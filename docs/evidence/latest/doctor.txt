@@ -1,6 +1,6 @@
-$ python3 -m memguard.cli.memctl doctor
+$ .venv/bin/python -m memguard.cli.memctl doctor
 
-[1779281543255] [32minfo [0m Proxy init engine sessionId:1939104454.
+[1779393445075] [32minfo [0m Proxy init engine sessionId:1933008078.
 {
   "python": "3.12.2",
   "platform": "Linux-6.6.0-19-generic-x86_64-with-glibc2.38",
@@ -23,20 +23,201 @@ $ python3 -m memguard.cli.memctl doctor
     "platform": "Linux",
     "is_linux": true,
     "cgroup_v2_mounted": true,
-    "proc_cgroup": "0::/user.slice/user-1000.slice/session-73.scope",
+    "proc_cgroup": "0::/user.slice/user-1000.slice/session-165.scope",
     "memory_current": null,
     "memory_max": null,
     "cpu_max": null,
-    "pid": 204535
+    "pid": 435999
   },
   "kylin_ai_sdk": {
     "embedding": {
       "backend": "kylin_coreai_embedding",
       "library": "libkysdk-coreai-embedding.so.1",
+      "library_file": "/lib/x86_64-linux-gnu/libkysdk-coreai-embedding.so.1",
       "library_loadable": true,
       "headers": {
         "/usr/include/kylin-ai/coreai/embedding/embedding.h": true,
         "/usr/include/kylin-ai/plugins/ai-engines/ondeviceembeddingengine.h": true
+      },
+      "runtime": {
+        "binary": "/usr/bin/kylin-ai-runtime",
+        "user_service": {
+          "available": true,
+          "active": false,
+          "state": "inactive"
+        },
+        "base_dir": "/tmp/.kylin-ai-runtime-unix/1000",
+        "base_dir_exists": true,
+        "sockets": {
+          "core-textembedding.sock": "/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock",
+          "config.sock": "/tmp/.kylin-ai-runtime-unix/1000/config.sock"
+        },
+        "socket_exists": {
+          "core-textembedding.sock": true,
+          "config.sock": true
+        },
+        "session_bus": true,
+        "xdg_runtime_dir": "/run/user/1000"
+      },
+      "kytensor": {
+        "service": {
+          "available": true,
+          "active": true,
+          "state": "active",
+          "enabled": "enabled"
+        },
+        "repository_index": {
+          "available": true,
+          "ok": true,
+          "models": [
+            "embd_cn-clip_512-uint8-image",
+            "embd_cn-clip_512-uint8-text",
+            "embd_gte-base_uint8-text",
+            "ensemble-embd_cn-clip_512-uint8-text",
+            "ensemble-embd_gte-base_uint8-text",
+            "matting_portrait",
+            "model_bank",
+            "ocr_ppocr",
+            "tokenizer_cn-clip_512-uint8-text",
+            "tokenizer_gte-base_uint8-text"
+          ],
+          "has_text_embedding_models": true
+        },
+        "repositories": [
+          {
+            "path": "/opt/appdata/kylin-ai/model-repository",
+            "exists": true,
+            "entries": [
+              "embd_cn-clip_512-uint8-image",
+              "embd_cn-clip_512-uint8-text",
+              "embd_gte-base_uint8-text",
+              "ensemble-embd_cn-clip_512-uint8-text",
+              "ensemble-embd_gte-base_uint8-text",
+              "matting_portrait",
+              "model_bank",
+              "ocr_ppocr",
+              "tokenizer_cn-clip_512-uint8-text",
+              "tokenizer_gte-base_uint8-text"
+            ],
+            "has_text_embedding_models": true
+          },
+          {
+            "path": "/usr/share/kylin-ai/model-repository",
+            "exists": true,
+            "entries": [
+              "embd_cn-clip_512-uint8-image",
+              "embd_cn-clip_512-uint8-text",
+              "embd_gte-base_uint8-text",
+              "ensemble-embd_cn-clip_512-uint8-text",
+              "ensemble-embd_gte-base_uint8-text",
+              "matting_portrait",
+              "model_bank",
+              "ocr_ppocr",
+              "tokenizer_cn-clip_512-uint8-text",
+              "tokenizer_gte-base_uint8-text"
+            ],
+            "has_text_embedding_models": true
+          }
+        ],
+        "expected_text_embedding_models": [
+          "ensemble-embd_gte-base_uint8-text",
+          "embd_gte-base_uint8-text",
+          "tokenizer_gte-base_uint8-text"
+        ],
+        "fix_hint": "If /opt/appdata/kylin-ai/model-repository is empty while /usr/share/kylin-ai/model-repository has models, run scripts/fix_kylin_embedding_runtime.sh to link the repositories and restart kytensor/runtime."
+      },
+      "plugins": {
+        "dirs": [
+          {
+            "path": "/usr/lib/kylin-ai/plugins/ai-engines",
+            "exists": false,
+            "shared_objects": [],
+            "has_ondevice_plugin": false
+          },
+          {
+            "path": "/usr/lib/x86_64-linux-gnu/kylin-ai/plugins/ai-engines",
+            "exists": true,
+            "shared_objects": [
+              "libbaidu-engine-plugin.so",
+              "libcustom-engine-plugin.so",
+              "libdeepseek-engine-plugin.so",
+              "libfreetrial-engine-plugin.so",
+              "libkylin-traditional-engine-plugin.so",
+              "libondevice-engine.so",
+              "libqwen-engine-plugin.so",
+              "libxunfei-engine-plugin.so"
+            ],
+            "has_ondevice_plugin": true
+          },
+          {
+            "path": "/usr/lib/aarch64-linux-gnu/kylin-ai/plugins/ai-engines",
+            "exists": false,
+            "shared_objects": [],
+            "has_ondevice_plugin": false
+          },
+          {
+            "path": "/usr/lib/loongarch64-linux-gnu/kylin-ai/plugins/ai-engines",
+            "exists": false,
+            "shared_objects": [],
+            "has_ondevice_plugin": false
+          }
+        ]
+      },
+      "packages": {
+        "available": true,
+        "packages": {
+          "kylin-ai-runtime": {
+            "installed": true,
+            "raw": "install ok installed 1.1.0.1-ok0.12"
+          },
+          "kylin-ai-engine-plugins": {
+            "installed": true,
+            "raw": "install ok installed 1.1.0.1-ok1.3"
+          },
+          "libkylin-coreai-embedding": {
+            "installed": true,
+            "raw": "install ok installed 1.2.0.0-ok0.2"
+          },
+          "libkylin-coreai-embedding-dev": {
+            "installed": true,
+            "raw": "install ok installed 1.2.0.0-ok0.2"
+          },
+          "libkylin-ondevice-embedding-engine": {
+            "installed": true,
+            "raw": "install ok installed 1.2.0.0-ok0.5"
+          },
+          "libkylin-ondevice-embedding-engine-dev": {
+            "installed": true,
+            "raw": "install ok installed 1.2.0.0-ok0.5"
+          },
+          "libkylin-ondevice-ai-engine-plugin": {
+            "installed": true,
+            "raw": "install ok installed 1.2.0.0-ok0.6"
+          },
+          "libkylin-ondevice-traditional-ai-engine-plugin": {
+            "installed": true,
+            "raw": "install ok installed 1.2.0.0-ok0.2"
+          }
+        }
+      },
+      "symbols": {
+        "available": true,
+        "ok": true,
+        "symbols": {
+          "text_embedding_create_session": true,
+          "text_embedding_init_session": true,
+          "text_embedding_get_model_info": true,
+          "text_embedding": true,
+          "embedding_result_get_vector_length": true,
+          "embedding_result_get_vector_data": true
+        }
+      },
+      "session": {
+        "created": true,
+        "init_code": 0,
+        "init_ok": true,
+        "init_code_hint": "success",
+        "model_info_ok": true
       },
       "model_info": {
         "dim": 768,
@@ -45,7 +226,14 @@ $ python3 -m memguard.cli.memctl doctor
       },
       "embedding_probe": null,
       "available": true,
-      "fallback": "hash_embedding"
+      "inference_ready": null,
+      "ready_for_default_retrieval": false,
+      "fallback": "hash_embedding",
+      "diagnosis": {
+        "success_condition": "library_loadable and model_info and embedding_probe.ok",
+        "availability_meaning": "available means SDK metadata is reachable; inference_ready means a real embedding call succeeded.",
+        "timeout_hint": "If model_info is present but embedding_probe returns 'Timeout was reached', inspect kylin-ai-runtime sockets, kytensor.service, Triton repository index, ondevice plugin logs, and model repository links."
+      }
     },
     "vector_store": {
       "backend": "kysdk_vector_engine_client",

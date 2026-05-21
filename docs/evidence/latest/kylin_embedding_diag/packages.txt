@@ -1,0 +1,14 @@
+$ dpkg-query -W 'kytensor-server' 'kylin-gte-base-model' 'kylin-ai-runtime' 'kylin-ai-engine-plugins' 'libkylin-coreai-embedding*' 'libkylin-ondevice*embedding*' 'libkylin-ondevice*ai-engine-plugin*' 2>/dev/null || true
+
+kylin-ai-engine-plugins:amd64	1.1.0.1-ok1.3
+kylin-ai-runtime	1.1.0.1-ok0.12
+kylin-gte-base-model	1.0.0.1-ok1.2
+kytensor-server:amd64	2.49.0.6-0ok4
+libkylin-coreai-embedding:amd64	1.2.0.0-ok0.2
+libkylin-coreai-embedding-dev:amd64	1.2.0.0-ok0.2
+libkylin-ondevice-ai-engine-plugin	1.2.0.0-ok0.6
+libkylin-ondevice-embedding-engine:amd64	1.2.0.0-ok0.5
+libkylin-ondevice-embedding-engine-dev:amd64	1.2.0.0-ok0.5
+libkylin-ondevice-image-embedding-engine	
+libkylin-ondevice-text-embedding-engine	
+libkylin-ondevice-traditional-ai-engine-plugin:amd64	1.2.0.0-ok0.2

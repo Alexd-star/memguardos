@@ -1,0 +1,370 @@
+$ for h in /usr/include/kylin-ai/coreai/embedding/embedding.h /usr/include/kylin-ai/plugins/ai-engines/ondeviceembeddingengine.h; do echo === $h; test -f $h && sed -n '1,220p' $h || echo missing; done; echo === symbols; find /usr/lib /lib -name 'libkysdk-coreai-embedding.so*' -print 2>/dev/null | while read -r lib; do echo === $lib; nm -D "$lib" 2>/dev/null | grep -E 'text_embedding|embedding_result' || true; done
+
+=== /usr/include/kylin-ai/coreai/embedding/embedding.h
+/*
+ * Copyright 2024 KylinSoft Co., Ltd.
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#ifndef EMBEDDING_H
+#define EMBEDDING_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct _EmbeddingResult EmbeddingResult;
+
+/// @brief 获取向量化结果 返回结果与result生命周期保持一致
+/// @param result 传入 向量化结果的结构体
+/// @return float 数组 存储的向量数据
+float *embedding_result_get_vector_data(EmbeddingResult *result);
+
+/// @brief 获取向量化结果
+/// @param result 传入 向量化结果的结构体
+/// @return float 数组 数组长度
+int embedding_result_get_vector_length(EmbeddingResult *result);
+
+/// @brief 获取向量化错误码
+/// @param result 传入 向量化结果的结构体
+/// @return 错误码
+int embedding_result_get_error_code(EmbeddingResult *result);
+
+/// @brief 获取向量化错误信息 返回结果与result生命周期保持一致
+/// @param result 传入 向量化结果的结构体
+/// @return 错误信息
+const char *embedding_result_get_error_message(EmbeddingResult *result);
+
+/// @brief  销毁向量化结果 [仅同步接口需要]
+/// @param result
+void embedding_result_destroy(EmbeddingResult **result);
+
+/// @brief 释放请求模型信息返回的结果
+void embedding_model_info_destroy(char *result);
+
+typedef struct _TextEmbeddingSession TextEmbeddingSession;
+
+/// @param result 生命周期为callback的作用域，资源释放由sdk侧管理
+typedef void (*TextEmbeddingResultCallback)(EmbeddingResult *result,
+                                            void *callback_user_data);
+
+TextEmbeddingSession *text_embedding_create_session();
+void text_embedding_destroy_session(TextEmbeddingSession **session);
+int text_embedding_init_session(TextEmbeddingSession *session);
+
+/// @brief 获取文本向量化模型信息 同步接口
+/// @param session[入参] 传入 text_embedding_create_session() 创建的 session
+/// @param model_info[出参] 在使用时定义一个char *model_infot=nullptr,
+/// 然后传入&model_info，需要embedding_model_info_destroy来销毁资源
+/// @return 是否成功
+///{
+///   "dim" : 768,
+///   "name" : "ensemble_gte_base_uint8_text",
+///   "ondevice" : true
+///}
+bool text_embedding_get_model_info(TextEmbeddingSession *session,
+                                   char **model_info);
+
+/// @brief 文本向量化模型 同步接口 向量化文本
+/// @param session[入参] 传入 text_embedding_create_session() 创建的 session
+/// @param text[入参] 传入 待向量化的文本
+/// @param result[出参] 在使用时定义一个EmbeddingResult *result=nullptr,
+/// 然后传入&result，需要embedding_result_destroy来销毁资源
+/// @return 返回向量化结果
+bool text_embedding(TextEmbeddingSession *session, const char *text,
+                    EmbeddingResult **result);
+
+/// @brief 文本向量化模型 异步接口 向量化文本
+/// @param session 传入 text_embedding_create_session() 创建的 session
+/// @param text 传入 待向量化的文本
+/// @param callback 向量化结果回调函数 传入 TextEmbeddingResultCallback
+/// 类型的结果回调函数
+/// @param callback_user_data 调用者自定义的数据，作为 callback 的参数返回
+void text_embedding_async(TextEmbeddingSession *session, const char *text,
+                          TextEmbeddingResultCallback callback,
+                          void *callback_user_data);
+
+typedef struct _ImageEmbeddingSession ImageEmbeddingSession;
+
+/// @param callback参数的生命周期仅为callback的作用域，资源释放由sdk侧管理
+typedef void (*ImageEmbeddingResultCallback)(EmbeddingResult *result,
+                                             void *callback_user_data);
+
+ImageEmbeddingSession *image_embedding_create_session();
+void image_embedding_destroy_session(ImageEmbeddingSession **session);
+int image_embedding_init_session(ImageEmbeddingSession *session);
+
+/// @brief 获取图像向量化模型信息 同步接口
+/// @param session[入参] 传入 image_embedding_create_session() 创建的 session
+/// @param model_info[出参] 在使用时定义一个char *model_infot=nullptr,
+/// 然后传入&model_info，需要embedding_model_info_destroy来销毁资源
+/// @return 是否成功
+///{
+///   "dim" : 1024,
+///   "image_name" : "cn_clip_512_uint8_image",
+///   "image_text_name" : "ensemble_cn_clip_512_uint8_text",
+///   "ondevice" : true
+///}
+bool image_embedding_get_model_info(ImageEmbeddingSession *session,
+                                    char **model_info);
+
+/// @brief 图像向量化模型同步接口 向量化文本
+/// @param session[入参] 传入 image_embedding_create_session() 创建的 session
+/// @param text[入参] 传入 待向量化的文本
+/// @param result[出参] 在使用时定义一个EmbeddingResult *result=nullptr,
+/// 然后传入&result，需要embedding_result_destroy来销毁资源
+/// @return 返回向量化结果
+bool text_embedding_by_image_model(ImageEmbeddingSession *session,
+                                   const char *text, EmbeddingResult **result);
+
+/// @brief 图像向量化模型同步接口 向量化图像
+/// @param session[入参] 传入 image_embedding_create_session() 创建的 session
+/// @param image_file[入参] 传入 待向量化的图像路径
+/// @param result[出参] 在使用时定义一个EmbeddingResult *result=nullptr,
+/// 然后传入&result，需要embedding_result_destroy来销毁资源
+/// @return 返回向量化结果
+bool image_embedding_by_image_file(ImageEmbeddingSession *session,
+                                   const char *image_file,
+                                   EmbeddingResult **result);
+
+/// @brief 图像向量化模型同步接口 向量化图像
+/// @param session[入参] 传入 image_embedding_create_session() 创建的 session
+/// @param image_data[入参] 传入 待向量化的base64图像数据
+/// @param image_data_length[入参] 传入 base64图像数据的长度
+/// @param result[出参] 在使用时定义一个EmbeddingResult *result=nullptr,
+/// 然后传入&result，需要embedding_result_destroy来销毁资源
+/// @return 返回向量化结果
+bool image_embedding_by_base64_image_data(ImageEmbeddingSession *session,
+                                          const unsigned char *image_data,
+                                          unsigned int image_data_length,
+                                          EmbeddingResult **result);
+
+/// @brief 图像向量化模型 异步不并发接口 向量化文本
+/// @param session 传入 image_embedding_create_session() 创建的 session
+/// @param text 传入 待向量化的文本
+/// @param callback 向量化结果回调函数 传入 ImageEmbeddingResultCallback
+/// 类型的结果回调函数
+/// @param callback_user_data 调用者自定义的数据，作为 callback 的参数返回
+void text_embedding_by_image_model_async(ImageEmbeddingSession *session,
+                                         const char *text,
+                                         ImageEmbeddingResultCallback callback,
+                                         void *callback_user_data);
+
+/// @brief 图像向量化模型 异步不并发接口 向量化图像
+/// @param session 传入 image_embedding_create_session() 创建的 session
+/// @param file_path 传入 待向量化的图像路径
+/// @param callback 向量化结果回调函数 传入 ImageEmbeddingResultCallback
+/// 类型的结果回调函数
+/// @param callback_user_data 调用者自定义的数据，作为 callback 的参数返回
+void image_embedding_from_by_file_async(ImageEmbeddingSession *session,
+                                        const char *file_path,
+                                        ImageEmbeddingResultCallback callback,
+                                        void *callback_user_data);
+
+/// @brief 图像向量化模型 异步不并发接口 向量化图像
+/// @param session 传入 image_embedding_create_session() 创建的 session
+/// @param image_data 传入 待向量化的base64图像数据
+/// @param image_data_length 传入 base64图像数据的长度
+/// @param callback 向量化结果回调函数 传入 ImageEmbeddingResultCallback
+/// 类型的结果回调函数
+/// @param callback_user_data 调用者自定义的数据，作为 callback 的参数返回
+void image_embedding_by_base64_image_data_async(
+    ImageEmbeddingSession *session, const unsigned char *image_data,
+    unsigned int image_data_length, ImageEmbeddingResultCallback callback,
+    void *callback_user_data);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
+=== /usr/include/kylin-ai/plugins/ai-engines/ondeviceembeddingengine.h
+/*
+ * Copyright (C) 2024 KylinSoft Co., Ltd.
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#pragma once
+
+#include <kylin-ai/ai-engine/embeddingengine.h>
+
+namespace ai_engine {
+namespace core_ai {
+namespace embedding {
+class EmbeddingServer;
+
+class OndeviceEmbeddingEngine : public AbstractEmbeddingEngine {
+public:
+    OndeviceEmbeddingEngine();
+    ~OndeviceEmbeddingEngine();
+    void setEmbeddingResultCallback(EmbeddingResultCallback callback) override;
+
+    std::string engineName() const override {
+        return "ondevice-embedding-engine";
+    }
+
+    bool isCloud() const override { return false; }
+
+    bool isBuiltInEngine() const override { return true; }
+
+    std::string modelInfo() const override;
+
+    // 文本向量化
+    result::AiEngineBaseResult initTextEmbeddingModule() override;
+    result::AiEngineBaseResult destroyTextEmbeddingModule() override;
+    result::AiEngineBaseResult embeddingText(const std::string &text) override;
+
+    // 图像向量化
+    result::AiEngineBaseResult initImageEmbeddingModule() override;
+    result::AiEngineBaseResult destroyImageEmbeddingModule() override;
+    result::AiEngineBaseResult embeddingImageFromImageFile(
+        const std::string &filePath) override;
+    result::AiEngineBaseResult embeddingImageFromBase64ImageData(
+        const std::string &fileData) override;
+    result::AiEngineBaseResult embeddingTextWithImageModel(
+        const std::string &text) override;
+
+private:
+    EmbeddingServer *embeddingServer_ = nullptr;
+};
+}  // namespace embedding
+}  // namespace core_ai
+}  // namespace ai_engine
+=== symbols
+=== /usr/lib/x86_64-linux-gnu/libkysdk-coreai-embedding.so.1
+000000000001cf90 T ai_runtime_core_text_embedding_service_call_embedding_text
+000000000001cfe0 T ai_runtime_core_text_embedding_service_call_embedding_text_finish
+000000000001d030 T ai_runtime_core_text_embedding_service_call_embedding_text_sync
+000000000001d0b0 T ai_runtime_core_text_embedding_service_call_get_model_info
+000000000001d100 T ai_runtime_core_text_embedding_service_call_get_model_info_finish
+000000000001d150 T ai_runtime_core_text_embedding_service_call_get_model_info_sync
+000000000001ce60 T ai_runtime_core_text_embedding_service_call_init
+000000000001ceb0 T ai_runtime_core_text_embedding_service_call_init_finish
+000000000001cf00 T ai_runtime_core_text_embedding_service_call_init_sync
+000000000001d200 T ai_runtime_core_text_embedding_service_complete_embedding_text
+000000000001d230 T ai_runtime_core_text_embedding_service_complete_get_model_info
+000000000001d1d0 T ai_runtime_core_text_embedding_service_complete_init
+000000000001c7d0 T ai_runtime_core_text_embedding_service_get_type
+000000000001c770 T ai_runtime_core_text_embedding_service_interface_info
+000000000001c7c0 T ai_runtime_core_text_embedding_service_override_properties
+000000000001d260 T ai_runtime_core_text_embedding_service_proxy_get_type
+000000000001d2c0 T ai_runtime_core_text_embedding_service_proxy_new
+000000000001d350 T ai_runtime_core_text_embedding_service_proxy_new_finish
+000000000001d510 T ai_runtime_core_text_embedding_service_proxy_new_for_bus
+000000000001d5a0 T ai_runtime_core_text_embedding_service_proxy_new_for_bus_finish
+000000000001d5e0 T ai_runtime_core_text_embedding_service_proxy_new_for_bus_sync
+000000000001d390 T ai_runtime_core_text_embedding_service_proxy_new_sync
+000000000001d660 T ai_runtime_core_text_embedding_service_skeleton_get_type
+000000000001d6c0 T ai_runtime_core_text_embedding_service_skeleton_new
+000000000000dfa0 T embedding_result_destroy
+000000000000df60 T embedding_result_get_error_code
+000000000000df80 T embedding_result_get_error_message
+000000000000df20 T embedding_result_get_vector_data
+000000000000df40 T embedding_result_get_vector_length
+0000000000013950 T text_embedding
+0000000000013b10 T text_embedding_async
+0000000000013fc0 T text_embedding_by_image_model
+0000000000014490 T text_embedding_by_image_model_async
+000000000000e0b0 T text_embedding_create_session
+0000000000016f40 T text_embedding_destroy_session
+00000000000136e0 T text_embedding_get_model_info
+00000000000136a0 T text_embedding_init_session
+=== /usr/lib/x86_64-linux-gnu/libkysdk-coreai-embedding.so.1.0.0
+000000000001cf90 T ai_runtime_core_text_embedding_service_call_embedding_text
+000000000001cfe0 T ai_runtime_core_text_embedding_service_call_embedding_text_finish
+000000000001d030 T ai_runtime_core_text_embedding_service_call_embedding_text_sync
+000000000001d0b0 T ai_runtime_core_text_embedding_service_call_get_model_info
+000000000001d100 T ai_runtime_core_text_embedding_service_call_get_model_info_finish
+000000000001d150 T ai_runtime_core_text_embedding_service_call_get_model_info_sync
+000000000001ce60 T ai_runtime_core_text_embedding_service_call_init
+000000000001ceb0 T ai_runtime_core_text_embedding_service_call_init_finish
+000000000001cf00 T ai_runtime_core_text_embedding_service_call_init_sync
+000000000001d200 T ai_runtime_core_text_embedding_service_complete_embedding_text
+000000000001d230 T ai_runtime_core_text_embedding_service_complete_get_model_info
+000000000001d1d0 T ai_runtime_core_text_embedding_service_complete_init
+000000000001c7d0 T ai_runtime_core_text_embedding_service_get_type
+000000000001c770 T ai_runtime_core_text_embedding_service_interface_info
+000000000001c7c0 T ai_runtime_core_text_embedding_service_override_properties
+000000000001d260 T ai_runtime_core_text_embedding_service_proxy_get_type
+000000000001d2c0 T ai_runtime_core_text_embedding_service_proxy_new
+000000000001d350 T ai_runtime_core_text_embedding_service_proxy_new_finish
+000000000001d510 T ai_runtime_core_text_embedding_service_proxy_new_for_bus
+000000000001d5a0 T ai_runtime_core_text_embedding_service_proxy_new_for_bus_finish
+000000000001d5e0 T ai_runtime_core_text_embedding_service_proxy_new_for_bus_sync
+000000000001d390 T ai_runtime_core_text_embedding_service_proxy_new_sync
+000000000001d660 T ai_runtime_core_text_embedding_service_skeleton_get_type
+000000000001d6c0 T ai_runtime_core_text_embedding_service_skeleton_new
+000000000000dfa0 T embedding_result_destroy
+000000000000df60 T embedding_result_get_error_code
+000000000000df80 T embedding_result_get_error_message
+000000000000df20 T embedding_result_get_vector_data
+000000000000df40 T embedding_result_get_vector_length
+0000000000013950 T text_embedding
+0000000000013b10 T text_embedding_async
+0000000000013fc0 T text_embedding_by_image_model
+0000000000014490 T text_embedding_by_image_model_async
+000000000000e0b0 T text_embedding_create_session
+0000000000016f40 T text_embedding_destroy_session
+00000000000136e0 T text_embedding_get_model_info
+00000000000136a0 T text_embedding_init_session
+=== /usr/lib/x86_64-linux-gnu/libkysdk-coreai-embedding.so
+000000000001cf90 T ai_runtime_core_text_embedding_service_call_embedding_text
+000000000001cfe0 T ai_runtime_core_text_embedding_service_call_embedding_text_finish
+000000000001d030 T ai_runtime_core_text_embedding_service_call_embedding_text_sync
+000000000001d0b0 T ai_runtime_core_text_embedding_service_call_get_model_info
+000000000001d100 T ai_runtime_core_text_embedding_service_call_get_model_info_finish
+000000000001d150 T ai_runtime_core_text_embedding_service_call_get_model_info_sync
+000000000001ce60 T ai_runtime_core_text_embedding_service_call_init
+000000000001ceb0 T ai_runtime_core_text_embedding_service_call_init_finish
+000000000001cf00 T ai_runtime_core_text_embedding_service_call_init_sync
+000000000001d200 T ai_runtime_core_text_embedding_service_complete_embedding_text
+000000000001d230 T ai_runtime_core_text_embedding_service_complete_get_model_info
+000000000001d1d0 T ai_runtime_core_text_embedding_service_complete_init
+000000000001c7d0 T ai_runtime_core_text_embedding_service_get_type
+000000000001c770 T ai_runtime_core_text_embedding_service_interface_info
+000000000001c7c0 T ai_runtime_core_text_embedding_service_override_properties
+000000000001d260 T ai_runtime_core_text_embedding_service_proxy_get_type
+000000000001d2c0 T ai_runtime_core_text_embedding_service_proxy_new
+000000000001d350 T ai_runtime_core_text_embedding_service_proxy_new_finish
+000000000001d510 T ai_runtime_core_text_embedding_service_proxy_new_for_bus
+000000000001d5a0 T ai_runtime_core_text_embedding_service_proxy_new_for_bus_finish
+000000000001d5e0 T ai_runtime_core_text_embedding_service_proxy_new_for_bus_sync
+000000000001d390 T ai_runtime_core_text_embedding_service_proxy_new_sync
+000000000001d660 T ai_runtime_core_text_embedding_service_skeleton_get_type
+000000000001d6c0 T ai_runtime_core_text_embedding_service_skeleton_new
+000000000000dfa0 T embedding_result_destroy
+000000000000df60 T embedding_result_get_error_code
+000000000000df80 T embedding_result_get_error_message
+000000000000df20 T embedding_result_get_vector_data
+000000000000df40 T embedding_result_get_vector_length
+0000000000013950 T text_embedding
+0000000000013b10 T text_embedding_async
+0000000000013fc0 T text_embedding_by_image_model
+0000000000014490 T text_embedding_by_image_model_async
+000000000000e0b0 T text_embedding_create_session
+0000000000016f40 T text_embedding_destroy_session
+00000000000136e0 T text_embedding_get_model_info
+00000000000136a0 T text_embedding_init_session

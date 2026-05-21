@@ -38,13 +38,13 @@ python -m memguard.cli.memctl sdk-status
 
 最新结果：
 
-- 单元测试：`33 passed`
+- 单元测试：`37 passed`
 - 负载评测：1000 条记忆，120 次检索请求
-- 最新 1k 负载 P95：83.761 ms
+- 最新 1k 负载 P95：65.367 ms
 - 5k 负载 P95：142.534 ms
-- 10k 负载 P95：242.053 ms
-- 最新 openKylin RSS：30628.0 KB
-- 10k 评测 RSS：61296.0 KB
+- 10k 负载 P95：258.027 ms
+- 最新 openKylin RSS：34240.0 KB
+- 10k 评测 RSS：65820.0 KB
 - 纯文本基线 Recall@5：0.6818
 - 完整 MemGuardOS Recall@5：1.0000
 - 当前 benchmark：22 条种子记忆、17 条检索用例、18 条敏感检测用例、12 条精准遗忘用例、6 条冲突解决用例、8 条图谱检索用例。
@@ -52,7 +52,7 @@ python -m memguard.cli.memctl sdk-status
 - 审计哈希链验证通过
 - OS 敏感路径 smoke test 被正确阻断
 - 真实 auditd 日志接入已验证：访问 `/etc/shadow` 后解析出的事件被 `sensitive_block` 阻断
-- SDK 状态：embedding 模型信息显示 768 维端侧文本模型；vector SDK 库和服务可用
+- SDK 状态：embedding 模型信息显示 768 维端侧文本模型，Python/C++ 探针均可返回 768 维向量；vector SDK 库和服务可用
 
 ## 1. 基础环境验证
 

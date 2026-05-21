@@ -3,6 +3,15 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+if [ -z "${PYTHON_BIN:-}" ]; then
+  if [ -x ".venv/bin/python" ]; then
+    PYTHON_BIN=".venv/bin/python"
+  else
+    PYTHON_BIN="python3"
+  fi
+fi
+export PYTHON_BIN
+
 RUN_10K=0
 if [ "${1:-}" = "--with-10k" ]; then
   RUN_10K=1
@@ -56,7 +65,7 @@ EOF
 
 | 文件 | 内容 |
 |---|---|
-| `environment.txt` | OS、内核、Python、SQLite 等基础环境 |
+| `environment.txt` | OS、内核、Python、SQLite、项目解释器等基础环境 |
 | `doctor.txt` | MemGuardOS doctor 输出 |
 | `pytest.txt` | 单元测试输出 |
 | `eval_1k.txt` | 1k 负载评测命令输出 |
@@ -64,7 +73,10 @@ EOF
 | `eval_report_openkylin.md` | 1k 负载评测 Markdown |
 | `sdk_status.txt` | Kylin SDK 状态 |
 | `sdk_embedding_probe.txt` | Kylin embedding 推理探测 |
+| `embedding_cpp_probe.txt` | Kylin embedding SDK 官方 C API 风格 C++ 探针 |
+| `kylin_embedding_diag/` | Kylin embedding runtime、socket、插件、包版本和日志诊断 |
 | `vector_probe.txt` | Kylin 向量数据库 SDK 探针 |
+| `quality_report.txt` | 输入清洗、格式标准化与质量校验证据 |
 | `behavior_history.txt` | shell 用户行为轨迹接入证据 |
 | `build_prompt.txt` | RAG 上下文与 LLM prompt 渲染证据 |
 | `generate_answer.txt` | 默认关闭的可选 LLM adapter dry-run 证据 |
@@ -86,15 +98,24 @@ EOF
   fi
 }
 
-run_shell_capture "environment" "cat /etc/os-release 2>/dev/null || true; uname -a; python3 --version; python3 - <<'PY'
+run_shell_capture "environment" "cat /etc/os-release 2>/dev/null || true; uname -a; echo PYTHON_BIN=${PYTHON_BIN}; \"${PYTHON_BIN}\" --version; \"${PYTHON_BIN}\" - <<'PY'
 import sqlite3, platform
 print('platform=' + platform.platform())
 print('sqlite=' + sqlite3.sqlite_version)
 PY"
 
-run_capture "doctor" python3 -m memguard.cli.memctl doctor
-run_capture "sdk_status" python3 -m memguard.cli.memctl sdk-status
-run_capture "sdk_embedding_probe" python3 -m memguard.cli.memctl sdk-status --probe-embedding
+run_capture "doctor" "${PYTHON_BIN}" -m memguard.cli.memctl doctor
+run_capture "sdk_status" "${PYTHON_BIN}" -m memguard.cli.memctl sdk-status
+run_capture "sdk_embedding_probe" "${PYTHON_BIN}" -m memguard.cli.memctl sdk-status --probe-embedding --probe-timeout 90
+if [ -f scripts/diagnose_kylin_embedding.sh ]; then
+  run_capture "kylin_embedding_diag" bash scripts/diagnose_kylin_embedding.sh --no-probe --out-dir "${OUT_DIR}/kylin_embedding_diag"
+fi
+
+if [ -f scripts/kylin_embedding_probe.cpp ] && command -v g++ >/dev/null 2>&1; then
+  run_capture "embedding_cpp_probe" bash scripts/run_kylin_embedding_probe.sh "openKylin agent memory"
+else
+  echo "g++ or embedding probe source unavailable; skipped" >"${OUT_DIR}/embedding_cpp_probe.txt"
+fi
 
 if [ -f scripts/kylin_vector_probe.cpp ] && command -v g++ >/dev/null 2>&1; then
   run_capture "vector_probe" bash scripts/run_kylin_vector_probe.sh "$(pwd)"
@@ -102,17 +123,18 @@ else
   echo "g++ or probe source unavailable; skipped" >"${OUT_DIR}/vector_probe.txt"
 fi
 
-run_capture "pytest" python3 -m pytest -q
-run_capture "eval_1k" python3 -m memguard.eval.run_eval \
+run_capture "pytest" "${PYTHON_BIN}" -m pytest -q
+run_capture "eval_1k" "${PYTHON_BIN}" -m memguard.eval.run_eval \
   --latency-size 1000 \
   --latency-queries 120 \
   --output "${OUT_DIR}/eval_result_openkylin.json" \
   --markdown "${OUT_DIR}/eval_report_openkylin.md"
 
-run_capture "behavior_history" python3 -m memguard.cli.memctl ingest-history --file "$HOME/.bash_history" --limit 20
-run_capture "build_prompt" python3 -m memguard.cli.memctl build-prompt "openKylin 服务内存限制" --top-k 5 --token-budget 1200
-run_capture "generate_answer" python3 -m memguard.cli.memctl generate-answer "openKylin 服务内存限制" --top-k 5 --token-budget 1200 --provider dry-run
-run_shell_capture "api_auth" "python3 - <<'PY'
+run_shell_capture "quality_report" "\"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '  普通知识：   systemd   可用 MemoryMax 限制服务内存。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '!!! --- ***' || true; \"${PYTHON_BIN}\" -m memguard.cli.memctl quality-report"
+run_capture "behavior_history" "${PYTHON_BIN}" -m memguard.cli.memctl ingest-history --file "$HOME/.bash_history" --limit 20
+run_capture "build_prompt" "${PYTHON_BIN}" -m memguard.cli.memctl build-prompt "openKylin 服务内存限制" --top-k 5 --token-budget 1200
+run_capture "generate_answer" "${PYTHON_BIN}" -m memguard.cli.memctl generate-answer "openKylin 服务内存限制" --top-k 5 --token-budget 1200 --provider dry-run
+run_shell_capture "api_auth" "\"${PYTHON_BIN}\" - <<'PY'
 from memguard.api.server import handle_request
 from memguard.service import MemGuardService
 
@@ -127,18 +149,18 @@ else
 fi
 
 if [ "$RUN_10K" -eq 1 ]; then
-  run_capture "eval_10k" python3 -m memguard.eval.run_eval \
+  run_capture "eval_10k" "${PYTHON_BIN}" -m memguard.eval.run_eval \
     --latency-size 10000 \
     --latency-queries 150 \
     --output "${OUT_DIR}/eval_result_openkylin_10k.json" \
     --markdown "${OUT_DIR}/eval_report_openkylin_10k.md"
 fi
 
-run_shell_capture "systemd_cgroup" "systemctl status memguardd --no-pager || true; systemctl show memguardd -p MemoryMax -p CPUQuotaPerSecUSec || true; cat /sys/fs/cgroup/system.slice/memguardd.service/memory.max 2>/dev/null || true; cat /sys/fs/cgroup/system.slice/memguardd.service/cpu.max 2>/dev/null || true; python3 -m memguard.cli.memctl status || true"
-run_shell_capture "journald" "python3 -m memguard.cli.memctl ingest --text 'openKylin journald evidence collection smoke test'; python3 -m memguard.cli.memctl verify-audit; journalctl -t memguardd -n 80 --no-pager || true"
-run_shell_capture "auditd_rules" "python3 -m memguard.cli.memctl auditd-rules --format auditctl; sudo auditctl -l 2>/dev/null | grep memguard_sensitive || true"
+run_shell_capture "systemd_cgroup" "systemctl status memguardd --no-pager || true; systemctl show memguardd -p MemoryMax -p CPUQuotaPerSecUSec || true; cat /sys/fs/cgroup/system.slice/memguardd.service/memory.max 2>/dev/null || true; cat /sys/fs/cgroup/system.slice/memguardd.service/cpu.max 2>/dev/null || true; \"${PYTHON_BIN}\" -m memguard.cli.memctl status || true"
+run_shell_capture "journald" "\"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text 'openKylin journald evidence collection smoke test'; \"${PYTHON_BIN}\" -m memguard.cli.memctl verify-audit; journalctl -t memguardd -n 80 --no-pager || true"
+run_shell_capture "auditd_rules" "\"${PYTHON_BIN}\" -m memguard.cli.memctl auditd-rules --format auditctl; sudo auditctl -l 2>/dev/null | grep memguard_sensitive || true"
 run_shell_capture "auditd_ingest" "sudo cat /etc/shadow >/dev/null 2>/dev/null || true; bash scripts/auditd_to_memguard.sh \"$(pwd)\" memguard_sensitive 200 --summary || true"
-run_capture "verify_audit" python3 -m memguard.cli.memctl verify-audit
+run_capture "verify_audit" "${PYTHON_BIN}" -m memguard.cli.memctl verify-audit
 
 write_summary
 rm -rf "$LATEST_DIR"

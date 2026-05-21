@@ -1,0 +1,28 @@
+$ cat /etc/os-release 2>/dev/null || true; uname -a; id; python3 --version; echo DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:-}; echo XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-}; systemctl --user show-environment 2>/dev/null | grep -E 'DBUS|XDG' || true
+
+NAME="openKylin"
+FULL_NAME="openKylin"
+VERSION="2.0 SP2 (nile)"
+VERSION_US="2.0 SP2 (nile)"
+ID=openkylin
+PRETTY_NAME="openKylin 2.0 SP2"
+VERSION_ID="2.0"
+HOME_URL="https://www.openkylin.top/"
+VERSION_CODENAME=nile
+PRODUCT_FEATURES=3
+Linux luo-pc 6.6.0-19-generic #0ok4-KYLINOS SMP PREEMPT_DYNAMIC Fri Dec 19 07:42:23 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+uid=1000(luo) gid=1000(luo) 组=1000(luo),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),100(users),111(lpadmin),990(sambashare)
+Python 3.12.2
+DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+XDG_RUNTIME_DIR=/run/user/1000
+XDG_DATA_DIRS=/usr/share/kylin-wlcom:/opt/kaiming/share:/usr/local/share:/usr/share:/opt/system/resource:/opt/kare/usr/share
+XDG_RUNTIME_DIR=/run/user/1000
+DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+XDG_CONFIG_DIRS=/etc/xdg/xdg-kylin-wlcom:/etc/xdg:/opt/system/conf/xdg
+XDG_CURRENT_DESKTOP=UKUI
+XDG_GREETER_DATA_DIR=/var/lib/lightdm-data/luo
+XDG_SEAT_PATH=/org/freedesktop/DisplayManager/Seat0
+XDG_SESSION_CLASS=user
+XDG_SESSION_DESKTOP=kylin-wlcom
+XDG_SESSION_PATH=/org/freedesktop/DisplayManager/Session0
+XDG_SESSION_TYPE=wayland

@@ -1,0 +1,3 @@
+$ journalctl --user -u kylin-ai-runtime.service -n 220 --no-pager || true
+
+-- No entries --

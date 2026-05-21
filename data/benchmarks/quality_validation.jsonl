@@ -1,0 +1,4 @@
+{"case":"empty_after_normalization","text":" \u0000 \n\t ","source_kind":"benchmark_quality","expect_stored":false,"expected_issue":"empty_after_normalization"}
+{"case":"no_signal_symbols","text":"!!! --- ***","source_kind":"benchmark_quality","expect_stored":false,"expected_issue":"no_alphanumeric_or_cjk_signal"}
+{"case":"normalized_whitespace","text":"  普通知识：   systemd   可用 MemoryMax 限制服务内存。\n\n\n","source_kind":"benchmark_quality","expect_stored":true,"expected_warning":"normalized_whitespace_or_control_chars"}
+{"case":"very_short_but_accepted","text":"ok","source_kind":"benchmark_quality","expect_stored":true,"expected_warning":"very_short_text"}

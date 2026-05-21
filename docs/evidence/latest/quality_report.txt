@@ -1,0 +1,208 @@
+$ ".venv/bin/python" -m memguard.cli.memctl ingest --text '  普通知识：   systemd   可用 MemoryMax 限制服务内存。'; ".venv/bin/python" -m memguard.cli.memctl ingest --text '!!! --- ***' || true; ".venv/bin/python" -m memguard.cli.memctl quality-report
+
+{"stored": true, "memory_id": "mem_a46f50a32ff14cb2", "type": "knowledge", "subtype": "workflow", "tier": "long_term", "confidence": 0.95, "quality": {"accepted": true, "score": 0.95, "issues": [], "warnings": ["normalized_whitespace_or_control_chars"], "original_chars": 40, "normalized_chars": 34, "line_count": 1, "source_kind": "manual"}}
+{"stored": false, "reason": "quality_reject", "quality": {"accepted": false, "score": 0.0, "issues": ["no_alphanumeric_or_cjk_signal"], "warnings": [], "original_chars": 11, "normalized_chars": 11, "line_count": 1, "source_kind": "manual"}}
+{
+  "quality_reject": [
+    {
+      "audit_id": 1010,
+      "event_type": "quality_reject",
+      "memory_id": null,
+      "detail": "{\"quality\": {\"accepted\": false, \"issues\": [\"no_alphanumeric_or_cjk_signal\"], \"line_count\": 1, \"normalized_chars\": 11, \"original_chars\": 11, \"score\": 0.0, \"source_kind\": \"manual\", \"warnings\": []}, \"reason\": \"input quality check rejected the memory\", \"source_kind\": \"manual\", \"source_uri\": \"inline\"}",
+      "created_at": "2026-05-21T19:57:56.836839+00:00",
+      "prev_hash": "1d05934b15e668d59a2671f120d65856596c1db191743a7de88902b9c5cc8cde",
+      "event_hash": "da4cb65365dcf4e329bdd216364da28428fae16ffcc17194311326fc3ff29347"
+    },
+    {
+      "audit_id": 937,
+      "event_type": "quality_reject",
+      "memory_id": null,
+      "detail": "{\"quality\": {\"accepted\": false, \"issues\": [\"no_alphanumeric_or_cjk_signal\"], \"line_count\": 1, \"normalized_chars\": 11, \"original_chars\": 11, \"score\": 0.0, \"source_kind\": \"manual\", \"warnings\": []}, \"reason\": \"input quality check rejected the memory\", \"source_kind\": \"manual\", \"source_uri\": \"inline\"}",
+      "created_at": "2026-05-21T19:50:09.394417+00:00",
+      "prev_hash": "51fe265a9703357498b2d8050a128390af6bf37c57d2d0dd34a30140ec84f050",
+      "event_hash": "19088425d7ffb8e63f69fdcc96dead6f9a779cc15d43e647ad0946afc15534c9"
+    }
+  ],
+  "recent_ingest_quality": [
+    {
+      "audit_id": 1009,
+      "event_type": "ingest",
+      "memory_id": "mem_a46f50a32ff14cb2",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 34, \"original_chars\": 40, \"score\": 0.95, \"source_kind\": \"manual\", \"warnings\": [\"normalized_whitespace_or_control_chars\"]}, \"sensitivity\": \"none\", \"source_kind\": \"manual\", \"source_uri\": \"inline\", \"subtype\": \"workflow\", \"tier\": \"long_term\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:57:56.703288+00:00",
+      "prev_hash": "8ed6f4e3f14b5434e1f9048e8674942ae7a0b93b3811cb7d5a3e01355a989f8a",
+      "event_hash": "1d05934b15e668d59a2671f120d65856596c1db191743a7de88902b9c5cc8cde"
+    },
+    {
+      "audit_id": 1003,
+      "event_type": "ingest",
+      "memory_id": "mem_90eb97f55d674508",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.750053+00:00",
+      "prev_hash": "37615ae5c5ad07a2b3b40346fb0165c1c6578231836fe6a32670add98948d4bb",
+      "event_hash": "c0d7276bcca2913bd994c6a4c8bed946204c7995c239c24aba15a61d49527c1a"
+    },
+    {
+      "audit_id": 1001,
+      "event_type": "ingest",
+      "memory_id": "mem_3680251a5e4f4aa0",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.728376+00:00",
+      "prev_hash": "bdc2c5d8d78d7e1b9104810aaa152b34735057d983d7a80eb617e6dc30286523",
+      "event_hash": "06312634ec5724b6811e54131a1a52f88ea138c9c41a9eabc1a66479377d3076"
+    },
+    {
+      "audit_id": 999,
+      "event_type": "ingest",
+      "memory_id": "mem_057f8a4303b74eaf",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.708434+00:00",
+      "prev_hash": "97f4d21edb3611832281192c2465319bf25540f142b82587aaf3f2722312bea9",
+      "event_hash": "61a37c9add7726d3b4cf6d5bc77fd3179b979cc3c1942df217b0db26de1dad97"
+    },
+    {
+      "audit_id": 997,
+      "event_type": "ingest",
+      "memory_id": "mem_767b425ec49e4c5f",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.683813+00:00",
+      "prev_hash": "c1c70f0505683f7d315227c8567977026d2cd506d03f2b8d27caccbd31219a63",
+      "event_hash": "f0a9481aa8915c6fbe21918f638a928b31a2b482da90991196c45acf9e862edf"
+    },
+    {
+      "audit_id": 995,
+      "event_type": "ingest",
+      "memory_id": "mem_4da2d23329754abb",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.663738+00:00",
+      "prev_hash": "ef4d43e8619a4a665711412dd343f41713467212576bc322dfc67da936b46c7d",
+      "event_hash": "1713146dc2dde5337c4e2413519c567f77d0267064f700927562e1a279e56932"
+    },
+    {
+      "audit_id": 993,
+      "event_type": "ingest",
+      "memory_id": "mem_53cc0c5dbf464909",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.641204+00:00",
+      "prev_hash": "0c86d432c38cf14cb120bcbdc60debdb29d6b26a711cc8ad03184c27d82107f8",
+      "event_hash": "d7b22baa8d5e9a6679c4b950a736dff237d8117a90fa3841e2268ce09f5dff2e"
+    },
+    {
+      "audit_id": 989,
+      "event_type": "ingest",
+      "memory_id": "mem_055e19cd1e534a97",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.601252+00:00",
+      "prev_hash": "7a5c838cc1d03f99669a88ab1823acbf12f536e7a7ffa3bd2fbda46010fc58fc",
+      "event_hash": "6e3e7087c445ae8b18a806d723bcb7564f7d74a63e30898ff3e07fbe162498e1"
+    },
+    {
+      "audit_id": 987,
+      "event_type": "ingest",
+      "memory_id": "mem_a2c43e548f214d15",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.578988+00:00",
+      "prev_hash": "523195918cde873f944fabea30fd79b5ea9c14256838c5777a022830c3a3560a",
+      "event_hash": "b10a50858eeb6ddbe28d0ae9028643c5fcf41a23de1ec44a31c5eb6a65d4f254"
+    },
+    {
+      "audit_id": 985,
+      "event_type": "ingest",
+      "memory_id": "mem_73fe624628704a7c",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.557854+00:00",
+      "prev_hash": "fd731b985bfd67a8643ea825245cb160a871d9a91f51e0478bf90fc44e6b0d7f",
+      "event_hash": "52d0562d790c641263b00c20e6e66def2275050e54f5ee1b07aee906eeb2e3f3"
+    },
+    {
+      "audit_id": 983,
+      "event_type": "ingest",
+      "memory_id": "mem_d3b19cca8d284346",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.534405+00:00",
+      "prev_hash": "4fd4c2917d9029cd32df3e19f89477caf50e3dba705f39baf46c1d21fbfbdd50",
+      "event_hash": "ea99dafe0332451114af383bd9350526fb3486d42ceb51370c4af4eec53d3325"
+    },
+    {
+      "audit_id": 981,
+      "event_type": "ingest",
+      "memory_id": "mem_5978ff7b9b5b42f7",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.513805+00:00",
+      "prev_hash": "e4f8408f2e945637f71629ffb6cb8de1f51a7e386cbf4749ff5308afc12bc34c",
+      "event_hash": "db865df71519b736ca1e562fb2163915b707096bb6156e7c693fda8ea8aea996"
+    },
+    {
+      "audit_id": 979,
+      "event_type": "ingest",
+      "memory_id": "mem_b6660cae8230482d",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.493108+00:00",
+      "prev_hash": "f8e783e98bb0f1b73b3e8b7abdc5686ba3a534975f58cc11a110ed7545f91ff4",
+      "event_hash": "ba341bd321c001860b2d4ee0fb97e0803bd9d41b4391747b91f233d90ff78716"
+    },
+    {
+      "audit_id": 977,
+      "event_type": "ingest",
+      "memory_id": "mem_95cdb00568714952",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.471818+00:00",
+      "prev_hash": "8fb811f99770bf0a22853e2849575384b1dc4dc006ff2e193bfedfa965324b62",
+      "event_hash": "2706597a38b05574bc1452cf73ae0f5a0e46bf68e0898e289068fb9feb38ccaa"
+    },
+    {
+      "audit_id": 975,
+      "event_type": "ingest",
+      "memory_id": "mem_5260d96697d543bb",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.449426+00:00",
+      "prev_hash": "f609719f182bc269f615b65477f17ef07a7b31fde9f5ef8835a2d7da7239d60e",
+      "event_hash": "bae22d14e7b938afd43f76dcbfe44cd810b1dab04d073f3ada019e006697f14f"
+    },
+    {
+      "audit_id": 973,
+      "event_type": "ingest",
+      "memory_id": "mem_559a2294b28e4fbc",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.427022+00:00",
+      "prev_hash": "d39837906253f4d42e19cd549a8438ed98d6a3db5ddc2702fd7a399d981b32c4",
+      "event_hash": "4284c208577d19091b97b7b8e3356686847d1dbf71dd533b09cb13088b49b3b8"
+    },
+    {
+      "audit_id": 971,
+      "event_type": "ingest",
+      "memory_id": "mem_b31b03594aec412f",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.404611+00:00",
+      "prev_hash": "922c4a4e487b700309487b221304031ff5f86190203e5f0acc33c2b045e4909a",
+      "event_hash": "2785bc35ae3d669c07db45d801357777a59185513cc1b0b648686dad84b9efe9"
+    },
+    {
+      "audit_id": 967,
+      "event_type": "ingest",
+      "memory_id": "mem_85fdef946a1e4e96",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.362269+00:00",
+      "prev_hash": "f8df3714ef87b6050a9d02ca2dc787f0c175faf5aa9990e77f0e0f66b5d72537",
+      "event_hash": "4188eb5294e4350e3428848064ce1178c2c74401e94f961a250618d6fb61fbb5"
+    },
+    {
+      "audit_id": 965,
+      "event_type": "ingest",
+      "memory_id": "mem_5c77ff1ecbe345ad",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.340024+00:00",
+      "prev_hash": "e26f29cc891fd19d8dd5657c4311eda4151d3f1246d55cd788cf495b7b82567a",
+      "event_hash": "2af65eacab7cdfd7e94457cbeacf42c2f95edc0e63fe3c579de9be84878e3c90"
+    },
+    {
+      "audit_id": 963,
+      "event_type": "ingest",
+      "memory_id": "mem_cd7d55351f6a4b72",
+      "detail": "{\"labels\": [], \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 74, \"original_chars\": 74, \"score\": 1.0, \"source_kind\": \"os_event\", \"warnings\": []}, \"sensitivity\": \"none\", \"source_kind\": \"os_event\", \"source_uri\": \"/etc/passwd\", \"subtype\": \"os_event\", \"tier\": \"working\", \"type\": \"knowledge\"}",
+      "created_at": "2026-05-21T19:54:39.317677+00:00",
+      "prev_hash": "0a57d7754ae36124d3390f84473ba9d31667da9a7aefe0c82a357abab1d27be1",
+      "event_hash": "015b49a09051a4117b617f5b93cb1bbadc91a24799d4c23d093d28d9e2694852"
+    }
+  ]
+}

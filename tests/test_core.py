@@ -16,7 +16,8 @@ from memguard.os_guard.auditd import audit_rules_file, auditctl_rules, ausearch_
 from memguard.os_guard.auditd_events import parse_auditd_events
 from memguard.extraction.entity import extract_entities, extract_relations
 from memguard.eval.run_eval import run as run_eval
-from memguard.retrieval.kylin_sdk import kylin_sdk_status
+from memguard.retrieval.hybrid import HybridRetriever
+from memguard.retrieval.kylin_sdk import KylinEmbeddingBackend, kylin_sdk_status
 from memguard.retrieval.conflict import preference_topic
 from memguard.daemon import daemon_health_snapshot, run_daemon
 from scripts.demo_smoke import main as demo_smoke_main
@@ -63,6 +64,25 @@ def test_phone_is_redacted_and_stored(tmp_path):
         record = result["record"]
         assert "[REDACTED:phone_cn]" in record.content
         assert record.sensitivity.redacted is True
+    finally:
+        service.close()
+
+
+def test_quality_validation_rejects_empty_and_normalizes_text(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        rejected = service.ingest_text(" \x00 \n\t ")
+        assert rejected["stored"] is False
+        assert rejected["reason"] == "quality_reject"
+        assert rejected["quality"]["issues"] == ["empty_after_normalization"]
+        assert service.audit(event_type="quality_reject")
+
+        result = service.ingest_text("  普通知识：   systemd   可用 MemoryMax 限制服务内存。\n\n\n")
+        assert result["stored"] is True
+        record = result["record"]
+        assert "   " not in record.content
+        assert "normalized_whitespace_or_control_chars" in result["quality"]["warnings"]
+        assert record.confidence <= 1.0
     finally:
         service.close()
 
@@ -233,6 +253,85 @@ def test_kylin_sdk_status_is_safe_on_current_platform():
     assert status["vector_store"]["backend"] == "kysdk_vector_engine_client"
     assert "fallback" in status["embedding"]
     assert "fallback" in status["vector_store"]
+
+
+def test_default_retrieval_backend_is_hash(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        record = service.ingest_text("systemd MemoryMax 可以限制 Linux 服务内存。")["record"]
+        hits = service.search("Linux 服务内存限制", limit=3)
+        assert hits
+        assert hits[0]["memory_id"] == record.memory_id
+        assert hits[0]["vector_backend"] == "hash"
+        status = service.retrieval_status()
+        assert status["requested_backend"] == "hash"
+        assert status["hash"]["available"] is True
+        assert status["policy"]["default_backend"] == "hash"
+    finally:
+        service.close()
+
+
+def test_auto_retrieval_falls_back_when_kylin_embedding_fails(monkeypatch):
+    def fake_embed(_text, _timeout_seconds, include_vector=True):
+        return {"ok": False, "error": "sdk unavailable in test", "include_vector": include_vector}
+
+    monkeypatch.setattr(KylinEmbeddingBackend, "embed_in_subprocess", staticmethod(fake_embed))
+    retriever = HybridRetriever(embedding_backend="auto")
+    records = [
+        {
+            "memory_id": "m1",
+            "type": "knowledge",
+            "summary": "systemd MemoryMax",
+            "content": "限制 Linux 服务内存",
+        },
+        {
+            "memory_id": "m2",
+            "type": "knowledge",
+            "summary": "auditd",
+            "content": "审计敏感路径访问",
+        },
+    ]
+    ranked = retriever.rank("Linux 内存限制", records, limit=2)
+    assert ranked
+    assert all(record["_vector_backend"] == "hash" for _, record in ranked)
+    assert retriever.status()["kylin"]["disabled_reason"] == "sdk unavailable in test"
+
+
+def test_auto_retrieval_can_use_successful_kylin_embedding_probe(monkeypatch):
+    def fake_embed(text, _timeout_seconds, include_vector=True):
+        lowered = text.lower()
+        if "systemd" in lowered or "内存" in text or "memory" in lowered:
+            vector = [1.0, 0.0, 0.0]
+        elif "audit" in lowered or "审计" in text:
+            vector = [0.0, 1.0, 0.0]
+        else:
+            vector = [0.0, 0.0, 1.0]
+        result = {"ok": True, "dim": 3}
+        if include_vector:
+            result["vector"] = vector
+        return result
+
+    monkeypatch.setattr(KylinEmbeddingBackend, "embed_in_subprocess", staticmethod(fake_embed))
+    retriever = HybridRetriever(embedding_backend="auto")
+    records = [
+        {
+            "memory_id": "m1",
+            "type": "knowledge",
+            "summary": "systemd MemoryMax",
+            "content": "限制 Linux 服务内存",
+        },
+        {
+            "memory_id": "m2",
+            "type": "knowledge",
+            "summary": "auditd",
+            "content": "审计敏感路径访问",
+        },
+    ]
+    ranked = retriever.rank("systemd memory", records, limit=2)
+    assert ranked
+    assert ranked[0][1]["memory_id"] == "m1"
+    assert all(record["_vector_backend"] == "kylin_sdk" for _, record in ranked)
+    assert retriever.status()["last_backend_used"] == "kylin_sdk"
 
 
 def test_custom_sensitive_pattern(tmp_path, monkeypatch):

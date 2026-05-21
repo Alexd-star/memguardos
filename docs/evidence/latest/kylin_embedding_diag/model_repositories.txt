@@ -1,0 +1,60 @@
+$ echo '=== /opt/appdata/kylin-ai/model-repository'; find '/opt/appdata/kylin-ai/model-repository' -maxdepth 2 -printf '%M %u:%g %p -> %l\n' 2>/dev/null | sort || true; echo '=== /usr/share/kylin-ai/model-repository'; find '/usr/share/kylin-ai/model-repository' -maxdepth 2 -printf '%M %u:%g %p -> %l\n' 2>/dev/null | sort | sed -n '1,220p' || true
+
+=== /opt/appdata/kylin-ai/model-repository
+drwxr-xr-x root:root /opt/appdata/kylin-ai/model-repository -> 
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/embd_cn-clip_512-uint8-image -> /usr/share/kylin-ai/model-repository/embd_cn-clip_512-uint8-image
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/embd_cn-clip_512-uint8-text -> /usr/share/kylin-ai/model-repository/embd_cn-clip_512-uint8-text
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/embd_gte-base_uint8-text -> /usr/share/kylin-ai/model-repository/embd_gte-base_uint8-text
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/ensemble-embd_cn-clip_512-uint8-text -> /usr/share/kylin-ai/model-repository/ensemble-embd_cn-clip_512-uint8-text
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/ensemble-embd_gte-base_uint8-text -> /usr/share/kylin-ai/model-repository/ensemble-embd_gte-base_uint8-text
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/matting_portrait -> /usr/share/kylin-ai/model-repository/matting_portrait
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/model_bank -> /usr/share/kylin-ai/model-repository/model_bank
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/ocr_ppocr -> /usr/share/kylin-ai/model-repository/ocr_ppocr
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/tokenizer_cn-clip_512-uint8-text -> /usr/share/kylin-ai/model-repository/tokenizer_cn-clip_512-uint8-text
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/tokenizer_gte-base_uint8-text -> /usr/share/kylin-ai/model-repository/tokenizer_gte-base_uint8-text
+=== /usr/share/kylin-ai/model-repository
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/embd_cn-clip_512-uint8-image -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/embd_cn-clip_512-uint8-image/1 -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/embd_cn-clip_512-uint8-text -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/embd_cn-clip_512-uint8-text/1 -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/embd_gte-base_uint8-text -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/embd_gte-base_uint8-text/1 -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/ensemble-embd_cn-clip_512-uint8-text -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/ensemble-embd_cn-clip_512-uint8-text/1 -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/ensemble-embd_gte-base_uint8-text -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/ensemble-embd_gte-base_uint8-text/1 -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/matting_portrait -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/matting_portrait/1 -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/model_bank -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/model_bank/1 -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/ocr_ppocr -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/ocr_ppocr/1 -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/tokenizer_cn-clip_512-uint8-text -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/tokenizer_cn-clip_512-uint8-text/1 -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/tokenizer_gte-base_uint8-text -> 
+drwxr-xr-x root:root /usr/share/kylin-ai/model-repository/tokenizer_gte-base_uint8-text/1 -> 
+-rw-r--r-- root:root /usr/share/kylin-ai/model-repository/embd_cn-clip_512-uint8-image/config.pbtxt -> 
+-rw-r--r-- root:root /usr/share/kylin-ai/model-repository/embd_cn-clip_512-uint8-text/config.pbtxt -> 
+-rw-r--r-- root:root /usr/share/kylin-ai/model-repository/embd_gte-base_uint8-text/config.pbtxt -> 
+-rw-r--r-- root:root /usr/share/kylin-ai/model-repository/ensemble-embd_cn-clip_512-uint8-text/config.pbtxt -> 
+-rw-r--r-- root:root /usr/share/kylin-ai/model-repository/ensemble-embd_gte-base_uint8-text/config.pbtxt -> 
+-rw-r--r-- root:root /usr/share/kylin-ai/model-repository/matting_portrait/config.pbtxt -> 
+-rw-r--r-- root:root /usr/share/kylin-ai/model-repository/model_bank/config.pbtxt -> 
+-rw-r--r-- root:root /usr/share/kylin-ai/model-repository/ocr_ppocr/config.pbtxt -> 
+-rw-r--r-- root:root /usr/share/kylin-ai/model-repository/tokenizer_cn-clip_512-uint8-text/config.pbtxt -> 
+-rw-r--r-- root:root /usr/share/kylin-ai/model-repository/tokenizer_gte-base_uint8-text/config.pbtxt -> 
+-rwxr-xr-x root:root /usr/share/kylin-ai/model-repository/embd_cn-clip_512-uint8-image/model_description.yaml -> 
+-rwxr-xr-x root:root /usr/share/kylin-ai/model-repository/embd_cn-clip_512-uint8-text/model_description.yaml -> 
+-rwxr-xr-x root:root /usr/share/kylin-ai/model-repository/embd_gte-base_uint8-text/model_description.yaml -> 
+-rwxr-xr-x root:root /usr/share/kylin-ai/model-repository/ensemble-embd_cn-clip_512-uint8-text/model_description.yaml -> 
+-rwxr-xr-x root:root /usr/share/kylin-ai/model-repository/ensemble-embd_gte-base_uint8-text/model_description.yaml -> 
+-rwxr-xr-x root:root /usr/share/kylin-ai/model-repository/matting_portrait/model_description.yaml -> 
+-rwxr-xr-x root:root /usr/share/kylin-ai/model-repository/ocr_ppocr/model_description.yaml -> 
+-rwxr-xr-x root:root /usr/share/kylin-ai/model-repository/tokenizer_cn-clip_512-uint8-text/config.json -> 
+-rwxr-xr-x root:root /usr/share/kylin-ai/model-repository/tokenizer_cn-clip_512-uint8-text/model_description.yaml -> 
+-rwxr-xr-x root:root /usr/share/kylin-ai/model-repository/tokenizer_cn-clip_512-uint8-text/vocab.txt -> 
+-rwxr-xr-x root:root /usr/share/kylin-ai/model-repository/tokenizer_gte-base_uint8-text/model_description.yaml -> 
+-rwxr-xr-x root:root /usr/share/kylin-ai/model-repository/tokenizer_gte-base_uint8-text/modeling.py -> 
+-rwxr-xr-x root:root /usr/share/kylin-ai/model-repository/tokenizer_gte-base_uint8-text/tokenizer_config.json -> 
+-rwxr-xr-x root:root /usr/share/kylin-ai/model-repository/tokenizer_gte-base_uint8-text/tokenizer.json -> 

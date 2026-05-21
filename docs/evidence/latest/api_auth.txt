@@ -1,4 +1,4 @@
-$ python3 - <<'PY'
+$ ".venv/bin/python" - <<'PY'
 from memguard.api.server import handle_request
 from memguard.service import MemGuardService
 

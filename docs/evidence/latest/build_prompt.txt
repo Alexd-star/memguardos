@@ -1,17 +1,17 @@
-$ python3 -m memguard.cli.memctl build-prompt openKylin 服务内存限制 --top-k 5 --token-budget 1200
+$ .venv/bin/python -m memguard.cli.memctl build-prompt openKylin 服务内存限制 --top-k 5 --token-budget 1200
 
 你是运行在 Linux/openKylin 上的 OS Agent。
 请严格遵守以下记忆使用策略：
 仅使用已返回且已脱敏的记忆作为 OS Agent 生成上下文；不得输出被精准遗忘或被敏感策略阻断的明文。
 
 可用记忆上下文如下。只允许使用这些已脱敏、未遗忘的记忆；不要猜测或复原被脱敏内容。
-[1] type=knowledge subtype=os_event tier=working score=0.2034 source=os_event
-summary: 知识记忆：OS event: auditd_access action=open path=/etc/passwd process=/usr/lib/systemd/systemd-logind
-evidence: OS event: auditd_access action=open path=/etc/passwd process=/usr/lib/systemd/systemd-logind
+[1] type=knowledge subtype=workflow tier=long_term score=0.6948 source=manual
+summary: 知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。
+evidence: 普通知识: systemd 可用 MemoryMax 限制服务内存。
 
-[2] type=knowledge subtype=fact tier=long_term score=0.1749 source=manual
-summary: 知识记忆：openKylin journald evidence collection smoke test
-evidence: openKylin journald evidence collection smoke test
+[2] type=knowledge subtype=workflow tier=long_term score=0.6948 source=manual
+summary: 知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。
+evidence: 普通知识: systemd 可用 MemoryMax 限制服务内存。
 
 [3] type=knowledge subtype=fact tier=long_term score=0.1749 source=manual
 summary: 知识记忆：openKylin journald evidence collection smoke test
@@ -25,7 +25,7 @@ evidence: openKylin journald evidence collection smoke test
 summary: 知识记忆：openKylin journald evidence collection smoke test
 evidence: openKylin journald evidence collection smoke test
 
-估算上下文 tokens: 272；预算: 1200；已截断: False
+估算上下文 tokens: 273；预算: 1200；已截断: False
 
 用户当前请求：
 openKylin 服务内存限制

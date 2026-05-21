@@ -1,0 +1,14 @@
+$ ls -la '/tmp/.kylin-ai-runtime-unix/1000' 2>/dev/null || true; test -S '/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock' && echo 'core-textembedding socket: present' || echo 'core-textembedding socket: missing'
+
+总计 8
+drwxrwxrwx 2 luo luo 4096  5月22日 03:49 .
+drwxrwxrwx 3 luo luo 4096  5月22日 03:49 ..
+srwxrwxr-x 1 luo luo    0  5月22日 03:49 assistant.sock
+srwxrwxr-x 1 luo luo    0  5月22日 03:49 config.sock
+srwxrwxr-x 1 luo luo    0  5月22日 03:49 core-imageembedding.sock
+srwxrwxr-x 1 luo luo    0  5月22日 03:49 core-speech.sock
+srwxrwxr-x 1 luo luo    0  5月22日 03:49 core-textembedding.sock
+srwxrwxr-x 1 luo luo    0  5月22日 03:49 core-vision.sock
+srwxrwxr-x 1 luo luo    0  5月22日 03:49 genai-nlp.sock
+srwxrwxr-x 1 luo luo    0  5月22日 03:49 genai-vision.sock
+core-textembedding socket: present

@@ -1,0 +1,35 @@
+$ systemctl cat kytensor.service --no-pager 2>/dev/null || true; systemctl status kytensor.service --no-pager 2>/dev/null || true; curl -sS -X POST --max-time 10 http://127.0.0.1:8000/v2/repository/index 2>/dev/null || true
+
+# /usr/lib/systemd/system/kytensor.service
+[Unit]
+Description=Kylin triton inference server
+
+[Service]
+ExecStart=/bin/bash -c 'source /usr/share/kylin-ai-python-env/python-env/bin/activate && /usr/bin/kytensor --model-repository=/opt/appdata/kylin-ai/model-repository --model-control-mode=explicit --http-address=127.0.0.1 --grpc-address=127.0.0.1'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+● kytensor.service - Kylin triton inference server
+     Loaded: loaded (/usr/lib/systemd/system/kytensor.service; enabled; preset: enabled)
+     Active: active (running) since Fri 2026-05-22 03:48:58 CST; 8min ago
+   Main PID: 409940 (kytensor)
+      Tasks: 109 (limit: 6991)
+     Memory: 1.3G (peak: 1.3G)
+        CPU: 9.623s
+     CGroup: /system.slice/kytensor.service
+             ├─409940 /usr/bin/kytensor --model-repository=/opt/appdata/kylin-ai/model-repository --model-control-mode=explicit --http-address=127.0.0.1 --grpc-address=127.0.0.1
+             └─410263 /opt/tritonserver/backends/python/triton_python_backend_stub /opt/appdata/kylin-ai/model-repository/tokenizer_gte-base_uint8-text/1/model.py triton_python_backend_shm_region_14e1eb4a-79a5-4aae-8212-fa11b0b15fdf 1048576 1048576 409940 /opt/tritonserver/backends/python 336 tokenizer_gte-base_uint8-text_0 DEFAULT
+
+5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name TreeEnsembleRegressor (domain: ai.onnx.ml version: 5) from file ./onnx/defs/traditionalml/defs.cc line 917, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 917
+5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name TreeEnsembleClassifier (domain: ai.onnx.ml version: 5) from file ./onnx/defs/traditionalml/defs.cc line 800, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 800
+5月 22 03:49:17 luo-pc bash[410237]: None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+5月 22 03:49:18 luo-pc bash[409940]: I0521 19:49:18.521557 409940 model_lifecycle.cc:839] "successfully loaded 'embd_gte-base_uint8-text'"
+5月 22 03:49:18 luo-pc bash[409940]: I0521 19:49:18.601658 409940 python_be.cc:2249] "TRITONBACKEND_ModelInstanceInitialize: tokenizer_gte-base_uint8-text_0 (CPU device 0)"
+5月 22 03:49:19 luo-pc bash[410263]: None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+5月 22 03:49:21 luo-pc bash[409940]: I0521 19:49:21.894895 409940 model_lifecycle.cc:839] "successfully loaded 'tokenizer_gte-base_uint8-text'"
+5月 22 03:49:21 luo-pc bash[409940]: I0521 19:49:21.896533 409940 model_lifecycle.cc:472] "loading: ensemble-embd_gte-base_uint8-text:1"
+5月 22 03:49:21 luo-pc bash[409940]: I0521 19:49:21.897630 409940 model_lifecycle.cc:839] "successfully loaded 'ensemble-embd_gte-base_uint8-text'"
+5月 22 03:49:22 luo-pc bash[409940]: W0521 19:49:22.072975 409940 pinned_memory_manager.cc:170] "failed to allocate pinned system memory: no pinned memory pool, falling back to non-pinned system memory"
+[{"name":"embd_cn-clip_512-uint8-image"},{"name":"embd_cn-clip_512-uint8-text"},{"name":"embd_gte-base_uint8-text","version":"1","state":"READY"},{"name":"ensemble-embd_cn-clip_512-uint8-text"},{"name":"ensemble-embd_gte-base_uint8-text","version":"1","state":"READY"},{"name":"matting_portrait"},{"name":"model_bank","version":"1","state":"READY"},{"name":"ocr_ppocr"},{"name":"tokenizer_cn-clip_512-uint8-text"},{"name":"tokenizer_gte-base_uint8-text","version":"1","state":"READY"}]

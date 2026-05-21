@@ -138,6 +138,21 @@ def run(latency_size: int = 200, latency_queries: int = 100) -> dict:
             )
             label_f1 = f1(label_expected, label_actual)
 
+            quality_cases = load_jsonl(BENCHMARK_DIR / "quality_validation.jsonl")
+            quality_correct = []
+            quality_issue_hits = []
+            quality_warning_hits = []
+            for row in quality_cases:
+                result = service.ingest_text(row["text"], source_kind=row.get("source_kind", "benchmark_quality"), source_uri=row["case"])
+                quality = result.get("quality", {})
+                quality_correct.append(1.0 if bool(result["stored"]) == bool(row["expect_stored"]) else 0.0)
+                expected_issue = row.get("expected_issue")
+                if expected_issue:
+                    quality_issue_hits.append(1.0 if expected_issue in quality.get("issues", []) else 0.0)
+                expected_warning = row.get("expected_warning")
+                if expected_warning:
+                    quality_warning_hits.append(1.0 if expected_warning in quality.get("warnings", []) else 0.0)
+
             tier_service = MemGuardService(store_path=root / "tier.segment", db_path=root / "tier.sqlite3")
             try:
                 working = tier_service.ingest_text("临时调试上下文，只在当前任务中使用。", tier="working")["record"]
@@ -173,10 +188,16 @@ def run(latency_size: int = 200, latency_queries: int = 100) -> dict:
                     "forgetting_cases": len(load_jsonl(BENCHMARK_DIR / "forgetting.jsonl")),
                     "conflict_cases": len(load_jsonl(BENCHMARK_DIR / "conflict_resolution.jsonl")),
                     "graph_cases": len(load_jsonl(BENCHMARK_DIR / "graph_retrieval.jsonl")),
+                    "quality_cases": len(quality_cases),
                 },
                 "preference_and_knowledge_extraction": {
                     "type_accuracy": round(type_correct / float(len(seeds) or 1), 4),
                     "subtype_accuracy": round(subtype_correct / float(len(seeds) or 1), 4),
+                },
+                "data_quality": {
+                    "decision_accuracy": round(mean(quality_correct), 4),
+                    "issue_detection_accuracy": round(mean(quality_issue_hits), 4),
+                    "warning_detection_accuracy": round(mean(quality_warning_hits), 4),
                 },
                 "retrieval": {
                     "mean_recall_at_5": round(mean(retrieval_scores), 4),
@@ -362,6 +383,7 @@ def to_markdown(result: dict) -> str:
     graph = result["graph_memory"]
     baseline = result["baseline_comparison"]
     tiers = result["memory_tiers"]
+    quality = result["data_quality"]
     latency_load = result["latency_load"]
     resource = result["resource_usage"]
     footprint = result["storage_footprint"]
@@ -383,6 +405,7 @@ def to_markdown(result: dict) -> str:
         "forgetting_cases": "精准遗忘用例",
         "conflict_cases": "冲突解决用例",
         "graph_cases": "图谱检索用例",
+        "quality_cases": "数据质量用例",
     }
     for key, value in result["dataset"].items():
         lines.append("| %s | %s |" % (dataset_labels.get(key, key), value))
@@ -395,6 +418,9 @@ def to_markdown(result: dict) -> str:
             "|---|---:|",
             "| 类型识别准确率 | %.4f |" % extraction["type_accuracy"],
             "| 子类型识别准确率 | %.4f |" % extraction["subtype_accuracy"],
+            "| 数据质量决策准确率 | %.4f |" % quality["decision_accuracy"],
+            "| 数据质量问题识别准确率 | %.4f |" % quality["issue_detection_accuracy"],
+            "| 数据质量警告识别准确率 | %.4f |" % quality["warning_detection_accuracy"],
             "| 平均 Recall@5 | %.4f |" % retrieval["mean_recall_at_5"],
             "| 跨语言 Recall@5 | %.4f |" % retrieval["cross_language_recall_at_5"],
             "| 纯文本基线 Recall@5 | %.4f |" % baseline["text_only_recall_at_5"],

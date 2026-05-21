@@ -1,0 +1,9 @@
+$ systemctl --user show kylin-ai-runtime.service -p ActiveState -p SubState -p Environment -p ExecStart --no-pager || true; systemctl --user status kylin-ai-runtime.service --no-pager || true; systemctl --user is-active kylin-ai-runtime.service || true; pgrep -a kylin-ai-runtime || true
+
+Environment=
+ActiveState=inactive
+SubState=dead
+Unit kylin-ai-runtime.service could not be found.
+inactive
+pgrep: pattern that searches for process name longer than 15 characters will result in zero matches
+Try `pgrep -f' option to match against the complete command line.

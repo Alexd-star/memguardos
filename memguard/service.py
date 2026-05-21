@@ -6,6 +6,7 @@ from memguard.extraction.entity import extract_entities, extract_relations
 from memguard.forgetting.planner import ForgetPlanner
 from memguard.ingestion.behavior import BehaviorEvent, load_shell_history
 from memguard.ingestion.config import config_entry_to_memory_text, load_config_entries, validate_config_entry
+from memguard.ingestion.quality import assess_text_quality
 from memguard.ingestion.tool_result import ToolResult
 from memguard.models import AuditInfo, MemoryRecord, MemorySource, VersionInfo, make_memory, new_id, stable_hash, utc_now
 from memguard.os_guard.events import parse_os_event
@@ -33,20 +34,32 @@ class MemGuardService:
         self.meta.close()
 
     def ingest_text(self, text: str, source_kind: str = "manual", source_uri: str = "", tier: Optional[str] = None) -> Dict[str, object]:
-        sensitivity = self.detector.classify(text, source_uri)
+        clean_text, quality = assess_text_quality(text, source_kind=source_kind)
+        if not quality.accepted:
+            detail = {
+                "source_kind": source_kind,
+                "source_uri": source_uri,
+                "quality": quality.to_dict(),
+                "reason": "input quality check rejected the memory",
+            }
+            self._audit("quality_reject", None, detail)
+            return {"stored": False, "reason": "quality_reject", "quality": quality.to_dict()}
+
+        sensitivity = self.detector.classify(clean_text, source_uri)
         if sensitivity.level == "high":
             detail = {
                 "source_kind": source_kind,
                 "source_uri": source_uri,
                 "labels": sensitivity.labels,
+                "quality": quality.to_dict(),
                 "reason": "high risk sensitive content is not stored in long-term memory",
             }
             self._audit("sensitive_block", None, detail)
-            return {"stored": False, "reason": "sensitive_block", "sensitivity": sensitivity}
+            return {"stored": False, "reason": "sensitive_block", "sensitivity": sensitivity, "quality": quality.to_dict()}
 
-        stored_text = text
+        stored_text = clean_text
         if sensitivity.level in {"medium", "low"} and sensitivity.labels:
-            stored_text = self.detector.redact(text, source_uri)
+            stored_text = self.detector.redact(clean_text, source_uri)
             sensitivity.redacted = True
 
         memory_type = self._classify_memory(stored_text)
@@ -60,6 +73,7 @@ class MemGuardService:
             tier=tier or self._default_tier(memory_type, source_kind),
             sensitivity=sensitivity,
         )
+        record.confidence = min(record.confidence, quality.score)
         self._enrich_graph(record)
         self.store.append(record)
         self.meta.upsert_memory(record)
@@ -74,9 +88,10 @@ class MemGuardService:
                 "source_uri": source_uri,
                 "sensitivity": record.sensitivity.level,
                 "labels": record.sensitivity.labels,
+                "quality": quality.to_dict(),
             },
         )
-        return {"stored": True, "record": record}
+        return {"stored": True, "record": record, "quality": quality.to_dict()}
 
     def ingest_tool_result(self, tool_result: ToolResult, source_uri: str = "tool_result") -> Dict[str, object]:
         return self.ingest_text(
@@ -352,6 +367,7 @@ class MemGuardService:
             item = dict(record)
             item["score"] = round(score, 4)
             item["match_source"] = "hybrid"
+            item["vector_backend"] = item.pop("_vector_backend", self.retriever.last_backend_used)
             results.append(item)
             seen.add(item["memory_id"])
         for record in self.meta.graph_search(query, limit=limit):
@@ -565,6 +581,23 @@ class MemGuardService:
         result = self.meta.verify_audit_chain()
         self.journald.log("audit_verify", None, result)
         return result
+
+    def retrieval_status(self) -> Dict[str, object]:
+        status = self.retriever.status()
+        status["policy"] = {
+            "default_backend": "hash",
+            "kylin_sdk_role": "optional_rerank_backend",
+            "fallback_behavior": "If Kylin embedding inference fails or times out, retrieval keeps using stable SQLite FTS + hash-vector ranking.",
+        }
+        self._audit(
+            "retrieval_status",
+            None,
+            {
+                "requested_backend": status.get("requested_backend"),
+                "last_backend_used": status.get("last_backend_used"),
+            },
+        )
+        return status
 
     def resolve_conflicts(self) -> Dict[str, object]:
         result = self.conflicts.resolve_preferences(self.meta.list_memories(include_deleted=False))

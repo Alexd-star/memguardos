@@ -47,34 +47,25 @@ bash scripts/collect_openkylin_evidence.sh
 
 ## 重要文档
 
-- [项目介绍总览](docs/项目介绍总览.md)
-- [总体设计](docs/概要设计说明书.md)
-- [功能、优化与优势记录](docs/功能优化与优势记录.md)
-- [赛题逐句符合性核查](docs/赛题要求逐句符合性核查.md)
-- [极致补强路线与风险决策](docs/极致补强路线与风险决策.md)
-- [工程审计与加固记录](docs/工程审计与加固记录.md)
-- [评委证据包索引](docs/评委证据包索引.md)
-- [满分目标规划](docs/满分目标规划.md)
-- [架构决策记录](docs/架构决策记录.md)
-- [麒麟 SDK 集成证据](docs/麒麟SDK集成证据.md)
-- [详细设计](docs/详细设计说明书.md)
-- [安全设计](docs/安全设计说明书.md)
-- [OS 机制说明](docs/操作系统机制说明.md)
-- [UKUI 轻量联动说明](docs/UKUI轻量联动说明.md)
-- [图谱记忆设计](docs/图谱记忆设计.md)
-- [用户手册](docs/用户手册.md)
-- [部署手册](docs/部署手册.md)
-- [openKylin 验证记录](docs/openKylin验证记录.md)
-- [评测报告](docs/eval_report.md)
-- [测试报告](docs/测试报告.md)
-- [演示脚本](docs/演示视频脚本.md)
-- [答辩提纲](docs/答辩提纲.md)
-- [提交材料边界说明](docs/提交材料边界说明.md)
-- [发布检查清单](docs/发布检查清单.md)
+建议按下面顺序阅读，避免在过程性材料里来回跳：
+
+1. [项目介绍总览](docs/项目介绍总览.md)
+2. [概要设计说明书](docs/概要设计说明书.md)
+3. [详细设计说明书](docs/详细设计说明书.md)
+4. [安全设计说明书](docs/安全设计说明书.md)
+5. [操作系统机制说明](docs/操作系统机制说明.md)
+6. [部署手册](docs/部署手册.md)
+7. [用户手册](docs/用户手册.md)
+8. [测试报告](docs/测试报告.md)
+9. [评委证据包索引](docs/评委证据包索引.md)
+10. [赛题要求逐句符合性核查](docs/赛题要求逐句符合性核查.md)
+11. [麒麟 SDK 集成证据](docs/麒麟SDK集成证据.md)
+12. [答辩提纲](docs/答辩提纲.md)
+13. [演示视频脚本](docs/演示视频脚本.md)
 
 ## 工程化
 
-仓库包含 GitHub Actions、Issue/PR 模板、贡献指南、安全策略、变更日志和提交材料边界说明。这些文件用于开源协作、持续集成和回溯备份；参赛功能主体仍是 `memguard/`、`scripts/`、`tests/`、`data/` 和中文 `docs/`。
+仓库包含 GitHub Actions、Issue/PR 模板、贡献指南、安全策略、变更日志、打包脚本和提交清单。这些文件用于开源协作、持续集成和回溯备份；参赛功能主体仍是 `memguard/`、`scripts/`、`tests/`、`data/` 和中文 `docs/`。
 
 ```powershell
 python -m pip install -e ".[dev]"

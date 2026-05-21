@@ -123,6 +123,7 @@ def build_parser() -> argparse.ArgumentParser:
     audit = sub.add_parser("audit", help="Show audit events")
     audit.add_argument("--limit", type=int, default=20)
     audit.add_argument("--type", dest="event_type")
+    sub.add_parser("quality-report", help="Show recent input quality validation audit events")
 
     patterns = sub.add_parser("patterns", help="List or add custom sensitive patterns")
     pattern_sub = patterns.add_subparsers(dest="pattern_command", required=True)
@@ -133,8 +134,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("doctor", help="Check local OS/runtime capabilities")
     sub.add_parser("status", help="Show runtime OS guard status")
+    sub.add_parser("retrieval-status", help="Show hybrid retrieval backend status")
     sdk_status = sub.add_parser("sdk-status", help="Detect openKylin Kylin AI embedding/vector SDK capabilities")
     sdk_status.add_argument("--probe-embedding", action="store_true", help="Run one real embedding call; may be slow if the model service is not ready")
+    sdk_status.add_argument("--probe-timeout", type=float, default=45.0, help="Timeout in seconds for the protected embedding probe subprocess")
 
     auditd = sub.add_parser("auditd-rules", help="Print auditd rules for sensitive path monitoring")
     auditd.add_argument("--format", choices=["auditctl", "rules-file", "ausearch"], default="auditctl")
@@ -153,9 +156,25 @@ def main(argv: list[str] | None = None) -> int:
             result = service.ingest_text(text, source_kind=args.source_kind, source_uri=source_uri, tier=args.tier)
             if result["stored"]:
                 record = result["record"]
-                print(json.dumps({"stored": True, "memory_id": record.memory_id, "type": record.type, "subtype": record.subtype, "tier": record.tier}, ensure_ascii=False))
+                print(
+                    json.dumps(
+                        {
+                            "stored": True,
+                            "memory_id": record.memory_id,
+                            "type": record.type,
+                            "subtype": record.subtype,
+                            "tier": record.tier,
+                            "confidence": record.confidence,
+                            "quality": result.get("quality"),
+                        },
+                        ensure_ascii=False,
+                    )
+                )
             else:
-                print(json.dumps({"stored": False, "reason": result["reason"], "sensitivity": result["sensitivity"].__dict__}, ensure_ascii=False))
+                payload = {"stored": False, "reason": result["reason"], "quality": result.get("quality")}
+                if result.get("sensitivity"):
+                    payload["sensitivity"] = result["sensitivity"].__dict__
+                print(json.dumps(payload, ensure_ascii=False))
             return 0
 
         if args.command == "ingest-tool-result":
@@ -342,6 +361,12 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(service.audit(limit=args.limit, event_type=args.event_type), ensure_ascii=False, indent=2))
             return 0
 
+        if args.command == "quality-report":
+            events = service.audit(limit=20, event_type="quality_reject")
+            ingests = service.audit(limit=20, event_type="ingest")
+            print(json.dumps({"quality_reject": events, "recent_ingest_quality": ingests}, ensure_ascii=False, indent=2))
+            return 0
+
         if args.command == "patterns":
             if args.pattern_command == "list":
                 print(json.dumps(service.list_patterns(), ensure_ascii=False, indent=2))
@@ -359,8 +384,18 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(cgroup_status(), ensure_ascii=False, indent=2))
             return 0
 
+        if args.command == "retrieval-status":
+            print(json.dumps(service.retrieval_status(), ensure_ascii=False, indent=2))
+            return 0
+
         if args.command == "sdk-status":
-            print(json.dumps(kylin_sdk_status(probe_embedding=args.probe_embedding), ensure_ascii=False, indent=2))
+            print(
+                json.dumps(
+                    kylin_sdk_status(probe_embedding=args.probe_embedding, probe_timeout=args.probe_timeout),
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
             return 0
 
         if args.command == "auditd-rules":

@@ -1,4 +1,4 @@
-$ python3 -m memguard.cli.memctl ingest-history --file /home/luo/.bash_history --limit 20
+$ .venv/bin/python -m memguard.cli.memctl ingest-history --file /home/luo/.bash_history --limit 20
 
 {
   "source_uri": "/home/luo/.bash_history",
@@ -8,28 +8,28 @@ $ python3 -m memguard.cli.memctl ingest-history --file /home/luo/.bash_history -
   "records": [
     {
       "command": "sudo apt updata",
-      "memory_id": "mem_1535ea91fd114c56",
+      "memory_id": "mem_a88bc0323a934012",
       "type": "knowledge",
       "subtype": "behavior_risk",
       "tier": "session"
     },
     {
       "command": "sudo apt update",
-      "memory_id": "mem_21a6eb6637ed4337",
+      "memory_id": "mem_73a4d73487ff42b2",
       "type": "knowledge",
       "subtype": "behavior_risk",
       "tier": "session"
     },
     {
       "command": "sudo apt install -y openssh-server git python3 python3-venv python3-pip sqlite3",
-      "memory_id": "mem_b9f4601f4f534e8a",
+      "memory_id": "mem_d43e12c33fa14eae",
       "type": "knowledge",
       "subtype": "behavior_risk",
       "tier": "session"
     },
     {
       "command": "sudo systemctl enable --now ssh",
-      "memory_id": "mem_061c0aaed4d54fd0",
+      "memory_id": "mem_a7ae941c60b0412e",
       "type": "knowledge",
       "subtype": "behavior_risk",
       "tier": "session"

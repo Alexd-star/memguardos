@@ -1,4 +1,4 @@
-$ python3 -m pytest -q
+$ .venv/bin/python -m pytest -q
 
-.................................                                        [100%]
-33 passed in 6.85s
+.....................................                                    [100%]
+37 passed in 6.05s
