@@ -1,0 +1,90 @@
+$ python3 -m memguard.cli.memctl ingest --text 'openKylin journald evidence collection smoke test'; python3 -m memguard.cli.memctl verify-audit; journalctl -t memguardd -n 80 --no-pager || true
+
+{"stored": true, "memory_id": "mem_5337e3d740f04792", "type": "knowledge", "subtype": "fact", "tier": "long_term"}
+{
+  "ok": false,
+  "checked": 791,
+  "failed_audit_id": 792,
+  "expected_hash": "77149f765cca4212c2bbaa3ac3db6045885cb6831230ba10b76a5c86a8ac952d",
+  "actual_hash": "24dbff7478cacbc8d680752641aa77cc8cdede7a11f180dcd2f7d07960bb26d7"
+}
+5月 20 20:53:19 luo-pc memguardd[207628]: {"detail": {"count": 5, "query": "journald audit memguardd"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:19 luo-pc memguardd[207630]: {"detail": {"count": 5, "query": "mmap precise forgetting compact"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:19 luo-pc memguardd[207632]: {"detail": {"count": 5, "query": "cgroup CPUQuota service"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:19 luo-pc memguardd[207634]: {"detail": {"count": 5, "query": "auditd sensitive path"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:19 luo-pc memguardd[207636]: {"detail": {"count": 5, "query": "openKylin systemd MemoryMax"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:19 luo-pc memguardd[207638]: {"detail": {"count": 5, "query": "journald audit memguardd"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:20 luo-pc memguardd[207640]: {"detail": {"count": 5, "query": "mmap precise forgetting compact"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:20 luo-pc memguardd[207644]: {"detail": {"count": 5, "query": "cgroup CPUQuota service"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:20 luo-pc memguardd[207646]: {"detail": {"count": 5, "query": "auditd sensitive path"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:20 luo-pc memguardd[207648]: {"detail": {"count": 5, "query": "openKylin systemd MemoryMax"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:20 luo-pc memguardd[207650]: {"detail": {"count": 5, "query": "journald audit memguardd"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:20 luo-pc memguardd[207652]: {"detail": {"count": 5, "query": "mmap precise forgetting compact"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:20 luo-pc memguardd[207654]: {"detail": {"count": 5, "query": "cgroup CPUQuota service"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:20 luo-pc memguardd[207656]: {"detail": {"count": 5, "query": "auditd sensitive path"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:20 luo-pc memguardd[207658]: {"detail": {"count": 5, "query": "openKylin systemd MemoryMax"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:20 luo-pc memguardd[207660]: {"detail": {"count": 5, "query": "journald audit memguardd"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:20 luo-pc memguardd[207662]: {"detail": {"count": 5, "query": "mmap precise forgetting compact"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:20 luo-pc memguardd[207664]: {"detail": {"count": 5, "query": "cgroup CPUQuota service"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:20 luo-pc memguardd[207666]: {"detail": {"count": 5, "query": "auditd sensitive path"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:21 luo-pc memguardd[207669]: {"detail": {"count": 5, "query": "openKylin systemd MemoryMax"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:21 luo-pc memguardd[207671]: {"detail": {"count": 5, "query": "journald audit memguardd"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:21 luo-pc memguardd[207673]: {"detail": {"count": 5, "query": "mmap precise forgetting compact"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:21 luo-pc memguardd[207675]: {"detail": {"count": 5, "query": "cgroup CPUQuota service"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:21 luo-pc memguardd[207677]: {"detail": {"count": 5, "query": "auditd sensitive path"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:21 luo-pc memguardd[207679]: {"detail": {"count": 5, "query": "openKylin systemd MemoryMax"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:21 luo-pc memguardd[207681]: {"detail": {"count": 5, "query": "journald audit memguardd"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:21 luo-pc memguardd[207683]: {"detail": {"count": 5, "query": "mmap precise forgetting compact"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:21 luo-pc memguardd[207685]: {"detail": {"count": 5, "query": "cgroup CPUQuota service"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:21 luo-pc memguardd[207687]: {"detail": {"count": 5, "query": "auditd sensitive path"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:21 luo-pc memguardd[207689]: {"detail": {"count": 5, "query": "openKylin systemd MemoryMax"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:21 luo-pc memguardd[207691]: {"detail": {"count": 5, "query": "journald audit memguardd"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:21 luo-pc memguardd[207693]: {"detail": {"count": 5, "query": "mmap precise forgetting compact"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:22 luo-pc memguardd[207695]: {"detail": {"count": 5, "query": "cgroup CPUQuota service"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:22 luo-pc memguardd[207699]: {"detail": {"count": 5, "query": "auditd sensitive path"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:22 luo-pc memguardd[207701]: {"detail": {"count": 5, "query": "openKylin systemd MemoryMax"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:22 luo-pc memguardd[207703]: {"detail": {"count": 5, "query": "journald audit memguardd"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:22 luo-pc memguardd[207705]: {"detail": {"count": 5, "query": "mmap precise forgetting compact"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:22 luo-pc memguardd[207707]: {"detail": {"count": 5, "query": "cgroup CPUQuota service"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:22 luo-pc memguardd[207709]: {"detail": {"count": 5, "query": "auditd sensitive path"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:22 luo-pc memguardd[207711]: {"detail": {"count": 5, "query": "openKylin systemd MemoryMax"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:22 luo-pc memguardd[207713]: {"detail": {"count": 5, "query": "journald audit memguardd"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:22 luo-pc memguardd[207715]: {"detail": {"count": 5, "query": "mmap precise forgetting compact"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:22 luo-pc memguardd[207717]: {"detail": {"count": 5, "query": "cgroup CPUQuota service"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:22 luo-pc memguardd[207719]: {"detail": {"count": 5, "query": "auditd sensitive path"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:22 luo-pc memguardd[207721]: {"detail": {"count": 5, "query": "openKylin systemd MemoryMax"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:23 luo-pc memguardd[207723]: {"detail": {"count": 5, "query": "journald audit memguardd"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:23 luo-pc memguardd[207726]: {"detail": {"count": 5, "query": "mmap precise forgetting compact"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:23 luo-pc memguardd[207728]: {"detail": {"count": 5, "query": "cgroup CPUQuota service"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:23 luo-pc memguardd[207730]: {"detail": {"count": 5, "query": "auditd sensitive path"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:23 luo-pc memguardd[207732]: {"detail": {"count": 5, "query": "openKylin systemd MemoryMax"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:23 luo-pc memguardd[207734]: {"detail": {"count": 5, "query": "journald audit memguardd"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:23 luo-pc memguardd[207736]: {"detail": {"count": 5, "query": "mmap precise forgetting compact"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:23 luo-pc memguardd[207738]: {"detail": {"count": 5, "query": "cgroup CPUQuota service"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:23 luo-pc memguardd[207740]: {"detail": {"count": 5, "query": "auditd sensitive path"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:23 luo-pc memguardd[207742]: {"detail": {"count": 5, "query": "openKylin systemd MemoryMax"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:23 luo-pc memguardd[207744]: {"detail": {"count": 5, "query": "journald audit memguardd"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:23 luo-pc memguardd[207746]: {"detail": {"count": 5, "query": "mmap precise forgetting compact"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:23 luo-pc memguardd[207748]: {"detail": {"count": 5, "query": "cgroup CPUQuota service"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:23 luo-pc memguardd[207750]: {"detail": {"count": 5, "query": "auditd sensitive path"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:24 luo-pc memguardd[207754]: {"detail": {"count": 5, "query": "openKylin systemd MemoryMax"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:24 luo-pc memguardd[207756]: {"detail": {"count": 5, "query": "journald audit memguardd"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:24 luo-pc memguardd[207758]: {"detail": {"count": 5, "query": "mmap precise forgetting compact"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:24 luo-pc memguardd[207760]: {"detail": {"count": 5, "query": "cgroup CPUQuota service"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:24 luo-pc memguardd[207762]: {"detail": {"count": 5, "query": "auditd sensitive path"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:24 luo-pc memguardd[207764]: {"detail": {"count": 5, "query": "openKylin systemd MemoryMax"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:24 luo-pc memguardd[207766]: {"detail": {"count": 5, "query": "journald audit memguardd"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:24 luo-pc memguardd[207768]: {"detail": {"count": 5, "query": "mmap precise forgetting compact"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:24 luo-pc memguardd[207770]: {"detail": {"count": 5, "query": "cgroup CPUQuota service"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:24 luo-pc memguardd[207772]: {"detail": {"count": 5, "query": "auditd sensitive path"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:24 luo-pc memguardd[207775]: {"detail": {"labels": [], "sensitivity": "none", "source_kind": "user_behavior", "source_uri": "/home/luo/.bash_history#1", "subtype": "behavior_risk", "tier": "session", "type": "knowledge"}, "event_type": "ingest", "memory_id": "mem_1535ea91fd114c56"}
+5月 20 20:53:24 luo-pc memguardd[207777]: {"detail": {"labels": [], "sensitivity": "none", "source_kind": "user_behavior", "source_uri": "/home/luo/.bash_history#2", "subtype": "behavior_risk", "tier": "session", "type": "knowledge"}, "event_type": "ingest", "memory_id": "mem_21a6eb6637ed4337"}
+5月 20 20:53:24 luo-pc memguardd[207779]: {"detail": {"labels": [], "sensitivity": "none", "source_kind": "user_behavior", "source_uri": "/home/luo/.bash_history#3", "subtype": "behavior_risk", "tier": "session", "type": "knowledge"}, "event_type": "ingest", "memory_id": "mem_b9f4601f4f534e8a"}
+5月 20 20:53:24 luo-pc memguardd[207781]: {"detail": {"labels": [], "sensitivity": "none", "source_kind": "user_behavior", "source_uri": "/home/luo/.bash_history#4", "subtype": "behavior_risk", "tier": "session", "type": "knowledge"}, "event_type": "ingest", "memory_id": "mem_061c0aaed4d54fd0"}
+5月 20 20:53:24 luo-pc memguardd[207783]: {"detail": {"blocked": 0, "events": 4, "source_uri": "/home/luo/.bash_history", "stored": 4}, "event_type": "behavior_ingest", "memory_id": null}
+5月 20 20:53:25 luo-pc memguardd[207787]: {"detail": {"count": 5, "query": "openKylin 服务内存限制"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:25 luo-pc memguardd[207789]: {"detail": {"effective_max_chars": 1846, "estimated_context_tokens": 272, "max_chars": 2000, "memory_count": 5, "query": "openKylin 服务内存限制", "token_budget": 1200, "truncated": false}, "event_type": "context_build", "memory_id": null}
+5月 20 20:53:25 luo-pc memguardd[207792]: {"detail": {"count": 5, "query": "openKylin 服务内存限制"}, "event_type": "search", "memory_id": null}
+5月 20 20:53:25 luo-pc memguardd[207794]: {"detail": {"effective_max_chars": 1846, "estimated_context_tokens": 272, "max_chars": 2000, "memory_count": 5, "query": "openKylin 服务内存限制", "token_budget": 1200, "truncated": false}, "event_type": "context_build", "memory_id": null}
+5月 20 20:53:25 luo-pc memguardd[207819]: {"detail": {"labels": [], "sensitivity": "none", "source_kind": "manual", "source_uri": "inline", "subtype": "fact", "tier": "long_term", "type": "knowledge"}, "event_type": "ingest", "memory_id": "mem_5337e3d740f04792"}
+5月 20 20:53:25 luo-pc memguardd[207822]: {"detail": {"actual_hash": "24dbff7478cacbc8d680752641aa77cc8cdede7a11f180dcd2f7d07960bb26d7", "checked": 791, "expected_hash": "77149f765cca4212c2bbaa3ac3db6045885cb6831230ba10b76a5c86a8ac952d", "failed_audit_id": 792, "ok": false}, "event_type": "audit_verify", "memory_id": null}

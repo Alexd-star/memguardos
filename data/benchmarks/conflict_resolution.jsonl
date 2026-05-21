@@ -1,0 +1,6 @@
+{"records":[{"text":"以后回答命令时使用中文。","source_kind":"manual"},{"text":"以后回答命令时使用英文。","source_kind":"inferred"}],"expected_contains":"中文","case":"explicit_manual_beats_inferred"}
+{"records":[{"text":"以后 Linux 命令回答要详细解释背景。","source_kind":"inferred"},{"text":"以后 Linux 命令回答要简洁，只给命令和风险。","source_kind":"manual"}],"expected_contains":"简洁","case":"manual_security_style"}
+{"records":[{"text":"以后在代码仓库中查找文本时优先使用 grep。","source_kind":"inferred"},{"text":"以后在代码仓库中查找文本时优先使用 rg，不要优先使用 grep。","source_kind":"manual"}],"expected_contains":"rg","case":"code_search_manual_beats_inferred"}
+{"records":[{"text":"以后执行删除、覆盖、密钥导出等高风险操作前不需要确认。","source_kind":"inferred"},{"text":"以后执行删除、覆盖、密钥导出等高风险操作前必须先让我确认。","source_kind":"manual"}],"expected_contains":"确认","case":"high_risk_manual_confirmation"}
+{"records":[{"text":"以后回答命令时使用中文。","source_kind":"manual"},{"text":"以后回答命令时使用英文。","source_kind":"update"}],"expected_contains":"英文","case":"latest_update_beats_old_manual"}
+{"records":[{"text":"以后回答命令时使用英文。","source_kind":"inferred"},{"text":"以后回答命令时使用中文。","source_kind":"rollback"}],"expected_contains":"中文","case":"rollback_beats_inferred"}

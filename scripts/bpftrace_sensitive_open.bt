@@ -1,0 +1,11 @@
+tracepoint:syscalls:sys_enter_openat
+/str(args->filename) == "/etc/shadow"/
+{
+  printf("{\"event_type\":\"ebpf_openat\",\"path\":\"%s\",\"process\":\"%s\",\"pid\":%d,\"action\":\"open\"}\n", str(args->filename), comm, pid);
+}
+
+tracepoint:syscalls:sys_enter_openat
+/str(args->filename) == "/etc/passwd"/
+{
+  printf("{\"event_type\":\"ebpf_openat\",\"path\":\"%s\",\"process\":\"%s\",\"pid\":%d,\"action\":\"open\"}\n", str(args->filename), comm, pid);
+}

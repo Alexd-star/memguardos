@@ -1,0 +1,20 @@
+$ cat /etc/os-release 2>/dev/null || true; uname -a; python3 --version; python3 - <<'PY'
+import sqlite3, platform
+print('platform=' + platform.platform())
+print('sqlite=' + sqlite3.sqlite_version)
+PY
+
+NAME="openKylin"
+FULL_NAME="openKylin"
+VERSION="2.0 SP2 (nile)"
+VERSION_US="2.0 SP2 (nile)"
+ID=openkylin
+PRETTY_NAME="openKylin 2.0 SP2"
+VERSION_ID="2.0"
+HOME_URL="https://www.openkylin.top/"
+VERSION_CODENAME=nile
+PRODUCT_FEATURES=3
+Linux luo-pc 6.6.0-19-generic #0ok4-KYLINOS SMP PREEMPT_DYNAMIC Fri Dec 19 07:42:23 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+Python 3.12.2
+platform=Linux-6.6.0-19-generic-x86_64-with-glibc2.38
+sqlite=3.42.0

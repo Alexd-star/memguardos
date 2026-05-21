@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "memguardos"
+version = "0.1.0"
+description = "Linux-oriented agent memory extraction and precise forgetting prototype"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+memctl = "memguard.cli.memctl:main"
+memguardd = "memguard.daemon:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.setuptools.packages.find]
+include = ["memguard*"]
+exclude = ["data*", "docs*", "scripts*", "tests*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

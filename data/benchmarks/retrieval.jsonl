@@ -1,0 +1,17 @@
+{"query":"openKylin 怎么限制服务内存？","expected":["knowledge_systemd_memory_en","knowledge_openkylin_service_zh"],"k":5,"case":"cross_language"}
+{"query":"如何查看 memguardd 的审计日志？","expected":["knowledge_journald_en"],"k":5,"case":"audit"}
+{"query":"精准遗忘需要哪些步骤？","expected":["knowledge_forget_workflow_zh"],"k":5,"case":"forgetting"}
+{"query":"mmap COW 版本化存储怎么做？","expected":["knowledge_mmap_cow_zh"],"k":5,"case":"os_storage"}
+{"query":"用户希望 Linux 命令回答简洁吗？","expected":["pref_linux_brief_zh"],"k":5,"case":"preference"}
+{"query":"代码搜索应该优先用什么工具？","expected":["pref_tool_rg_first"],"k":5,"case":"tool_preference"}
+{"query":"删除文件或导出密钥前要不要确认？","expected":["pref_security_confirm_delete"],"k":5,"case":"security_policy"}
+{"query":"How does Kylin vector database SDK expose similarity search?","expected":["knowledge_vector_sdk_en"],"k":5,"case":"vector_sdk"}
+{"query":"openKylin 端侧 embedding 模型是多少维？","expected":["knowledge_embedding_sdk_zh"],"k":5,"case":"embedding_sdk"}
+{"query":"systemd unit 资源限制模板怎么写？","expected":["knowledge_template_systemd_unit"],"k":5,"case":"template"}
+{"query":"auditd 监控 shadow 会产生什么事件？","expected":["knowledge_auditd_shadow_case"],"k":5,"case":"auditd_case"}
+{"query":"fanotify 怎么把敏感目录访问转成 OS event？","expected":["knowledge_fanotify_sensitive_dir"],"k":5,"case":"fanotify"}
+{"query":"eBPF 可以补充哪些敏感访问证据？","expected":["knowledge_ebpf_openat_probe"],"k":5,"case":"ebpf"}
+{"query":"shell history 里的 pytest 命令属于什么用户行为记忆？","expected":["knowledge_behavior_shell_history"],"k":5,"case":"behavior_history"}
+{"query":"为了省 token 能不能默认牺牲 RAG 上下文相关性？","expected":["knowledge_context_token_budget"],"k":5,"case":"token_budget"}
+{"query":"openKylin 桌面通知可以怎么联动 MemGuardOS？","expected":["knowledge_ukui_notification"],"k":5,"case":"ukui_notify"}
+{"query":"OS Agent 如何通过本地接口调用 MemGuardOS 记忆？","expected":["knowledge_socket_local_api"],"k":5,"case":"local_api"}

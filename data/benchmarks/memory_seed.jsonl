@@ -1,0 +1,22 @@
+{"label":"pref_linux_brief_zh","text":"以后回答 Linux 命令时直接给命令和风险提示，不要写太长背景。","expected_type":"preference","expected_subtype":"tool_preference"}
+{"label":"pref_output_chinese","text":"我偏好中文回答，除非我明确要求英文。","expected_type":"preference","expected_subtype":"output_style"}
+{"label":"pref_security_no_secret","text":"安全策略：不要把 API key、token、密码保存到长期记忆里。","expected_type":"sensitive_policy","expected_subtype":"security_policy"}
+{"label":"knowledge_systemd_memory_en","text":"On systemd-based Linux distributions, MemoryMax limits service memory usage and CPUQuota limits CPU time. Use systemctl daemon-reload after editing unit files.","expected_type":"knowledge","expected_subtype":"workflow"}
+{"label":"knowledge_journald_en","text":"journald audit logs can be queried with journalctl -t memguardd or journalctl -u memguardd to inspect service events.","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_openkylin_service_zh","text":"openKylin 上可以通过 systemd service 管理后台进程，并用 systemctl status 查看运行状态。","expected_type":"knowledge","expected_subtype":"workflow"}
+{"label":"knowledge_forget_workflow_zh","text":"精准遗忘流程包括候选定位、dry-run 预览、用户确认、元数据删除、向量索引清理、图边清理、缓存失效和审计记录。","expected_type":"knowledge","expected_subtype":"workflow"}
+{"label":"knowledge_mmap_cow_zh","text":"mmap 版本化存储可以采用 append-only segment，每次更新追加新版本，删除写入 tombstone，compact 后移除旧明文。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"pref_tool_rg_first","text":"以后在代码仓库中查找文本时优先使用 rg，不要优先使用 grep。","expected_type":"preference","expected_subtype":"tool_preference"}
+{"label":"pref_output_short_risk","text":"回答运维命令时请先给最短可执行命令，再补充风险提醒。","expected_type":"preference","expected_subtype":"output_style"}
+{"label":"pref_security_confirm_delete","text":"安全策略：执行删除、覆盖、密钥导出等高风险操作前必须先让我确认。","expected_type":"sensitive_policy","expected_subtype":"security_policy"}
+{"label":"knowledge_auditd_shadow_case","text":"案例：auditd 监控 /etc/shadow 访问时，会产生带 key=memguard_sensitive 的 SYSCALL 和 PATH 事件。","expected_type":"knowledge","expected_subtype":"case"}
+{"label":"knowledge_vector_sdk_en","text":"Kylin AI vector engine provides a lightweight vector database service with a Unix socket and a C++ client SDK for similarity search.","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_embedding_sdk_zh","text":"openKylin 的 Kylin CoreAI embedding SDK 可以返回端侧文本向量模型信息，例如 768 维 on-device embedding。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_template_systemd_unit","text":"模板：systemd 服务单元可以配置 WorkingDirectory、ExecStart、MemoryMax、CPUQuota 和 Restart。","expected_type":"knowledge","expected_subtype":"template"}
+{"label":"knowledge_forget_negative_cache","text":"知识：普通缓存清理不等于精准遗忘，不能替代候选证明、索引清理和审计链。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_fanotify_sensitive_dir","text":"fanotify 可以监听指定敏感目录的文件打开事件，并把 path、process、action 转换为 OS event。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_ebpf_openat_probe","text":"eBPF 或 bpftrace 可以观察 openat/read 等系统调用，用于补充 auditd 之外的敏感访问证据。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_behavior_shell_history","text":"User behavior: shell_command tool=pytest category=routine source=.bash_history index=2 command=pytest -q","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_context_token_budget","text":"RAG 上下文包应优先保证相关性和安全性，token 预算只作为显式配置的裁剪和成本观测指标。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_ukui_notification","text":"openKylin UKUI 轻量联动可以通过 freedesktop notify-send 向桌面通知守护进程发送 MemGuardOS 安全提示。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_socket_local_api","text":"MemGuardOS daemon 通过 Unix domain socket 提供本地 JSON API，适合 OS Agent 在本机调用 search、ingest 和 build_context。","expected_type":"knowledge","expected_subtype":"fact"}

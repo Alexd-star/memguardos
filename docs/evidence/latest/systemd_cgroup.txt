@@ -1,0 +1,36 @@
+$ systemctl status memguardd --no-pager || true; systemctl show memguardd -p MemoryMax -p CPUQuotaPerSecUSec || true; cat /sys/fs/cgroup/system.slice/memguardd.service/memory.max 2>/dev/null || true; cat /sys/fs/cgroup/system.slice/memguardd.service/cpu.max 2>/dev/null || true; python3 -m memguard.cli.memctl status || true
+
+● memguardd.service - MemGuardOS agent memory service
+     Loaded: loaded (/etc/systemd/system/memguardd.service; disabled; preset: enabled)
+     Active: active (running) since Tue 2026-05-19 21:34:44 CST; 23h ago
+   Main PID: 25287 (python3)
+      Tasks: 2 (limit: 6991)
+     Memory: 11.1M (max: 512.0M available: 500.8M peak: 13.1M)
+        CPU: 23.152s
+     CGroup: /system.slice/memguardd.service
+             └─25287 /usr/bin/python3 -m memguard.daemon --interval 60 --socket /run/memguardos/memguard.sock --socket-mode 666
+
+5月 20 20:38:05 luo-pc memguardd[199821]: {"detail": {"cgroup_v2": true, "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 20 20:42:05 luo-pc memguardd[200193]: {"detail": {"cgroup_v2": true, "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 20 20:45:05 luo-pc memguardd[200507]: {"detail": {"cgroup_v2": true, "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 20 20:46:05 luo-pc memguardd[200722]: {"detail": {"cgroup_v2": true, "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 20 20:47:05 luo-pc memguardd[200848]: {"detail": {"cgroup_v2": true, "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 20 20:48:06 luo-pc memguardd[200942]: {"detail": {"cgroup_v2": true, "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 20 20:49:06 luo-pc memguardd[201034]: {"detail": {"cgroup_v2": true, "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 20 20:51:06 luo-pc memguardd[201240]: {"detail": {"cgroup_v2": true, "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 20 20:52:06 luo-pc memguardd[204288]: {"detail": {"cgroup_v2": true, "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 20 20:53:06 luo-pc memguardd[206262]: {"detail": {"cgroup_v2": true, "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+CPUQuotaPerSecUSec=500ms
+MemoryMax=536870912
+536870912
+50000 100000
+{
+  "platform": "Linux",
+  "is_linux": true,
+  "cgroup_v2_mounted": true,
+  "proc_cgroup": "0::/user.slice/user-1000.slice/session-73.scope",
+  "memory_current": null,
+  "memory_max": null,
+  "cpu_max": null,
+  "pid": 207814
+}

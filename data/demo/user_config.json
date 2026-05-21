@@ -1,0 +1,17 @@
+{
+  "answer": {
+    "language": "中文",
+    "verbosity": "简洁但保留风险提示"
+  },
+  "tools": {
+    "code_search": "优先使用 rg，不优先使用 grep",
+    "linux_service": "优先使用 systemctl 和 journalctl"
+  },
+  "security": {
+    "high_risk_confirmation": "删除、覆盖、密钥导出等高风险操作前必须先确认",
+    "memory_policy": "不要把 token、密码、私钥写入长期记忆"
+  },
+  "workflow": {
+    "openkylin_service_check": "先 systemctl status，再 journalctl -u 查看日志，最后检查 cgroup 限制"
+  }
+}

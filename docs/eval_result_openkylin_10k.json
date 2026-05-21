@@ -1,0 +1,69 @@
+{
+  "dataset": {
+    "seed_memories": 22,
+    "retrieval_cases": 17,
+    "sensitive_cases": 18,
+    "forgetting_cases": 12,
+    "conflict_cases": 6,
+    "graph_cases": 8
+  },
+  "preference_and_knowledge_extraction": {
+    "type_accuracy": 1.0,
+    "subtype_accuracy": 1.0
+  },
+  "retrieval": {
+    "mean_recall_at_5": 1.0,
+    "cross_language_recall_at_5": 1.0,
+    "p50_latency_ms": 18.845,
+    "p95_latency_ms": 24.945
+  },
+  "baseline_comparison": {
+    "text_only_recall_at_5": 0.7941,
+    "hybrid_no_graph_recall_at_5": 1.0,
+    "full_memguardos_recall_at_5": 1.0
+  },
+  "sensitive_detection": {
+    "block_f1": 1.0,
+    "redaction_f1": 1.0,
+    "label_f1": 1.0
+  },
+  "forgetting": {
+    "candidate_precision": 1.0,
+    "candidate_recall": 1.0,
+    "keep_success": 1.0
+  },
+  "conflict_resolution": {
+    "correctness": 1.0
+  },
+  "graph_memory": {
+    "entity_recall_at_5": 1.0
+  },
+  "memory_tiers": {
+    "flow_ok": true,
+    "working_session_long_term_supported": true
+  },
+  "latency_load": {
+    "memory_count": 10000,
+    "query_count": 150,
+    "p50_latency_ms": 222.848,
+    "p95_latency_ms": 242.053,
+    "p99_latency_ms": 260.004,
+    "segment_kb": 28196.15,
+    "sqlite_kb": 37092.0,
+    "total_store_kb": 65288.15
+  },
+  "resource_usage": {
+    "eval_wall_time_ms": 235791.859,
+    "eval_cpu_time_ms": 141891.512,
+    "tracemalloc_current_kb": 177.464,
+    "tracemalloc_peak_kb": 15218.368,
+    "process_rss_kb": 61296.0
+  },
+  "storage_footprint": {
+    "main_segment_kb": 57.385,
+    "main_sqlite_kb": 168.0,
+    "total_eval_store_kb": 288.696,
+    "bytes_per_live_memory": 9238.281
+  },
+  "memory_count": 32
+}

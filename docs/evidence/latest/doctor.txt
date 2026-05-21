@@ -1,0 +1,70 @@
+$ python3 -m memguard.cli.memctl doctor
+
+[1779281543255] [32minfo [0m Proxy init engine sessionId:1939104454.
+{
+  "python": "3.12.2",
+  "platform": "Linux-6.6.0-19-generic-x86_64-with-glibc2.38",
+  "home": "/home/luo/.memguardos",
+  "store_path": "/home/luo/.memguardos/memory.segment",
+  "db_path": "/home/luo/.memguardos/memguard.sqlite3",
+  "sqlite_version": "3.42.0",
+  "commands": {
+    "systemctl": "/usr/bin/systemctl",
+    "journalctl": "/usr/bin/journalctl",
+    "systemd-cat": "/usr/bin/systemd-cat",
+    "auditctl": "/usr/sbin/auditctl",
+    "bpftrace": null
+  },
+  "paths": {
+    "proc": true,
+    "sys_fs_cgroup": true
+  },
+  "cgroup": {
+    "platform": "Linux",
+    "is_linux": true,
+    "cgroup_v2_mounted": true,
+    "proc_cgroup": "0::/user.slice/user-1000.slice/session-73.scope",
+    "memory_current": null,
+    "memory_max": null,
+    "cpu_max": null,
+    "pid": 204535
+  },
+  "kylin_ai_sdk": {
+    "embedding": {
+      "backend": "kylin_coreai_embedding",
+      "library": "libkysdk-coreai-embedding.so.1",
+      "library_loadable": true,
+      "headers": {
+        "/usr/include/kylin-ai/coreai/embedding/embedding.h": true,
+        "/usr/include/kylin-ai/plugins/ai-engines/ondeviceembeddingengine.h": true
+      },
+      "model_info": {
+        "dim": 768,
+        "name": "ensemble-embd_gte-base_uint8-text",
+        "ondevice": true
+      },
+      "embedding_probe": null,
+      "available": true,
+      "fallback": "hash_embedding"
+    },
+    "vector_store": {
+      "backend": "kysdk_vector_engine_client",
+      "library": "libkysdk-vector-engine-client.so.1",
+      "library_loadable": true,
+      "headers": {
+        "/usr/include/kysdk-vector-engine-client/Database.h": true
+      },
+      "binary": "/usr/bin/kylin-ai-vector-engine",
+      "default_binary": "/usr/bin/kylin-ai-vector-engine-default",
+      "user_service": {
+        "available": true,
+        "active": true,
+        "state": "active"
+      },
+      "socket": "/tmp/kylin-ai-vector-engine-1000.sock",
+      "socket_exists": true,
+      "available": true,
+      "fallback": "sqlite_fts_hash_vector"
+    }
+  }
+}

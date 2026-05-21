@@ -1,0 +1,18 @@
+{"text":"我的邮箱是 user@example.com，请用于测试。","source_uri":"inline","expect_stored":true,"expect_redacted":true,"labels":["email"]}
+{"text":"联系电话 13800138000 是测试号码。","source_uri":"inline","expect_stored":true,"expect_redacted":true,"labels":["phone_cn"]}
+{"text":"HF token is hf_abcdefghijklmnopqrstuvwxyz123456","source_uri":"/home/u/.env","expect_stored":false,"expect_redacted":false,"labels":["api_key","sensitive_os_source"]}
+{"text":"-----BEGIN PRIVATE KEY----- abcdefg -----END PRIVATE KEY-----","source_uri":"/home/u/.ssh/id_rsa","expect_stored":false,"expect_redacted":false,"labels":["private_key","sensitive_os_source"]}
+{"text":"普通 Linux workflow 文档，没有敏感信息。","source_uri":"inline","expect_stored":true,"expect_redacted":false,"labels":[]}
+{"text":"OS event: auditd_access action=open path=/etc/shadow process=/usr/bin/cat","source_uri":"/etc/shadow","expect_stored":false,"expect_redacted":false,"labels":["sensitive_os_source"]}
+{"text":"OS event: auditd_access action=open path=/home/luo/.ssh/authorized_keys process=/usr/sbin/sshd","source_uri":"/home/luo/.ssh/authorized_keys","expect_stored":false,"expect_redacted":false,"labels":["sensitive_os_source"]}
+{"text":"我的姓名是张三，用于测试报告。","source_uri":"inline","expect_stored":true,"expect_redacted":true,"labels":["person_name_cn"]}
+{"text":"GitHub token: github_pat_abcdefghijklmnopqrstuvwxyz123456","source_uri":"inline","expect_stored":false,"expect_redacted":false,"labels":["api_key","token_assignment"]}
+{"text":"API_KEY=abcd1234efgh5678","source_uri":"inline","expect_stored":false,"expect_redacted":false,"labels":["token_assignment"]}
+{"text":"配置项 password_policy=strong 只是策略说明，不包含真实密码。","source_uri":"inline","expect_stored":true,"expect_redacted":false,"labels":[]}
+{"text":"联系人姓名是张三，作为隐私测试样例。","source_uri":"inline","expect_stored":true,"expect_redacted":true,"labels":["person_name_cn"]}
+{"text":"收货地址是北京市海淀区中关村东路1号2号楼305室。","source_uri":"inline","expect_stored":true,"expect_redacted":true,"labels":["address_cn"]}
+{"text":"银行卡号 6222 0202 0202 0202 020 是测试样例。","source_uri":"inline","expect_stored":true,"expect_redacted":true,"labels":["bank_card"]}
+{"text":"AWS access key AKIAABCDEFGHIJKLMNOP should never enter long-term memory.","source_uri":"inline","expect_stored":false,"expect_redacted":false,"labels":["aws_access_key_id"]}
+{"text":"token bucket 算法是一种限流算法，不是访问令牌。","source_uri":"inline","expect_stored":true,"expect_redacted":false,"labels":[]}
+{"text":"User behavior: shell_command tool=cat category=high_risk command=cat /home/luo/.ssh/id_rsa","source_uri":"/home/luo/.ssh/id_rsa","expect_stored":false,"expect_redacted":false,"labels":["sensitive_os_source"]}
+{"text":"自然语言里提到 token 成本控制，不代表出现真实访问令牌。","source_uri":"inline","expect_stored":true,"expect_redacted":false,"labels":[]}

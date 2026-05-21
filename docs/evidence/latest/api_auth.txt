@@ -1,0 +1,11 @@
+$ python3 - <<'PY'
+from memguard.api.server import handle_request
+from memguard.service import MemGuardService
+
+service = MemGuardService()
+print(handle_request(service, {'command': 'health'}, auth_token='local-secret'))
+print(handle_request(service, {'command': 'health', 'token': 'local-secret'}, auth_token='local-secret'))
+PY
+
+{'ok': False, 'error': 'unauthorized'}
+{'ok': True, 'result': {'status': 'ready'}}

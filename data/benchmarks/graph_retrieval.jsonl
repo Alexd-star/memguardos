@@ -1,0 +1,8 @@
+{"entity":"systemd","expected":["knowledge_systemd_memory_en","knowledge_openkylin_service_zh"],"case":"service_memory"}
+{"entity":"journald","expected":["knowledge_journald_en"],"case":"audit_log"}
+{"entity":"mmap","expected":["knowledge_mmap_cow_zh"],"case":"versioned_storage"}
+{"entity":"precise_forgetting","expected":["knowledge_forget_workflow_zh"],"case":"forgetting_workflow"}
+{"entity":"fanotify","expected":["knowledge_fanotify_sensitive_dir"],"case":"os_event_producer"}
+{"entity":"eBPF","expected":["knowledge_ebpf_openat_probe"],"case":"syscall_probe"}
+{"entity":"pytest","expected":["knowledge_behavior_shell_history"],"case":"behavior_tool"}
+{"entity":"MemGuardOS","expected":["knowledge_ukui_notification","knowledge_socket_local_api"],"case":"agent_api"}

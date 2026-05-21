@@ -1,0 +1,48 @@
+$ python3 -m memguard.cli.memctl sdk-status --probe-embedding
+
+[1779281543597] [32minfo [0m Proxy init engine sessionId:375535276.
+[1779281543602] [32minfo [0m Proxy init engine sessionId:1677607982.
+[Dbus-close:aisdk_text]: Timeout was reached
+{
+  "embedding": {
+    "backend": "kylin_coreai_embedding",
+    "library": "libkysdk-coreai-embedding.so.1",
+    "library_loadable": true,
+    "headers": {
+      "/usr/include/kylin-ai/coreai/embedding/embedding.h": true,
+      "/usr/include/kylin-ai/plugins/ai-engines/ondeviceembeddingengine.h": true
+    },
+    "model_info": {
+      "dim": 768,
+      "name": "ensemble-embd_gte-base_uint8-text",
+      "ondevice": true
+    },
+    "embedding_probe": {
+      "ok": false,
+      "error_code": 3,
+      "error_message": "Timeout was reached",
+      "length": 0
+    },
+    "available": true,
+    "fallback": "hash_embedding"
+  },
+  "vector_store": {
+    "backend": "kysdk_vector_engine_client",
+    "library": "libkysdk-vector-engine-client.so.1",
+    "library_loadable": true,
+    "headers": {
+      "/usr/include/kysdk-vector-engine-client/Database.h": true
+    },
+    "binary": "/usr/bin/kylin-ai-vector-engine",
+    "default_binary": "/usr/bin/kylin-ai-vector-engine-default",
+    "user_service": {
+      "available": true,
+      "active": true,
+      "state": "active"
+    },
+    "socket": "/tmp/kylin-ai-vector-engine-1000.sock",
+    "socket_exists": true,
+    "available": true,
+    "fallback": "sqlite_fts_hash_vector"
+  }
+}

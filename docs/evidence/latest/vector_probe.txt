@@ -1,0 +1,12 @@
+$ bash scripts/run_kylin_vector_probe.sh /home/luo/memguardos
+
+connect: code=0 ok=true msg=OK
+has_before: code=0 ok=true msg=
+create: code=0 ok=true msg=OK
+insert: code=0 ok=true msg=
+load: code=0 ok=true msg=
+add_vector: code=0 ok=true msg=OK
+search: code=0 ok=true msg=
+hit id=1 score=1
+hit id=2 score=0
+cleanup_drop: code=0 ok=true msg=

@@ -1,0 +1,13 @@
+$ python3 -m memguard.cli.memctl auditd-rules --format auditctl; sudo auditctl -l 2>/dev/null | grep memguard_sensitive || true
+
+auditctl -w /home/luo/.ssh -p rwxa -k memguard_sensitive
+auditctl -w /home/luo/.config -p rwxa -k memguard_sensitive
+auditctl -w /home/luo/.env -p rwxa -k memguard_sensitive
+auditctl -w /etc/ssh -p rwxa -k memguard_sensitive
+auditctl -w /etc/passwd -p rwxa -k memguard_sensitive
+auditctl -w /etc/shadow -p rwxa -k memguard_sensitive
+-w /home/luo/.ssh -p rwxa -k memguard_sensitive
+-w /home/luo/.config -p rwxa -k memguard_sensitive
+-w /etc/ssh -p rwxa -k memguard_sensitive
+-w /etc/passwd -p rwxa -k memguard_sensitive
+-w /etc/shadow -p rwxa -k memguard_sensitive

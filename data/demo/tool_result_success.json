@@ -1,0 +1,14 @@
+{
+  "command": "pytest -q",
+  "cwd": "/home/demo/project",
+  "exit_code": 0,
+  "stdout": "17 passed in 1.99s",
+  "stderr": "",
+  "duration_ms": 1990,
+  "generated_files": [
+    "docs/eval_report.md",
+    "docs/test_report.md"
+  ],
+  "tool_name": "pytest"
+}
+
