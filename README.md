@@ -69,6 +69,29 @@ bash scripts/collect_openkylin_evidence.sh
 - [测试报告](docs/测试报告.md)
 - [演示脚本](docs/演示视频脚本.md)
 - [答辩提纲](docs/答辩提纲.md)
+- [提交材料边界说明](docs/提交材料边界说明.md)
+- [发布检查清单](docs/发布检查清单.md)
+
+## 工程化
+
+仓库包含 GitHub Actions、Issue/PR 模板、贡献指南、安全策略、变更日志和提交材料边界说明。这些文件用于开源协作、持续集成和回溯备份；参赛功能主体仍是 `memguard/`、`scripts/`、`tests/`、`data/` 和中文 `docs/`。
+
+```powershell
+python -m pip install -e ".[dev]"
+make ci
+python scripts/package_submission.py
+```
+
+如果 Windows 环境没有 `make`，使用以下等价命令：
+
+```powershell
+python -m compileall -q memguard scripts
+python -m ruff check memguard tests scripts
+python -m pytest -q
+python scripts/check_docs_links.py
+```
+
+`scripts/package_submission.py` 会同时生成 `memguardos_competition_submission_*.zip` 和 `memguardos_full_repository_*.zip`。竞赛平台提交优先使用前者；后者用于 GitHub release、备份或完整工程交付。
 
 ## 验证命令
 

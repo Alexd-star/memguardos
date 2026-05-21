@@ -1,4 +1,4 @@
-.PHONY: test eval demo doctor lint package clean
+.PHONY: test eval demo doctor lint coverage docs-check ci package clean
 
 test:
 	python -m pytest -q
@@ -21,6 +21,14 @@ demo:
 lint:
 	python -m compileall -q memguard scripts
 	python -m ruff check memguard tests scripts
+
+coverage:
+	python -m pytest --cov=memguard --cov=scripts --cov-report=term-missing
+
+docs-check:
+	python scripts/check_docs_links.py
+
+ci: lint test docs-check
 
 package:
 	python scripts/package_submission.py
