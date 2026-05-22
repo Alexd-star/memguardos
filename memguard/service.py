@@ -1,7 +1,15 @@
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from memguard.config import custom_patterns_path, default_db_path, default_store_path
+from memguard.config import (
+    DEFAULT_NAMESPACE,
+    custom_patterns_path,
+    default_db_path,
+    default_store_path,
+    get_home,
+    list_namespaces,
+    normalize_namespace,
+)
 from memguard.extraction.entity import extract_entities, extract_relations
 from memguard.forgetting.planner import ForgetPlanner
 from memguard.ingestion.behavior import BehaviorEvent, load_shell_history
@@ -20,10 +28,14 @@ from memguard.store.sqlite_meta import SQLiteMetaStore
 
 
 class MemGuardService:
-    def __init__(self, store_path: Optional[Path] = None, db_path: Optional[Path] = None):
-        self.store = AppendOnlyMemoryStore(store_path or default_store_path())
-        self.meta = SQLiteMetaStore(db_path or default_db_path())
-        self.pattern_path = custom_patterns_path()
+    def __init__(self, store_path: Optional[Path] = None, db_path: Optional[Path] = None, namespace: Optional[str] = None):
+        self.namespace = normalize_namespace(namespace)
+        self.store = AppendOnlyMemoryStore(store_path or default_store_path(self.namespace))
+        self.meta = SQLiteMetaStore(db_path or default_db_path(self.namespace))
+        if store_path is not None or db_path is not None:
+            self.pattern_path = (Path(db_path) if db_path is not None else Path(store_path)).parent / "sensitive_patterns.json"
+        else:
+            self.pattern_path = custom_patterns_path(self.namespace)
         self.detector = SensitiveDetector(load_patterns(self.pattern_path))
         self.retriever = HybridRetriever()
         self.conflicts = ConflictResolver()
@@ -70,6 +82,7 @@ class MemGuardService:
             source=MemorySource(kind=source_kind, uri=source_uri),
             summary=self._summarize(stored_text, memory_type),
             subtype=subtype,
+            scope=self.namespace,
             tier=tier or self._default_tier(memory_type, source_kind),
             sensitivity=sensitivity,
         )
@@ -599,6 +612,48 @@ class MemGuardService:
         )
         return status
 
+    def namespace_status(self) -> Dict[str, object]:
+        store_path = self.store.path
+        db_path = self.meta.path
+        patterns_path = self.pattern_path
+        configured_home = get_home()
+        expected_root = configured_home if self.namespace == DEFAULT_NAMESPACE else configured_home / "namespaces" / self.namespace
+        expected_store = expected_root / "memory.segment"
+        expected_db = expected_root / "memguard.sqlite3"
+        status: Dict[str, object] = {
+            "namespace": self.namespace,
+            "is_default": self.namespace == DEFAULT_NAMESPACE,
+            "home": str(configured_home),
+            "namespace_home": str(store_path.parent),
+            "storage_root": str(store_path.parent),
+            "store_path": str(store_path),
+            "db_path": str(db_path),
+            "custom_patterns_path": str(patterns_path),
+            "store_exists": store_path.exists(),
+            "db_exists": db_path.exists(),
+            "custom_patterns_exists": patterns_path.exists(),
+            "store_bytes": store_path.stat().st_size if store_path.exists() else 0,
+            "db_bytes": db_path.stat().st_size if db_path.exists() else 0,
+            "uses_custom_paths": store_path != expected_store or db_path != expected_db,
+        }
+        status["record_count"] = len(self.meta.list_memories(include_deleted=True))
+        status["live_record_count"] = len(self.meta.list_memories(include_deleted=False))
+        status["audit_event_count"] = len(self.meta.list_audit(limit=1000000))
+        self._audit(
+            "namespace_status",
+            None,
+            {
+                "namespace_home": status["namespace_home"],
+                "record_count": status["record_count"],
+                "live_record_count": status["live_record_count"],
+            },
+        )
+        return status
+
+    @staticmethod
+    def list_namespaces() -> List[Dict[str, object]]:
+        return list_namespaces()
+
     def resolve_conflicts(self) -> Dict[str, object]:
         result = self.conflicts.resolve_preferences(self.meta.list_memories(include_deleted=False))
         self._audit("conflict_resolve", None, result)
@@ -622,6 +677,8 @@ class MemGuardService:
             return {"ok": False, "reason": str(exc)}
 
     def _audit(self, event_type: str, memory_id: Optional[str], detail: Dict[str, object]) -> None:
+        detail = dict(detail)
+        detail.setdefault("namespace", self.namespace)
         self.meta.add_audit(event_type, memory_id, detail)
         self.journald.log(event_type, memory_id, detail)
 

@@ -142,9 +142,12 @@ class HybridRetriever:
         text_set = set(text_tokens)
         overlap = len(query_set & text_set) / float(len(query_set) or 1)
         vector_score = cosine(query_vector, text_vector)
+        relevance_score = 0.55 * vector_score + 0.40 * overlap
+        if overlap <= 0.0 and relevance_score < 0.08:
+            return 0.0
         recency_score = 0.05
         sensitivity_penalty = 0.2 if record.get("sensitivity_level") == "high" else 0.0
-        return 0.55 * vector_score + 0.40 * overlap + recency_score - sensitivity_penalty
+        return relevance_score + recency_score - sensitivity_penalty
 
     def score(self, query: str, record: Dict[str, str]) -> float:
         text = "%s %s %s" % (record.get("type", ""), record.get("summary", ""), record.get("content", ""))

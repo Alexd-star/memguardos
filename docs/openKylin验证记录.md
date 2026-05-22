@@ -4,9 +4,9 @@
 
 ## 0. 已验证 VM 快照
 
-日期：2026-05-18 至 2026-05-19
+日期：2026-05-18 至 2026-05-22
 
-说明：本页记录已经完成的 openKylin 证据。2026-05-19 新增的 `ingest-history` 用户行为接入和 Unix socket token 鉴权已经同步到 openKylin，并进入最新证据包。
+说明：本页记录已经完成的 openKylin 证据。最新证据包采集时间为 `20260522_130156`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、Kylin embedding 实际检索重排、Kylin 向量数据库探针和 10k 规模评测。
 
 环境：
 
@@ -17,10 +17,12 @@
 - cgroup v2：已挂载
 - `systemctl`、`journalctl`、`systemd-cat`：可用
 - `memguardd.service`：常驻 daemon，`active (running)`
+- `memguardd@demo-a.service`、`memguardd@demo-b.service`：模板 namespace daemon，`active (running)`
 - `auditctl`、`ausearch`：已安装并验证
 - `bpftrace`：当前 VM 未安装
-- Kylin embedding SDK：通过 `libkysdk-coreai-embedding.so.1` 检测到
-- Kylin vector SDK：通过 `libkysdk-vector-engine-client.so.1` 检测到
+- Kylin embedding SDK：`libkysdk-coreai-embedding.so.1` 可加载，Python/C++ 探针均返回 768 维向量
+- Kylin embedding 可选检索后端：`MEMGUARD_EMBEDDING_BACKEND=auto` 实际检索返回 `vector_backend: "kylin_sdk"`
+- Kylin vector SDK：`libkysdk-vector-engine-client.so.1` 可加载，C++ 探针完成连接、建表、插入、搜索和清理
 - Kylin vector engine 用户服务：active，socket 可用
 
 已验证命令：
@@ -34,11 +36,12 @@ python -m memguard.eval.run_eval --latency-size 1000 --latency-queries 120 \
   --markdown docs/eval_report_openkylin.md
 bash scripts/openkylin_verify.sh
 python -m memguard.cli.memctl sdk-status
+bash scripts/collect_openkylin_evidence.sh --with-10k
 ```
 
 最新结果：
 
-- 单元测试：`37 passed`
+- 单元测试：`41 passed`
 - 负载评测：1000 条记忆，120 次检索请求
 - 最新 1k 负载 P95：65.367 ms
 - 5k 负载 P95：142.534 ms
@@ -50,9 +53,10 @@ python -m memguard.cli.memctl sdk-status
 - 当前 benchmark：22 条种子记忆、17 条检索用例、18 条敏感检测用例、12 条精准遗忘用例、6 条冲突解决用例、8 条图谱检索用例。
 - 类型/子类型准确率、Recall@5、敏感阻断 F1、脱敏 F1、敏感标签 F1、遗忘精确率/召回率、冲突正确率、图谱 Recall@5 均为 1.0000
 - 审计哈希链验证通过
+- 并发审计验证通过：6 线程共 72 条事件，`verify.ok=true`
 - OS 敏感路径 smoke test 被正确阻断
 - 真实 auditd 日志接入已验证：访问 `/etc/shadow` 后解析出的事件被 `sensitive_block` 阻断
-- SDK 状态：embedding 模型信息显示 768 维端侧文本模型，Python/C++ 探针均可返回 768 维向量；vector SDK 库和服务可用
+- SDK 状态：embedding 模型信息显示 768 维端侧文本模型，Python/C++ 探针均可返回 768 维向量；实际检索可使用 `kylin_sdk` 作为可选重排后端；vector SDK 库和服务可用
 
 ## 1. 基础环境验证
 
@@ -76,6 +80,7 @@ python3 -m memguard.cli.memctl doctor
 ```bash
 python3 -m memguard.cli.memctl sdk-status
 python3 -m memguard.cli.memctl sdk-status --probe-embedding
+bash scripts/run_kylin_embedding_probe.sh "openKylin agent memory"
 bash scripts/run_kylin_vector_probe.sh
 ```
 
@@ -84,6 +89,8 @@ bash scripts/run_kylin_vector_probe.sh
 - embedding 动态库可加载：`libkysdk-coreai-embedding.so.1`。
 - embedding 头文件位于 `/usr/include/kylin-ai/`。
 - 模型信息包含文本向量维度和 `ondevice: true`。
+- Python 子进程探针和 C++ 探针均返回 768 维文本向量。
+- `MEMGUARD_EMBEDDING_BACKEND=auto` 时，实际检索结果包含 `vector_backend: "kylin_sdk"`。
 - vector SDK 动态库可加载：`libkysdk-vector-engine-client.so.1`。
 - vector 数据库服务 `kylin-ai-vector-engine.service` active。
 - vector engine socket 存在。

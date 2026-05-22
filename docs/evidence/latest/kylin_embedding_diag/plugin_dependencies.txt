@@ -1,25 +1,25 @@
 $ for so in /usr/lib/kylin-ai/plugins/ai-engines/*.so /usr/lib/*/kylin-ai/plugins/ai-engines/*.so; do [ -e "$so" ] || continue; echo === $so; ldd "$so" 2>/dev/null | grep -Ei 'not found|onnx|openvino|kylin|embedding|engine' || true; done
 
 === /usr/lib/x86_64-linux-gnu/kylin-ai/plugins/ai-engines/libbaidu-engine-plugin.so
-	libbaidu-nlp-engine.so.1 => /lib/x86_64-linux-gnu/libbaidu-nlp-engine.so.1 (0x00007f0b32bf1000)
-	libbaidu-speech-engine.so.1 => /lib/x86_64-linux-gnu/libbaidu-speech-engine.so.1 (0x00007f0b32b34000)
-	libbaidu-vision-engine.so.1 => /lib/x86_64-linux-gnu/libbaidu-vision-engine.so.1 (0x00007f0b32ae1000)
+	libbaidu-nlp-engine.so.1 => /lib/x86_64-linux-gnu/libbaidu-nlp-engine.so.1 (0x00007f8b06f76000)
+	libbaidu-speech-engine.so.1 => /lib/x86_64-linux-gnu/libbaidu-speech-engine.so.1 (0x00007f8b06eb9000)
+	libbaidu-vision-engine.so.1 => /lib/x86_64-linux-gnu/libbaidu-vision-engine.so.1 (0x00007f8b06e66000)
 === /usr/lib/x86_64-linux-gnu/kylin-ai/plugins/ai-engines/libcustom-engine-plugin.so
-	libcustom-nlp-engine.so.1 => /lib/x86_64-linux-gnu/libcustom-nlp-engine.so.1 (0x00007fd5697e5000)
+	libcustom-nlp-engine.so.1 => /lib/x86_64-linux-gnu/libcustom-nlp-engine.so.1 (0x00007f1b5ecb4000)
 === /usr/lib/x86_64-linux-gnu/kylin-ai/plugins/ai-engines/libdeepseek-engine-plugin.so
-	libdeepseek-nlp-engine.so.1 => /lib/x86_64-linux-gnu/libdeepseek-nlp-engine.so.1 (0x00007f0fe12df000)
+	libdeepseek-nlp-engine.so.1 => /lib/x86_64-linux-gnu/libdeepseek-nlp-engine.so.1 (0x00007f14117c2000)
 === /usr/lib/x86_64-linux-gnu/kylin-ai/plugins/ai-engines/libfreetrial-engine-plugin.so
-	libfreetrial-nlp-engine.so.1 => /lib/x86_64-linux-gnu/libfreetrial-nlp-engine.so.1 (0x00007f1d4ced6000)
+	libfreetrial-nlp-engine.so.1 => /lib/x86_64-linux-gnu/libfreetrial-nlp-engine.so.1 (0x00007f3d4b832000)
 === /usr/lib/x86_64-linux-gnu/kylin-ai/plugins/ai-engines/libkylin-traditional-engine-plugin.so
-	libkylin-ondevice-embedding-engine.so.1 => /lib/x86_64-linux-gnu/libkylin-ondevice-embedding-engine.so.1 (0x00007f575ed65000)
-	libkmlengine.so.1 => /lib/x86_64-linux-gnu/libkmlengine.so.1 (0x00007f57582b1000)
+	libkylin-ondevice-embedding-engine.so.1 => /lib/x86_64-linux-gnu/libkylin-ondevice-embedding-engine.so.1 (0x00007fccbbc2c000)
+	libkmlengine.so.1 => /lib/x86_64-linux-gnu/libkmlengine.so.1 (0x00007fccb5178000)
 === /usr/lib/x86_64-linux-gnu/kylin-ai/plugins/ai-engines/libondevice-engine.so
-	libkylin-ondevice-nlp-engine.so => /lib/x86_64-linux-gnu/libkylin-ondevice-nlp-engine.so (0x00007f17fd93a000)
-	libkylin-ondevice-vision-engine.so => /lib/x86_64-linux-gnu/libkylin-ondevice-vision-engine.so (0x00007f17fd905000)
-	libkmlengine.so.1 => /lib/x86_64-linux-gnu/libkmlengine.so.1 (0x00007f17f68a7000)
+	libkylin-ondevice-nlp-engine.so => /lib/x86_64-linux-gnu/libkylin-ondevice-nlp-engine.so (0x00007fb69bddd000)
+	libkylin-ondevice-vision-engine.so => /lib/x86_64-linux-gnu/libkylin-ondevice-vision-engine.so (0x00007fb69bda8000)
+	libkmlengine.so.1 => /lib/x86_64-linux-gnu/libkmlengine.so.1 (0x00007fb694d4a000)
 === /usr/lib/x86_64-linux-gnu/kylin-ai/plugins/ai-engines/libqwen-engine-plugin.so
-	libqwen-nlp-engine.so.1 => /lib/x86_64-linux-gnu/libqwen-nlp-engine.so.1 (0x00007fe1682bc000)
+	libqwen-nlp-engine.so.1 => /lib/x86_64-linux-gnu/libqwen-nlp-engine.so.1 (0x00007f1330107000)
 === /usr/lib/x86_64-linux-gnu/kylin-ai/plugins/ai-engines/libxunfei-engine-plugin.so
-	libxunfei-speech-engine.so.1 => /lib/x86_64-linux-gnu/libxunfei-speech-engine.so.1 (0x00007fc043d4f000)
-	libxunfei-vision-engine.so.1 => /lib/x86_64-linux-gnu/libxunfei-vision-engine.so.1 (0x00007fc043d05000)
-	libxunfei-nlp-engine.so.1 => /lib/x86_64-linux-gnu/libxunfei-nlp-engine.so.1 (0x00007fc043ce7000)
+	libxunfei-speech-engine.so.1 => /lib/x86_64-linux-gnu/libxunfei-speech-engine.so.1 (0x00007fd01aa98000)
+	libxunfei-vision-engine.so.1 => /lib/x86_64-linux-gnu/libxunfei-vision-engine.so.1 (0x00007fd01aa4e000)
+	libxunfei-nlp-engine.so.1 => /lib/x86_64-linux-gnu/libxunfei-nlp-engine.so.1 (0x00007fd01aa30000)

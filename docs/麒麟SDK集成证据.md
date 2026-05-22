@@ -1,6 +1,6 @@
 # Kylin AI SDK 集成证据
 
-日期：2026-05-18
+日期：2026-05-22
 
 赛题鼓励调用 openKylin 系统提供的文本向量化 SDK 和向量数据库 SDK。本文记录 MemGuardOS 当前在 openKylin 上得到的 SDK 证据和工程取舍。
 
@@ -67,7 +67,16 @@ python3 -m memguard.cli.memctl sdk-status --probe-embedding --probe-timeout 180
 - `scripts/diagnose_kylin_embedding.sh` 用于采集 runtime、socket、插件、包版本、动态符号、用户服务日志和 session 初始化返回码。
 - `scripts/kylin_embedding_probe.cpp` 与 `scripts/run_kylin_embedding_probe.sh` 按官方 C API 风格直接调用文本向量化 SDK，可排除 Python `ctypes` 适配层因素。
 - Python 探针和 C++ 探针均已返回 768 维向量。
-- 因此 MemGuardOS 保留高性能 FTS/hash/graph 作为默认检索路径，同时提供 Kylin embedding 可选增强后端和安全回退机制。
+- 因此 MemGuardOS 保留高性能 FTS/hash/graph 作为默认检索路径，同时提供 Kylin embedding 可选增强后端和安全回退机制。最新 openKylin 证据中，`MEMGUARD_EMBEDDING_BACKEND=auto` 的实际检索返回 `vector_backend: "kylin_sdk"`，说明 SDK 已进入可选检索重排链路。
+
+实际检索验证命令：
+
+```bash
+MEMGUARD_EMBEDDING_BACKEND=auto MEMGUARD_KYLIN_EMBEDDING_TIMEOUT=90 \
+  python3 -m memguard.cli.memctl search "openKylin 服务内存限制"
+```
+
+证据文件：`docs/evidence/latest/kylin_retrieval.txt`。
 
 ## 2. 文本向量化 C++ 探针
 
@@ -168,7 +177,7 @@ cleanup_drop: code=0 ok=true msg=
 比赛版本采用两层策略：
 
 1. **默认检索路径**：SQLite FTS + 轻量 hash-vector 重排 + 图谱扩展。该路径已在 10k 记忆下保持 P95 < 500 ms。
-2. **openKylin SDK 路径**：SDK 状态、文本 embedding 真实推理探针和向量数据库真实搜索探针已在当前 openKylin VM 验证。Kylin embedding 可作为可选重排后端启用，但不替代默认稳定路径。
+2. **openKylin SDK 路径**：SDK 状态、文本 embedding 真实推理探针、实际可选检索重排和向量数据库真实搜索探针已在当前 openKylin VM 验证。Kylin embedding 可作为可选重排后端启用，但不替代默认稳定路径。
 
 诊断命令：
 

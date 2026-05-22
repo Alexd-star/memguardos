@@ -10,8 +10,13 @@ class SQLiteMetaStore:
     def __init__(self, path: Path):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(str(self.path))
+        self.conn = sqlite3.connect(str(self.path), timeout=30.0)
         self.conn.row_factory = sqlite3.Row
+        self.conn.execute("PRAGMA busy_timeout = 30000")
+        try:
+            self.conn.execute("PRAGMA journal_mode = WAL")
+        except sqlite3.OperationalError:
+            pass
         self._fts_enabled = False
         self.init_schema()
 
@@ -270,16 +275,21 @@ class SQLiteMetaStore:
     def add_audit(self, event_type: str, memory_id: Optional[str], detail: Dict[str, Any]) -> Dict[str, Any]:
         detail_json = json.dumps(detail, ensure_ascii=False, sort_keys=True)
         created_at = utc_now()
-        prev_hash = self._last_audit_hash()
-        event_hash = stable_hash("|".join([prev_hash, event_type, memory_id or "", detail_json, created_at]))
-        self.conn.execute(
-            """
-            INSERT INTO audit(event_type, memory_id, detail, created_at, prev_hash, event_hash)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (event_type, memory_id, detail_json, created_at, prev_hash, event_hash),
-        )
-        self.conn.commit()
+        try:
+            self.conn.execute("BEGIN IMMEDIATE")
+            prev_hash = self._last_audit_hash()
+            event_hash = stable_hash("|".join([prev_hash, event_type, memory_id or "", detail_json, created_at]))
+            self.conn.execute(
+                """
+                INSERT INTO audit(event_type, memory_id, detail, created_at, prev_hash, event_hash)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (event_type, memory_id, detail_json, created_at, prev_hash, event_hash),
+            )
+            self.conn.commit()
+        except sqlite3.Error:
+            self.conn.rollback()
+            raise
         return {"prev_hash": prev_hash, "event_hash": event_hash, "created_at": created_at}
 
     def list_audit(self, limit: int = 50, event_type: Optional[str] = None) -> List[Dict[str, Any]]:

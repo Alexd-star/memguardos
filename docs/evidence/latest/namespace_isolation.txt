@@ -1,0 +1,152 @@
+$ NS_HOME='docs/evidence/openkylin_20260522_130156/namespace_home'; rm -rf "${NS_HOME}"; mkdir -p "${NS_HOME}"; MEMGUARD_HOME="${NS_HOME}" ".venv/bin/python" -m memguard.cli.memctl --namespace alpha ingest --text 'alpha 会话只保存 openKylin systemd MemoryMax 方案。'; MEMGUARD_HOME="${NS_HOME}" ".venv/bin/python" -m memguard.cli.memctl --namespace beta ingest --text 'beta 会话只保存 auditd shadow access 方案。'; echo '--- alpha search MemoryMax ---'; MEMGUARD_HOME="${NS_HOME}" ".venv/bin/python" -m memguard.cli.memctl --namespace alpha search MemoryMax --top-k 3; echo '--- beta search MemoryMax should be empty ---'; MEMGUARD_HOME="${NS_HOME}" ".venv/bin/python" -m memguard.cli.memctl --namespace beta search MemoryMax --top-k 3; echo '--- beta search auditd ---'; MEMGUARD_HOME="${NS_HOME}" ".venv/bin/python" -m memguard.cli.memctl --namespace beta search auditd --top-k 3; echo '--- namespace status ---'; MEMGUARD_HOME="${NS_HOME}" ".venv/bin/python" -m memguard.cli.memctl --namespace alpha namespace-status; MEMGUARD_HOME="${NS_HOME}" ".venv/bin/python" -m memguard.cli.memctl --namespace beta namespace-status; MEMGUARD_HOME="${NS_HOME}" ".venv/bin/python" -m memguard.cli.memctl namespaces
+
+{"stored": true, "memory_id": "mem_3d5ef42093d1481e", "type": "knowledge", "subtype": "workflow", "tier": "long_term", "confidence": 1.0, "quality": {"accepted": true, "score": 1.0, "issues": [], "warnings": [], "original_chars": 43, "normalized_chars": 43, "line_count": 1, "source_kind": "manual"}}
+{"stored": true, "memory_id": "mem_323b0479f2034105", "type": "knowledge", "subtype": "fact", "tier": "long_term", "confidence": 1.0, "quality": {"accepted": true, "score": 1.0, "issues": [], "warnings": [], "original_chars": 35, "normalized_chars": 35, "line_count": 1, "source_kind": "manual"}}
+--- alpha search MemoryMax ---
+[
+  {
+    "memory_id": "mem_3d5ef42093d1481e",
+    "type": "knowledge",
+    "subtype": "workflow",
+    "scope": "alpha",
+    "tier": "long_term",
+    "summary": "知识记忆：alpha 会话只保存 openKylin systemd MemoryMax 方案。",
+    "content": "alpha 会话只保存 openKylin systemd MemoryMax 方案。",
+    "source_kind": "manual",
+    "source_uri": "inline",
+    "sensitivity_level": "none",
+    "sensitivity_labels": "[]",
+    "sensitivity_redacted": 0,
+    "version_id": "ver_deecdbca7a0c442e",
+    "deleted": 0,
+    "updated_at": "2026-05-22T05:02:38.624019+00:00",
+    "rank": -1.375e-06,
+    "score": 0.5957,
+    "match_source": "hybrid",
+    "vector_backend": "hash"
+  }
+]
+--- beta search MemoryMax should be empty ---
+[]
+--- beta search auditd ---
+[
+  {
+    "memory_id": "mem_323b0479f2034105",
+    "type": "knowledge",
+    "subtype": "fact",
+    "scope": "beta",
+    "tier": "long_term",
+    "summary": "知识记忆：beta 会话只保存 auditd shadow access 方案。",
+    "content": "beta 会话只保存 auditd shadow access 方案。",
+    "source_kind": "manual",
+    "source_uri": "inline",
+    "sensitivity_level": "none",
+    "sensitivity_labels": "[]",
+    "sensitivity_redacted": 0,
+    "version_id": "ver_b820808a45624ad4",
+    "deleted": 0,
+    "updated_at": "2026-05-22T05:02:38.790682+00:00",
+    "rank": -1.375e-06,
+    "score": 0.5957,
+    "match_source": "hybrid",
+    "vector_backend": "hash"
+  }
+]
+--- namespace status ---
+{
+  "namespace": "alpha",
+  "is_default": false,
+  "home": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home",
+  "namespace_home": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/alpha",
+  "storage_root": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/alpha",
+  "store_path": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/alpha/memory.segment",
+  "db_path": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/alpha/memguard.sqlite3",
+  "custom_patterns_path": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/alpha/sensitive_patterns.json",
+  "store_exists": true,
+  "db_exists": true,
+  "custom_patterns_exists": false,
+  "store_bytes": 2024,
+  "db_bytes": 61440,
+  "uses_custom_paths": false,
+  "record_count": 1,
+  "live_record_count": 1,
+  "audit_event_count": 2
+}
+{
+  "namespace": "beta",
+  "is_default": false,
+  "home": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home",
+  "namespace_home": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/beta",
+  "storage_root": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/beta",
+  "store_path": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/beta/memory.segment",
+  "db_path": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/beta/memguard.sqlite3",
+  "custom_patterns_path": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/beta/sensitive_patterns.json",
+  "store_exists": true,
+  "db_exists": true,
+  "custom_patterns_exists": false,
+  "store_bytes": 1598,
+  "db_bytes": 61440,
+  "uses_custom_paths": false,
+  "record_count": 1,
+  "live_record_count": 1,
+  "audit_event_count": 3
+}
+[
+  {
+    "namespace": "alpha",
+    "is_default": false,
+    "home": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home",
+    "home_exists": true,
+    "namespace_home": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/alpha",
+    "namespace_home_exists": true,
+    "store_path": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/alpha/memory.segment",
+    "db_path": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/alpha/memguard.sqlite3",
+    "custom_patterns_path": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/alpha/sensitive_patterns.json",
+    "store_exists": true,
+    "db_exists": true,
+    "custom_patterns_exists": false,
+    "store_bytes": 2024,
+    "db_bytes": 61440,
+    "record_count": 1,
+    "live_record_count": 1,
+    "audit_event_count": 3
+  },
+  {
+    "namespace": "beta",
+    "is_default": false,
+    "home": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home",
+    "home_exists": true,
+    "namespace_home": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/beta",
+    "namespace_home_exists": true,
+    "store_path": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/beta/memory.segment",
+    "db_path": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/beta/memguard.sqlite3",
+    "custom_patterns_path": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/namespaces/beta/sensitive_patterns.json",
+    "store_exists": true,
+    "db_exists": true,
+    "custom_patterns_exists": false,
+    "store_bytes": 1598,
+    "db_bytes": 61440,
+    "record_count": 1,
+    "live_record_count": 1,
+    "audit_event_count": 4
+  },
+  {
+    "namespace": "default",
+    "is_default": true,
+    "home": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home",
+    "home_exists": true,
+    "namespace_home": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home",
+    "namespace_home_exists": true,
+    "store_path": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/memory.segment",
+    "db_path": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/memguard.sqlite3",
+    "custom_patterns_path": "/home/luo/memguardos/docs/evidence/openkylin_20260522_130156/namespace_home/sensitive_patterns.json",
+    "store_exists": false,
+    "db_exists": false,
+    "custom_patterns_exists": false,
+    "store_bytes": 0,
+    "db_bytes": 0,
+    "record_count": 0,
+    "live_record_count": 0,
+    "audit_event_count": 0
+  }
+]

@@ -6,6 +6,8 @@ import time
 from pathlib import Path
 
 from memguard.api.server import handle_request, serve_unix_socket
+from memguard.cli.memctl import main as memctl_main
+from memguard.config import default_db_path, default_store_path, list_namespaces, namespace_status, normalize_namespace
 from memguard.ingestion.behavior import parse_shell_history
 from memguard.llm.adapter import generate_answer
 from memguard.llm.prompt import render_generation_prompt
@@ -20,11 +22,91 @@ from memguard.retrieval.hybrid import HybridRetriever
 from memguard.retrieval.kylin_sdk import KylinEmbeddingBackend, kylin_sdk_status
 from memguard.retrieval.conflict import preference_topic
 from memguard.daemon import daemon_health_snapshot, run_daemon
+from memguard.store.sqlite_meta import SQLiteMetaStore
 from scripts.demo_smoke import main as demo_smoke_main
 
 
 def make_service(tmp_path: Path) -> MemGuardService:
     return MemGuardService(store_path=tmp_path / "memory.segment", db_path=tmp_path / "memguard.sqlite3")
+
+
+def test_namespace_paths_are_safe_and_default_is_backward_compatible(tmp_path, monkeypatch):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+    monkeypatch.delenv("MEMGUARD_NAMESPACE", raising=False)
+
+    assert normalize_namespace(None) == "default"
+    assert default_store_path() == tmp_path / "home" / "memory.segment"
+    assert default_db_path() == tmp_path / "home" / "memguard.sqlite3"
+    assert default_store_path("project-a") == tmp_path / "home" / "namespaces" / "project-a" / "memory.segment"
+
+    for invalid in ("../escape", ".hidden", "bad/name", "bad name", "CON", "CON.txt"):
+        try:
+            normalize_namespace(invalid)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("invalid namespace was accepted: %s" % invalid)
+
+
+def test_read_only_namespace_status_and_cli_do_not_create_storage(tmp_path, monkeypatch, capsys):
+    home = tmp_path / "dry-home"
+    monkeypatch.setenv("MEMGUARD_HOME", str(home))
+    monkeypatch.delenv("MEMGUARD_NAMESPACE", raising=False)
+
+    status = namespace_status("demo")
+    assert status["namespace"] == "demo"
+    assert status["home_exists"] is False
+    assert status["namespace_home_exists"] is False
+    assert status["record_count"] == 0
+    assert not home.exists()
+
+    names = list_namespaces()
+    assert [item["namespace"] for item in names] == ["default"]
+    assert not home.exists()
+
+    report = doctor_report(namespace="demo")
+    assert report["namespace"] == "demo"
+    assert report["namespace_status"]["namespace_home_exists"] is False
+    assert not home.exists()
+
+    assert memctl_main(["namespaces"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload[0]["namespace"] == "default"
+    assert not home.exists()
+
+
+def test_namespace_isolation_keeps_records_patterns_and_audit_separate(tmp_path, monkeypatch):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+    alpha = MemGuardService(namespace="alpha")
+    beta = MemGuardService(namespace="beta")
+    try:
+        alpha_record = alpha.ingest_text("alpha 会话只保存 openKylin systemd MemoryMax 方案。")["record"]
+        beta_record = beta.ingest_text("beta 会话只保存 auditd shadow access 方案。")["record"]
+        alpha.try_add_pattern("alpha_code", r"ALPHA-[0-9]{4}")
+
+        assert alpha.search("MemoryMax", limit=3)[0]["memory_id"] == alpha_record.memory_id
+        assert beta.search("MemoryMax", limit=3) == []
+        assert beta.search("shadow access", limit=3)[0]["memory_id"] == beta_record.memory_id
+        assert alpha.search("shadow access", limit=3) == []
+        assert alpha.list_patterns() == {"alpha_code": r"ALPHA-[0-9]{4}"}
+        assert beta.list_patterns() == {}
+
+        alpha_status = alpha.namespace_status()
+        beta_status = beta.namespace_status()
+        assert alpha_status["namespace"] == "alpha"
+        assert beta_status["namespace"] == "beta"
+        assert alpha_status["namespace_home"] != beta_status["namespace_home"]
+        assert "namespaces\\alpha" in alpha_status["namespace_home"] or "namespaces/alpha" in alpha_status["namespace_home"]
+        assert alpha.audit(limit=1)[0]["detail"].find('"namespace": "alpha"') != -1
+        assert beta.audit(limit=1)[0]["detail"].find('"namespace": "beta"') != -1
+
+        names = {item["namespace"] for item in list_namespaces()}
+        assert {"default", "alpha", "beta"}.issubset(names)
+        assert namespace_status("alpha")["store_exists"] is True
+        assert namespace_status("beta")["db_exists"] is True
+    finally:
+        alpha.close()
+        beta.close()
 
 
 def test_ingest_and_search_preference(tmp_path):
@@ -182,6 +264,42 @@ def test_audit_hash_chain_verification(tmp_path):
         assert result["checked"] >= 2
     finally:
         service.close()
+
+
+def test_concurrent_audit_writes_preserve_hash_chain(tmp_path):
+    db_path = tmp_path / "concurrent.sqlite3"
+    workers = 6
+    per_worker = 12
+    barrier = threading.Barrier(workers)
+    errors: list[BaseException] = []
+    initializer = SQLiteMetaStore(db_path)
+    initializer.close()
+
+    def write_events(worker_id: int) -> None:
+        store = SQLiteMetaStore(db_path)
+        try:
+            barrier.wait(timeout=5)
+            for index in range(per_worker):
+                store.add_audit("concurrent_probe", None, {"worker": worker_id, "index": index})
+        except BaseException as exc:  # pragma: no cover - assertion reports captured thread failures
+            errors.append(exc)
+        finally:
+            store.close()
+
+    threads = [threading.Thread(target=write_events, args=(worker_id,)) for worker_id in range(workers)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=10)
+
+    assert errors == []
+    verifier = SQLiteMetaStore(db_path)
+    try:
+        result = verifier.verify_audit_chain()
+        assert result["ok"] is True
+        assert result["checked"] == workers * per_worker
+    finally:
+        verifier.close()
 
 
 def test_os_event_sensitive_path_is_blocked(tmp_path):
@@ -583,6 +701,7 @@ def test_demo_smoke_script_runs():
 def test_daemon_health_and_once_mode():
     snapshot = daemon_health_snapshot()
     assert snapshot["status"] == "ready"
+    assert snapshot["namespace"] == "default"
     assert "cgroup_v2" in snapshot
     assert run_daemon(once=True) == 0
 
@@ -592,10 +711,21 @@ def test_local_api_handler_and_unix_socket(tmp_path):
     try:
         ingest = handle_request(service, {"command": "ingest", "text": "以后回答 Linux 命令时直接给命令和风险提示。"})
         assert ingest["ok"] is True
+        assert ingest["result"]["scope"] == "default"
+        assert ingest["result"]["namespace"] == "default"
         denied = handle_request(service, {"command": "health"}, auth_token="secret")
         assert denied["ok"] is False
         allowed = handle_request(service, {"command": "health", "token": "secret"}, auth_token="secret")
         assert allowed["ok"] is True
+        assert allowed["result"]["namespace"] == "default"
+        assert allowed["result"]["store_path"] == str(tmp_path / "memory.segment")
+        assert allowed["result"]["db_path"] == str(tmp_path / "memguard.sqlite3")
+        namespace = handle_request(service, {"command": "namespace_status"})
+        assert namespace["ok"] is True
+        assert namespace["result"]["namespace"] == "default"
+        assert namespace["result"]["uses_custom_paths"] is True
+        assert namespace["result"]["store_path"] == str(tmp_path / "memory.segment")
+        assert namespace["result"]["db_path"] == str(tmp_path / "memguard.sqlite3")
         context = handle_request(service, {"command": "build_context", "query": "Linux 命令", "limit": 3})
         assert context["ok"] is True
         assert context["result"]["memory_count"] >= 1

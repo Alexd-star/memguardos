@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+from memguard.config import list_namespaces
 from memguard.ingestion.tool_result import ToolResult
 from memguard.llm.adapter import LLMAdapterError, generate_answer
 from memguard.llm.prompt import render_generation_prompt
@@ -16,8 +17,16 @@ from memguard.retrieval.kylin_sdk import kylin_sdk_status
 from memguard.service import MemGuardService
 
 
+_SERVICE_FREE_COMMANDS = {"doctor", "status", "namespaces", "sdk-status", "auditd-rules"}
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="memctl", description="MemGuardOS command-line tool")
+    parser.add_argument(
+        "--namespace",
+        default=None,
+        help="Memory namespace/session id. Defaults to MEMGUARD_NAMESPACE or 'default'.",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     ingest = sub.add_parser("ingest", help="Ingest text or a file into memory")
@@ -134,6 +143,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("doctor", help="Check local OS/runtime capabilities")
     sub.add_parser("status", help="Show runtime OS guard status")
+    sub.add_parser("namespace-status", help="Show current namespace storage isolation status")
+    sub.add_parser("namespaces", help="List local memory namespaces")
     sub.add_parser("retrieval-status", help="Show hybrid retrieval backend status")
     sdk_status = sub.add_parser("sdk-status", help="Detect openKylin Kylin AI embedding/vector SDK capabilities")
     sdk_status.add_argument("--probe-embedding", action="store_true", help="Run one real embedding call; may be slow if the model service is not ready")
@@ -149,7 +160,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    service = MemGuardService()
+    if args.command in _SERVICE_FREE_COMMANDS:
+        return _run_service_free_command(args)
+
+    service = MemGuardService(namespace=args.namespace)
     try:
         if args.command == "ingest":
             text, source_uri = _read_ingest(args)
@@ -376,38 +390,51 @@ def main(argv: list[str] | None = None) -> int:
                 print(json.dumps(result, ensure_ascii=False, indent=2))
                 return 0 if result["ok"] else 2
 
-        if args.command == "doctor":
-            print(json.dumps(doctor_report(), ensure_ascii=False, indent=2))
-            return 0
-
-        if args.command == "status":
-            print(json.dumps(cgroup_status(), ensure_ascii=False, indent=2))
+        if args.command == "namespace-status":
+            print(json.dumps(service.namespace_status(), ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "retrieval-status":
             print(json.dumps(service.retrieval_status(), ensure_ascii=False, indent=2))
             return 0
 
-        if args.command == "sdk-status":
-            print(
-                json.dumps(
-                    kylin_sdk_status(probe_embedding=args.probe_embedding, probe_timeout=args.probe_timeout),
-                    ensure_ascii=False,
-                    indent=2,
-                )
-            )
-            return 0
-
-        if args.command == "auditd-rules":
-            if args.format == "auditctl":
-                print("\n".join(auditctl_rules(key=args.key, existing_only=args.existing_only)))
-            elif args.format == "rules-file":
-                print(audit_rules_file(key=args.key, existing_only=args.existing_only), end="")
-            else:
-                print(ausearch_command(key=args.key))
-            return 0
     finally:
         service.close()
+    return 1
+
+
+def _run_service_free_command(args: argparse.Namespace) -> int:
+    if args.command == "doctor":
+        print(json.dumps(doctor_report(namespace=args.namespace), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "status":
+        print(json.dumps(cgroup_status(), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "namespaces":
+        print(json.dumps(list_namespaces(), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "sdk-status":
+        print(
+            json.dumps(
+                kylin_sdk_status(probe_embedding=args.probe_embedding, probe_timeout=args.probe_timeout),
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "auditd-rules":
+        if args.format == "auditctl":
+            print("\n".join(auditctl_rules(key=args.key, existing_only=args.existing_only)))
+        elif args.format == "rules-file":
+            print(audit_rules_file(key=args.key, existing_only=args.existing_only), end="")
+        else:
+            print(ausearch_command(key=args.key))
+        return 0
+
     return 1
 
 

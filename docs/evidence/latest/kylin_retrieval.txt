@@ -1,0 +1,82 @@
+$ KYLIN_RETRIEVAL_HOME='docs/evidence/openkylin_20260522_130156/kylin_retrieval_home'; rm -rf "${KYLIN_RETRIEVAL_HOME}"; mkdir -p "${KYLIN_RETRIEVAL_HOME}"; MEMGUARD_HOME="${KYLIN_RETRIEVAL_HOME}" MEMGUARD_EMBEDDING_BACKEND=auto MEMGUARD_KYLIN_EMBEDDING_TIMEOUT=90 ".venv/bin/python" - <<'PY'
+import json
+
+from memguard.service import MemGuardService
+
+service = MemGuardService()
+service.ingest_text('openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。')
+service.ingest_text('auditd 会审计 /etc/shadow 等敏感路径访问，并阻断高风险记忆写入。')
+hits = service.search('openKylin 服务内存限制', limit=2)
+print(json.dumps({'hits': hits, 'retrieval_status': service.retrieval_status()}, ensure_ascii=False, indent=2))
+raise SystemExit(0 if hits and hits[0].get('vector_backend') == 'kylin_sdk' else 2)
+PY
+
+{
+  "hits": [
+    {
+      "memory_id": "mem_3ac8350315184041",
+      "type": "knowledge",
+      "subtype": "workflow",
+      "scope": "default",
+      "tier": "long_term",
+      "summary": "知识记忆：openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。",
+      "content": "openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。",
+      "source_kind": "manual",
+      "source_uri": "",
+      "sensitivity_level": "none",
+      "sensitivity_labels": "[]",
+      "sensitivity_redacted": 0,
+      "version_id": "ver_0784622f0eab477f",
+      "deleted": 0,
+      "updated_at": "2026-05-22T05:02:01.206347+00:00",
+      "rank": -1.3512476007677544e-06,
+      "score": 0.7351,
+      "match_source": "hybrid",
+      "vector_backend": "kylin_sdk"
+    },
+    {
+      "memory_id": "mem_b9c7e43a022d4f8f",
+      "type": "knowledge",
+      "subtype": "fact",
+      "scope": "default",
+      "tier": "long_term",
+      "summary": "知识记忆：auditd 会审计 /etc/shadow 等敏感路径访问,并阻断高风险记忆写入。",
+      "content": "auditd 会审计 /etc/shadow 等敏感路径访问,并阻断高风险记忆写入。",
+      "source_kind": "manual",
+      "source_uri": "",
+      "sensitivity_level": "none",
+      "sensitivity_labels": "[]",
+      "sensitivity_redacted": 0,
+      "version_id": "ver_4b5b48693382444e",
+      "deleted": 0,
+      "updated_at": "2026-05-22T05:02:01.216807+00:00",
+      "score": 0.3505,
+      "match_source": "hybrid",
+      "vector_backend": "kylin_sdk"
+    }
+  ],
+  "retrieval_status": {
+    "requested_backend": "auto",
+    "last_backend_used": "kylin_sdk",
+    "hash": {
+      "name": "hash",
+      "available": true,
+      "dim": 128,
+      "fallback": false
+    },
+    "kylin": {
+      "name": "kylin_sdk",
+      "available": true,
+      "timeout_seconds": 90.0,
+      "failures": 0,
+      "disabled_reason": "",
+      "cache_entries": 3,
+      "fallback": "hash"
+    },
+    "policy": {
+      "default_backend": "hash",
+      "kylin_sdk_role": "optional_rerank_backend",
+      "fallback_behavior": "If Kylin embedding inference fails or times out, retrieval keeps using stable SQLite FTS + hash-vector ranking."
+    }
+  }
+}

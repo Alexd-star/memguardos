@@ -1,6 +1,6 @@
 # openKylin 证据采集包
 
-采集时间：20260522_035724
+采集时间：20260522_130156
 
 ## 文件说明
 
@@ -15,6 +15,7 @@
 | `sdk_status.txt` | Kylin SDK 状态 |
 | `sdk_embedding_probe.txt` | Kylin embedding 推理探测 |
 | `embedding_cpp_probe.txt` | Kylin embedding SDK 官方 C API 风格 C++ 探针 |
+| `kylin_retrieval.txt` | Kylin embedding 作为实际检索重排后端的证据 |
 | `kylin_embedding_diag/` | Kylin embedding runtime、socket、插件、包版本和日志诊断 |
 | `vector_probe.txt` | Kylin 向量数据库 SDK 探针 |
 | `quality_report.txt` | 输入清洗、格式标准化与质量校验证据 |
@@ -22,6 +23,9 @@
 | `build_prompt.txt` | RAG 上下文与 LLM prompt 渲染证据 |
 | `generate_answer.txt` | 默认关闭的可选 LLM adapter dry-run 证据 |
 | `api_auth.txt` | 本地 Agent API token 鉴权证据 |
+| `namespace_isolation.txt` | namespace 多会话记忆隔离证据 |
+| `systemd_namespace.txt` | systemd 模板实例与独立 cgroup 证据 |
+| `audit_concurrency.txt` | 并发审计写入与哈希链连续性证据 |
 | `ukui_notify.txt` | UKUI/freedesktop 桌面通知 smoke 证据 |
 | `systemd_cgroup.txt` | systemd/cgroup 服务限制证据 |
 | `journald.txt` | journald 日志证据 |

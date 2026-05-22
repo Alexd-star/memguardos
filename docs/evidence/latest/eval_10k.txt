@@ -1,4 +1,4 @@
-$ .venv/bin/python -m memguard.eval.run_eval --latency-size 10000 --latency-queries 150 --output docs/evidence/openkylin_20260522_035724/eval_result_openkylin_10k.json --markdown docs/evidence/openkylin_20260522_035724/eval_report_openkylin_10k.md
+$ .venv/bin/python -m memguard.eval.run_eval --latency-size 10000 --latency-queries 150 --output docs/evidence/openkylin_20260522_130156/eval_result_openkylin_10k.json --markdown docs/evidence/openkylin_20260522_130156/eval_report_openkylin_10k.md
 
 {
   "dataset": {
@@ -22,8 +22,8 @@ $ .venv/bin/python -m memguard.eval.run_eval --latency-size 10000 --latency-quer
   "retrieval": {
     "mean_recall_at_5": 1.0,
     "cross_language_recall_at_5": 1.0,
-    "p50_latency_ms": 16.968,
-    "p95_latency_ms": 20.833
+    "p50_latency_ms": 19.719,
+    "p95_latency_ms": 24.302
   },
   "baseline_comparison": {
     "text_only_recall_at_5": 0.7941,
@@ -53,25 +53,25 @@ $ .venv/bin/python -m memguard.eval.run_eval --latency-size 10000 --latency-quer
   "latency_load": {
     "memory_count": 10000,
     "query_count": 150,
-    "p50_latency_ms": 236.399,
-    "p95_latency_ms": 258.027,
-    "p99_latency_ms": 267.497,
-    "segment_kb": 28196.15,
-    "sqlite_kb": 39180.0,
-    "total_store_kb": 67376.15
+    "p50_latency_ms": 258.174,
+    "p95_latency_ms": 298.138,
+    "p99_latency_ms": 360.804,
+    "segment_kb": 28225.447,
+    "sqlite_kb": 39060.0,
+    "total_store_kb": 71477.713
   },
   "resource_usage": {
-    "eval_wall_time_ms": 252512.941,
-    "eval_cpu_time_ms": 158369.979,
-    "tracemalloc_current_kb": 207.899,
-    "tracemalloc_peak_kb": 15450.952,
-    "process_rss_kb": 65820.0
+    "eval_wall_time_ms": 263981.161,
+    "eval_cpu_time_ms": 171699.806,
+    "tracemalloc_current_kb": 195.988,
+    "tracemalloc_peak_kb": 15465.769,
+    "process_rss_kb": 66164.0
   },
   "storage_footprint": {
-    "main_segment_kb": 59.354,
-    "main_sqlite_kb": 180.0,
-    "total_eval_store_kb": 302.652,
-    "bytes_per_live_memory": 9115.176
+    "main_segment_kb": 59.454,
+    "main_sqlite_kb": 4.0,
+    "total_eval_store_kb": 2798.17,
+    "bytes_per_live_memory": 84274.294
   },
   "memory_count": 34
 }

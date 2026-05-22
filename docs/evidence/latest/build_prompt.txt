@@ -9,23 +9,7 @@ $ .venv/bin/python -m memguard.cli.memctl build-prompt openKylin 服务内存限
 summary: 知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。
 evidence: 普通知识: systemd 可用 MemoryMax 限制服务内存。
 
-[2] type=knowledge subtype=workflow tier=long_term score=0.6948 source=manual
-summary: 知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。
-evidence: 普通知识: systemd 可用 MemoryMax 限制服务内存。
-
-[3] type=knowledge subtype=fact tier=long_term score=0.1749 source=manual
-summary: 知识记忆：openKylin journald evidence collection smoke test
-evidence: openKylin journald evidence collection smoke test
-
-[4] type=knowledge subtype=fact tier=long_term score=0.1749 source=manual
-summary: 知识记忆：openKylin journald evidence collection smoke test
-evidence: openKylin journald evidence collection smoke test
-
-[5] type=knowledge subtype=fact tier=long_term score=0.1749 source=manual
-summary: 知识记忆：openKylin journald evidence collection smoke test
-evidence: openKylin journald evidence collection smoke test
-
-估算上下文 tokens: 273；预算: 1200；已截断: False
+估算上下文 tokens: 62；预算: 1200；已截断: False
 
 用户当前请求：
 openKylin 服务内存限制

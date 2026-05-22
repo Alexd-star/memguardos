@@ -24,6 +24,8 @@ def handle_request(service: MemGuardService, request: Dict[str, object], auth_to
         token_budget = request.get("token_budget")
         token_budget = int(token_budget) if token_budget else None
         return {"ok": True, "result": service.build_context(query, limit=limit, max_chars=max_chars, token_budget=token_budget)}
+    if command == "namespace_status":
+        return {"ok": True, "result": service.namespace_status()}
     if command == "ingest":
         text = str(request.get("text", ""))
         source_kind = str(request.get("source_kind", "api"))
@@ -39,6 +41,8 @@ def handle_request(service: MemGuardService, request: Dict[str, object], auth_to
                     "memory_id": record.memory_id,
                     "type": record.type,
                     "subtype": record.subtype,
+                    "scope": record.scope,
+                    "namespace": service.namespace,
                     "tier": record.tier,
                 },
             }
@@ -52,7 +56,15 @@ def handle_request(service: MemGuardService, request: Dict[str, object], auth_to
             },
         }
     if command == "health":
-        return {"ok": True, "result": {"status": "ready"}}
+        return {
+            "ok": True,
+            "result": {
+                "status": "ready",
+                "namespace": service.namespace,
+                "store_path": str(service.store.path),
+                "db_path": str(service.meta.path),
+            },
+        }
     return {"ok": False, "error": "unknown_command", "command": command}
 
 

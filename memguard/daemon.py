@@ -11,17 +11,21 @@ from typing import Dict, Optional
 from memguard.api.server import serve_unix_socket
 import platform
 
+from memguard.config import namespace_status, normalize_namespace
 from memguard.os_guard.cgroup import cgroup_status
 from memguard.os_guard.journald import JournaldLogger
 from memguard.retrieval.kylin_sdk import kylin_sdk_status
 from memguard.service import MemGuardService
 
 
-def daemon_health_snapshot(probe_sdk: bool = False) -> Dict[str, object]:
+def daemon_health_snapshot(probe_sdk: bool = False, namespace: Optional[str] = None) -> Dict[str, object]:
+    namespace = normalize_namespace(namespace)
     cgroup = cgroup_status()
     snapshot: Dict[str, object] = {
         "status": "ready",
         "python": platform.python_version(),
+        "namespace": namespace,
+        "namespace_home": namespace_status(namespace)["namespace_home"],
         "cgroup_v2": cgroup.get("cgroup_v2_mounted"),
         "proc_cgroup": cgroup.get("proc_cgroup"),
     }
@@ -39,8 +43,10 @@ def run_daemon(
     socket_path: str = "",
     socket_mode: int = 0o660,
     auth_token: Optional[str] = None,
+    namespace: Optional[str] = None,
 ) -> int:
     logger = JournaldLogger()
+    namespace = normalize_namespace(namespace)
     stopping = {"value": False}
 
     def _stop(signum, _frame):
@@ -50,9 +56,9 @@ def run_daemon(
     signal.signal(signal.SIGTERM, _stop)
     signal.signal(signal.SIGINT, _stop)
 
-    service = MemGuardService()
+    service = MemGuardService(namespace=namespace)
     try:
-        snapshot = daemon_health_snapshot(probe_sdk=probe_sdk)
+        snapshot = daemon_health_snapshot(probe_sdk=probe_sdk, namespace=namespace)
         service._audit("daemon_started", None, snapshot)
         print(json.dumps(snapshot, ensure_ascii=False), flush=True)
         if once:
@@ -73,7 +79,7 @@ def run_daemon(
             )
             socket_thread.start()
         while not stopping["value"]:
-            logger.log("daemon_heartbeat", None, daemon_health_snapshot(probe_sdk=probe_sdk))
+            logger.log("daemon_heartbeat", None, daemon_health_snapshot(probe_sdk=probe_sdk, namespace=namespace))
             time.sleep(max(1.0, interval))
         if socket_thread is not None:
             socket_thread.join(timeout=2.0)
@@ -91,6 +97,7 @@ def main() -> int:
     parser.add_argument("--socket", default="", help="Optional Unix domain socket path for local Agent API")
     parser.add_argument("--socket-mode", default="660", help="Octal permission mode for the Unix socket, for example 660 or 666")
     parser.add_argument("--auth-token-file", default="", help="Optional file containing the local API bearer token")
+    parser.add_argument("--namespace", default=None, help="Memory namespace/session id. Defaults to MEMGUARD_NAMESPACE or 'default'.")
     args = parser.parse_args()
     auth_token = ""
     if args.auth_token_file:
@@ -102,6 +109,7 @@ def main() -> int:
         socket_path=args.socket,
         socket_mode=int(args.socket_mode, 8),
         auth_token=auth_token or None,
+        namespace=args.namespace,
     )
 
 

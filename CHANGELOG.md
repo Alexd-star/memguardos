@@ -16,14 +16,16 @@
 - 敏感检测、脱敏、阻断和自定义敏感模式。
 - 自然语言精准遗忘、compact 和明文探针验证。
 - RAG 上下文构建、provider-neutral prompt 渲染和默认关闭的 LLM adapter。
-- systemd/cgroup、journald、auditd、Kylin SDK 探测和向量数据库 SDK 探针。
+- namespace 多会话隔离、systemd/cgroup 模板实例、journald、auditd、Kylin SDK 探测、Kylin embedding 可选检索重排和向量数据库 SDK 探针。
 - UKUI/freedesktop 轻量通知和默认关闭的 bpftrace openat 探针脚本。
 
 ### 验证结果
 
-- 本地与 openKylin 单元测试：`33 passed`。
-- openKylin 1k 负载 P95：`83.761 ms`。
-- openKylin 10k 负载 P95：`242.053 ms`。
+- 本地与 openKylin 单元测试：`41 passed`。
+- openKylin 1k 负载 P95：`65.367 ms`。
+- openKylin 10k 负载 P95：`258.027 ms`。
+- Kylin embedding 实际检索：`vector_backend: "kylin_sdk"`。
+- 并发审计写入：6 线程共 72 条事件，审计哈希链验证通过。
 - Recall@5、跨语言 Recall@5、敏感 F1、精准遗忘指标、冲突正确率、图谱 Recall@5 均为 `1.0000`。
 
 ### 工程化

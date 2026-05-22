@@ -1,0 +1,18 @@
+[Unit]
+Description=MemGuardOS namespaced agent memory service (%i)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/memguardos
+Environment=PYTHONPATH=/opt/memguardos
+Environment=MEMGUARD_NAMESPACE=%i
+RuntimeDirectory=memguardos-%i
+ExecStart=/usr/bin/python3 -m memguard.daemon --interval 60 --namespace %i --socket /run/memguardos-%i/memguard.sock --socket-mode 660
+Restart=always
+RestartSec=5
+MemoryMax=512M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target
