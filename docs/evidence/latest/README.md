@@ -1,6 +1,6 @@
 # openKylin 证据采集包
 
-采集时间：20260522_182352
+采集时间：20260522_234709
 
 ## 文件说明
 
@@ -28,6 +28,10 @@
 | `systemd_namespace.txt` | systemd 模板实例与独立 cgroup 证据 |
 | `audit_concurrency.txt` | 并发审计写入与哈希链连续性证据 |
 | `ukui_notify.txt` | UKUI/freedesktop 桌面通知 smoke 证据 |
+| `ukui_deep_plugins.txt` | Peony/UKUI 控制中心深度插件源码与构建环境探针 |
+| `ukui_plugin_build.txt` | Peony 右键插件与 UKUI 控制中心插件真实构建证据 |
+| `ukui_plugin_install.txt` | UKUI 插件系统目录安装尝试与只读根文件系统边界 |
+| `bpf_lsm_enforcer.txt` | BPF LSM 强制拦截增强环境、构建和 attach 探针 |
 | `systemd_cgroup.txt` | systemd/cgroup 服务限制证据 |
 | `journald.txt` | journald 日志证据 |
 | `auditd_rules.txt` | auditd 规则证据 |

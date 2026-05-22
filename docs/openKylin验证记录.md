@@ -6,7 +6,7 @@
 
 日期：2026-05-18 至 2026-05-22
 
-说明：本页记录已经完成的 openKylin 证据。最新证据包采集时间为 `20260522_182352`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、Kylin embedding 实际检索重排、Kylin 向量数据库探针和 10k 规模评测。
+说明：本页记录已经完成的 openKylin 证据。最新证据包采集时间为 `20260522_234709`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、Kylin embedding 实际检索重排、Kylin 向量数据库探针、BPF LSM 安全测试文件强制拒绝、Peony/UKUI 原生插件构建和 10k 规模评测。
 
 环境：
 
@@ -19,7 +19,8 @@
 - `memguardd.service`：常驻 daemon，`active (running)`
 - `memguardd@demo-a.service`、`memguardd@demo-b.service`：模板 namespace daemon，`active (running)`
 - `auditctl`、`ausearch`：已安装并验证
-- `bpftrace`：当前 VM 未安装
+- BPF LSM：`/sys/kernel/security/lsm` 包含 `bpf`，BTF 可用，BPF LSM loader 可 attach
+- UKUI 插件构建环境：`libpeony-dev`、`libukcc-dev` 和 Qt5 开发工具可用
 - Kylin embedding SDK：`libkysdk-coreai-embedding.so.1` 可加载，Python/C++ 探针均返回 768 维向量
 - Kylin embedding 可选检索后端：`MEMGUARD_EMBEDDING_BACKEND=auto` 实际检索返回 `vector_backend: "kylin_sdk"`
 - Kylin vector SDK：`libkysdk-vector-engine-client.so.1` 可加载，C++ 探针完成连接、建表、插入、搜索和清理
@@ -43,11 +44,11 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 
 - 单元测试：`42 passed`
 - 负载评测：1000 条记忆，120 次检索请求
-- 最新 1k 负载 P95：63.848 ms
+- 最新 1k 负载 P95：76.182 ms
 - 5k 负载 P95：142.534 ms
-- 10k 负载 P95：262.502 ms
-- 最新 openKylin RSS：34496.0 KB
-- 10k 评测 RSS：66160.0 KB
+- 10k 负载 P95：343.328 ms
+- 最新 openKylin RSS：34668.0 KB
+- 10k 评测 RSS：66116.0 KB
 - 纯文本基线 Recall@5：0.7800
 - 完整 MemGuardOS Recall@5：1.0000
 - 当前 benchmark：30 条种子记忆、25 条检索用例、25 条敏感检测用例、17 条精准遗忘用例、10 条冲突解决用例、13 条图谱检索用例、6 条数据质量用例。
@@ -56,6 +57,8 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 - 并发审计验证通过：6 线程共 72 条事件，`verify.ok=true`
 - OS 敏感路径 smoke test 被正确阻断
 - 真实 auditd 日志接入已验证：访问 `/etc/shadow` 后解析出的事件被 `sensitive_block` 阻断
+- BPF LSM 强制拦截已验证：访问 `/tmp/memguardos_lsm_secret` 返回 `Permission denied`，证据为 `enforcement_result=denied`
+- Peony/UKUI 原生插件已构建：Peony 右键菜单插件和 UKUI 控制中心插件均构建出 `.so`；系统目录安装因根文件系统只读未完成
 - SDK 状态：embedding 模型信息显示 768 维端侧文本模型，Python/C++ 探针均可返回 768 维向量；实际检索可使用 `kylin_sdk` 作为可选重排后端；vector SDK 库和服务可用
 - 自然语言敏感规则：`patterns suggest` 和 `patterns add-natural` 可从“工号格式”指令生成受限正则，并在写入记忆时完成脱敏
 
@@ -186,11 +189,40 @@ python3 -m memguard.cli.memctl evict-tier session --yes
 - `working`、`session`、`long_term` 均可用。
 - 清理 `session` 不会删除长期记忆。
 
-## 8. 一键验证
+## 8. BPF LSM 强制拦截验证
+
+```bash
+bash scripts/run_bpf_lsm_enforcer.sh docs/evidence/latest
+```
+
+当前 VM 证据：
+
+```text
+MemGuardOS BPF LSM enforcer attached. Press Ctrl+C to detach.
+cat: /tmp/memguardos_lsm_secret: 权限不够
+enforcement_result=denied
+```
+
+边界说明：默认演示只拦 `/tmp/memguardos_lsm_secret`，不拦 `/etc/shadow`、SSH、sudo 或 PAM 相关路径，避免影响登录链路。auditd 仍是默认稳定审计主路径。
+
+## 9. Peony/UKUI 原生插件验证
+
+```bash
+bash scripts/probe_ukui_deep_plugins.sh docs/evidence/latest
+bash scripts/build_ukui_plugins.sh
+bash scripts/install_ukui_plugins.sh --no-build
+```
+
+当前 VM 证据：
+
+- Peony 右键菜单插件构建产物：`native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so`。
+- UKUI 控制中心插件构建产物：`native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so`。
+- 安装到 `/usr/lib/x86_64-linux-gnu/...` 时返回“只读文件系统”，因此当前只宣称源码和 `.so` 构建成功，不宣称 UI 已可见。
+
+## 10. 一键验证
 
 ```bash
 bash scripts/openkylin_verify.sh
 ```
 
 该脚本会运行 doctor、Kylin AI SDK 状态、向量数据库探针、单元测试、评测、auditd 规则预览、OS 事件 smoke test、真实 auditd 日志接入和审计链验证。
-

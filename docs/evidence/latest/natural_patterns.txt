@@ -31,10 +31,10 @@ $ ".venv/bin/python" -m memguard.cli.memctl patterns suggest '把员工工号，
     }
   }
 }
-{"stored": true, "memory_id": "mem_b913b6f6612d4019", "type": "sensitive_policy", "subtype": "security_policy", "tier": "long_term", "confidence": 1.0, "quality": {"accepted": true, "score": 1.0, "issues": [], "warnings": [], "original_chars": 22, "normalized_chars": 22, "line_count": 1, "source_kind": "manual"}}
+{"stored": true, "memory_id": "mem_2265df626d8e4f4e", "type": "sensitive_policy", "subtype": "security_policy", "tier": "long_term", "confidence": 1.0, "quality": {"accepted": true, "score": 1.0, "issues": [], "warnings": [], "original_chars": 22, "normalized_chars": 22, "line_count": 1, "source_kind": "manual"}}
 [
   {
-    "memory_id": "mem_b913b6f6612d4019",
+    "memory_id": "mem_2265df626d8e4f4e",
     "type": "sensitive_policy",
     "subtype": "security_policy",
     "scope": "default",
@@ -46,16 +46,16 @@ $ ".venv/bin/python" -m memguard.cli.memctl patterns suggest '把员工工号，
     "sensitivity_level": "low",
     "sensitivity_labels": "[\"employee_id\"]",
     "sensitivity_redacted": 1,
-    "version_id": "ver_8bd25ecedbdf4bfa",
+    "version_id": "ver_80396ee31f904d6d",
     "deleted": 0,
-    "updated_at": "2026-05-22T10:24:25.966208+00:00",
+    "updated_at": "2026-05-22T15:47:50.030374+00:00",
     "rank": -1.3479212253829322e-06,
     "score": 0.7229,
     "match_source": "hybrid",
     "vector_backend": "hash"
   },
   {
-    "memory_id": "mem_f13d09aa21f24f10",
+    "memory_id": "mem_20832e1399af4156",
     "type": "knowledge",
     "subtype": "workflow",
     "scope": "default",
@@ -67,9 +67,9 @@ $ ".venv/bin/python" -m memguard.cli.memctl patterns suggest '把员工工号，
     "sensitivity_level": "none",
     "sensitivity_labels": "[]",
     "sensitivity_redacted": 0,
-    "version_id": "ver_49b3d2a6155a4fd5",
+    "version_id": "ver_9c6b06f573214c8a",
     "deleted": 0,
-    "updated_at": "2026-05-22T10:24:25.330630+00:00",
+    "updated_at": "2026-05-22T15:47:49.121769+00:00",
     "score": 0.1309,
     "match_source": "hybrid",
     "vector_backend": "hash"

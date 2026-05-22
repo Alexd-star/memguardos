@@ -1,0 +1,1 @@
+install: 无法创建普通文件 '/usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so': 只读文件系统

@@ -1,4 +1,4 @@
 $ .venv/bin/python -m pytest -q
 
 ..........................................                               [100%]
-42 passed in 7.84s
+42 passed in 8.05s

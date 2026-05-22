@@ -12,6 +12,7 @@ MemGuardOS 是面向研究生操作系统开源创新大赛赛题 3 的 Linux/op
 - 记忆层级：`working`、`session`、`long_term`。
 - 版本管理：追加式版本、回滚、墓碑删除、压缩清除。
 - OS 机制：mmap 段文件读取、namespace 多会话隔离、systemd/cgroup 服务限制、journald 桥接、auditd 规则与真实日志接入。
+- 原生增强：提供可选 BPF LSM 强制拦截、Peony 右键插件和 UKUI 控制中心插件源码，默认主路径仍保持免 root、可复现。
 - 敏感检测：PII、凭据、私钥、自定义正则、自然语言敏感规则、OS 高风险路径信号。
 - 精准遗忘：自然语言 dry-run、确认删除、元数据/索引/图谱清除、不可逆探针验证。
 - 知识结构化：实体/关系抽取、图谱搜索、关联记忆查询。

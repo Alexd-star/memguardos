@@ -17,15 +17,17 @@
 - 自然语言精准遗忘、compact 和明文探针验证。
 - RAG 上下文构建、provider-neutral prompt 渲染和默认关闭的 LLM adapter。
 - namespace 多会话隔离、systemd/cgroup 模板实例、journald、auditd、Kylin SDK 探测、Kylin embedding 可选检索重排和向量数据库 SDK 探针。
-- UKUI/freedesktop 轻量通知和默认关闭的 bpftrace openat 探针脚本。
+- UKUI/freedesktop 轻量通知、Peony 右键菜单插件源码、UKUI 控制中心插件源码和 BPF LSM 强制拦截增强。
 
 ### 验证结果
 
 - 本地与 openKylin 单元测试：`42 passed`。
-- openKylin 1k 负载 P95：`63.848 ms`。
-- openKylin 10k 负载 P95：`262.502 ms`。
+- openKylin 1k 负载 P95：`76.182 ms`。
+- openKylin 10k 负载 P95：`343.328 ms`。
 - benchmark 扩充到 30/25/25/17/10/13/6，覆盖自然语言敏感规则、更多 OS 敏感路径、namespace/cgroup、Kylin 可选检索和并发审计样例。
 - Kylin embedding 实际检索：`vector_backend: "kylin_sdk"`。
+- BPF LSM：openKylin 上构建并 attach，对 `/tmp/memguardos_lsm_secret` 返回 `Permission denied`，证据为 `enforcement_result=denied`。
+- UKUI 原生插件：Peony 右键菜单插件和 UKUI 控制中心插件均已构建出 `.so`；当前 VM 系统目录安装因只读根文件系统未完成。
 - 并发审计写入：6 线程共 72 条事件，审计哈希链验证通过。
 - Recall@5、跨语言 Recall@5、敏感 F1、精准遗忘指标、冲突正确率、图谱 Recall@5 均为 `1.0000`。
 

@@ -1,0 +1,7 @@
+{
+  "Keys": [
+    "memguardos-peony-menu-plugin"
+  ],
+  "Name": "MemGuardOS Peony Menu Plugin",
+  "Description": "Send selected files to MemGuardOS as OS-agent memory events."
+}

@@ -57,6 +57,32 @@ run_shell_capture() {
   }
 }
 
+run_self_logging_capture() {
+  local name="$1"
+  shift
+  local file="${OUT_DIR}/${name}.txt"
+  local stdout_file="${OUT_DIR}/${name}.stdout.tmp"
+  local merged_file="${OUT_DIR}/${name}.merged.tmp"
+  rm -f "$file" "$stdout_file" "$merged_file"
+  local code=0
+  "$@" >"$stdout_file" 2>&1 || code=$?
+  {
+    echo "\$ $*"
+    echo
+    if [ -s "$file" ]; then
+      cat "$file"
+    else
+      cat "$stdout_file"
+    fi
+    if [ "$code" -ne 0 ]; then
+      echo "command failed with exit code ${code}"
+    fi
+  } >"$merged_file"
+  mv "$merged_file" "$file"
+  rm -f "$stdout_file"
+  return 0
+}
+
 write_summary() {
   {
     cat <<'EOF'
@@ -92,6 +118,10 @@ EOF
 | `systemd_namespace.txt` | systemd 模板实例与独立 cgroup 证据 |
 | `audit_concurrency.txt` | 并发审计写入与哈希链连续性证据 |
 | `ukui_notify.txt` | UKUI/freedesktop 桌面通知 smoke 证据 |
+| `ukui_deep_plugins.txt` | Peony/UKUI 控制中心深度插件源码与构建环境探针 |
+| `ukui_plugin_build.txt` | Peony 右键插件与 UKUI 控制中心插件真实构建证据 |
+| `ukui_plugin_install.txt` | UKUI 插件系统目录安装尝试与只读根文件系统边界 |
+| `bpf_lsm_enforcer.txt` | BPF LSM 强制拦截增强环境、构建和 attach 探针 |
 | `systemd_cgroup.txt` | systemd/cgroup 服务限制证据 |
 | `journald.txt` | journald 日志证据 |
 | `auditd_rules.txt` | auditd 规则证据 |
@@ -223,6 +253,10 @@ if command -v notify-send >/dev/null 2>&1; then
 else
   echo "notify-send unavailable; skipped" >"${OUT_DIR}/ukui_notify.txt"
 fi
+run_self_logging_capture "ukui_deep_plugins" bash scripts/probe_ukui_deep_plugins.sh "${OUT_DIR}"
+run_capture "ukui_plugin_build" bash scripts/build_ukui_plugins.sh
+run_capture "ukui_plugin_install" bash scripts/install_ukui_plugins.sh --no-build
+run_self_logging_capture "bpf_lsm_enforcer" bash scripts/run_bpf_lsm_enforcer.sh "${OUT_DIR}"
 
 if [ "$RUN_10K" -eq 1 ]; then
   run_capture "eval_10k" "${PYTHON_BIN}" -m memguard.eval.run_eval \

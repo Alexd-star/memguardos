@@ -1,0 +1,20 @@
+# MemGuardOS BPF LSM enforcer probe
+2026-05-23T00:03:16+08:00
+kernel=6.6.0-19-generic
+lsm=lockdown,capability,yama,selinux,bpf,ima,evm
+btf=yes
+/usr/bin/clang
+/usr/bin/pkg-config
+libbpf_dev=yes
+
+make: 进入目录“/home/luo/memguardos/native/bpf_lsm”
+rm -rf build
+mkdir -p build
+clang -O2 -g -Wall -Werror -target bpf -I/usr/include/x86_64-linux-gnu  -c memguard_lsm.bpf.c -o build/memguard_lsm.bpf.o
+cc -O2 -g -Wall -Wextra memguard_lsm_loader.c -o build/memguard_lsm_loader $(pkg-config --cflags --libs libbpf)
+make: 离开目录“/home/luo/memguardos/native/bpf_lsm”
+MemGuardOS BPF LSM enforcer attached. Press Ctrl+C to detach.
+loader_pid=36167
+trying cat /tmp/memguardos_lsm_secret; expected Permission denied when enforcement works
+cat: /tmp/memguardos_lsm_secret: 权限不够
+enforcement_result=denied

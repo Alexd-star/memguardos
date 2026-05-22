@@ -35,6 +35,7 @@ EXCLUDED_PATTERNS = [
 ROLE_DESCRIPTIONS = {
     "作品主体/核心代码": "memguard/",
     "作品主体/脚本": "scripts/",
+    "作品主体/原生增强": "native/",
     "作品主体/测试": "tests/",
     "作品主体/数据与评测样例": "data/",
     "中文文档": "README.md and docs/",
@@ -47,6 +48,7 @@ ROLE_DESCRIPTIONS = {
 COMPETITION_ROLES = {
     "作品主体/核心代码",
     "作品主体/脚本",
+    "作品主体/原生增强",
     "作品主体/测试",
     "作品主体/数据与评测样例",
     "中文文档",
@@ -61,6 +63,8 @@ def classify_file(path: Path) -> str:
         return "作品主体/核心代码"
     if rel.startswith("scripts/"):
         return "作品主体/脚本"
+    if rel.startswith("native/"):
+        return "作品主体/原生增强"
     if rel.startswith("tests/"):
         return "作品主体/测试"
     if rel.startswith("data/"):

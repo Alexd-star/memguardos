@@ -1,36 +1,17 @@
 $ systemctl status memguardd --no-pager || true; systemctl show memguardd -p MemoryMax -p CPUQuotaPerSecUSec || true; cat /sys/fs/cgroup/system.slice/memguardd.service/memory.max 2>/dev/null || true; cat /sys/fs/cgroup/system.slice/memguardd.service/cpu.max 2>/dev/null || true; ".venv/bin/python" -m memguard.cli.memctl status || true
 
-● memguardd.service - MemGuardOS agent memory service
+○ memguardd.service - MemGuardOS agent memory service
      Loaded: loaded (/etc/systemd/system/memguardd.service; disabled; preset: enabled)
-     Active: active (running) since Fri 2026-05-22 05:17:32 CST; 13h ago
-   Main PID: 471520 (python3)
-      Tasks: 2 (limit: 6991)
-     Memory: 14.9M (max: 512.0M available: 497.0M peak: 16.5M)
-        CPU: 6.926s
-     CGroup: /system.slice/memguardd.service
-             └─471520 /usr/bin/python3 -m memguard.daemon --interval 60 --socket /run/memguardos/memguard.sock --socket-mode 666
-
-5月 22 18:17:42 luo-pc memguardd[633645]: {"detail": {"cgroup_v2": true, "namespace": "default", "namespace_home": "/root/.memguardos", "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
-5月 22 18:18:42 luo-pc memguardd[633741]: {"detail": {"cgroup_v2": true, "namespace": "default", "namespace_home": "/root/.memguardos", "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
-5月 22 18:19:42 luo-pc memguardd[633837]: {"detail": {"cgroup_v2": true, "namespace": "default", "namespace_home": "/root/.memguardos", "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
-5月 22 18:20:42 luo-pc memguardd[633969]: {"detail": {"cgroup_v2": true, "namespace": "default", "namespace_home": "/root/.memguardos", "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
-5月 22 18:21:42 luo-pc memguardd[634067]: {"detail": {"cgroup_v2": true, "namespace": "default", "namespace_home": "/root/.memguardos", "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
-5月 22 18:22:42 luo-pc memguardd[634164]: {"detail": {"cgroup_v2": true, "namespace": "default", "namespace_home": "/root/.memguardos", "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
-5月 22 18:23:42 luo-pc memguardd[634718]: {"detail": {"cgroup_v2": true, "namespace": "default", "namespace_home": "/root/.memguardos", "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
-5月 22 18:24:42 luo-pc memguardd[641479]: {"detail": {"cgroup_v2": true, "namespace": "default", "namespace_home": "/root/.memguardos", "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
-5月 22 18:25:42 luo-pc memguardd[649220]: {"detail": {"cgroup_v2": true, "namespace": "default", "namespace_home": "/root/.memguardos", "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
-5月 22 18:26:42 luo-pc memguardd[654927]: {"detail": {"cgroup_v2": true, "namespace": "default", "namespace_home": "/root/.memguardos", "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+     Active: inactive (dead)
 CPUQuotaPerSecUSec=500ms
 MemoryMax=536870912
-536870912
-50000 100000
 {
   "platform": "Linux",
   "is_linux": true,
   "cgroup_v2_mounted": true,
-  "proc_cgroup": "0::/user.slice/user-1000.slice/session-220.scope",
+  "proc_cgroup": "0::/user.slice/user-1000.slice/session-21.scope",
   "memory_current": null,
   "memory_max": null,
   "cpu_max": null,
-  "pid": 659948
+  "pid": 34348
 }
