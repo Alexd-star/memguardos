@@ -2,6 +2,6 @@ $ .venv/bin/python -m memguard.cli.memctl verify-audit
 
 {
   "ok": true,
-  "checked": 69,
-  "head_hash": "47a252d99a0246eadb3fad72ff46776814267a22b502601a8d3fdc05f3dbd6c3"
+  "checked": 73,
+  "head_hash": "aa09a01e819b7da614a35ce5bb3cc236e13685bd1295781c3013f4e36b7428aa"
 }

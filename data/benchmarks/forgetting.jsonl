@@ -4,9 +4,14 @@
 {"request":"忘掉代码搜索优先用 rg 的偏好","expected_delete":["pref_tool_rg_first"],"expected_keep":["pref_linux_brief_zh","pref_output_chinese"]}
 {"request":"删除 systemd 服务单元模板记忆","expected_delete":["knowledge_template_systemd_unit"],"expected_keep":["knowledge_systemd_memory_en","knowledge_openkylin_service_zh"]}
 {"request":"忘记 auditd 监控 shadow 的案例","expected_delete":["knowledge_auditd_shadow_case"],"expected_keep":["knowledge_journald_en","knowledge_forget_negative_cache"]}
-{"request":"忘掉端侧 embedding SDK 维度信息","expected_delete":["knowledge_embedding_sdk_zh"],"expected_keep":["knowledge_vector_sdk_en"]}
+{"request":"忘掉端侧 embedding SDK 768 维向量模型信息","expected_delete":["knowledge_embedding_sdk_zh"],"expected_keep":["knowledge_vector_sdk_en","knowledge_kylin_auto_retrieval"]}
 {"request":"忘掉中文回答偏好","expected_delete":["pref_output_chinese"],"expected_keep":["pref_linux_brief_zh"]}
 {"request":"删除高风险操作确认策略","expected_delete":["pref_security_confirm_delete"],"expected_keep":["pref_output_short_risk"]}
 {"request":"忘记普通缓存清理不等于精准遗忘这条知识","expected_delete":["knowledge_forget_negative_cache"],"expected_keep":["knowledge_forget_workflow_zh"]}
 {"request":"忘掉 shell history 中 pytest 行为记忆","expected_delete":["knowledge_behavior_shell_history"],"expected_keep":["knowledge_context_token_budget"]}
 {"request":"删除 UKUI 通知联动知识","expected_delete":["knowledge_ukui_notification"],"expected_keep":["knowledge_socket_local_api"]}
+{"request":"忘掉 namespace cgroup 多会话隔离流程","expected_delete":["knowledge_namespace_cgroup_isolation"],"expected_keep":["knowledge_openkylin_service_zh"]}
+{"request":"删除 Kylin auto retrieval 可选后端说明","expected_delete":["knowledge_kylin_auto_retrieval"],"expected_keep":["knowledge_embedding_sdk_zh","knowledge_vector_sdk_en"]}
+{"request":"忘记 BEGIN IMMEDIATE 并发审计哈希链知识","expected_delete":["knowledge_audit_concurrency"],"expected_keep":["knowledge_journald_en"]}
+{"request":"删除 pytest fast feedback 偏好","expected_delete":["pref_pytest_fast_feedback"],"expected_keep":["knowledge_behavior_shell_history"]}
+{"request":"忘掉不要夸大 LSM eBPF UKUI 的答辩偏好","expected_delete":["pref_answer_no_exaggeration"],"expected_keep":["knowledge_ebpf_openat_probe","knowledge_ukui_notification"]}

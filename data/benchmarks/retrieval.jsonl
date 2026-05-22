@@ -15,3 +15,11 @@
 {"query":"为了省 token 能不能默认牺牲 RAG 上下文相关性？","expected":["knowledge_context_token_budget"],"k":5,"case":"token_budget"}
 {"query":"openKylin 桌面通知可以怎么联动 MemGuardOS？","expected":["knowledge_ukui_notification"],"k":5,"case":"ukui_notify"}
 {"query":"OS Agent 如何通过本地接口调用 MemGuardOS 记忆？","expected":["knowledge_socket_local_api"],"k":5,"case":"local_api"}
+{"query":"不同智能体会话怎样隔离 memory.segment 和 SQLite？","expected":["knowledge_namespace_cgroup_isolation"],"k":5,"case":"namespace_isolation"}
+{"query":"Kylin embedding 可选后端启用后结果里会显示什么？","expected":["knowledge_kylin_auto_retrieval"],"k":5,"case":"kylin_auto_backend"}
+{"query":"多 Agent 同时写审计时怎么避免哈希链分叉？","expected":["knowledge_audit_concurrency"],"k":5,"case":"audit_concurrency"}
+{"query":"用户用自然语言描述工号格式时，敏感规则怎么落库？","expected":["knowledge_natural_sensitive_pattern"],"k":5,"case":"natural_sensitive_pattern"}
+{"query":"kubeconfig 和 AWS credentials 属于什么 OS 风险来源？","expected":["knowledge_kube_aws_sensitive_paths"],"k":5,"case":"os_sensitive_paths"}
+{"query":"修改 Python 项目后优先跑什么测试？","expected":["pref_pytest_fast_feedback"],"k":5,"case":"tool_preference"}
+{"query":"答辩里哪些 OS 或大模型能力不能夸大？","expected":["pref_answer_no_exaggeration"],"k":5,"case":"evidence_boundary"}
+{"query":"更多 Linux 发行版 smoke test 至少验证哪些内容？","expected":["knowledge_linux_smoke_portability"],"k":5,"case":"linux_portability"}

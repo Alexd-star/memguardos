@@ -1,6 +1,6 @@
 # openKylin 证据采集包
 
-采集时间：20260522_130156
+采集时间：20260522_182352
 
 ## 文件说明
 
@@ -19,6 +19,7 @@
 | `kylin_embedding_diag/` | Kylin embedding runtime、socket、插件、包版本和日志诊断 |
 | `vector_probe.txt` | Kylin 向量数据库 SDK 探针 |
 | `quality_report.txt` | 输入清洗、格式标准化与质量校验证据 |
+| `natural_patterns.txt` | 自然语言自定义敏感规则证据 |
 | `behavior_history.txt` | shell 用户行为轨迹接入证据 |
 | `build_prompt.txt` | RAG 上下文与 LLM prompt 渲染证据 |
 | `generate_answer.txt` | 默认关闭的可选 LLM adapter dry-run 证据 |

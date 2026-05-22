@@ -83,6 +83,7 @@ EOF
 | `kylin_embedding_diag/` | Kylin embedding runtime、socket、插件、包版本和日志诊断 |
 | `vector_probe.txt` | Kylin 向量数据库 SDK 探针 |
 | `quality_report.txt` | 输入清洗、格式标准化与质量校验证据 |
+| `natural_patterns.txt` | 自然语言自定义敏感规则证据 |
 | `behavior_history.txt` | shell 用户行为轨迹接入证据 |
 | `build_prompt.txt` | RAG 上下文与 LLM prompt 渲染证据 |
 | `generate_answer.txt` | 默认关闭的可选 LLM adapter dry-run 证据 |
@@ -153,8 +154,11 @@ run_capture "eval_1k" "${PYTHON_BIN}" -m memguard.eval.run_eval \
   --latency-queries 120 \
   --output "${OUT_DIR}/eval_result_openkylin.json" \
   --markdown "${OUT_DIR}/eval_report_openkylin.md"
+cp "${OUT_DIR}/eval_result_openkylin.json" docs/eval_result_openkylin.json
+cp "${OUT_DIR}/eval_report_openkylin.md" docs/eval_report_openkylin.md
 
 run_shell_capture "quality_report" "\"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '  普通知识：   systemd   可用 MemoryMax 限制服务内存。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '!!! --- ***' || true; \"${PYTHON_BIN}\" -m memguard.cli.memctl quality-report"
+run_shell_capture "natural_patterns" "\"${PYTHON_BIN}\" -m memguard.cli.memctl patterns suggest '把员工工号，格式以 MG- 开头后接 6 位数字，作为敏感信息'; \"${PYTHON_BIN}\" -m memguard.cli.memctl patterns add-natural '把员工工号，格式以 MG- 开头后接 6 位数字，作为敏感信息'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '员工工号 MG-123456 需要脱敏保存。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl search '员工工号' --top-k 3; \"${PYTHON_BIN}\" -m memguard.cli.memctl patterns list"
 run_capture "behavior_history" "${PYTHON_BIN}" -m memguard.cli.memctl ingest-history --file "$HOME/.bash_history" --limit 20
 run_capture "build_prompt" "${PYTHON_BIN}" -m memguard.cli.memctl build-prompt "openKylin 服务内存限制" --top-k 5 --token-budget 1200
 run_capture "generate_answer" "${PYTHON_BIN}" -m memguard.cli.memctl generate-answer "openKylin 服务内存限制" --top-k 5 --token-budget 1200 --provider dry-run
@@ -226,6 +230,8 @@ if [ "$RUN_10K" -eq 1 ]; then
     --latency-queries 150 \
     --output "${OUT_DIR}/eval_result_openkylin_10k.json" \
     --markdown "${OUT_DIR}/eval_report_openkylin_10k.md"
+  cp "${OUT_DIR}/eval_result_openkylin_10k.json" docs/eval_result_openkylin_10k.json
+  cp "${OUT_DIR}/eval_report_openkylin_10k.md" docs/eval_report_openkylin_10k.md
 fi
 
 run_shell_capture "systemd_cgroup" "systemctl status memguardd --no-pager || true; systemctl show memguardd -p MemoryMax -p CPUQuotaPerSecUSec || true; cat /sys/fs/cgroup/system.slice/memguardd.service/memory.max 2>/dev/null || true; cat /sys/fs/cgroup/system.slice/memguardd.service/cpu.max 2>/dev/null || true; \"${PYTHON_BIN}\" -m memguard.cli.memctl status || true"

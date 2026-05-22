@@ -16,3 +16,10 @@
 {"text":"token bucket 算法是一种限流算法，不是访问令牌。","source_uri":"inline","expect_stored":true,"expect_redacted":false,"labels":[]}
 {"text":"User behavior: shell_command tool=cat category=high_risk command=cat /home/luo/.ssh/id_rsa","source_uri":"/home/luo/.ssh/id_rsa","expect_stored":false,"expect_redacted":false,"labels":["sensitive_os_source"]}
 {"text":"自然语言里提到 token 成本控制，不代表出现真实访问令牌。","source_uri":"inline","expect_stored":true,"expect_redacted":false,"labels":[]}
+{"text":"OS event: fanotify_open action=open path=/home/luo/.aws/credentials process=python","source_uri":"/home/luo/.aws/credentials","expect_stored":false,"expect_redacted":false,"labels":["sensitive_os_source"]}
+{"text":"OS event: fanotify_open action=open path=/home/luo/.kube/config process=kubectl","source_uri":"/home/luo/.kube/config","expect_stored":false,"expect_redacted":false,"labels":["sensitive_os_source"]}
+{"text":"GCP service account key path was opened by terraform.","source_uri":"/home/luo/service_account_key.json","expect_stored":false,"expect_redacted":false,"labels":["sensitive_os_source"]}
+{"text":"AKIA1234567890ABCDEF 是一个 AWS Key 示例。","source_uri":"inline","expect_stored":false,"expect_redacted":false,"labels":["aws_access_key_id"]}
+{"text":"password_length=16 是密码策略字段，不是用户真实密码。","source_uri":"inline","expect_stored":true,"expect_redacted":false,"labels":[]}
+{"text":"姓名字段为空时不应触发中文姓名脱敏。","source_uri":"inline","expect_stored":true,"expect_redacted":false,"labels":[]}
+{"text":"普通 kubeconfig 文档说明，不包含具体文件路径或凭据内容。","source_uri":"inline","expect_stored":true,"expect_redacted":false,"labels":[]}

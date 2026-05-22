@@ -1,6 +1,6 @@
 $ ".venv/bin/python" -m memguard.cli.memctl ingest --text '  普通知识：   systemd   可用 MemoryMax 限制服务内存。'; ".venv/bin/python" -m memguard.cli.memctl ingest --text '!!! --- ***' || true; ".venv/bin/python" -m memguard.cli.memctl quality-report
 
-{"stored": true, "memory_id": "mem_fcba638526d54f9c", "type": "knowledge", "subtype": "workflow", "tier": "long_term", "confidence": 0.95, "quality": {"accepted": true, "score": 0.95, "issues": [], "warnings": ["normalized_whitespace_or_control_chars"], "original_chars": 40, "normalized_chars": 34, "line_count": 1, "source_kind": "manual"}}
+{"stored": true, "memory_id": "mem_f13d09aa21f24f10", "type": "knowledge", "subtype": "workflow", "tier": "long_term", "confidence": 0.95, "quality": {"accepted": true, "score": 0.95, "issues": [], "warnings": ["normalized_whitespace_or_control_chars"], "original_chars": 40, "normalized_chars": 34, "line_count": 1, "source_kind": "manual"}}
 {"stored": false, "reason": "quality_reject", "quality": {"accepted": false, "score": 0.0, "issues": ["no_alphanumeric_or_cjk_signal"], "warnings": [], "original_chars": 11, "normalized_chars": 11, "line_count": 1, "source_kind": "manual"}}
 {
   "quality_reject": [
@@ -9,20 +9,20 @@ $ ".venv/bin/python" -m memguard.cli.memctl ingest --text '  普通知识：   s
       "event_type": "quality_reject",
       "memory_id": null,
       "detail": "{\"namespace\": \"default\", \"quality\": {\"accepted\": false, \"issues\": [\"no_alphanumeric_or_cjk_signal\"], \"line_count\": 1, \"normalized_chars\": 11, \"original_chars\": 11, \"score\": 0.0, \"source_kind\": \"manual\", \"warnings\": []}, \"reason\": \"input quality check rejected the memory\", \"source_kind\": \"manual\", \"source_uri\": \"inline\"}",
-      "created_at": "2026-05-22T05:02:37.724525+00:00",
-      "prev_hash": "27667ab56a40303162cf67e1625137b1d83bfedec30a0a79f6fe95882a5b56d5",
-      "event_hash": "b5388cd84035df9be50106b5f5675885d70d70300834bcad9ca1ed00d37d2556"
+      "created_at": "2026-05-22T10:24:25.464695+00:00",
+      "prev_hash": "ce284d87ff9cb1c5c286fb6ed3a4cc10797f686f7f02781ba9bff9b67da5c0fc",
+      "event_hash": "d5f6dabed3e36fe27b72dc8e8bf2e6b5386c89f342f30c25438d5a27d3af4c86"
     }
   ],
   "recent_ingest_quality": [
     {
       "audit_id": 2,
       "event_type": "ingest",
-      "memory_id": "mem_fcba638526d54f9c",
+      "memory_id": "mem_f13d09aa21f24f10",
       "detail": "{\"labels\": [], \"namespace\": \"default\", \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 34, \"original_chars\": 40, \"score\": 0.95, \"source_kind\": \"manual\", \"warnings\": [\"normalized_whitespace_or_control_chars\"]}, \"sensitivity\": \"none\", \"source_kind\": \"manual\", \"source_uri\": \"inline\", \"subtype\": \"workflow\", \"tier\": \"long_term\", \"type\": \"knowledge\"}",
-      "created_at": "2026-05-22T05:02:37.560853+00:00",
-      "prev_hash": "15e658c5a6f16d4180534feca6f26a3a83fa8ac23b1b3a80eddcd1d2a289fb7d",
-      "event_hash": "27667ab56a40303162cf67e1625137b1d83bfedec30a0a79f6fe95882a5b56d5"
+      "created_at": "2026-05-22T10:24:25.334760+00:00",
+      "prev_hash": "15d75c6d36670fa891489d8d449fd7d9fb5c36b9cc0d94a7b79244d1142e74bd",
+      "event_hash": "ce284d87ff9cb1c5c286fb6ed3a4cc10797f686f7f02781ba9bff9b67da5c0fc"
     }
   ]
 }

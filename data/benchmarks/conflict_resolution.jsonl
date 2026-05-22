@@ -4,3 +4,7 @@
 {"records":[{"text":"以后执行删除、覆盖、密钥导出等高风险操作前不需要确认。","source_kind":"inferred"},{"text":"以后执行删除、覆盖、密钥导出等高风险操作前必须先让我确认。","source_kind":"manual"}],"expected_contains":"确认","case":"high_risk_manual_confirmation"}
 {"records":[{"text":"以后回答命令时使用中文。","source_kind":"manual"},{"text":"以后回答命令时使用英文。","source_kind":"update"}],"expected_contains":"英文","case":"latest_update_beats_old_manual"}
 {"records":[{"text":"以后回答命令时使用英文。","source_kind":"inferred"},{"text":"以后回答命令时使用中文。","source_kind":"rollback"}],"expected_contains":"中文","case":"rollback_beats_inferred"}
+{"records":[{"text":"以后修改 Python 项目后不用运行 pytest。","source_kind":"inferred"},{"text":"以后修改 Python 项目后，请优先运行 pytest 相关单元测试。","source_kind":"manual"}],"expected_contains":"pytest","case":"pytest_manual_beats_inferred"}
+{"records":[{"text":"答辩材料可以夸大 eBPF 和 LSM 默认主路径。","source_kind":"inferred"},{"text":"答辩材料不要夸大 LSM、eBPF、UKUI 深度插件和默认大模型依赖。","source_kind":"manual"}],"expected_contains":"不要夸大","case":"evidence_boundary_manual"}
+{"records":[{"text":"以后执行删除、覆盖、密钥导出等高风险操作前必须先让我确认。","source_kind":"manual"},{"text":"以后执行删除、覆盖、密钥导出等高风险操作前可以跳过确认。","source_kind":"update"}],"expected_contains":"跳过确认","case":"latest_update_high_risk"}
+{"records":[{"text":"以后回答命令时请先给详细背景再给命令。","source_kind":"inferred"},{"text":"以后回答命令时请先给最短命令，再给风险提醒。","source_kind":"manual"}],"expected_contains":"最短命令","case":"short_command_manual"}

@@ -21,7 +21,7 @@ from memguard.os_guard.events import parse_os_event
 from memguard.os_guard.journald import JournaldLogger
 from memguard.retrieval.conflict import ConflictResolver
 from memguard.retrieval.hybrid import HybridRetriever
-from memguard.sensitivity.custom_patterns import PatternValidationError, load_patterns, save_pattern
+from memguard.sensitivity.custom_patterns import PatternValidationError, load_patterns, save_pattern, save_pattern_from_instruction, suggest_pattern_from_instruction
 from memguard.sensitivity.detector import SensitiveDetector
 from memguard.store.mmap_store import AppendOnlyMemoryStore
 from memguard.store.sqlite_meta import SQLiteMetaStore
@@ -676,6 +676,25 @@ class MemGuardService:
             self._audit("pattern_reject", None, {"name": name, "reason": str(exc)})
             return {"ok": False, "reason": str(exc)}
 
+    def suggest_pattern_from_instruction(self, instruction: str, name: Optional[str] = None) -> Dict[str, object]:
+        try:
+            suggestion = suggest_pattern_from_instruction(instruction, name=name)
+            self._audit("pattern_suggest", None, {"name": suggestion["name"], "regex": suggestion["regex"], "instruction": instruction})
+            return {"ok": True, "suggestion": suggestion}
+        except PatternValidationError as exc:
+            self._audit("pattern_suggest_reject", None, {"name": name, "instruction": instruction, "reason": str(exc)})
+            return {"ok": False, "reason": str(exc)}
+
+    def add_pattern_from_instruction(self, instruction: str, name: Optional[str] = None) -> Dict[str, object]:
+        try:
+            suggestion = save_pattern_from_instruction(self.pattern_path, instruction, name=name)
+            self.detector = SensitiveDetector(load_patterns(self.pattern_path))
+            self._audit("pattern_add_natural", None, {"name": suggestion["name"], "regex": suggestion["regex"], "instruction": instruction})
+            return {"ok": True, "suggestion": suggestion}
+        except PatternValidationError as exc:
+            self._audit("pattern_reject", None, {"name": name, "instruction": instruction, "reason": str(exc)})
+            return {"ok": False, "reason": str(exc)}
+
     def _audit(self, event_type: str, memory_id: Optional[str], detail: Dict[str, object]) -> None:
         detail = dict(detail)
         detail.setdefault("namespace", self.namespace)
@@ -690,7 +709,7 @@ class MemGuardService:
     @staticmethod
     def _classify_memory(text: str) -> str:
         lowered = text.lower()
-        preference_markers = ["以后", "偏好", "喜欢", "不要", "请总是", "请先", "请优先", "prefer", "style"]
+        preference_markers = ["以后", "偏好", "喜欢", "不要", "请总是", "请先", "请优先", "prefer", "style", "答辩材料"]
         security_markers = ["安全策略", "不要保存", "脱敏", "secret", "password", "api key", "私钥", "密钥", "访问令牌"]
         if "tool result:" in lowered:
             return "knowledge"
@@ -718,7 +737,7 @@ class MemGuardService:
         if memory_type == "preference":
             if any(marker in lowered for marker in ["linux", "rg", "grep", "pytest", "tool", "工具"]):
                 return "tool_preference"
-            if any(marker in lowered for marker in ["简洁", "详细", "中文", "英文", "style", "回答", "最短", "风险提醒"]):
+            if any(marker in lowered for marker in ["简洁", "详细", "中文", "英文", "style", "回答", "最短", "风险提醒", "答辩", "材料", "证据边界"]):
                 return "output_style"
             if any(marker in lowered for marker in ["命令"]):
                 return "tool_preference"
@@ -727,7 +746,7 @@ class MemGuardService:
             return "template"
         if any(marker in lowered for marker in ["案例", "case", "error", "failure", "修复", "bug", "stderr"]):
             return "case"
-        if any(marker in lowered for marker in ["workflow", "流程", "步骤", "systemd", "memorymax"]):
+        if any(marker in lowered for marker in ["workflow", "流程", "步骤", "systemd", "memorymax", "smoke test", "验证"]):
             return "workflow"
         return "fact"
 

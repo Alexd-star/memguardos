@@ -21,9 +21,10 @@
 
 ### 验证结果
 
-- 本地与 openKylin 单元测试：`41 passed`。
-- openKylin 1k 负载 P95：`65.367 ms`。
-- openKylin 10k 负载 P95：`258.027 ms`。
+- 本地与 openKylin 单元测试：`42 passed`。
+- openKylin 1k 负载 P95：`63.848 ms`。
+- openKylin 10k 负载 P95：`262.502 ms`。
+- benchmark 扩充到 30/25/25/17/10/13/6，覆盖自然语言敏感规则、更多 OS 敏感路径、namespace/cgroup、Kylin 可选检索和并发审计样例。
 - Kylin embedding 实际检索：`vector_backend: "kylin_sdk"`。
 - 并发审计写入：6 线程共 72 条事件，审计哈希链验证通过。
 - Recall@5、跨语言 Recall@5、敏感 F1、精准遗忘指标、冲突正确率、图谱 Recall@5 均为 `1.0000`。

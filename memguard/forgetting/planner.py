@@ -112,11 +112,17 @@ def _anchor_policy_passes(request: str, matched_distinctive: List[str], strong_m
     matched = set(matched_distinctive)
     if "linux" in lowered_request:
         return "linux" in matched
+    if "rg" in lowered_request:
+        return "rg" in matched
+    if "shell history" in lowered_request:
+        return "shell" in matched and "history" in matched
     if "huggingface" in lowered_request or "api key" in lowered_request.lower():
         return "token" in matched and bool({"api", "key", "huggingface"} & matched)
     if "精准遗忘流程" in request:
         return "流程" in matched or "忘流" in matched
     if "embedding" in lowered_request:
+        if "维度" in request:
+            return bool({"维度", "768"} & matched)
         return "embedding" in matched
     if "auditd" in lowered_request:
         return "auditd" in matched

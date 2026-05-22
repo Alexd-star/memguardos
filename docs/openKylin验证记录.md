@@ -6,7 +6,7 @@
 
 日期：2026-05-18 至 2026-05-22
 
-说明：本页记录已经完成的 openKylin 证据。最新证据包采集时间为 `20260522_130156`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、Kylin embedding 实际检索重排、Kylin 向量数据库探针和 10k 规模评测。
+说明：本页记录已经完成的 openKylin 证据。最新证据包采集时间为 `20260522_182352`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、Kylin embedding 实际检索重排、Kylin 向量数据库探针和 10k 规模评测。
 
 环境：
 
@@ -41,22 +41,23 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 
 最新结果：
 
-- 单元测试：`41 passed`
+- 单元测试：`42 passed`
 - 负载评测：1000 条记忆，120 次检索请求
-- 最新 1k 负载 P95：65.367 ms
+- 最新 1k 负载 P95：63.848 ms
 - 5k 负载 P95：142.534 ms
-- 10k 负载 P95：258.027 ms
-- 最新 openKylin RSS：34240.0 KB
-- 10k 评测 RSS：65820.0 KB
-- 纯文本基线 Recall@5：0.6818
+- 10k 负载 P95：262.502 ms
+- 最新 openKylin RSS：34496.0 KB
+- 10k 评测 RSS：66160.0 KB
+- 纯文本基线 Recall@5：0.7800
 - 完整 MemGuardOS Recall@5：1.0000
-- 当前 benchmark：22 条种子记忆、17 条检索用例、18 条敏感检测用例、12 条精准遗忘用例、6 条冲突解决用例、8 条图谱检索用例。
+- 当前 benchmark：30 条种子记忆、25 条检索用例、25 条敏感检测用例、17 条精准遗忘用例、10 条冲突解决用例、13 条图谱检索用例、6 条数据质量用例。
 - 类型/子类型准确率、Recall@5、敏感阻断 F1、脱敏 F1、敏感标签 F1、遗忘精确率/召回率、冲突正确率、图谱 Recall@5 均为 1.0000
 - 审计哈希链验证通过
 - 并发审计验证通过：6 线程共 72 条事件，`verify.ok=true`
 - OS 敏感路径 smoke test 被正确阻断
 - 真实 auditd 日志接入已验证：访问 `/etc/shadow` 后解析出的事件被 `sensitive_block` 阻断
 - SDK 状态：embedding 模型信息显示 768 维端侧文本模型，Python/C++ 探针均可返回 768 维向量；实际检索可使用 `kylin_sdk` 作为可选重排后端；vector SDK 库和服务可用
+- 自然语言敏感规则：`patterns suggest` 和 `patterns add-natural` 可从“工号格式”指令生成受限正则，并在写入记忆时完成脱敏
 
 ## 1. 基础环境验证
 

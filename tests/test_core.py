@@ -480,6 +480,33 @@ def test_custom_sensitive_pattern_validation_rejects_bad_regex(tmp_path, monkeyp
         service.close()
 
 
+def test_natural_language_sensitive_pattern_add_and_suggest(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+    service = make_service(tmp_path)
+    try:
+        suggestion = service.suggest_pattern_from_instruction("把员工工号，格式以 MG- 开头后接 6 位数字，作为敏感信息")
+        assert suggestion["ok"] is True
+        assert suggestion["suggestion"]["name"] == "employee_id"
+        assert suggestion["suggestion"]["regex"] == r"(?<![A-Za-z0-9])MG\-\d{6}(?![A-Za-z0-9])"
+
+        added = service.add_pattern_from_instruction("把员工工号，格式以 MG- 开头后接 6 位数字，作为敏感信息")
+        assert added["ok"] is True
+        result = service.ingest_text("员工工号 MG-123456 只用于自然语言规则测试。")
+        assert result["stored"] is True
+        assert result["record"].sensitivity.redacted is True
+        assert "[REDACTED:employee_id]" in result["record"].content
+
+        rejected = service.add_pattern_from_instruction("把所有内容都当作敏感信息")
+        assert rejected["ok"] is False
+
+        assert memctl_main(["patterns", "suggest", "把订单号，格式以 ORD- 开头后接 8 位数字，作为敏感信息"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["ok"] is True
+        assert payload["suggestion"]["name"] == "order_id"
+    finally:
+        service.close()
+
+
 def test_memory_tier_promote_and_evict(tmp_path):
     service = make_service(tmp_path)
     try:

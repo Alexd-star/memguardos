@@ -6,3 +6,8 @@
 {"entity":"eBPF","expected":["knowledge_ebpf_openat_probe"],"case":"syscall_probe"}
 {"entity":"pytest","expected":["knowledge_behavior_shell_history"],"case":"behavior_tool"}
 {"entity":"MemGuardOS","expected":["knowledge_ukui_notification","knowledge_socket_local_api"],"case":"agent_api"}
+{"entity":"cgroup","expected":["knowledge_namespace_cgroup_isolation","knowledge_systemd_memory_en"],"case":"resource_isolation"}
+{"entity":"kylin_sdk","expected":["knowledge_kylin_auto_retrieval"],"case":"kylin_optional_backend"}
+{"entity":"BEGIN","expected":["knowledge_audit_concurrency"],"case":"audit_transaction"}
+{"entity":"sensitive_patterns","expected":["knowledge_natural_sensitive_pattern"],"case":"natural_pattern_store"}
+{"entity":"kubeconfig","expected":["knowledge_kube_aws_sensitive_paths"],"case":"os_sensitive_config"}

@@ -1,94 +1,5 @@
 $ journalctl -u kytensor.service -n 220 --no-pager || true
 
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Hardmax (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 1227, but it is already registered from file ./onnx/defs/math/defs.cc line 1227
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Mod (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 122, but it is already registered from file ./onnx/defs/math/defs.cc line 122
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Neg (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 163, but it is already registered from file ./onnx/defs/math/defs.cc line 163
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Abs (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 189, but it is already registered from file ./onnx/defs/math/defs.cc line 189
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Reciprocal (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 208, but it is already registered from file ./onnx/defs/math/defs.cc line 208
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Floor (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 227, but it is already registered from file ./onnx/defs/math/defs.cc line 227
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Ceil (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 246, but it is already registered from file ./onnx/defs/math/defs.cc line 246
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Sqrt (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 265, but it is already registered from file ./onnx/defs/math/defs.cc line 265
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Relu (domain:  version: 13) from file ./onnx/defs/math/old.cc line 365, but it is already registered from file ./onnx/defs/math/old.cc line 365
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Exp (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 651, but it is already registered from file ./onnx/defs/math/defs.cc line 651
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Log (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 677, but it is already registered from file ./onnx/defs/math/defs.cc line 677
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Tanh (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 703, but it is already registered from file ./onnx/defs/math/defs.cc line 703
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Pow (domain:  version: 13) from file ./onnx/defs/math/old.cc line 450, but it is already registered from file ./onnx/defs/math/old.cc line 450
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Sigmoid (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 832, but it is already registered from file ./onnx/defs/math/defs.cc line 832
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Max (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 950, but it is already registered from file ./onnx/defs/math/defs.cc line 950
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Min (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 960, but it is already registered from file ./onnx/defs/math/defs.cc line 960
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Sum (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 970, but it is already registered from file ./onnx/defs/math/defs.cc line 970
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Mean (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 980, but it is already registered from file ./onnx/defs/math/defs.cc line 980
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Clip (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 1023, but it is already registered from file ./onnx/defs/math/defs.cc line 1023
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Gemm (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 1313, but it is already registered from file ./onnx/defs/math/defs.cc line 1313
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name MatMul (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 1392, but it is already registered from file ./onnx/defs/math/defs.cc line 1392
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Expand (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 1719, but it is already registered from file ./onnx/defs/math/defs.cc line 1719
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Sign (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 1887, but it is already registered from file ./onnx/defs/math/defs.cc line 1887
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Erf (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 1913, but it is already registered from file ./onnx/defs/math/defs.cc line 1913
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name SoftmaxCrossEntropyLoss (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 2795, but it is already registered from file ./onnx/defs/math/defs.cc line 2795
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name NegativeLogLikelihoodLoss (domain:  version: 13) from file ./onnx/defs/math/defs.cc line 2454, but it is already registered from file ./onnx/defs/math/defs.cc line 2454
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Dropout (domain:  version: 13) from file ./onnx/defs/nn/defs.cc line 1887, but it is already registered from file ./onnx/defs/nn/defs.cc line 1887
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Flatten (domain:  version: 13) from file ./onnx/defs/nn/old.cc line 99, but it is already registered from file ./onnx/defs/nn/old.cc line 99
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name LRN (domain:  version: 13) from file ./onnx/defs/nn/defs.cc line 2066, but it is already registered from file ./onnx/defs/nn/defs.cc line 2066
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name MeanVarianceNormalization (domain:  version: 13) from file ./onnx/defs/nn/defs.cc line 2243, but it is already registered from file ./onnx/defs/nn/defs.cc line 2243
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name ReduceMax (domain:  version: 13) from file ./onnx/defs/reduction/old.cc line 431, but it is already registered from file ./onnx/defs/reduction/old.cc line 431
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name ReduceMin (domain:  version: 13) from file ./onnx/defs/reduction/old.cc line 432, but it is already registered from file ./onnx/defs/reduction/old.cc line 432
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name ReduceSum (domain:  version: 13) from file ./onnx/defs/reduction/defs.cc line 25, but it is already registered from file ./onnx/defs/reduction/defs.cc line 25
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name ReduceSumSquare (domain:  version: 13) from file ./onnx/defs/reduction/old.cc line 433, but it is already registered from file ./onnx/defs/reduction/old.cc line 433
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name ReduceMean (domain:  version: 13) from file ./onnx/defs/reduction/old.cc line 434, but it is already registered from file ./onnx/defs/reduction/old.cc line 434
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name ReduceProd (domain:  version: 13) from file ./onnx/defs/reduction/old.cc line 435, but it is already registered from file ./onnx/defs/reduction/old.cc line 435
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name ReduceLogSum (domain:  version: 13) from file ./onnx/defs/reduction/old.cc line 436, but it is already registered from file ./onnx/defs/reduction/old.cc line 436
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name ReduceLogSumExp (domain:  version: 13) from file ./onnx/defs/reduction/old.cc line 437, but it is already registered from file ./onnx/defs/reduction/old.cc line 437
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name ReduceL1 (domain:  version: 13) from file ./onnx/defs/reduction/old.cc line 441, but it is already registered from file ./onnx/defs/reduction/old.cc line 441
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name ReduceL2 (domain:  version: 13) from file ./onnx/defs/reduction/old.cc line 442, but it is already registered from file ./onnx/defs/reduction/old.cc line 442
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name ArgMax (domain:  version: 13) from file ./onnx/defs/reduction/defs.cc line 180, but it is already registered from file ./onnx/defs/reduction/defs.cc line 180
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name ArgMin (domain:  version: 13) from file ./onnx/defs/reduction/defs.cc line 182, but it is already registered from file ./onnx/defs/reduction/defs.cc line 182
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Cast (domain:  version: 13) from file ./onnx/defs/tensor/old.cc line 201, but it is already registered from file ./onnx/defs/tensor/old.cc line 201
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Reshape (domain:  version: 13) from file ./onnx/defs/tensor/old.cc line 790, but it is already registered from file ./onnx/defs/tensor/old.cc line 790
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Shape (domain:  version: 13) from file ./onnx/defs/tensor/old.cc line 1044, but it is already registered from file ./onnx/defs/tensor/old.cc line 1044
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Size (domain:  version: 13) from file ./onnx/defs/tensor/old.cc line 6226, but it is already registered from file ./onnx/defs/tensor/old.cc line 6226
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Concat (domain:  version: 13) from file ./onnx/defs/tensor/defs.cc line 515, but it is already registered from file ./onnx/defs/tensor/defs.cc line 515
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Split (domain:  version: 13) from file ./onnx/defs/tensor/old.cc line 1279, but it is already registered from file ./onnx/defs/tensor/old.cc line 1279
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Slice (domain:  version: 13) from file ./onnx/defs/tensor/defs.cc line 832, but it is already registered from file ./onnx/defs/tensor/defs.cc line 832
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Transpose (domain:  version: 13) from file ./onnx/defs/tensor/old.cc line 1613, but it is already registered from file ./onnx/defs/tensor/old.cc line 1613
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name ScatterND (domain:  version: 13) from file ./onnx/defs/tensor/old.cc line 1914, but it is already registered from file ./onnx/defs/tensor/old.cc line 1914
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name ScatterElements (domain:  version: 13) from file ./onnx/defs/tensor/old.cc line 2198, but it is already registered from file ./onnx/defs/tensor/old.cc line 2198
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Gather (domain:  version: 13) from file ./onnx/defs/tensor/defs.cc line 1549, but it is already registered from file ./onnx/defs/tensor/defs.cc line 1549
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name GatherElements (domain:  version: 13) from file ./onnx/defs/tensor/defs.cc line 1662, but it is already registered from file ./onnx/defs/tensor/defs.cc line 1662
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Squeeze (domain:  version: 13) from file ./onnx/defs/tensor/old.cc line 2537, but it is already registered from file ./onnx/defs/tensor/old.cc line 2537
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Unsqueeze (domain:  version: 13) from file ./onnx/defs/tensor/old.cc line 2705, but it is already registered from file ./onnx/defs/tensor/old.cc line 2705
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name SpaceToDepth (domain:  version: 13) from file ./onnx/defs/tensor/defs.cc line 1896, but it is already registered from file ./onnx/defs/tensor/defs.cc line 1896
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name DepthToSpace (domain:  version: 13) from file ./onnx/defs/tensor/defs.cc line 1972, but it is already registered from file ./onnx/defs/tensor/defs.cc line 1972
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Tile (domain:  version: 13) from file ./onnx/defs/tensor/defs.cc line 2033, but it is already registered from file ./onnx/defs/tensor/defs.cc line 2033
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Resize (domain:  version: 13) from file ./onnx/defs/tensor/old.cc line 3235, but it is already registered from file ./onnx/defs/tensor/old.cc line 3235
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Identity (domain:  version: 13) from file ./onnx/defs/tensor/old.cc line 3435, but it is already registered from file ./onnx/defs/tensor/old.cc line 3435
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name IsNaN (domain:  version: 13) from file ./onnx/defs/tensor/old.cc line 3474, but it is already registered from file ./onnx/defs/tensor/old.cc line 3474
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name NonZero (domain:  version: 13) from file ./onnx/defs/tensor/defs.cc line 3067, but it is already registered from file ./onnx/defs/tensor/defs.cc line 3067
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name GatherND (domain:  version: 13) from file ./onnx/defs/tensor/defs.cc line 3487, but it is already registered from file ./onnx/defs/tensor/defs.cc line 3487
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Pad (domain:  version: 13) from file ./onnx/defs/tensor/old.cc line 5681, but it is already registered from file ./onnx/defs/tensor/old.cc line 5681
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name QuantizeLinear (domain:  version: 13) from file ./onnx/defs/quantization/old.cc line 148, but it is already registered from file ./onnx/defs/quantization/old.cc line 148
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name DequantizeLinear (domain:  version: 13) from file ./onnx/defs/quantization/old.cc line 199, but it is already registered from file ./onnx/defs/quantization/old.cc line 199
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Loop (domain:  version: 13) from file ./onnx/defs/controlflow/old.cc line 2423, but it is already registered from file ./onnx/defs/controlflow/old.cc line 2423
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name If (domain:  version: 13) from file ./onnx/defs/controlflow/old.cc line 2108, but it is already registered from file ./onnx/defs/controlflow/old.cc line 2108
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name CumSum (domain:  version: 14) from file ./onnx/defs/math/defs.cc line 2105, but it is already registered from file ./onnx/defs/math/defs.cc line 2105
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Relu (domain:  version: 14) from file ./onnx/defs/math/defs.cc line 284, but it is already registered from file ./onnx/defs/math/defs.cc line 284
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Reshape (domain:  version: 14) from file ./onnx/defs/tensor/old.cc line 5879, but it is already registered from file ./onnx/defs/tensor/old.cc line 5879
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name GRU (domain:  version: 14) from file ./onnx/defs/rnn/defs.cc line 318, but it is already registered from file ./onnx/defs/rnn/defs.cc line 318
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name LSTM (domain:  version: 14) from file ./onnx/defs/rnn/defs.cc line 426, but it is already registered from file ./onnx/defs/rnn/defs.cc line 426
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name RNN (domain:  version: 14) from file ./onnx/defs/rnn/defs.cc line 221, but it is already registered from file ./onnx/defs/rnn/defs.cc line 221
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Trilu (domain:  version: 14) from file ./onnx/defs/tensor/defs.cc line 3691, but it is already registered from file ./onnx/defs/tensor/defs.cc line 3691
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name BatchNormalization (domain:  version: 14) from file ./onnx/defs/nn/old.cc line 1831, but it is already registered from file ./onnx/defs/nn/old.cc line 1831
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name HardSwish (domain:  version: 14) from file ./onnx/defs/math/defs.cc line 890, but it is already registered from file ./onnx/defs/math/defs.cc line 890
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Add (domain:  version: 14) from file ./onnx/defs/math/defs.cc line 92, but it is already registered from file ./onnx/defs/math/defs.cc line 92
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Sub (domain:  version: 14) from file ./onnx/defs/math/defs.cc line 99, but it is already registered from file ./onnx/defs/math/defs.cc line 99
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Mul (domain:  version: 14) from file ./onnx/defs/math/defs.cc line 148, but it is already registered from file ./onnx/defs/math/defs.cc line 148
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Div (domain:  version: 14) from file ./onnx/defs/math/defs.cc line 155, but it is already registered from file ./onnx/defs/math/defs.cc line 155
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Identity (domain:  version: 14) from file ./onnx/defs/tensor/old.cc line 5522, but it is already registered from file ./onnx/defs/tensor/old.cc line 5522
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name BatchNormalization (domain:  version: 15) from file ./onnx/defs/nn/defs.cc line 1643, but it is already registered from file ./onnx/defs/nn/defs.cc line 1643
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Bernoulli (domain:  version: 15) from file ./onnx/defs/generator/defs.cc line 574, but it is already registered from file ./onnx/defs/generator/defs.cc line 574
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Pow (domain:  version: 15) from file ./onnx/defs/math/defs.cc line 731, but it is already registered from file ./onnx/defs/math/defs.cc line 731
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Optional (domain:  version: 15) from file ./onnx/defs/optional/defs.cc line 26, but it is already registered from file ./onnx/defs/optional/defs.cc line 26
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name OptionalHasElement (domain:  version: 15) from file ./onnx/defs/optional/old.cc line 16, but it is already registered from file ./onnx/defs/optional/old.cc line 16
-5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name OptionalGetElement (domain:  version: 15) from file ./onnx/defs/optional/old.cc line 51, but it is already registered from file ./onnx/defs/optional/old.cc line 51
 5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name CastLike (domain:  version: 15) from file ./onnx/defs/tensor/old.cc line 374, but it is already registered from file ./onnx/defs/tensor/old.cc line 374
 5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name Shape (domain:  version: 15) from file ./onnx/defs/tensor/old.cc line 6130, but it is already registered from file ./onnx/defs/tensor/old.cc line 6130
 5月 22 03:49:16 luo-pc bash[409940]: Schema error: Trying to register schema with name RoiAlign (domain:  version: 16) from file ./onnx/defs/object_detection/defs.cc line 24, but it is already registered from file ./onnx/defs/object_detection/defs.cc line 24
@@ -220,3 +131,92 @@ $ journalctl -u kytensor.service -n 220 --no-pager || true
 5月 22 03:49:21 luo-pc bash[409940]: I0521 19:49:21.896533 409940 model_lifecycle.cc:472] "loading: ensemble-embd_gte-base_uint8-text:1"
 5月 22 03:49:21 luo-pc bash[409940]: I0521 19:49:21.897630 409940 model_lifecycle.cc:839] "successfully loaded 'ensemble-embd_gte-base_uint8-text'"
 5月 22 03:49:22 luo-pc bash[409940]: W0521 19:49:22.072975 409940 pinned_memory_manager.cc:170] "failed to allocate pinned system memory: no pinned memory pool, falling back to non-pinned system memory"
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  openKylin agent memory
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  openKylin agent memory
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  openKylin agent memory
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  openKylin agent memory
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  openKylin agent memory
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  openKylin agent memory
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  openKylin agent memory
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  openKylin agent memory
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  openKylin 服务内存限制
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 6, 3367, 3182, 11189, 28353, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [    0  9803   605    53  2397     6  3367  3182 11189 28353     2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  knowledge 知识记忆：openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。 openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 59636, 605, 53, 2397, 6, 3367, 1173, 5426, 71, 172681, 71346, 6, 264, 86039, 2737, 45688, 6, 2213, 12752, 71835, 14641, 28353, 30, 9803, 605, 53, 2397, 6, 3367, 1173, 5426, 71, 172681, 71346, 6, 264, 86039, 2737, 45688, 6, 2213, 12752, 71835, 14641, 28353, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [     0  51359      6  21001  84460     12  59636    605     53   2397
+5月 22 18:09:41 luo-pc bash[410263]:       6   3367   1173   5426     71 172681  71346      6    264  86039
+5月 22 18:09:41 luo-pc bash[410263]:    2737  45688      6   2213  12752  71835  14641  28353     30   9803
+5月 22 18:09:41 luo-pc bash[410263]:     605     53   2397      6   3367   1173   5426     71 172681  71346
+5月 22 18:09:41 luo-pc bash[410263]:       6    264  86039   2737  45688      6   2213  12752  71835  14641
+5月 22 18:09:41 luo-pc bash[410263]:   28353     30      2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+5月 22 18:09:41 luo-pc bash[410263]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  knowledge 知识记忆：auditd 会审计 /etc/shadow 等敏感路径访问,并阻断高风险记忆写入。 auditd 会审计 /etc/shadow 等敏感路径访问,并阻断高风险记忆写入。
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 41004, 18, 71, 6, 1147, 114020, 248, 111879, 64, 2420, 24293, 6, 844, 63554, 201922, 56280, 4, 2672, 46968, 19563, 1395, 23400, 84460, 9449, 2283, 30, 44200, 71, 6, 1147, 114020, 248, 111879, 64, 2420, 24293, 6, 844, 63554, 201922, 56280, 4, 2672, 46968, 19563, 1395, 23400, 84460, 9449, 2283, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [     0  51359      6  21001  84460     12  41004     18     71      6
+5月 22 18:09:41 luo-pc bash[410263]:    1147 114020    248 111879     64   2420  24293      6    844  63554
+5月 22 18:09:41 luo-pc bash[410263]:  201922  56280      4   2672  46968  19563   1395  23400  84460   9449
+5月 22 18:09:41 luo-pc bash[410263]:    2283     30  44200     71      6   1147 114020    248 111879     64
+5月 22 18:09:41 luo-pc bash[410263]:    2420  24293      6    844  63554 201922  56280      4   2672  46968
+5月 22 18:09:41 luo-pc bash[410263]:   19563   1395  23400  84460   9449   2283     30      2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+5月 22 18:09:41 luo-pc bash[410263]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  openKylin agent memory
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  openKylin agent memory
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  openKylin 服务内存限制
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 6, 3367, 3182, 11189, 28353, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [    0  9803   605    53  2397     6  3367  3182 11189 28353     2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  knowledge 知识记忆：openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。 openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 59636, 605, 53, 2397, 6, 3367, 1173, 5426, 71, 172681, 71346, 6, 264, 86039, 2737, 45688, 6, 2213, 12752, 71835, 14641, 28353, 30, 9803, 605, 53, 2397, 6, 3367, 1173, 5426, 71, 172681, 71346, 6, 264, 86039, 2737, 45688, 6, 2213, 12752, 71835, 14641, 28353, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [     0  51359      6  21001  84460     12  59636    605     53   2397
+5月 22 18:09:41 luo-pc bash[410263]:       6   3367   1173   5426     71 172681  71346      6    264  86039
+5月 22 18:09:41 luo-pc bash[410263]:    2737  45688      6   2213  12752  71835  14641  28353     30   9803
+5月 22 18:09:41 luo-pc bash[410263]:     605     53   2397      6   3367   1173   5426     71 172681  71346
+5月 22 18:09:41 luo-pc bash[410263]:       6    264  86039   2737  45688      6   2213  12752  71835  14641
+5月 22 18:09:41 luo-pc bash[410263]:   28353     30      2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+5月 22 18:09:41 luo-pc bash[410263]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  knowledge 知识记忆：auditd 会审计 /etc/shadow 等敏感路径访问,并阻断高风险记忆写入。 auditd 会审计 /etc/shadow 等敏感路径访问,并阻断高风险记忆写入。
+5月 22 18:09:41 luo-pc bash[410263]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 41004, 18, 71, 6, 1147, 114020, 248, 111879, 64, 2420, 24293, 6, 844, 63554, 201922, 56280, 4, 2672, 46968, 19563, 1395, 23400, 84460, 9449, 2283, 30, 44200, 71, 6, 1147, 114020, 248, 111879, 64, 2420, 24293, 6, 844, 63554, 201922, 56280, 4, 2672, 46968, 19563, 1395, 23400, 84460, 9449, 2283, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+5月 22 18:09:41 luo-pc bash[410263]: input_ids  [     0  51359      6  21001  84460     12  41004     18     71      6
+5月 22 18:09:41 luo-pc bash[410263]:    1147 114020    248 111879     64   2420  24293      6    844  63554
+5月 22 18:09:41 luo-pc bash[410263]:  201922  56280      4   2672  46968  19563   1395  23400  84460   9449
+5月 22 18:09:41 luo-pc bash[410263]:    2283     30  44200     71      6   1147 114020    248 111879     64
+5月 22 18:09:41 luo-pc bash[410263]:    2420  24293      6    844  63554 201922  56280      4   2672  46968
+5月 22 18:09:41 luo-pc bash[410263]:   19563   1395  23400  84460   9449   2283     30      2]
+5月 22 18:09:41 luo-pc bash[410263]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+5月 22 18:09:41 luo-pc bash[410263]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+5月 22 18:09:41 luo-pc bash[410263]: tokenize string  openKylin agent memory

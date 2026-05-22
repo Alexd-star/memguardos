@@ -1,6 +1,6 @@
 $ .venv/bin/python -m memguard.cli.memctl sdk-status
 
-[1779426117168] [32minfo [0m Proxy init engine sessionId:933355138.
+[1779445433051] [32minfo [0m Proxy init engine sessionId:784710099.
 {
   "embedding": {
     "backend": "kylin_coreai_embedding",

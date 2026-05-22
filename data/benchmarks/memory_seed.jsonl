@@ -20,3 +20,11 @@
 {"label":"knowledge_context_token_budget","text":"RAG 上下文包应优先保证相关性和安全性，token 预算只作为显式配置的裁剪和成本观测指标。","expected_type":"knowledge","expected_subtype":"fact"}
 {"label":"knowledge_ukui_notification","text":"openKylin UKUI 轻量联动可以通过 freedesktop notify-send 向桌面通知守护进程发送 MemGuardOS 安全提示。","expected_type":"knowledge","expected_subtype":"fact"}
 {"label":"knowledge_socket_local_api","text":"MemGuardOS daemon 通过 Unix domain socket 提供本地 JSON API，适合 OS Agent 在本机调用 search、ingest 和 build_context。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_namespace_cgroup_isolation","text":"namespace 多会话隔离流程：不同项目使用独立 memory.segment、memguard.sqlite3、sensitive_patterns.json，并由 memguardd@.service 放入独立 cgroup。","expected_type":"knowledge","expected_subtype":"workflow"}
+{"label":"knowledge_kylin_auto_retrieval","text":"MEMGUARD_EMBEDDING_BACKEND=auto 时，openKylin Kylin embedding SDK 可以作为可选重排后端，检索结果会标记 vector_backend=kylin_sdk。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_audit_concurrency","text":"并发审计写入需要使用 SQLite BEGIN IMMEDIATE 保护 prev_hash 读取和 audit insert，避免多个 Agent 同时写入时产生哈希链分叉。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_natural_sensitive_pattern","text":"自然语言自定义敏感规则流程：用户描述工号格式，系统生成受限 regex，经过校验后写入 sensitive_patterns.json。","expected_type":"knowledge","expected_subtype":"workflow"}
+{"label":"knowledge_kube_aws_sensitive_paths","text":"Kubernetes kubeconfig、AWS credentials 和 service account key 属于高风险 OS 来源路径，应该作为 sensitive_os_source 阻断长期记忆写入。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"pref_pytest_fast_feedback","text":"以后修改 Python 项目后，请优先运行 pytest 相关单元测试，再补充 ruff 和文档链接检查。","expected_type":"preference","expected_subtype":"tool_preference"}
+{"label":"pref_answer_no_exaggeration","text":"答辩材料不要夸大 LSM、eBPF、UKUI 深度插件和默认大模型依赖，必须按证据边界表达。","expected_type":"preference","expected_subtype":"output_style"}
+{"label":"knowledge_linux_smoke_portability","text":"在更多 Linux 发行版上做 smoke test 时，应至少验证 Python 版本、SQLite FTS、pytest、memctl doctor 和 demo_smoke。","expected_type":"knowledge","expected_subtype":"workflow"}

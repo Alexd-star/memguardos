@@ -1,14 +1,14 @@
-$ .venv/bin/python -m memguard.eval.run_eval --latency-size 10000 --latency-queries 150 --output docs/evidence/openkylin_20260522_130156/eval_result_openkylin_10k.json --markdown docs/evidence/openkylin_20260522_130156/eval_report_openkylin_10k.md
+$ .venv/bin/python -m memguard.eval.run_eval --latency-size 10000 --latency-queries 150 --output docs/evidence/openkylin_20260522_182352/eval_result_openkylin_10k.json --markdown docs/evidence/openkylin_20260522_182352/eval_report_openkylin_10k.md
 
 {
   "dataset": {
-    "seed_memories": 22,
-    "retrieval_cases": 17,
-    "sensitive_cases": 18,
-    "forgetting_cases": 12,
-    "conflict_cases": 6,
-    "graph_cases": 8,
-    "quality_cases": 4
+    "seed_memories": 30,
+    "retrieval_cases": 25,
+    "sensitive_cases": 25,
+    "forgetting_cases": 17,
+    "conflict_cases": 10,
+    "graph_cases": 13,
+    "quality_cases": 6
   },
   "preference_and_knowledge_extraction": {
     "type_accuracy": 1.0,
@@ -22,11 +22,11 @@ $ .venv/bin/python -m memguard.eval.run_eval --latency-size 10000 --latency-quer
   "retrieval": {
     "mean_recall_at_5": 1.0,
     "cross_language_recall_at_5": 1.0,
-    "p50_latency_ms": 19.719,
-    "p95_latency_ms": 24.302
+    "p50_latency_ms": 20.049,
+    "p95_latency_ms": 22.092
   },
   "baseline_comparison": {
-    "text_only_recall_at_5": 0.7941,
+    "text_only_recall_at_5": 0.78,
     "hybrid_no_graph_recall_at_5": 1.0,
     "full_memguardos_recall_at_5": 1.0
   },
@@ -53,25 +53,25 @@ $ .venv/bin/python -m memguard.eval.run_eval --latency-size 10000 --latency-quer
   "latency_load": {
     "memory_count": 10000,
     "query_count": 150,
-    "p50_latency_ms": 258.174,
-    "p95_latency_ms": 298.138,
-    "p99_latency_ms": 360.804,
+    "p50_latency_ms": 233.665,
+    "p95_latency_ms": 262.502,
+    "p99_latency_ms": 274.696,
     "segment_kb": 28225.447,
-    "sqlite_kb": 39060.0,
-    "total_store_kb": 71477.713
+    "sqlite_kb": 39164.0,
+    "total_store_kb": 73275.58
   },
   "resource_usage": {
-    "eval_wall_time_ms": 263981.161,
-    "eval_cpu_time_ms": 171699.806,
-    "tracemalloc_current_kb": 195.988,
-    "tracemalloc_peak_kb": 15465.769,
-    "process_rss_kb": 66164.0
+    "eval_wall_time_ms": 228307.73,
+    "eval_cpu_time_ms": 146862.509,
+    "tracemalloc_current_kb": 210.729,
+    "tracemalloc_peak_kb": 15479.778,
+    "process_rss_kb": 66160.0
   },
   "storage_footprint": {
-    "main_segment_kb": 59.454,
+    "main_segment_kb": 82.857,
     "main_sqlite_kb": 4.0,
-    "total_eval_store_kb": 2798.17,
-    "bytes_per_live_memory": 84274.294
+    "total_eval_store_kb": 3972.276,
+    "bytes_per_live_memory": 88426.326
   },
-  "memory_count": 34
+  "memory_count": 46
 }

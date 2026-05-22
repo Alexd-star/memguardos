@@ -140,6 +140,12 @@ def build_parser() -> argparse.ArgumentParser:
     pattern_add = pattern_sub.add_parser("add", help="Add a custom sensitive pattern")
     pattern_add.add_argument("name")
     pattern_add.add_argument("regex")
+    pattern_suggest = pattern_sub.add_parser("suggest", help="Suggest a validated sensitive regex from a natural-language instruction")
+    pattern_suggest.add_argument("instruction")
+    pattern_suggest.add_argument("--name", default="", help="Optional pattern name; inferred when omitted")
+    pattern_add_natural = pattern_sub.add_parser("add-natural", help="Add a custom sensitive pattern from a natural-language instruction")
+    pattern_add_natural.add_argument("instruction")
+    pattern_add_natural.add_argument("--name", default="", help="Optional pattern name; inferred when omitted")
 
     sub.add_parser("doctor", help="Check local OS/runtime capabilities")
     sub.add_parser("status", help="Show runtime OS guard status")
@@ -387,6 +393,14 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             if args.pattern_command == "add":
                 result = service.try_add_pattern(args.name, args.regex)
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0 if result["ok"] else 2
+            if args.pattern_command == "suggest":
+                result = service.suggest_pattern_from_instruction(args.instruction, name=args.name or None)
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0 if result["ok"] else 2
+            if args.pattern_command == "add-natural":
+                result = service.add_pattern_from_instruction(args.instruction, name=args.name or None)
                 print(json.dumps(result, ensure_ascii=False, indent=2))
                 return 0 if result["ok"] else 2
 

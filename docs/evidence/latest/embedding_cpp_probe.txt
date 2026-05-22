@@ -2,7 +2,7 @@ $ bash scripts/run_kylin_embedding_probe.sh openKylin agent memory
 
 build: g++ -std=c++17 scripts/kylin_embedding_probe.cpp  -lkysdk-coreai-embedding
 run: timeout 90 /tmp/memguardos_kylin_embedding_probe
-[1779426121028] [32minfo [0m Proxy init engine sessionId:1322805658.
+[1779445434387] [32minfo [0m Proxy init engine sessionId:1062348274.
 session.created=true
 session.init_code=0
 model_info.ok=true
