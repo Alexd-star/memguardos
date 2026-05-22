@@ -1,4 +1,6 @@
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from time import perf_counter
 from typing import Dict, List, Optional
 
 from memguard.config import (
@@ -18,6 +20,7 @@ from memguard.ingestion.quality import assess_text_quality
 from memguard.ingestion.tool_result import ToolResult
 from memguard.models import AuditInfo, MemoryRecord, MemorySource, VersionInfo, make_memory, new_id, stable_hash, utc_now
 from memguard.os_guard.events import parse_os_event
+from memguard.os_guard.cgroup import cgroup_status
 from memguard.os_guard.journald import JournaldLogger
 from memguard.retrieval.conflict import ConflictResolver
 from memguard.retrieval.hybrid import HybridRetriever
@@ -222,35 +225,52 @@ class MemGuardService:
         if previous is None:
             return {"updated": False, "reason": "memory_not_found", "memory_id": memory_id}
 
-        sensitivity = self.detector.classify(text, previous.source.uri)
+        clean_text, quality = assess_text_quality(text, source_kind="update")
+        if not quality.accepted:
+            self._audit(
+                "quality_reject",
+                memory_id,
+                {
+                    "source_kind": "update",
+                    "source_uri": previous.memory_id,
+                    "quality": quality.to_dict(),
+                    "reason": "updated memory failed input quality check",
+                    "update_reason": reason,
+                },
+            )
+            return {"updated": False, "reason": "quality_reject", "quality": quality.to_dict()}
+
+        sensitivity = self.detector.classify(clean_text, previous.source.uri)
         if sensitivity.level == "high":
             self._audit(
                 "sensitive_block",
                 memory_id,
                 {
                     "labels": sensitivity.labels,
+                    "quality": quality.to_dict(),
                     "reason": "high risk update is not stored",
                     "update_reason": reason,
                 },
             )
-            return {"updated": False, "reason": "sensitive_block", "sensitivity": sensitivity}
+            return {"updated": False, "reason": "sensitive_block", "sensitivity": sensitivity, "quality": quality.to_dict()}
 
-        stored_text = text
+        stored_text = clean_text
         if sensitivity.level in {"medium", "low"} and sensitivity.labels:
-            stored_text = self.detector.redact(text, previous.source.uri)
+            stored_text = self.detector.redact(clean_text, previous.source.uri)
             sensitivity.redacted = True
 
+        memory_type = self._classify_memory(stored_text)
         record = MemoryRecord(
             memory_id=previous.memory_id,
-            type=self._classify_memory(stored_text),
-            subtype=self._classify_subtype(stored_text, self._classify_memory(stored_text), "update"),
+            type=memory_type,
+            subtype=self._classify_subtype(stored_text, memory_type, "update"),
             scope=previous.scope,
             tier=previous.tier,
             content=stored_text,
-            summary=self._summarize(stored_text, self._classify_memory(stored_text)),
+            summary=self._summarize(stored_text, memory_type),
             source=MemorySource(kind="update", uri=previous.memory_id),
             evidence=[stored_text[:240]],
-            confidence=previous.confidence,
+            confidence=min(previous.confidence, quality.score),
             importance=previous.importance,
             language=previous.language,
             entities=previous.entities,
@@ -262,8 +282,8 @@ class MemGuardService:
         self._enrich_graph(record)
         self.store.append(record)
         self.meta.upsert_memory(record)
-        self._audit("update", memory_id, {"reason": reason, "version_id": record.version.version_id})
-        return {"updated": True, "record": record}
+        self._audit("update", memory_id, {"reason": reason, "version_id": record.version.version_id, "quality": quality.to_dict()})
+        return {"updated": True, "record": record, "quality": quality.to_dict()}
 
     def list_memories(self, include_deleted: bool = False, tier: Optional[str] = None) -> List[Dict[str, object]]:
         return self.meta.list_memories(include_deleted=include_deleted, tier=tier)
@@ -314,6 +334,127 @@ class MemGuardService:
             evicted.append(record.memory_id)
         self._audit("tier_evict", None, {"tier": tier, "evicted": evicted})
         return {"evicted": True, "tier": tier, "memory_ids": evicted}
+
+    def memory_policy_status(self, eviction_limit: int = 10) -> Dict[str, object]:
+        live_records = self.meta.list_memories(include_deleted=False)
+        meta_records = self.meta.list_memories(include_deleted=True)
+        segment_records = self.store.scan()
+        tier_order = ["working", "session", "long_term"]
+        tiers: Dict[str, Dict[str, object]] = {
+            tier: {
+                "count": 0,
+                "content_chars": 0,
+                "summary_chars": 0,
+                "approx_payload_bytes": 0,
+                "sensitivity": {},
+                "sources": {},
+                "oldest_updated_at": "",
+                "newest_updated_at": "",
+            }
+            for tier in tier_order
+        }
+
+        for row in live_records:
+            tier = str(row.get("tier") or "long_term")
+            if tier not in tiers:
+                tiers[tier] = {
+                    "count": 0,
+                    "content_chars": 0,
+                    "summary_chars": 0,
+                    "approx_payload_bytes": 0,
+                    "sensitivity": {},
+                    "sources": {},
+                    "oldest_updated_at": "",
+                    "newest_updated_at": "",
+                }
+            bucket = tiers[tier]
+            content = str(row.get("content") or "")
+            summary = str(row.get("summary") or "")
+            source_kind = str(row.get("source_kind") or "unknown")
+            sensitivity_level = str(row.get("sensitivity_level") or "none")
+            updated_at = str(row.get("updated_at") or "")
+            bucket["count"] = int(bucket["count"]) + 1
+            bucket["content_chars"] = int(bucket["content_chars"]) + len(content)
+            bucket["summary_chars"] = int(bucket["summary_chars"]) + len(summary)
+            bucket["approx_payload_bytes"] = int(bucket["approx_payload_bytes"]) + len((content + summary).encode("utf-8"))
+            sensitivities = dict(bucket["sensitivity"])
+            sensitivities[sensitivity_level] = int(sensitivities.get(sensitivity_level, 0)) + 1
+            bucket["sensitivity"] = sensitivities
+            sources = dict(bucket["sources"])
+            sources[source_kind] = int(sources.get(source_kind, 0)) + 1
+            bucket["sources"] = sources
+            if updated_at:
+                if not bucket["oldest_updated_at"] or updated_at < str(bucket["oldest_updated_at"]):
+                    bucket["oldest_updated_at"] = updated_at
+                if not bucket["newest_updated_at"] or updated_at > str(bucket["newest_updated_at"]):
+                    bucket["newest_updated_at"] = updated_at
+
+        stale_count = max(0, len(segment_records) - len(live_records))
+        eviction_candidates = [
+            {
+                "memory_id": row.get("memory_id"),
+                "tier": row.get("tier"),
+                "type": row.get("type"),
+                "subtype": row.get("subtype"),
+                "source_kind": row.get("source_kind"),
+                "updated_at": row.get("updated_at"),
+                "summary": row.get("summary"),
+            }
+            for row in sorted(
+                [row for row in live_records if row.get("tier") in {"working", "session"}],
+                key=lambda item: str(item.get("updated_at") or ""),
+            )[: max(0, eviction_limit)]
+        ]
+        store_bytes = self._path_size(self.store.path)
+        sqlite_bytes = sum(
+            self._path_size(path)
+            for path in (
+                self.meta.path,
+                Path(str(self.meta.path) + "-wal"),
+                Path(str(self.meta.path) + "-shm"),
+            )
+        )
+        result = {
+            "namespace": self.namespace,
+            "policy": {
+                "working": "当前任务临时上下文，优先淘汰，不进入长期沉淀。",
+                "session": "本轮会话/阶段性任务记忆，可在任务结束后批量淘汰或挑选沉淀。",
+                "long_term": "稳定偏好、知识、安全策略和可复用经验，默认保留并参与 RAG。",
+                "eviction_order": ["working", "session"],
+                "promotion_path": "working/session -> long_term",
+                "compaction": "遗忘或层级淘汰后可执行 compact，清理追加段文件中的旧明文。",
+            },
+            "tiers": tiers,
+            "counts": {
+                "live": len(live_records),
+                "metadata_records": len(meta_records),
+                "segment_records": len(segment_records),
+                "stale_or_deleted": stale_count,
+                "eviction_candidates": len(eviction_candidates),
+            },
+            "storage": {
+                "segment_path": str(self.store.path),
+                "segment_bytes": store_bytes,
+                "sqlite_path": str(self.meta.path),
+                "sqlite_total_bytes": sqlite_bytes,
+                "approx_total_bytes": store_bytes + sqlite_bytes,
+                "bytes_per_live_memory": round((store_bytes + sqlite_bytes) / float(len(live_records) or 1), 3),
+            },
+            "eviction_candidates": eviction_candidates,
+            "recommendations": self._memory_policy_recommendations(tiers, stale_count, store_bytes + sqlite_bytes),
+            "cgroup": cgroup_status(),
+        }
+        self._audit(
+            "memory_policy_status",
+            None,
+            {
+                "live": len(live_records),
+                "stale_or_deleted": stale_count,
+                "eviction_candidates": len(eviction_candidates),
+                "approx_total_bytes": store_bytes + sqlite_bytes,
+            },
+        )
+        return result
 
     def versions(self, memory_id: str) -> List[Dict[str, object]]:
         versions = []
@@ -371,7 +512,7 @@ class MemGuardService:
         self._audit("rollback", memory_id, {"target_version_id": version_id, "new_version_id": record.version.version_id})
         return {"rolled_back": True, "record": record}
 
-    def search(self, query: str, limit: int = 5) -> List[Dict[str, object]]:
+    def search(self, query: str, limit: int = 5, audit: bool = True) -> List[Dict[str, object]]:
         candidates = self._search_candidates(query, limit=max(limit * 8, 80))
         ranked = self.retriever.rank(query, candidates, limit=limit)
         results = []
@@ -395,8 +536,80 @@ class MemGuardService:
                 record["score"] = 0.1
                 record["match_source"] = "text"
                 results.append(record)
-        self._audit("search", None, {"query": query, "count": len(results)})
+        if audit:
+            self._audit("search", None, {"query": query, "count": len(results)})
         return results[:limit]
+
+    def batch_search(self, queries: List[str], limit: int = 5, workers: int = 4) -> Dict[str, object]:
+        clean_queries = [query.strip() for query in queries if query and query.strip()]
+        workers = max(1, min(int(workers), max(1, len(clean_queries)), 16))
+        if not clean_queries:
+            result = {
+                "query_count": 0,
+                "workers": workers,
+                "read_path_audit": "single_batch_audit_event",
+                "results": [],
+                "latency": {"total_ms": 0.0, "p50_ms": 0.0, "p95_ms": 0.0, "p99_ms": 0.0},
+                "errors": [],
+                "ok": True,
+            }
+            self._audit("batch_search", None, {"query_count": 0, "workers": workers, "errors": 0})
+            return result
+
+        started = perf_counter()
+        results: List[Optional[Dict[str, object]]] = [None] * len(clean_queries)
+        latencies: List[float] = []
+        errors: List[Dict[str, object]] = []
+
+        def run_one(index: int, query: str) -> Dict[str, object]:
+            worker_service = MemGuardService(store_path=self.store.path, db_path=self.meta.path, namespace=self.namespace)
+            try:
+                query_started = perf_counter()
+                hits = worker_service.search(query, limit=limit, audit=False)
+                elapsed_ms = (perf_counter() - query_started) * 1000
+                return {"index": index, "query": query, "hits": hits, "latency_ms": round(elapsed_ms, 3)}
+            finally:
+                worker_service.close()
+
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            future_map = {executor.submit(run_one, index, query): index for index, query in enumerate(clean_queries)}
+            for future in as_completed(future_map):
+                index = future_map[future]
+                try:
+                    item = future.result()
+                    results[index] = item
+                    latencies.append(float(item["latency_ms"]))
+                except Exception as exc:
+                    errors.append({"index": index, "query": clean_queries[index], "error": repr(exc)})
+
+        total_ms = (perf_counter() - started) * 1000
+        ordered_results = [item for item in results if item is not None]
+        result = {
+            "query_count": len(clean_queries),
+            "workers": workers,
+            "read_path_audit": "single_batch_audit_event",
+            "results": ordered_results,
+            "latency": {
+                "total_ms": round(total_ms, 3),
+                "p50_ms": round(self._percentile(latencies, 0.50), 3),
+                "p95_ms": round(self._percentile(latencies, 0.95), 3),
+                "p99_ms": round(self._percentile(latencies, 0.99), 3),
+            },
+            "errors": errors,
+            "ok": not errors and len(ordered_results) == len(clean_queries),
+        }
+        self._audit(
+            "batch_search",
+            None,
+            {
+                "query_count": len(clean_queries),
+                "workers": workers,
+                "errors": len(errors),
+                "total_ms": result["latency"]["total_ms"],
+                "p95_ms": result["latency"]["p95_ms"],
+            },
+        )
+        return result
 
     def build_context(self, query: str, limit: int = 5, max_chars: int = 2000, token_budget: Optional[int] = None) -> Dict[str, object]:
         effective_max_chars = max_chars
@@ -514,7 +727,7 @@ class MemGuardService:
         for source in (
             self.meta.search_text(query, limit=limit),
             self.meta.graph_search(query, limit=max(10, limit // 4)),
-            self.meta.list_memories(include_deleted=False)[:limit],
+            self.meta.list_memories(include_deleted=False, limit=limit),
         ):
             for record in source:
                 memory_id = record.get("memory_id")
@@ -523,7 +736,7 @@ class MemGuardService:
                 seen.add(memory_id)
                 candidates.append(record)
         if not candidates:
-            return self.meta.list_memories(include_deleted=False)
+            return self.meta.list_memories(include_deleted=False, limit=limit)
         return candidates
 
     def graph_search(self, entity_query: str, limit: int = 10) -> List[Dict[str, object]]:
@@ -788,3 +1001,38 @@ class MemGuardService:
             "labels": labels if isinstance(labels, list) else [],
             "redacted": bool(row.get("sensitivity_redacted", False)),
         }
+
+    @staticmethod
+    def _path_size(path: Path) -> int:
+        try:
+            return path.stat().st_size if path.exists() else 0
+        except OSError:
+            return 0
+
+    @staticmethod
+    def _percentile(values: List[float], q: float) -> float:
+        if not values:
+            return 0.0
+        ordered = sorted(values)
+        index = min(len(ordered) - 1, max(0, int(round((len(ordered) - 1) * q))))
+        return ordered[index]
+
+    @staticmethod
+    def _memory_policy_recommendations(tiers: Dict[str, Dict[str, object]], stale_count: int, total_bytes: int) -> List[str]:
+        recommendations = []
+        working_count = int(tiers.get("working", {}).get("count", 0))
+        session_count = int(tiers.get("session", {}).get("count", 0))
+        long_term_count = int(tiers.get("long_term", {}).get("count", 0))
+        if working_count:
+            recommendations.append("working 层存在临时记忆，任务结束后优先执行 evict-tier working 或挑选 promote 到 long_term。")
+        if session_count:
+            recommendations.append("session 层存在阶段性记忆，适合在演示中展示中期记忆淘汰和沉淀。")
+        if stale_count:
+            recommendations.append("存在已删除或旧版本记录，建议执行 compact 以压缩 mmap 段文件并清理旧明文。")
+        if total_bytes > 64 * 1024 * 1024:
+            recommendations.append("当前存储超过 64MB，建议增加 namespace 拆分、压缩和更严格的 working/session 淘汰策略。")
+        if long_term_count == 0:
+            recommendations.append("long_term 层为空，RAG 复用能力不足，建议沉淀稳定偏好、知识和安全策略。")
+        if not recommendations:
+            recommendations.append("当前分层、存储和淘汰状态健康，可继续按默认策略运行。")
+        return recommendations

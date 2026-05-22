@@ -1,4 +1,4 @@
-.PHONY: test eval demo doctor lint coverage docs-check ci package clean
+.PHONY: test eval demo doctor lint coverage docs-check competition-ready ci package clean
 
 test:
 	python -m pytest -q
@@ -28,7 +28,10 @@ coverage:
 docs-check:
 	python scripts/check_docs_links.py
 
-ci: lint test docs-check
+competition-ready:
+	python scripts/check_competition_ready.py --output docs/competition_ready.json --markdown docs/竞赛就绪自检报告.md
+
+ci: lint test docs-check competition-ready
 
 package:
 	python scripts/package_submission.py

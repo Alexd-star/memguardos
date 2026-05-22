@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import asdict, is_dataclass
 import json
 import os
 import socket
 from pathlib import Path
-from typing import Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from memguard.service import MemGuardService
 
@@ -17,6 +18,13 @@ def handle_request(service: MemGuardService, request: Dict[str, object], auth_to
         query = str(request.get("query", ""))
         limit = int(request.get("limit", 5))
         return {"ok": True, "result": service.search(query, limit=limit)}
+    if command == "batch_search":
+        raw_queries = request.get("queries", [])
+        if not isinstance(raw_queries, list):
+            return {"ok": False, "error": "queries_must_be_array"}
+        limit = int(request.get("limit", 5))
+        workers = int(request.get("workers", 4))
+        return {"ok": True, "result": service.batch_search([str(query) for query in raw_queries], limit=limit, workers=workers)}
     if command == "build_context":
         query = str(request.get("query", ""))
         limit = int(request.get("limit", 5))
@@ -26,6 +34,53 @@ def handle_request(service: MemGuardService, request: Dict[str, object], auth_to
         return {"ok": True, "result": service.build_context(query, limit=limit, max_chars=max_chars, token_budget=token_budget)}
     if command == "namespace_status":
         return {"ok": True, "result": service.namespace_status()}
+    if command == "memory_policy":
+        eviction_limit = int(request.get("eviction_limit", 10))
+        return {"ok": True, "result": service.memory_policy_status(eviction_limit=eviction_limit)}
+    if command == "list":
+        return {
+            "ok": True,
+            "result": _jsonable(service.list_memories(
+                include_deleted=bool(request.get("include_deleted", False)),
+                tier=str(request["tier"]) if request.get("tier") else None,
+            )),
+        }
+    if command == "update":
+        memory_id = str(request.get("memory_id", ""))
+        text = str(request.get("text", ""))
+        reason = str(request.get("reason", "api update"))
+        return {"ok": True, "result": _jsonable(service.update_memory(memory_id, text, reason=reason))}
+    if command == "versions":
+        return {"ok": True, "result": _jsonable(service.versions(str(request.get("memory_id", ""))))}
+    if command == "promote":
+        memory_id = str(request.get("memory_id", ""))
+        tier = str(request.get("tier", ""))
+        return {"ok": True, "result": _jsonable(service.promote_memory(memory_id, tier))}
+    if command == "evict_tier":
+        tier = str(request.get("tier", ""))
+        confirm = bool(request.get("confirm", False))
+        return {"ok": True, "result": _jsonable(service.evict_tier(tier, confirm=confirm))}
+    if command == "forget":
+        forget_request = str(request.get("request", request.get("text", "")))
+        confirm = bool(request.get("confirm", False))
+        compact = bool(request.get("compact", False))
+        return {"ok": True, "result": _jsonable(service.forget(forget_request, confirm=confirm, compact=compact))}
+    if command == "verify_forget":
+        memory_id = str(request.get("memory_id", ""))
+        probe = str(request.get("probe", ""))
+        return {"ok": True, "result": _jsonable(service.verify_forget_probe(memory_id, probe))}
+    if command == "audit":
+        return {
+            "ok": True,
+            "result": _jsonable(service.audit(
+                limit=int(request.get("limit", 20)),
+                event_type=str(request["event_type"]) if request.get("event_type") else None,
+            )),
+        }
+    if command == "verify_audit":
+        return {"ok": True, "result": _jsonable(service.verify_audit())}
+    if command == "retrieval_status":
+        return {"ok": True, "result": _jsonable(service.retrieval_status())}
     if command == "ingest":
         text = str(request.get("text", ""))
         source_kind = str(request.get("source_kind", "api"))
@@ -122,3 +177,17 @@ def _dispatch_payload(service: MemGuardService, payload: bytes, auth_token: Opti
         return handle_request(service, request, auth_token=auth_token)
     except Exception as exc:
         return {"ok": False, "error": "bad_request", "detail": str(exc)}
+
+
+def _jsonable(value: Any) -> Any:
+    if hasattr(value, "to_dict") and callable(value.to_dict):
+        return _jsonable(value.to_dict())
+    if is_dataclass(value):
+        return _jsonable(asdict(value))
+    if isinstance(value, dict):
+        return {str(key): _jsonable(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(item) for item in value]
+    if isinstance(value, Path):
+        return str(value)
+    return value

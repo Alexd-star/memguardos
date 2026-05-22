@@ -16,12 +16,17 @@
 - 敏感检测、脱敏、阻断和自定义敏感模式。
 - 自然语言精准遗忘、compact 和明文探针验证。
 - RAG 上下文构建、provider-neutral prompt 渲染和默认关闭的 LLM adapter。
+- Agent 批量检索和记忆策略报告，覆盖任务规划、工具调用、结果生成多查询场景，以及冷热分层、存储占用、淘汰候选和 cgroup 状态。
 - namespace 多会话隔离、systemd/cgroup 模板实例、journald、auditd、Kylin SDK 探测、Kylin embedding 可选检索重排和向量数据库 SDK 探针。
 - UKUI/freedesktop 轻量通知、Peony 右键菜单插件源码、UKUI 控制中心插件源码和 BPF LSM 强制拦截增强。
 
 ### 验证结果
 
-- 本地与 openKylin 单元测试：`42 passed`。
+- 本地单元测试：`45 passed`。
+- openKylin 最新证据包单元测试：`42 passed`。
+- 本地 1k 负载 P95：`26.127 ms`。
+- 本地 6 线程并发检索 P95：`168.240 ms`。
+- 本地 Agent 批量检索 P95：`3.970 ms`。
 - openKylin 1k 负载 P95：`76.182 ms`。
 - openKylin 10k 负载 P95：`343.328 ms`。
 - benchmark 扩充到 30/25/25/17/10/13/6，覆盖自然语言敏感规则、更多 OS 敏感路径、namespace/cgroup、Kylin 可选检索和并发审计样例。

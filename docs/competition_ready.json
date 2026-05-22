@@ -1,0 +1,480 @@
+{
+  "ok": true,
+  "summary": {
+    "total": 67,
+    "passed": 67,
+    "failed": 0,
+    "warnings": 0
+  },
+  "checks": [
+    {
+      "category": "中文文档",
+      "name": "README.md",
+      "ok": true,
+      "detail": "中文字符数 1746",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/项目介绍总览.md",
+      "ok": true,
+      "detail": "中文字符数 5031",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/概要设计说明书.md",
+      "ok": true,
+      "detail": "中文字符数 901",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/详细设计说明书.md",
+      "ok": true,
+      "detail": "中文字符数 1668",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/部署手册.md",
+      "ok": true,
+      "detail": "中文字符数 511",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/用户手册.md",
+      "ok": true,
+      "detail": "中文字符数 1193",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/测试报告.md",
+      "ok": true,
+      "detail": "中文字符数 1766",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/赛题符合性说明.md",
+      "ok": true,
+      "detail": "中文字符数 947",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/正式提交材料说明.md",
+      "ok": true,
+      "detail": "中文字符数 498",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/评委证据包索引.md",
+      "ok": true,
+      "detail": "中文字符数 1224",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/安全设计说明书.md",
+      "ok": true,
+      "detail": "中文字符数 951",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/操作系统机制说明.md",
+      "ok": true,
+      "detail": "中文字符数 1360",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/麒麟SDK集成证据.md",
+      "ok": true,
+      "detail": "中文字符数 724",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/答辩提纲.md",
+      "ok": true,
+      "detail": "中文字符数 1003",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/演示视频脚本.md",
+      "ok": true,
+      "detail": "中文字符数 491",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/service.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/store/mmap_store.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/store/sqlite_meta.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/retrieval/hybrid.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/sensitivity/detector.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/forgetting/planner.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/api/server.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/install_openkylin.sh",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/collect_openkylin_evidence.sh",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/package_submission.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "native/bpf_lsm/memguard_lsm.bpf.c",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "native/ukui/peony-memguard/memguard_peony_plugin.cpp",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "偏好提取准确率 TP/(TP+FP)",
+      "ok": true,
+      "detail": "当前 1.0000，要求 >= 0.9000",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "知识提取准确率 TP/(TP+FP)",
+      "ok": true,
+      "detail": "当前 1.0000，要求 >= 0.9000",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "知识检索 Recall@5",
+      "ok": true,
+      "detail": "当前 1.0000，要求 >= 0.9000",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "跨语言 Recall@5",
+      "ok": true,
+      "detail": "当前 1.0000，要求 >= 0.8000",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "敏感阻断 F1",
+      "ok": true,
+      "detail": "当前 1.0000，要求 >= 0.9500",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "敏感标签 F1",
+      "ok": true,
+      "detail": "当前 1.0000，要求 >= 0.9000",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "精准遗忘候选精确率",
+      "ok": true,
+      "detail": "当前 1.0000，要求 >= 0.9000",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "精准遗忘候选召回率",
+      "ok": true,
+      "detail": "当前 1.0000，要求 >= 0.9000",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "冲突处理正确率",
+      "ok": true,
+      "detail": "当前 1.0000，要求 >= 0.9000",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "负载 P95 延迟小于 500ms",
+      "ok": true,
+      "detail": "当前 14.6450，要求 <= 500.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "记忆分层策略报告",
+      "ok": true,
+      "detail": "当前 True",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "并发检索",
+      "ok": true,
+      "detail": "当前 True",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "Agent 批量检索",
+      "ok": true,
+      "detail": "当前 True",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "RAG 脱敏保持",
+      "ok": true,
+      "detail": "当前 True",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "benchmark 用例规模",
+      "ok": true,
+      "detail": "总用例/种子数 126",
+      "severity": "P1"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "证据目录",
+      "ok": true,
+      "detail": "D:\\Luo_docs\\竞赛\\研创赛\\memguardos\\docs\\evidence\\latest",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "pytest.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "eval_1k.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "eval_10k.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "sdk_status.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "sdk_embedding_probe.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "embedding_cpp_probe.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "vector_probe.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "kylin_retrieval.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "namespace_isolation.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "systemd_cgroup.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "systemd_namespace.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "auditd_ingest.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "audit_concurrency.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "verify_audit.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "bpf_lsm_enforcer.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "ukui_plugin_build.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "ukui_plugin_install.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "natural_patterns.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "manifest.json",
+      "ok": true,
+      "detail": "证据清单存在",
+      "severity": "P1"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "SHA256SUMS.txt",
+      "ok": true,
+      "detail": "哈希清单存在",
+      "severity": "P1"
+    },
+    {
+      "category": "工程卫生",
+      "name": "运行时文件未混入提交主体",
+      "ok": true,
+      "detail": "发现 0 个运行时文件",
+      "severity": "P0"
+    },
+    {
+      "category": "工程卫生",
+      "name": "许可证",
+      "ok": true,
+      "detail": "LICENSE 存在",
+      "severity": "P0"
+    },
+    {
+      "category": "工程卫生",
+      "name": "提交包脚本",
+      "ok": true,
+      "detail": "可生成竞赛提交包",
+      "severity": "P0"
+    }
+  ]
+}

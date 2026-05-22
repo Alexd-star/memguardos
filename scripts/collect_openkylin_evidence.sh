@@ -113,6 +113,7 @@ EOF
 | `behavior_history.txt` | shell 用户行为轨迹接入证据 |
 | `build_prompt.txt` | RAG 上下文与 LLM prompt 渲染证据 |
 | `generate_answer.txt` | 默认关闭的可选 LLM adapter dry-run 证据 |
+| `agent_batch_search.txt` | OS Agent 任务规划、工具调用、结果生成多查询并发检索证据 |
 | `api_auth.txt` | 本地 Agent API token 鉴权证据 |
 | `namespace_isolation.txt` | namespace 多会话记忆隔离证据 |
 | `systemd_namespace.txt` | systemd 模板实例与独立 cgroup 证据 |
@@ -127,6 +128,9 @@ EOF
 | `auditd_rules.txt` | auditd 规则证据 |
 | `auditd_ingest.txt` | auditd 真实日志接入证据 |
 | `verify_audit.txt` | 审计哈希链验证 |
+| `memory_policy.txt` | 记忆冷热分层、存储占用、cgroup 状态和淘汰候选证据 |
+| `manifest.json` | 证据包文件大小与 SHA256 摘要清单 |
+| `SHA256SUMS.txt` | 可由 `sha256sum -c SHA256SUMS.txt` 复核的证据包哈希 |
 EOF
   } >"${OUT_DIR}/README.md"
   if [ "$RUN_10K" -eq 1 ]; then
@@ -192,6 +196,8 @@ run_shell_capture "natural_patterns" "\"${PYTHON_BIN}\" -m memguard.cli.memctl p
 run_capture "behavior_history" "${PYTHON_BIN}" -m memguard.cli.memctl ingest-history --file "$HOME/.bash_history" --limit 20
 run_capture "build_prompt" "${PYTHON_BIN}" -m memguard.cli.memctl build-prompt "openKylin 服务内存限制" --top-k 5 --token-budget 1200
 run_capture "generate_answer" "${PYTHON_BIN}" -m memguard.cli.memctl generate-answer "openKylin 服务内存限制" --top-k 5 --token-budget 1200 --provider dry-run
+run_shell_capture "agent_batch_search" "\"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '任务规划记忆：openKylin systemd cgroup MemoryMax 约束。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '工具调用记忆：Linux 验证优先使用 rg、pytest、journalctl。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '结果生成记忆：答辩先给结论，再给指标证据和边界。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl batch-search '任务规划 systemd cgroup' '工具调用 pytest journalctl' '结果生成 答辩 证据' --top-k 3 --workers 3; \"${PYTHON_BIN}\" -m memguard.cli.memctl audit --type batch_search --limit 3; \"${PYTHON_BIN}\" -m memguard.cli.memctl verify-audit"
+run_capture "memory_policy" "${PYTHON_BIN}" -m memguard.cli.memctl memory-policy --eviction-limit 10
 run_shell_capture "namespace_isolation" "NS_HOME='${OUT_DIR}/namespace_home'; rm -rf \"\${NS_HOME}\"; mkdir -p \"\${NS_HOME}\"; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl --namespace alpha ingest --text 'alpha 会话只保存 openKylin systemd MemoryMax 方案。'; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl --namespace beta ingest --text 'beta 会话只保存 auditd shadow access 方案。'; echo '--- alpha search MemoryMax ---'; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl --namespace alpha search MemoryMax --top-k 3; echo '--- beta search MemoryMax should be empty ---'; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl --namespace beta search MemoryMax --top-k 3; echo '--- beta search auditd ---'; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl --namespace beta search auditd --top-k 3; echo '--- namespace status ---'; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl --namespace alpha namespace-status; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl --namespace beta namespace-status; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl namespaces"
 run_shell_capture "audit_concurrency" "TMP_AUDIT_HOME=\$(mktemp -d /tmp/memguardos-audit-concurrency.XXXXXX); export TMP_AUDIT_HOME; \"${PYTHON_BIN}\" - <<'PY'
 from pathlib import Path
@@ -275,9 +281,10 @@ run_shell_capture "auditd_rules" "\"${PYTHON_BIN}\" -m memguard.cli.memctl audit
 run_shell_capture "auditd_ingest" "sudo cat /etc/shadow >/dev/null 2>/dev/null || true; bash scripts/auditd_to_memguard.sh \"$(pwd)\" memguard_sensitive 200 --summary || true"
 run_capture "verify_audit" "${PYTHON_BIN}" -m memguard.cli.memctl verify-audit
 
-write_summary
 rm -rf "${OUT_DIR}/namespace_home"
 rm -rf "${OUT_DIR}/kylin_retrieval_home"
+write_summary
+"${PYTHON_BIN}" scripts/write_evidence_manifest.py "$OUT_DIR" >"${OUT_DIR}/evidence_manifest.txt" 2>&1 || true
 rm -rf "$LATEST_DIR"
 mkdir -p "$(dirname "$LATEST_DIR")"
 cp -a "$OUT_DIR" "$LATEST_DIR"

@@ -24,6 +24,7 @@ from memguard.retrieval.conflict import preference_topic
 from memguard.daemon import daemon_health_snapshot, run_daemon
 from memguard.store.sqlite_meta import SQLiteMetaStore
 from scripts.demo_smoke import main as demo_smoke_main
+from scripts.write_evidence_manifest import build_manifest, write_outputs
 
 
 def make_service(tmp_path: Path) -> MemGuardService:
@@ -250,6 +251,21 @@ def test_versions_update_and_rollback(tmp_path):
         assert latest is not None
         assert "中文" in latest.content
         assert latest.version.op == "rollback"
+    finally:
+        service.close()
+
+
+def test_update_memory_uses_same_quality_gate_as_ingest(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        created = service.ingest_text("以后回答命令时使用中文。")["record"]
+        rejected = service.update_memory(created.memory_id, " \x00 \n ")
+        assert rejected["updated"] is False
+        assert rejected["reason"] == "quality_reject"
+        latest = service.store.get_latest(created.memory_id)
+        assert latest is not None
+        assert latest.content == created.content
+        assert service.audit(event_type="quality_reject")
     finally:
         service.close()
 
@@ -530,6 +546,35 @@ def test_memory_tier_promote_and_evict(tmp_path):
         service.close()
 
 
+def test_memory_policy_status_reports_tiers_candidates_and_storage(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        working = service.ingest_text("临时工作记忆：用于当前任务调试。", tier="working")["record"]
+        session = service.ingest_text("会话记忆：本轮答辩材料整理。", tier="session")["record"]
+        service.ingest_text("长期知识：systemd MemoryMax 可以限制服务内存。", tier="long_term")
+
+        before = service.memory_policy_status(eviction_limit=2)
+        assert before["namespace"] == "default"
+        assert before["tiers"]["working"]["count"] == 1
+        assert before["tiers"]["session"]["count"] == 1
+        assert before["tiers"]["long_term"]["count"] == 1
+        assert before["counts"]["eviction_candidates"] == 2
+        assert before["storage"]["segment_bytes"] > 0
+        assert before["storage"]["bytes_per_live_memory"] > 0
+        assert before["cgroup"]["platform"]
+        candidate_ids = {item["memory_id"] for item in before["eviction_candidates"]}
+        assert {working.memory_id, session.memory_id}.issubset(candidate_ids)
+
+        service.evict_tier("working", confirm=True)
+        after = service.memory_policy_status(eviction_limit=2)
+        assert after["tiers"]["working"]["count"] == 0
+        assert after["counts"]["stale_or_deleted"] >= 1
+        assert any("compact" in item for item in after["recommendations"])
+        assert service.audit(event_type="memory_policy_status")
+    finally:
+        service.close()
+
+
 def test_auditd_rule_generation():
     commands = auditctl_rules(paths=["/home/test/.ssh"], key="memguard_test")
     assert commands == ["auditctl -w /home/test/.ssh -p rwxa -k memguard_test"]
@@ -709,11 +754,44 @@ def test_graph_search_and_related_memories(tmp_path):
         service.close()
 
 
+def test_batch_search_reports_ordered_agent_queries_and_audit(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        service.ingest_text("任务规划记忆：openKylin systemd cgroup MemoryMax。")
+        service.ingest_text("工具调用记忆：优先使用 rg、pytest、journalctl。")
+        service.ingest_text("结果生成记忆：中文回答先给结论，再给证据。")
+        result = service.batch_search(
+            ["任务规划 systemd", "工具调用 pytest", "结果生成 中文"],
+            limit=3,
+            workers=3,
+        )
+        assert result["ok"] is True
+        assert result["query_count"] == 3
+        assert result["workers"] == 3
+        assert [item["query"] for item in result["results"]] == ["任务规划 systemd", "工具调用 pytest", "结果生成 中文"]
+        assert all(item["hits"] for item in result["results"])
+        assert result["latency"]["p95_ms"] >= 0
+        assert service.verify_audit()["ok"] is True
+        assert service.audit(event_type="batch_search")
+    finally:
+        service.close()
+
+
 def test_eval_latency_load_smoke():
     result = run_eval(latency_size=20)
     assert result["latency_load"]["memory_count"] == 20
     assert result["latency_load"]["query_count"] >= 100
     assert result["latency_load"]["p95_latency_ms"] < 500
+    assert result["concurrent_search"]["ok"] is True
+    assert result["concurrent_search"]["workers"] == 6
+    assert result["concurrent_search"]["query_count"] >= 100
+    assert result["concurrent_search"]["audit_chain_ok"] is True
+    assert result["agent_batch_search"]["ok"] is True
+    assert result["agent_batch_search"]["query_count"] == 4
+    assert result["agent_batch_search"]["audit_chain_ok"] is True
+    assert result["rag_context_budget"]["over_token_budget"] is False
+    assert result["rag_context_budget"]["redaction_enforced"] is True
+    assert result["memory_tiers"]["policy_report_ok"] is True
     assert "baseline_comparison" in result
     assert "text_only_recall_at_5" in result["baseline_comparison"]
     assert "full_memguardos_recall_at_5" in result["baseline_comparison"]
@@ -723,6 +801,25 @@ def test_eval_latency_load_smoke():
 
 def test_demo_smoke_script_runs():
     assert demo_smoke_main() == 0
+
+
+def test_evidence_manifest_writes_sha256_outputs(tmp_path):
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    (evidence / "pytest.txt").write_text("42 passed\n", encoding="utf-8")
+    (evidence / "evidence_manifest.txt").write_text("runtime log should not be hashed\n", encoding="utf-8")
+
+    manifest = build_manifest(evidence)
+    write_outputs(evidence, manifest)
+
+    written = json.loads((evidence / "manifest.json").read_text(encoding="utf-8"))
+    paths = {item["path"] for item in written["files"]}
+    assert "pytest.txt" in paths
+    assert "manifest.json" not in paths
+    assert "SHA256SUMS.txt" not in paths
+    assert "evidence_manifest.txt" not in paths
+    sha_text = (evidence / "SHA256SUMS.txt").read_text(encoding="utf-8")
+    assert "pytest.txt" in sha_text
 
 
 def test_daemon_health_and_once_mode():
@@ -756,6 +853,36 @@ def test_local_api_handler_and_unix_socket(tmp_path):
         context = handle_request(service, {"command": "build_context", "query": "Linux 命令", "limit": 3})
         assert context["ok"] is True
         assert context["result"]["memory_count"] >= 1
+        batch = handle_request(service, {"command": "batch_search", "queries": ["Linux 命令", "风险提示"], "limit": 2, "workers": 2})
+        assert batch["ok"] is True
+        assert batch["result"]["ok"] is True
+        assert batch["result"]["query_count"] == 2
+        assert handle_request(service, {"command": "batch_search", "queries": "Linux 命令"})["ok"] is False
+        policy = handle_request(service, {"command": "memory_policy", "eviction_limit": 3})
+        assert policy["ok"] is True
+        assert policy["result"]["counts"]["live"] >= 1
+        assert "cgroup" in policy["result"]
+        listed = handle_request(service, {"command": "list"})
+        assert listed["ok"] is True
+        memory_id = listed["result"][0]["memory_id"]
+        updated = handle_request(service, {"command": "update", "memory_id": memory_id, "text": "以后回答 Linux 命令时先给安全风险。"})
+        assert updated["ok"] is True
+        assert updated["result"]["updated"] is True
+        json.dumps(updated, ensure_ascii=False)
+        versions = handle_request(service, {"command": "versions", "memory_id": memory_id})
+        assert versions["ok"] is True
+        assert len(versions["result"]) >= 2
+        dry_forget = handle_request(service, {"command": "forget", "request": "忘掉 Linux 命令", "confirm": False})
+        assert dry_forget["ok"] is True
+        assert dry_forget["result"]["candidates"]
+        retrieval_status = handle_request(service, {"command": "retrieval_status"})
+        assert retrieval_status["ok"] is True
+        assert "hash" in retrieval_status["result"]
+        audit = handle_request(service, {"command": "audit", "limit": 3})
+        assert audit["ok"] is True
+        verify = handle_request(service, {"command": "verify_audit"})
+        assert verify["ok"] is True
+        assert verify["result"]["ok"] is True
         if not hasattr(socket, "AF_UNIX"):
             return
 

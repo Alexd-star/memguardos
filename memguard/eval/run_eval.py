@@ -6,6 +6,7 @@ import json
 import os
 import time
 import tracemalloc
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from memguard.eval.metrics import f1, mean, percentile, precision, recall_at_k
 from memguard.service import MemGuardService
@@ -30,6 +31,7 @@ def run(latency_size: int = 200, latency_queries: int = 100) -> dict:
         root = Path(tmp)
         wall_start = time.perf_counter()
         cpu_start = time.process_time()
+        baseline_rss_kb = current_rss_kb()
         tracemalloc.start()
         service = MemGuardService(store_path=root / "memory.segment", db_path=root / "memguard.sqlite3")
         try:
@@ -37,6 +39,10 @@ def run(latency_size: int = 200, latency_queries: int = 100) -> dict:
             id_to_label = {}
             type_correct = 0
             subtype_correct = 0
+            preference_tp = 0
+            preference_fp = 0
+            knowledge_tp = 0
+            knowledge_fp = 0
             seeds = load_jsonl(BENCHMARK_DIR / "memory_seed.jsonl")
             for row in seeds:
                 result = service.ingest_text(row["text"], source_kind="benchmark", source_uri=row["label"])
@@ -49,6 +55,16 @@ def run(latency_size: int = 200, latency_queries: int = 100) -> dict:
                     type_correct += 1
                 if row.get("expected_subtype") == record.subtype:
                     subtype_correct += 1
+                if record.type == "preference":
+                    if row["expected_type"] == "preference":
+                        preference_tp += 1
+                    else:
+                        preference_fp += 1
+                if record.type == "knowledge":
+                    if row["expected_type"] == "knowledge":
+                        knowledge_tp += 1
+                    else:
+                        knowledge_fp += 1
 
             retrieval_scores = []
             latencies = []
@@ -158,7 +174,9 @@ def run(latency_size: int = 200, latency_queries: int = 100) -> dict:
                 working = tier_service.ingest_text("临时调试上下文，只在当前任务中使用。", tier="working")["record"]
                 promoted = tier_service.promote_memory(working.memory_id, "long_term")
                 session = tier_service.ingest_text("本轮会话记忆，结束后可清理。", tier="session")["record"]
+                policy_before_evict = tier_service.memory_policy_status(eviction_limit=5)
                 evicted = tier_service.evict_tier("session", confirm=True)
+                policy_after_evict = tier_service.memory_policy_status(eviction_limit=5)
                 tier_flow_ok = (
                     promoted["promoted"]
                     and promoted["record"].tier == "long_term"
@@ -169,7 +187,11 @@ def run(latency_size: int = 200, latency_queries: int = 100) -> dict:
                 tier_service.close()
 
             load_result = run_latency_load(root, latency_size, latency_queries)
+            concurrent_result = run_concurrent_search_load(root, max(200, min(latency_size, 1000)), max(100, latency_queries), workers=6)
+            agent_batch_result = run_agent_batch_search_eval(root)
+            rag_budget_result = run_rag_budget_eval(root)
             current_bytes, peak_bytes = tracemalloc.get_traced_memory()
+            final_rss_kb = current_rss_kb()
             footprint = storage_footprint(
                 [
                     service.store.path,
@@ -193,6 +215,12 @@ def run(latency_size: int = 200, latency_queries: int = 100) -> dict:
                 "preference_and_knowledge_extraction": {
                     "type_accuracy": round(type_correct / float(len(seeds) or 1), 4),
                     "subtype_accuracy": round(subtype_correct / float(len(seeds) or 1), 4),
+                    "preference_precision": round(preference_tp / float(preference_tp + preference_fp or 1), 4),
+                    "preference_true_positive": preference_tp,
+                    "preference_false_positive": preference_fp,
+                    "knowledge_precision": round(knowledge_tp / float(knowledge_tp + knowledge_fp or 1), 4),
+                    "knowledge_true_positive": knowledge_tp,
+                    "knowledge_false_positive": knowledge_fp,
                 },
                 "data_quality": {
                     "decision_accuracy": round(mean(quality_correct), 4),
@@ -227,14 +255,27 @@ def run(latency_size: int = 200, latency_queries: int = 100) -> dict:
                 "memory_tiers": {
                     "flow_ok": bool(tier_flow_ok),
                     "working_session_long_term_supported": True,
+                    "policy_report_ok": bool(
+                        policy_before_evict["counts"]["eviction_candidates"] >= 1
+                        and policy_after_evict["tiers"]["session"]["count"] == 0
+                        and policy_after_evict["counts"]["stale_or_deleted"] >= 1
+                    ),
+                    "eviction_candidates_before": policy_before_evict["counts"]["eviction_candidates"],
+                    "stale_or_deleted_after": policy_after_evict["counts"]["stale_or_deleted"],
                 },
                 "latency_load": load_result,
+                "concurrent_search": concurrent_result,
+                "agent_batch_search": agent_batch_result,
+                "rag_context_budget": rag_budget_result,
                 "resource_usage": {
                     "eval_wall_time_ms": round((time.perf_counter() - wall_start) * 1000, 3),
                     "eval_cpu_time_ms": round((time.process_time() - cpu_start) * 1000, 3),
                     "tracemalloc_current_kb": round(current_bytes / 1024.0, 3),
                     "tracemalloc_peak_kb": round(peak_bytes / 1024.0, 3),
-                    "process_rss_kb": current_rss_kb(),
+                    "process_rss_kb": final_rss_kb,
+                    "baseline_rss_kb": baseline_rss_kb,
+                    "rss_delta_kb": round(final_rss_kb - baseline_rss_kb, 3) if final_rss_kb is not None and baseline_rss_kb is not None else None,
+                    "baseline_method": "current process RSS sampled before MemGuardService initialization",
                 },
                 "storage_footprint": {
                     "main_segment_kb": round(file_size(service.store.path) / 1024.0, 3),
@@ -284,6 +325,159 @@ def run_latency_load(root: Path, size: int, query_count: int = 100) -> dict:
             "segment_kb": round(file_size(service.store.path) / 1024.0, 3),
             "sqlite_kb": round(file_size(service.meta.path) / 1024.0, 3),
             "total_store_kb": round(storage_footprint([service.store.path, service.meta.path]) / 1024.0, 3),
+        }
+    finally:
+        service.close()
+
+
+def run_concurrent_search_load(root: Path, size: int, query_count: int = 100, workers: int = 6) -> dict:
+    size = max(1, int(size))
+    query_count = max(workers, int(query_count))
+    workers = max(1, int(workers))
+    store_path = root / "concurrent_search.segment"
+    db_path = root / "concurrent_search.sqlite3"
+    seed_service = MemGuardService(store_path=store_path, db_path=db_path)
+    try:
+        topics = ["systemd", "journald", "auditd", "mmap", "precise_forgetting", "openKylin", "cgroup", "ukui"]
+        for idx in range(size):
+            topic = topics[idx % len(topics)]
+            seed_service.ingest_text(
+                "concurrent memory %04d topic=%s openKylin Linux agent memory benchmark MemoryMax audit precise forgetting" % (idx, topic),
+                source_kind="concurrent_load",
+                source_uri="concurrent_%04d" % idx,
+                tier="session" if idx % 5 == 0 else "long_term",
+            )
+    finally:
+        seed_service.close()
+
+    queries = [
+        "openKylin systemd MemoryMax",
+        "journald audit memguardd",
+        "mmap precise forgetting compact",
+        "cgroup CPUQuota service",
+        "auditd sensitive path",
+        "UKUI agent memory",
+    ]
+    latencies = []
+    errors = []
+
+    def worker(worker_id: int, count: int) -> list[float]:
+        service = MemGuardService(store_path=store_path, db_path=db_path)
+        worker_latencies = []
+        try:
+            for idx in range(count):
+                query = queries[(idx + worker_id) % len(queries)]
+                start = time.perf_counter()
+                hits = service.search(query, limit=5, audit=False)
+                worker_latencies.append((time.perf_counter() - start) * 1000)
+                if not hits:
+                    raise RuntimeError("empty search result for %s" % query)
+        finally:
+            service.close()
+        return worker_latencies
+
+    base = query_count // workers
+    extra = query_count % workers
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = [
+            executor.submit(worker, worker_id, base + (1 if worker_id < extra else 0))
+            for worker_id in range(workers)
+        ]
+        for future in as_completed(futures):
+            try:
+                latencies.extend(future.result())
+            except Exception as exc:
+                errors.append(repr(exc))
+
+    verifier = MemGuardService(store_path=store_path, db_path=db_path)
+    try:
+        audit = verifier.verify_audit()
+        policy = verifier.memory_policy_status(eviction_limit=5)
+    finally:
+        verifier.close()
+    return {
+        "memory_count": size,
+        "query_count": len(latencies),
+        "workers": workers,
+        "read_path_audit": "disabled_for_latency_measurement",
+        "errors": errors,
+        "ok": not errors and len(latencies) == query_count and audit.get("ok", False),
+        "p50_latency_ms": round(percentile(latencies, 0.50), 3),
+        "p95_latency_ms": round(percentile(latencies, 0.95), 3),
+        "p99_latency_ms": round(percentile(latencies, 0.99), 3),
+        "audit_chain_ok": bool(audit.get("ok")),
+        "audit_events_checked": audit.get("checked"),
+        "policy_eviction_candidates": policy["counts"]["eviction_candidates"],
+    }
+
+
+def run_agent_batch_search_eval(root: Path) -> dict:
+    service = MemGuardService(store_path=root / "agent_batch.segment", db_path=root / "agent_batch.sqlite3")
+    try:
+        seeds = [
+            "任务规划记忆：openKylin OS Agent 规划阶段优先读取 systemd、cgroup、auditd 和 namespace 约束。",
+            "工具调用记忆：执行 Linux 检查时优先使用 rg、systemctl status、journalctl 和 python -m pytest。",
+            "结果生成记忆：答辩输出需要先给结论，再列证据指标和不可夸大的边界。",
+            "安全策略记忆：生成前上下文必须使用脱敏内容，不得复原 Token、手机号或私钥。",
+            "知识记忆：mmap 段文件依赖页缓存，适合端侧轻量记忆加载和顺序扫描。",
+            "知识记忆：Kylin embedding SDK 可作为可选重排后端，默认保留 hash fallback。",
+        ]
+        for idx, text in enumerate(seeds):
+            service.ingest_text(text, source_kind="agent_batch_seed", source_uri="agent_batch_%02d" % idx)
+        queries = [
+            "任务规划 openKylin systemd cgroup",
+            "工具调用 Linux pytest journalctl rg",
+            "结果生成 答辩 证据 边界",
+            "安全策略 脱敏 Token 私钥",
+        ]
+        batch = service.batch_search(queries, limit=4, workers=4)
+        audit = service.verify_audit()
+        hits_per_query = [len(item.get("hits", [])) for item in batch["results"]]
+        return {
+            "ok": bool(batch["ok"] and audit.get("ok") and hits_per_query and min(hits_per_query) >= 1),
+            "query_count": batch["query_count"],
+            "workers": batch["workers"],
+            "hits_per_query": hits_per_query,
+            "total_latency_ms": batch["latency"]["total_ms"],
+            "p95_latency_ms": batch["latency"]["p95_ms"],
+            "audit_chain_ok": bool(audit.get("ok")),
+            "read_path_audit": batch["read_path_audit"],
+        }
+    finally:
+        service.close()
+
+
+def run_rag_budget_eval(root: Path) -> dict:
+    service = MemGuardService(store_path=root / "rag_budget.segment", db_path=root / "rag_budget.sqlite3")
+    try:
+        service.ingest_text(
+            "RAG 脱敏预算测试：我的联系电话是 13800138000，生成前上下文必须只返回脱敏占位符。",
+            source_kind="rag_budget",
+            source_uri="phone_case",
+        )
+        for idx in range(18):
+            service.ingest_text(
+                (
+                    "RAG 预算样例 %02d：openKylin OS Agent 在构建回答前需要合并 systemd、auditd、"
+                    "mmap、精准遗忘、UKUI、Kylin SDK 和 cgroup 证据；回答必须基于已脱敏记忆。"
+                )
+                % idx,
+                source_kind="rag_budget",
+                source_uri="rag_%02d" % idx,
+            )
+        context = service.build_context("RAG 脱敏预算测试 联系电话 openKylin cgroup", limit=12, max_chars=4000, token_budget=280)
+        context_text = context["context"]
+        budget = context["budget"]
+        return {
+            "token_budget": budget["token_budget"],
+            "estimated_context_tokens": budget["estimated_context_tokens"],
+            "estimated_package_tokens": budget["estimated_package_tokens"],
+            "context_chars": budget["context_chars"],
+            "truncated": budget["truncated"],
+            "over_token_budget": budget["over_token_budget"],
+            "redaction_enforced": "13800138000" not in context_text and "[REDACTED:phone_cn]" in context_text,
+            "memory_count": context["memory_count"],
+            "policy": context["generation_policy"],
         }
     finally:
         service.close()
@@ -383,6 +577,9 @@ def to_markdown(result: dict) -> str:
     graph = result["graph_memory"]
     baseline = result["baseline_comparison"]
     tiers = result["memory_tiers"]
+    concurrent = result["concurrent_search"]
+    agent_batch = result["agent_batch_search"]
+    rag_budget = result["rag_context_budget"]
     quality = result["data_quality"]
     latency_load = result["latency_load"]
     resource = result["resource_usage"]
@@ -418,6 +615,10 @@ def to_markdown(result: dict) -> str:
             "|---|---:|",
             "| 类型识别准确率 | %.4f |" % extraction["type_accuracy"],
             "| 子类型识别准确率 | %.4f |" % extraction["subtype_accuracy"],
+            "| 偏好提取准确率 TP/(TP+FP) | %.4f |" % extraction["preference_precision"],
+            "| 偏好 TP/FP | %s / %s |" % (extraction["preference_true_positive"], extraction["preference_false_positive"]),
+            "| 知识提取准确率 TP/(TP+FP) | %.4f |" % extraction["knowledge_precision"],
+            "| 知识 TP/FP | %s / %s |" % (extraction["knowledge_true_positive"], extraction["knowledge_false_positive"]),
             "| 数据质量决策准确率 | %.4f |" % quality["decision_accuracy"],
             "| 数据质量问题识别准确率 | %.4f |" % quality["issue_detection_accuracy"],
             "| 数据质量警告识别准确率 | %.4f |" % quality["warning_detection_accuracy"],
@@ -437,15 +638,34 @@ def to_markdown(result: dict) -> str:
             "| 冲突解决正确率 | %.4f |" % conflict["correctness"],
             "| 图谱实体 Recall@5 | %.4f |" % graph["entity_recall_at_5"],
             "| 记忆层级流转是否通过 | %s |" % tiers["flow_ok"],
+            "| 记忆分层策略报告是否通过 | %s |" % tiers["policy_report_ok"],
+            "| 分层淘汰前候选数 | %s |" % tiers["eviction_candidates_before"],
+            "| 分层淘汰后旧版本/墓碑数 | %s |" % tiers["stale_or_deleted_after"],
             "| 负载记忆数量 | %s |" % latency_load["memory_count"],
             "| 负载查询数量 | %s |" % latency_load["query_count"],
             "| 负载 P95 延迟 ms | %.3f |" % latency_load["p95_latency_ms"],
+            "| 并发检索是否通过 | %s |" % concurrent["ok"],
+            "| 并发检索线程数 | %s |" % concurrent["workers"],
+            "| 并发检索查询数量 | %s |" % concurrent["query_count"],
+            "| 并发检索 P95 延迟 ms | %.3f |" % concurrent["p95_latency_ms"],
+            "| 并发检索审计链是否通过 | %s |" % concurrent["audit_chain_ok"],
+            "| Agent 批量检索是否通过 | %s |" % agent_batch["ok"],
+            "| Agent 批量检索查询数 | %s |" % agent_batch["query_count"],
+            "| Agent 批量检索线程数 | %s |" % agent_batch["workers"],
+            "| Agent 批量检索 P95 延迟 ms | %.3f |" % agent_batch["p95_latency_ms"],
+            "| Agent 批量检索审计链是否通过 | %s |" % agent_batch["audit_chain_ok"],
+            "| RAG token 预算 | %s |" % rag_budget["token_budget"],
+            "| RAG 上下文估算 tokens | %s |" % rag_budget["estimated_context_tokens"],
+            "| RAG 上下文是否超预算 | %s |" % rag_budget["over_token_budget"],
+            "| RAG 脱敏是否保持 | %s |" % rag_budget["redaction_enforced"],
             "| 负载段文件 KB | %.3f |" % latency_load["segment_kb"],
             "| 负载 SQLite KB | %.3f |" % latency_load["sqlite_kb"],
             "| 评测墙钟耗时 ms | %.3f |" % resource["eval_wall_time_ms"],
             "| 评测 CPU 耗时 ms | %.3f |" % resource["eval_cpu_time_ms"],
             "| tracemalloc 峰值 KB | %.3f |" % resource["tracemalloc_peak_kb"],
+            "| RSS 基线 KB | %s |" % (resource["baseline_rss_kb"] if resource.get("baseline_rss_kb") is not None else "N/A"),
             "| 进程 RSS KB | %s |" % (resource["process_rss_kb"] if resource["process_rss_kb"] is not None else "N/A"),
+            "| RSS 增量 KB | %s |" % (resource["rss_delta_kb"] if resource.get("rss_delta_kb") is not None else "N/A"),
             "| 主记忆段文件 KB | %.3f |" % footprint["main_segment_kb"],
             "| 主 SQLite KB | %.3f |" % footprint["main_sqlite_kb"],
             "| 评测存储总占用 KB | %.3f |" % footprint["total_eval_store_kb"],

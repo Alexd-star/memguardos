@@ -43,3 +43,6 @@ jobs:
 
       - name: Evaluation smoke
         run: python -m memguard.eval.run_eval --latency-size 100 --latency-queries 100 --output docs/eval_result_ci.json --markdown docs/eval_report_ci.md
+
+      - name: Competition readiness smoke
+        run: python scripts/check_competition_ready.py --eval docs/eval_result_ci.json --allow-missing-openkylin

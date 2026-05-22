@@ -72,6 +72,8 @@ def build_parser() -> argparse.ArgumentParser:
     evict = sub.add_parser("evict-tier", help="Evict working/session tier memories")
     evict.add_argument("tier", choices=["working", "session"])
     evict.add_argument("--yes", action="store_true")
+    memory_policy = sub.add_parser("memory-policy", help="Show tiered memory policy, storage footprint, cgroup status, and eviction candidates")
+    memory_policy.add_argument("--eviction-limit", type=int, default=10)
 
     versions = sub.add_parser("versions", help="List all versions of a memory")
     versions.add_argument("memory_id")
@@ -83,6 +85,11 @@ def build_parser() -> argparse.ArgumentParser:
     search = sub.add_parser("search", help="Search memories")
     search.add_argument("query")
     search.add_argument("--top-k", type=int, default=5)
+    batch_search = sub.add_parser("batch-search", help="Search several OS Agent planning/tool/generation queries concurrently")
+    batch_search.add_argument("queries", nargs="+", help="One or more queries. Repeat arguments or pass a JSON array with --json.")
+    batch_search.add_argument("--json", action="store_true", help="Interpret the first argument as a JSON array of query strings")
+    batch_search.add_argument("--top-k", type=int, default=5)
+    batch_search.add_argument("--workers", type=int, default=4)
 
     context = sub.add_parser("build-context", help="Build a redacted RAG context package for OS Agent generation")
     context.add_argument("query")
@@ -286,6 +293,10 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(service.evict_tier(args.tier, confirm=args.yes), ensure_ascii=False, indent=2))
             return 0
 
+        if args.command == "memory-policy":
+            print(json.dumps(service.memory_policy_status(eviction_limit=args.eviction_limit), ensure_ascii=False, indent=2))
+            return 0
+
         if args.command == "update":
             result = service.update_memory(args.memory_id, args.text, reason=args.reason)
             printable = dict(result)
@@ -312,6 +323,11 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "search":
             print(json.dumps(service.search(args.query, limit=args.top_k), ensure_ascii=False, indent=2))
+            return 0
+
+        if args.command == "batch-search":
+            queries = _read_batch_queries(args)
+            print(json.dumps(service.batch_search(queries, limit=args.top_k, workers=args.workers), ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "build-context":
@@ -469,6 +485,18 @@ def _read_os_event(args: argparse.Namespace) -> str:
     if args.file:
         return Path(args.file).read_text(encoding="utf-8").splitlines()[0]
     raise SystemExit("ingest-os-event requires --json, --line, or --file")
+
+
+def _read_batch_queries(args: argparse.Namespace) -> list[str]:
+    if args.json:
+        try:
+            payload = json.loads(args.queries[0])
+        except json.JSONDecodeError as exc:
+            raise SystemExit("batch-search --json requires a valid JSON array") from exc
+        if not isinstance(payload, list):
+            raise SystemExit("batch-search --json requires a JSON array")
+        return [str(item) for item in payload]
+    return [str(item) for item in args.queries]
 
 
 def _read_auditd_lines(path: str, limit: int) -> list[str]:

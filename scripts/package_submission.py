@@ -34,15 +34,69 @@ EXCLUDED_PATTERNS = [
 
 ROLE_DESCRIPTIONS = {
     "作品主体/核心代码": "memguard/",
-    "作品主体/脚本": "scripts/",
+    "作品主体/脚本": "runtime, deployment, validation, evidence, and OS integration scripts",
     "作品主体/原生增强": "native/",
     "作品主体/测试": "tests/",
     "作品主体/数据与评测样例": "data/",
-    "中文文档": "README.md and docs/",
+    "正式中文文档": "README.md and selected docs/ files for competition review",
     "证据包": "docs/evidence/",
+    "过程与工程支撑文档": "requirement tracking, changelog, contribution, CI, templates, and self-check reports",
     "GitHub工程化支撑": ".github/, .devcontainer/, CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, CODE_OF_CONDUCT.md, requirements-dev.txt, .dockerignore, .gitattributes, .gitignore",
     "开发环境支撑": "Dockerfile",
-    "项目配置": "pyproject.toml, Makefile, LICENSE",
+    "项目配置": "pyproject.toml, LICENSE",
+}
+
+FORMAL_DOCS = {
+    "README.md",
+    "docs/正式提交材料说明.md",
+    "docs/赛题符合性说明.md",
+    "docs/项目介绍总览.md",
+    "docs/概要设计说明书.md",
+    "docs/详细设计说明书.md",
+    "docs/安全设计说明书.md",
+    "docs/操作系统机制说明.md",
+    "docs/麒麟SDK集成证据.md",
+    "docs/openKylin验证记录.md",
+    "docs/部署手册.md",
+    "docs/用户手册.md",
+    "docs/测试报告.md",
+    "docs/评委证据包索引.md",
+    "docs/答辩提纲.md",
+    "docs/演示视频脚本.md",
+}
+
+FORMAL_DOC_PATTERNS = [
+    "docs/eval_report*.md",
+    "docs/eval_result*.json",
+]
+
+FORMAL_SCRIPTS = {
+    "scripts/auditd_to_memguard.sh",
+    "scripts/bpftrace_sensitive_open.bt",
+    "scripts/build_ukui_plugins.sh",
+    "scripts/collect_openkylin_evidence.sh",
+    "scripts/demo_smoke.py",
+    "scripts/diagnose_kylin_embedding.sh",
+    "scripts/fix_kylin_embedding_runtime.sh",
+    "scripts/install_auditd_rules.sh",
+    "scripts/install_openkylin.sh",
+    "scripts/install_ukui_plugins.sh",
+    "scripts/kylin_embedding_probe.cpp",
+    "scripts/kylin_vector_probe.cpp",
+    "scripts/memguardd.service",
+    "scripts/memguardd@.service",
+    "scripts/openkylin_verify.sh",
+    "scripts/probe_ukui_deep_plugins.sh",
+    "scripts/run_bpf_lsm_enforcer.sh",
+    "scripts/run_bpftrace_sensitive_probe.sh",
+    "scripts/run_kylin_embedding_probe.sh",
+    "scripts/run_kylin_vector_probe.sh",
+    "scripts/ukui_notify_smoke.sh",
+    "scripts/write_evidence_manifest.py",
+}
+
+PROCESS_TESTS = {
+    "tests/test_packaging.py",
 }
 
 COMPETITION_ROLES = {
@@ -51,28 +105,40 @@ COMPETITION_ROLES = {
     "作品主体/原生增强",
     "作品主体/测试",
     "作品主体/数据与评测样例",
-    "中文文档",
+    "正式中文文档",
     "证据包",
     "项目配置",
 }
 
 
 def classify_file(path: Path) -> str:
-    rel = path.relative_to(ROOT).as_posix()
+    path = Path(path)
+    rel = path.as_posix() if not path.is_absolute() else path.relative_to(ROOT).as_posix()
     if rel.startswith("memguard/"):
         return "作品主体/核心代码"
-    if rel.startswith("scripts/"):
+    if rel in FORMAL_SCRIPTS:
         return "作品主体/脚本"
+    if rel.startswith("scripts/"):
+        return "过程与工程支撑文档"
     if rel.startswith("native/"):
         return "作品主体/原生增强"
+    if rel in PROCESS_TESTS:
+        return "过程与工程支撑文档"
     if rel.startswith("tests/"):
         return "作品主体/测试"
     if rel.startswith("data/"):
         return "作品主体/数据与评测样例"
     if rel.startswith("docs/evidence/"):
         return "证据包"
-    if rel.startswith("docs/") or rel == "README.md":
-        return "中文文档"
+    if rel in FORMAL_DOCS or any(fnmatch.fnmatch(rel, pattern) for pattern in FORMAL_DOC_PATTERNS):
+        return "正式中文文档"
+    if rel.startswith("docs/") or rel in {
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "CHANGELOG.md",
+        "CODE_OF_CONDUCT.md",
+    }:
+        return "过程与工程支撑文档"
     if rel.startswith(".github/") or rel.startswith(".devcontainer/") or rel in {
         "CONTRIBUTING.md",
         "SECURITY.md",
@@ -86,8 +152,10 @@ def classify_file(path: Path) -> str:
         return "GitHub工程化支撑"
     if rel == "Dockerfile":
         return "开发环境支撑"
-    if rel in {"pyproject.toml", "Makefile", "LICENSE"}:
+    if rel in {"pyproject.toml", "LICENSE"}:
         return "项目配置"
+    if rel == "Makefile":
+        return "过程与工程支撑文档"
     return "其他"
 
 

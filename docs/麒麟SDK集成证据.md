@@ -44,7 +44,7 @@ python3 -m memguard.cli.memctl sdk-status
 python3 -m memguard.cli.memctl sdk-status --probe-embedding --probe-timeout 180
 ```
 
-当前 VM 修复后结果：
+openKylin 验证结果：
 
 ```json
 {

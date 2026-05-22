@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import Dict, Iterable, List, Optional, Tuple
 import hashlib
 import math
@@ -19,6 +20,11 @@ TRANSLATION_HINTS = {
 
 
 def tokenize(text: str) -> List[str]:
+    return list(_tokenize_cached(text))
+
+
+@lru_cache(maxsize=8192)
+def _tokenize_cached(text: str) -> Tuple[str, ...]:
     latin = re.findall(r"[A-Za-z0-9_\-]+", text.lower())
     cjk_sequences = re.findall(r"[\u4e00-\u9fff]+", text)
     cjk = []
@@ -30,17 +36,22 @@ def tokenize(text: str) -> List[str]:
     for zh, hints in TRANSLATION_HINTS.items():
         if zh in text:
             tokens.extend(item.lower() for item in hints)
-    return tokens
+    return tuple(tokens)
 
 
 def hashed_vector(tokens: Iterable[str], dim: int = 128) -> List[float]:
+    return list(_hashed_vector_cached(tuple(tokens), dim))
+
+
+@lru_cache(maxsize=16384)
+def _hashed_vector_cached(tokens: Tuple[str, ...], dim: int = 128) -> Tuple[float, ...]:
     vector = [0.0] * dim
     for token in tokens:
         digest = hashlib.sha256(token.encode("utf-8")).digest()
         idx = int.from_bytes(digest[:4], "big") % dim
         vector[idx] += 1.0
     norm = math.sqrt(sum(value * value for value in vector)) or 1.0
-    return [value / norm for value in vector]
+    return tuple(value / norm for value in vector)
 
 
 def normalize_vector(vector: Iterable[float]) -> List[float]:
@@ -63,7 +74,14 @@ class HashEmbeddingProvider:
         return hashed_vector(tokenize(text), dim=self.dim)
 
     def status(self) -> Dict[str, object]:
-        return {"name": self.name, "available": True, "dim": self.dim, "fallback": False}
+        return {
+            "name": self.name,
+            "available": True,
+            "dim": self.dim,
+            "fallback": False,
+            "token_cache": _tokenize_cached.cache_info()._asdict(),
+            "vector_cache": _hashed_vector_cached.cache_info()._asdict(),
+        }
 
 
 class KylinEmbeddingProvider:

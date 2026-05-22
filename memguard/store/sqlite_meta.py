@@ -173,7 +173,7 @@ class SQLiteMetaStore:
         self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (memory_id,))
         self.conn.commit()
 
-    def list_memories(self, include_deleted: bool = False, tier: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list_memories(self, include_deleted: bool = False, tier: Optional[str] = None, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         sql = "SELECT * FROM memory"
         clauses = []
         params = []
@@ -185,6 +185,9 @@ class SQLiteMetaStore:
         if clauses:
             sql += " WHERE " + " AND ".join(clauses)
         sql += " ORDER BY updated_at DESC"
+        if limit is not None:
+            sql += " LIMIT ?"
+            params.append(max(0, int(limit)))
         return [dict(row) for row in self.conn.execute(sql, params)]
 
     def get_memory(self, memory_id: str) -> Optional[Dict[str, Any]]:

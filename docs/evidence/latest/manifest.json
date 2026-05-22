@@ -1,0 +1,253 @@
+{
+  "generated_at": "2026-05-22T17:44:47.223322+00:00",
+  "root": "D:\\Luo_docs\\竞赛\\研创赛\\memguardos\\docs\\evidence\\latest",
+  "file_count": 49,
+  "total_bytes": 220358,
+  "files": [
+    {
+      "path": "api_auth.txt",
+      "bytes": 602,
+      "sha256": "5d46135b637f16aeea3c83a47d218ff32ab37ba866d70839250141c82e43faea"
+    },
+    {
+      "path": "audit_concurrency.txt",
+      "bytes": 1608,
+      "sha256": "ef03d6b14fecdfdfe02a0f3b3020010fc529ddb8c3712cb71b2a03cc821064d2"
+    },
+    {
+      "path": "auditd_ingest.txt",
+      "bytes": 795,
+      "sha256": "2e858b3c6eb50a8b5bc6b7cd07664b532d34bd756e74dae7b134c547a4c2c32c"
+    },
+    {
+      "path": "auditd_rules.txt",
+      "bytes": 704,
+      "sha256": "3ea0d42b955e7de2ef034881d6595211bcbbb9669dea07c162872e4fc230f545"
+    },
+    {
+      "path": "behavior_history.txt",
+      "bytes": 1028,
+      "sha256": "e4e04e091165905a883028b8e3c7bd35fa742c63d05b83461b1305c8ea2be70f"
+    },
+    {
+      "path": "bpf_lsm_enforcer.txt",
+      "bytes": 816,
+      "sha256": "83ffcae49aaa7c0222d0a50f83647205e8ecbf53ae631dca25d855083ce6a782"
+    },
+    {
+      "path": "build_prompt.txt",
+      "bytes": 923,
+      "sha256": "067f8b2fe3d95f6449bbc22ff9d1bddcebd8cecc57cd4c89f7893ea34ff74a46"
+    },
+    {
+      "path": "doctor.txt",
+      "bytes": 9755,
+      "sha256": "dc9c4a6d4a3030e4cf0bbf1545cbc51a75ce2cbf885b29be2a790b9313124d14"
+    },
+    {
+      "path": "embedding_cpp_probe.txt",
+      "bytes": 635,
+      "sha256": "3cacb81505d0a602333c93d20fbc59e7694225f62842e7dd3d5c965772851391"
+    },
+    {
+      "path": "environment.txt",
+      "bytes": 813,
+      "sha256": "34e9c5f3fe2f8b23bd84762e648d769155da1fc639a40e993a1253897f47a212"
+    },
+    {
+      "path": "eval_10k.txt",
+      "bytes": 2037,
+      "sha256": "b96b0bae70910e9f0d0252eb7e6e9b4ddd5e618760fa5193e270991cebd3d5f2"
+    },
+    {
+      "path": "eval_1k.txt",
+      "bytes": 2017,
+      "sha256": "c98444ccd8d2d82f4b2a49b9ec2010bcd2acf0a15fb27a75fb4db99dffccc1c9"
+    },
+    {
+      "path": "eval_report_openkylin.md",
+      "bytes": 1748,
+      "sha256": "adc2475c4cedd853cd3cdf40086d0b72f7409af5488030fe761ec56d1ee663ae"
+    },
+    {
+      "path": "eval_report_openkylin_10k.md",
+      "bytes": 1755,
+      "sha256": "fcbf8856b8bdf306da7a0f6cfdd04f7276df85473f12d08d633978f869c4c8d6"
+    },
+    {
+      "path": "eval_result_openkylin.json",
+      "bytes": 1777,
+      "sha256": "ece8054966687b37ffcbe65b70d9f915a1f0b4aaf147b7d32323ca918dd2a6c7"
+    },
+    {
+      "path": "eval_result_openkylin_10k.json",
+      "bytes": 1788,
+      "sha256": "498d0ca5cbdf59a43c6b3c7553457868173fc6dec49c64969cba67179c5e7ce8"
+    },
+    {
+      "path": "generate_answer.txt",
+      "bytes": 1088,
+      "sha256": "74029bc056b6c94efd10e4fafb8488ebbd36ee50ea2bd25309606d5c0f3ed379"
+    },
+    {
+      "path": "journald.txt",
+      "bytes": 22494,
+      "sha256": "792597ead8c94ccf0d0f53f4af3bb26b08b1b567d3ea08a51f2aaf277aa4bde0"
+    },
+    {
+      "path": "kylin_embedding_diag/environment.txt",
+      "bytes": 1383,
+      "sha256": "ec7f1ebf362a5150458716861efa9b597bad44d7db35a100278240ebe2633536"
+    },
+    {
+      "path": "kylin_embedding_diag/headers_and_symbols.txt",
+      "bytes": 19471,
+      "sha256": "418d8e35ab50f36141e74e9b86d1e3df2a31d8d397a849bb9a97864a59672f08"
+    },
+    {
+      "path": "kylin_embedding_diag/kytensor_journal.txt",
+      "bytes": 50712,
+      "sha256": "64cc41508b328dea086bfa868b28c4ff753fbffb61bc41a599a946c9eaa3398c"
+    },
+    {
+      "path": "kylin_embedding_diag/kytensor_service.txt",
+      "bytes": 3748,
+      "sha256": "e73bbaa1508ae0857458eeafe421f40518d6307dbd352c5cad63083a75024d99"
+    },
+    {
+      "path": "kylin_embedding_diag/model_repositories.txt",
+      "bytes": 6385,
+      "sha256": "e67639f47f0c21caf107ba74daaf129666aafc42812c7bfd4446a140f1aff59d"
+    },
+    {
+      "path": "kylin_embedding_diag/packages.txt",
+      "bytes": 777,
+      "sha256": "136ef6d6b918dc2bc01c82abeddf1a3f66a705bae191bca1cb8b1fd71b680da7"
+    },
+    {
+      "path": "kylin_embedding_diag/plugin_dependencies.txt",
+      "bytes": 2462,
+      "sha256": "76b27651f6dfea90a410ceb80d604becea99ea77f48726e0eb2c43d8a6a64174"
+    },
+    {
+      "path": "kylin_embedding_diag/plugin_dirs.txt",
+      "bytes": 940,
+      "sha256": "3595828a3a8a08ad2990ea16c9f4013e600b5634cd9cf105faa8446e5ee23cfd"
+    },
+    {
+      "path": "kylin_embedding_diag/README.md",
+      "bytes": 1825,
+      "sha256": "b26d9bb3926b1017730499d5cb23ac2ab3af7d513df2b624f62358311492b205"
+    },
+    {
+      "path": "kylin_embedding_diag/runtime_file_log.txt",
+      "bytes": 13204,
+      "sha256": "a80d1f462d008b3129b1269761e6574f0bd11cf5c1f9f0aad14fd49c76232220"
+    },
+    {
+      "path": "kylin_embedding_diag/runtime_journal.txt",
+      "bytes": 92,
+      "sha256": "462089a2ceeac5ac33cfd4376d226fee58a093485a4a3f3c3b4e7ae82167b96d"
+    },
+    {
+      "path": "kylin_embedding_diag/runtime_service.txt",
+      "bytes": 562,
+      "sha256": "0e1c07b49d80b2171db2ba7648bff9848f6659c8afec542a531b72d4a15c974d"
+    },
+    {
+      "path": "kylin_embedding_diag/runtime_sockets.txt",
+      "bytes": 845,
+      "sha256": "dee3fafaff09cb6e5c49eba920086d34c7424585035f018e5ad43876b33241e0"
+    },
+    {
+      "path": "kylin_embedding_diag/sdk_status.txt",
+      "bytes": 7664,
+      "sha256": "279e58df961e473dbd7bc756bdf368a5d3e485355cd2247998ed3c5a95f658c5"
+    },
+    {
+      "path": "kylin_embedding_diag.txt",
+      "bytes": 222,
+      "sha256": "06f367d52dbcc4ff696a19f003dda87eb5821db4d67adf1dd1fca47498fd8670"
+    },
+    {
+      "path": "kylin_retrieval.txt",
+      "bytes": 3067,
+      "sha256": "62efbce2e27833a90473e4baf2f086c6b98c6303f1c7839b61fcc837ad924da9"
+    },
+    {
+      "path": "namespace_isolation.txt",
+      "bytes": 8067,
+      "sha256": "9e3e2b09a450f0f3676f572741d954b0aae53999e71539d6a36ada50ed83bff2"
+    },
+    {
+      "path": "natural_patterns.txt",
+      "bytes": 3234,
+      "sha256": "29f61028fe4ad7e054bf76585bc777ac20882b99b3f82a83cc73a363574e8bcd"
+    },
+    {
+      "path": "pytest.txt",
+      "bytes": 132,
+      "sha256": "30d3f6bf51c9adcf33ca065949332a1411d9b0079a1dd5c7601f1f7eed37b6f8"
+    },
+    {
+      "path": "quality_report.txt",
+      "bytes": 2407,
+      "sha256": "373df83a784e10d20cbb178e4d9892ccf2c017678839a3ecd9b35185da306343"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2366,
+      "sha256": "c5b9e47b7b70af86d86af51448e9177101b483b37ee8e88390eb8a50a163b4f1"
+    },
+    {
+      "path": "sdk_embedding_probe.txt",
+      "bytes": 8005,
+      "sha256": "0c185c6a8258fc1d8e371d99d0fa89e782202663ca7849cba474872f8877c033"
+    },
+    {
+      "path": "sdk_status.txt",
+      "bytes": 7671,
+      "sha256": "8768d83928799adfffc8ab57c8f7a6942a5b7fff2bd2f8d1309359991fbaf0a1"
+    },
+    {
+      "path": "systemd_cgroup.txt",
+      "bytes": 780,
+      "sha256": "87b1b4d1ae96735861d145de029c6502c5e8cb092264d430e700ac471cf9bf87"
+    },
+    {
+      "path": "systemd_namespace.txt",
+      "bytes": 5090,
+      "sha256": "914d6325feab76ef85949adf8e3aaf8cf67438d1d84b1271b1e69a2b3c0ce474"
+    },
+    {
+      "path": "ukui_deep_plugins.txt",
+      "bytes": 9521,
+      "sha256": "cf77ea9603c04fee4f8cdae81ff7bc4cffa3e25a8d15bbb3f4b812989bdfdef5"
+    },
+    {
+      "path": "ukui_notify.txt",
+      "bytes": 155,
+      "sha256": "1db61721a143da7c12aea8507e312ceff5bbb1a101f5dec62fc45342e6ee7cda"
+    },
+    {
+      "path": "ukui_plugin_build.txt",
+      "bytes": 6541,
+      "sha256": "02214cf9cb41f414e41b15e09843400c3eee21525f949eb7696a2e079d276e3e"
+    },
+    {
+      "path": "ukui_plugin_install.txt",
+      "bytes": 134,
+      "sha256": "67ca867b246f026eabe55cfee3a085aa51bf169feadbbd07924bb48a4769e3a8"
+    },
+    {
+      "path": "vector_probe.txt",
+      "bytes": 340,
+      "sha256": "c70a6203608fe00adb4a8167249dfd1d4cbb8eda497fa220f42b191c3503a3ed"
+    },
+    {
+      "path": "verify_audit.txt",
+      "bytes": 173,
+      "sha256": "afe9e008221110bd585b268ae0b2aa2cd606a82d81bc3dfd98d39cbea9cd6fae"
+    }
+  ]
+}
