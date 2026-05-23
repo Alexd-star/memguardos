@@ -255,11 +255,12 @@ dist/memguardos_full_repository_<时间戳>_manifest.json
 正式评审建议按以下顺序阅读：
 
 1. [docs/项目介绍总览.md](docs/项目介绍总览.md)
-2. [docs/赛题符合性说明.md](docs/赛题符合性说明.md)
-3. [docs/概要设计说明书.md](docs/概要设计说明书.md) 和 [docs/详细设计说明书.md](docs/详细设计说明书.md)
-4. [docs/部署手册.md](docs/部署手册.md) 和 [docs/用户手册.md](docs/用户手册.md)
-5. [docs/测试报告.md](docs/测试报告.md) 和 [docs/评委证据包索引.md](docs/评委证据包索引.md)
-6. [docs/答辩提纲.md](docs/答辩提纲.md) 和 [docs/演示视频脚本.md](docs/演示视频脚本.md)
+2. [docs/最终提交说明.md](docs/最终提交说明.md) 和 [docs/平台摘要.md](docs/平台摘要.md)
+3. [docs/赛题符合性说明.md](docs/赛题符合性说明.md)
+4. [docs/概要设计说明书.md](docs/概要设计说明书.md) 和 [docs/详细设计说明书.md](docs/详细设计说明书.md)
+5. [docs/部署手册.md](docs/部署手册.md) 和 [docs/用户手册.md](docs/用户手册.md)
+6. [docs/测试报告.md](docs/测试报告.md) 和 [docs/评委证据包索引.md](docs/评委证据包索引.md)
+7. [docs/答辩提纲.md](docs/答辩提纲.md)、[docs/答辩稿.md](docs/答辩稿.md) 和 [docs/演示视频脚本.md](docs/演示视频脚本.md)
 
 ## 准确边界
 

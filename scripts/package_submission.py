@@ -49,6 +49,8 @@ ROLE_DESCRIPTIONS = {
 FORMAL_DOCS = {
     "README.md",
     "docs/正式提交材料说明.md",
+    "docs/最终提交说明.md",
+    "docs/平台摘要.md",
     "docs/赛题符合性说明.md",
     "docs/项目介绍总览.md",
     "docs/概要设计说明书.md",
@@ -62,6 +64,7 @@ FORMAL_DOCS = {
     "docs/测试报告.md",
     "docs/评委证据包索引.md",
     "docs/答辩提纲.md",
+    "docs/答辩稿.md",
     "docs/演示视频脚本.md",
 }
 
