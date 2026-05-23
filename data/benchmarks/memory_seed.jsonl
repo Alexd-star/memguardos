@@ -16,7 +16,7 @@
 {"label":"knowledge_forget_negative_cache","text":"知识：普通缓存清理不等于精准遗忘，不能替代候选证明、索引清理和审计链。","expected_type":"knowledge","expected_subtype":"fact"}
 {"label":"knowledge_fanotify_sensitive_dir","text":"fanotify 可以监听指定敏感目录的文件打开事件，并把 path、process、action 转换为 OS event。","expected_type":"knowledge","expected_subtype":"fact"}
 {"label":"knowledge_ebpf_openat_probe","text":"eBPF 或 bpftrace 可以观察 openat/read 等系统调用，用于补充 auditd 之外的敏感访问证据。","expected_type":"knowledge","expected_subtype":"fact"}
-{"label":"knowledge_behavior_shell_history","text":"User behavior: shell_command tool=pytest category=routine source=.bash_history index=2 command=pytest -q","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_behavior_shell_history","text":"User behavior from shell history: shell_command tool=pytest category=routine source=.bash_history index=2 command=pytest -q","expected_type":"knowledge","expected_subtype":"fact"}
 {"label":"knowledge_context_token_budget","text":"RAG 上下文包应优先保证相关性和安全性，token 预算只作为显式配置的裁剪和成本观测指标。","expected_type":"knowledge","expected_subtype":"fact"}
 {"label":"knowledge_ukui_notification","text":"openKylin UKUI 轻量联动可以通过 freedesktop notify-send 向桌面通知守护进程发送 MemGuardOS 安全提示。","expected_type":"knowledge","expected_subtype":"fact"}
 {"label":"knowledge_socket_local_api","text":"MemGuardOS daemon 通过 Unix domain socket 提供本地 JSON API，适合 OS Agent 在本机调用 search、ingest 和 build_context。","expected_type":"knowledge","expected_subtype":"fact"}
@@ -28,3 +28,18 @@
 {"label":"pref_pytest_fast_feedback","text":"以后修改 Python 项目后，请优先运行 pytest 相关单元测试，再补充 ruff 和文档链接检查。","expected_type":"preference","expected_subtype":"tool_preference"}
 {"label":"pref_answer_no_exaggeration","text":"答辩材料不要夸大 LSM、eBPF、UKUI 深度插件和默认大模型依赖，必须按证据边界表达。","expected_type":"preference","expected_subtype":"output_style"}
 {"label":"knowledge_linux_smoke_portability","text":"在更多 Linux 发行版上做 smoke test 时，应至少验证 Python 版本、SQLite FTS、pytest、memctl doctor 和 demo_smoke。","expected_type":"knowledge","expected_subtype":"workflow"}
+{"label":"pref_real_shell_destructive_confirm","text":"请记住：如果 shell history 中出现 sudo rm -rf、mkfs、dd 等高风险命令，后续执行前必须先二次确认。","expected_type":"preference","expected_subtype":"tool_preference"}
+{"label":"knowledge_real_audit_log_shadow","text":"真实案例：auditd log type=PATH msg=audit(1710000000.1:42): name=\"/etc/shadow\" nametype=NORMAL key=\"memguard_sensitive\"，应转换为 OS event 并触发敏感阻断。","expected_type":"knowledge","expected_subtype":"case"}
+{"label":"knowledge_real_shell_history_risk","text":"User behavior: shell_command source=.bash_history index=31 command=sudo systemctl restart memguardd category=maintenance","source_kind":"user_behavior","expected_type":"knowledge","expected_subtype":"behavior_risk"}
+{"label":"pref_real_config_search_tool","text":"手动配置：user.preferences.search_tool=rg；该配置覆盖旧的 grep 仓库搜索偏好。","source_kind":"manual_config","expected_type":"preference","expected_subtype":"tool_preference"}
+{"label":"pref_real_config_answer_style","text":"手动配置：answer.style=concise_with_risk；Linux 运维回答先给命令，再给风险提醒。","source_kind":"manual_config","expected_type":"preference","expected_subtype":"output_style"}
+{"label":"knowledge_real_incident_oom","text":"生产故障案例：memguardd.service was killed by cgroup OOM；修复步骤包括调低并发、执行 compact、检查 MemoryMax 和 journalctl。","expected_type":"knowledge","expected_subtype":"case"}
+{"label":"knowledge_real_ukui_plugin_verify","text":"UKUI 插件验证流程：安装 Peony/UKCC .so，重启 peony 和 ukui-control-center，检查右键动作，并用 journalctl 查看 MemGuardOS 日志。","expected_type":"knowledge","expected_subtype":"workflow"}
+{"label":"knowledge_real_bpf_policy_workflow","text":"BPF LSM 策略流程：先从 JSON 生成 memguard_lsm_policy.h，人工审查 denylist，再在隔离 openKylin VM 中 attach loader。","expected_type":"knowledge","expected_subtype":"workflow"}
+{"label":"knowledge_real_semantic_extractor","text":"语义抽取增强流程：默认使用 deterministic semantic rules；设置 MEMGUARD_EXTRACTOR_COMMAND 后可调用本地 NER 或 LLM 返回 JSON schema。","expected_type":"knowledge","expected_subtype":"workflow"}
+{"label":"pref_llm_default_boundary","text":"答辩口径：系统默认离线可复现，只有显式配置本地增强命令才调用模型，不应说默认依赖外部 LLM API。","expected_type":"preference","expected_subtype":"output_style"}
+{"label":"knowledge_web_console_local","text":"本地 Web 控制台运行在 127.0.0.1，用于评审演示、本机 Agent 调试、记忆写入、检索、RAG 上下文构建、精准遗忘和审计查看。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_ukui_visible_restart","text":"Peony 插件可见性流程：安装 .so 后重启 peony 或重新登录桌面，再检查右键菜单动作和 journalctl 输出。","expected_type":"knowledge","expected_subtype":"workflow"}
+{"label":"knowledge_bpf_lsm_hook_boundary","text":"BPF LSM hook 边界：程序挂载在 lsm/file_open 上，默认只阻断专用测试文件；生产 denylist 在隔离 VM 审查后加载。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_benchmark_realism","text":"评测数据集现实性：包含真实风格 auditd PATH、shell history、manual config、systemd OOM、UKUI 和 BPF policy 样例，用于支撑过拟合追问的证据。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_shell_history_hard_negative","text":"真实 shell history 误删难例：命令 history -d 42 只是清理历史记录，不等同于 sudo rm -rf 破坏性删除。","expected_type":"knowledge","expected_subtype":"fact"}

@@ -23,3 +23,18 @@
 {"query":"修改 Python 项目后优先跑什么测试？","expected":["pref_pytest_fast_feedback"],"k":5,"case":"tool_preference"}
 {"query":"答辩里哪些 OS 或大模型能力不能夸大？","expected":["pref_answer_no_exaggeration"],"k":5,"case":"evidence_boundary"}
 {"query":"更多 Linux 发行版 smoke test 至少验证哪些内容？","expected":["knowledge_linux_smoke_portability"],"k":5,"case":"linux_portability"}
+{"query":"shell history 出现 sudo rm -rf 或 mkfs 时要不要先确认？","expected":["pref_real_shell_destructive_confirm"],"k":5,"case":"real_shell_history"}
+{"query":"真实 auditd PATH 日志里 /etc/shadow 应如何处理？","expected":["knowledge_real_audit_log_shadow"],"k":5,"case":"real_audit_log"}
+{"query":"bash history 中 sudo systemctl restart memguardd 属于什么行为风险？","expected":["knowledge_real_shell_history_risk"],"k":5,"case":"real_behavior"}
+{"query":"手动配置里的 search_tool=rg 如何覆盖旧 grep 偏好？","expected":["pref_real_config_search_tool"],"k":5,"case":"real_config_conflict"}
+{"query":"answer.style=concise_with_risk 表示怎样回答 Linux 运维问题？","expected":["pref_real_config_answer_style"],"k":5,"case":"real_config_style"}
+{"query":"memguardd 被 cgroup OOM 后应该检查哪些项？","expected":["knowledge_real_incident_oom"],"k":5,"case":"real_incident"}
+{"query":"Peony 和 UKUI 控制中心插件安装后怎么验证可见？","expected":["knowledge_real_ukui_plugin_verify"],"k":5,"case":"ukui_visible_verify"}
+{"query":"BPF LSM denylist 如何从 JSON 策略生成并审查？","expected":["knowledge_real_bpf_policy_workflow"],"k":5,"case":"bpf_policy"}
+{"query":"如何启用可选 NER 或 LLM 语义抽取增强？","expected":["knowledge_real_semantic_extractor"],"k":5,"case":"semantic_extractor"}
+{"query":"默认会不会依赖外部 LLM API？","expected":["pref_llm_default_boundary"],"k":5,"case":"llm_boundary"}
+{"query":"本地 Web 控制台能展示哪些记忆功能？","expected":["knowledge_web_console_local"],"k":5,"case":"web_console"}
+{"query":"Peony 插件安装后为什么需要重启桌面组件？","expected":["knowledge_ukui_visible_restart"],"k":5,"case":"ukui_restart"}
+{"query":"BPF LSM file_open hook 的默认阻断边界是什么？","expected":["knowledge_bpf_lsm_hook_boundary"],"k":5,"case":"bpf_hook_boundary"}
+{"query":"benchmark 如何证明不是只用 toy demo 过拟合？","expected":["knowledge_benchmark_realism"],"k":5,"case":"benchmark_realism"}
+{"query":"shell history 里 history -d 和 sudo rm -rf 应该如何区分？","expected":["knowledge_shell_history_hard_negative"],"k":5,"case":"shell_history_hard_negative"}

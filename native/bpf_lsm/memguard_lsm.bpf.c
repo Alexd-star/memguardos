@@ -66,9 +66,13 @@ static __always_inline int contains(const char *path, const char *needle)
     return 0;
 }
 
+#include "memguard_lsm_policy.h"
+
 static __always_inline int sensitive_path(const char *path)
 {
     if (streq(path, "/tmp/memguardos_lsm_secret") || contains(path, "/tmp/memguardos_lsm_secret"))
+        return 1;
+    if (memguard_custom_sensitive_path(path))
         return 1;
 #ifdef MEMGUARDOS_PRODUCTION_DENYLIST
     if (streq(path, "/etc/shadow") || streq(path, "/etc/gshadow"))

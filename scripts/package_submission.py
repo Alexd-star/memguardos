@@ -78,6 +78,7 @@ FORMAL_SCRIPTS = {
     "scripts/demo_smoke.py",
     "scripts/diagnose_kylin_embedding.sh",
     "scripts/fix_kylin_embedding_runtime.sh",
+    "scripts/generate_bpf_lsm_policy.py",
     "scripts/install_auditd_rules.sh",
     "scripts/install_openkylin.sh",
     "scripts/install_ukui_plugins.sh",
@@ -92,6 +93,8 @@ FORMAL_SCRIPTS = {
     "scripts/run_kylin_embedding_probe.sh",
     "scripts/run_kylin_vector_probe.sh",
     "scripts/ukui_notify_smoke.sh",
+    "scripts/verify_ukui_plugins.sh",
+    "scripts/web_dashboard_smoke.py",
     "scripts/write_evidence_manifest.py",
 }
 

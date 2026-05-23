@@ -33,9 +33,9 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地单元测试 | 47 passed |
+| 本地单元测试 | 49 passed |
 | openKylin 单元测试证据 | 42 passed |
-| 本地 1k 负载 P95 | 14.645 ms |
+| 本地 1k 负载 P95 | 17.991 ms |
 | openKylin 1k 负载 P95 | 76.182 ms |
 | openKylin 10k 负载 P95 | 343.328 ms |
 | openKylin 10k 负载 P99 | 432.702 ms |
@@ -52,7 +52,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | 能力域 | 已实现内容 | 主要入口 |
 |---|---|---|
 | 多源记忆接入 | 文本、文件、结构化配置、shell 行为、工具执行结果、OS 事件、auditd 日志 | `memctl ingest`、`ingest-config`、`ingest-history`、`ingest-tool-result`、`ingest-os-event` |
-| 记忆建模 | 偏好记忆、知识记忆、敏感策略记忆；`working`、`session`、`long_term` 三层记忆 | `memguard/models.py`、`memguard/service.py` |
+| 记忆建模 | 偏好记忆、知识记忆、敏感策略记忆；可解释混合语义抽取；`working`、`session`、`long_term` 三层记忆 | `memguard/extraction/semantic.py`、`memguard/models.py`、`memguard/service.py` |
 | 数据质量治理 | Unicode 标准化、空输入拒绝、低质量提示、结构化字段校验、质量分入审计 | `memguard/ingestion/quality.py` |
 | 轻量化存储 | mmap 追加式段文件、SQLite 元数据、FTS、图谱边、审计哈希链 | `memguard/store/` |
 | 混合检索 | SQLite FTS、稳定 hash-vector、图谱关联、跨语言技术词扩展、冲突处理 | `memguard/retrieval/` |
@@ -60,9 +60,10 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | 精准遗忘 | 自然语言候选、dry-run、确认删除、tombstone、FTS/图谱清理、compact、明文探针验证 | `memctl forget`、`memctl verify-forget` |
 | 敏感治理 | PII、凭据、私钥、银行卡、中文地址、OS 高风险路径、自定义正则、自然语言敏感规则 | `memguard/sensitivity/` |
 | 多会话隔离 | namespace 独立段文件、SQLite、敏感规则、审计链；systemd 模板服务配合 cgroup | `memctl --namespace`、`memguardd@.service` |
-| OS 集成 | systemd、cgroup、journald、auditd、BPF LSM 可选强制拦截、UKUI/Peony 原生插件源码 | `scripts/`、`native/` |
+| OS 集成 | systemd、cgroup、journald、auditd、BPF LSM 可选强制拦截、JSON denylist 策略生成、UKUI/Peony 原生插件源码 | `scripts/`、`native/` |
 | Agent API | 本地 Unix socket JSON API，支持 health、ingest、search、batch_search、build_context、forget、audit 等 | `memguard/api/server.py` |
 | Kylin SDK 适配 | Kylin embedding/vector SDK 探测，embedding 可选重排后端，默认保留稳定 fallback | `memctl sdk-status`、`memguard/retrieval/kylin_sdk.py` |
+| 本地控制台 | 无外部依赖的 localhost Web 控制台，覆盖状态、写入、抽取解释、检索、RAG 上下文、遗忘和审计 | `memctl web`、`memguard/web/dashboard.py` |
 
 ## 系统架构
 
@@ -144,7 +145,14 @@ python -m memguard.cli.memctl build-context "openKylin 服务内存限制" --top
 python -m memguard.cli.memctl build-prompt "openKylin 服务内存限制" --top-k 5 --token-budget 1200
 ```
 
-### 4. 精准遗忘和审计
+### 4. 查看抽取解释和 Web 控制台
+
+```powershell
+python -m memguard.cli.memctl explain-extraction --text "真实案例：systemd service failed with exit_code=1，修复后运行 pytest。"
+python -m memguard.cli.memctl web --host 127.0.0.1 --port 8765
+```
+
+### 5. 精准遗忘和审计
 
 ```powershell
 python -m memguard.cli.memctl forget "忘掉 temporary project codename"
@@ -153,7 +161,7 @@ python -m memguard.cli.memctl verify-forget "temporary project codename"
 python -m memguard.cli.memctl verify-audit
 ```
 
-### 5. 多会话隔离
+### 6. 多会话隔离
 
 ```powershell
 python -m memguard.cli.memctl --namespace demo-a ingest --text "demo-a 会话只保存 systemd MemoryMax 方案。"
@@ -256,8 +264,10 @@ dist/memguardos_full_repository_<时间戳>_manifest.json
 ## 准确边界
 
 - Kylin embedding SDK：已完成真实向量探针和可选重排检索证据；默认主路径仍保留 FTS/hash/graph fallback。
-- BPF LSM：已在 openKylin 对安全测试文件完成强制拒绝验证；默认不拦截 `/etc/shadow`、SSH、sudo 或 PAM 链路。
-- UKUI：Peony/UKUI 控制中心插件源码已构建 `.so`；UI 可见性以目标系统安装验证为准。
+- 语义抽取：默认采用可解释、可复现的 deterministic semantic rules；显式配置 `MEMGUARD_EXTRACTOR_COMMAND` 后可接本地 NER/LLM JSON 增强器，增强器失败会自动回退。
+- BPF LSM：已在 openKylin 对安全测试文件完成强制拒绝验证；支持从 JSON 生成可审查静态 denylist；默认不拦截 `/etc/shadow`、SSH、sudo 或 PAM 链路。
+- UKUI：Peony/UKUI 控制中心插件源码已构建 `.so`；系统 UI 可见性以目标系统安装和重启桌面组件后的验证为准。
+- Web 控制台：用于本地演示和评审操作，默认绑定 `127.0.0.1`，不作为公网 SaaS 管理台。
 - 用户行为：支持 shell 行为、工具结果、OS 事件和 auditd 事件；不宣称全量桌面行为捕获。
 - 外部 LLM：默认不依赖外部 API；只有显式选择 provider 时才调用本地命令或兼容远程端点。
 

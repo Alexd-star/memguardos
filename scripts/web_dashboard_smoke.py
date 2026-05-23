@@ -1,0 +1,80 @@
+from __future__ import annotations
+
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from threading import Thread
+from urllib.request import Request, urlopen
+import json
+import socket
+import time
+
+from memguard.service import MemGuardService
+from memguard.web.dashboard import run_dashboard
+
+
+def main() -> int:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        service = MemGuardService(store_path=root / "memory.segment", db_path=root / "memguard.sqlite3")
+        port = _free_port()
+        thread = Thread(target=run_dashboard, args=(service, "127.0.0.1", port, ""), daemon=True)
+        thread.start()
+        base = "http://127.0.0.1:%s" % port
+        _wait_until_ready(base)
+        page = _http_get(base + "/")
+        ingest = _http_post(base + "/api/ingest", {"text": "以后回答 openKylin 服务问题时先给命令。", "source_kind": "dashboard"})
+        search = _http_get_json(base + "/api/search?q=openKylin%20%E6%9C%8D%E5%8A%A1")
+        explain = _http_get_json(base + "/api/explain-extraction?text=%E8%AF%B7%E4%BB%A5%E5%90%8E%E7%94%A8%E4%B8%AD%E6%96%87%E7%AE%80%E6%B4%81%E5%9B%9E%E7%AD%94")
+        status = _http_get_json(base + "/api/status")
+        result = {
+            "page_ok": "MemGuardOS 控制台" in page,
+            "ingest_ok": bool(ingest.get("ok") and ingest.get("result", {}).get("stored")),
+            "search_hits": len(search.get("result", [])),
+            "extraction_type": explain.get("result", {}).get("extraction", {}).get("memory_type"),
+            "live_record_count": status.get("result", {}).get("live_record_count"),
+            "url": base,
+        }
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        service.close()
+        return 0 if result["page_ok"] and result["ingest_ok"] and result["search_hits"] >= 1 else 2
+
+
+def _free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+
+
+def _wait_until_ready(base: str) -> None:
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        try:
+            _http_get(base + "/api/status")
+            return
+        except OSError:
+            time.sleep(0.05)
+    raise RuntimeError("dashboard did not start")
+
+
+def _http_get(url: str) -> str:
+    with urlopen(url, timeout=3) as response:
+        return response.read().decode("utf-8")
+
+
+def _http_get_json(url: str) -> dict:
+    return json.loads(_http_get(url))
+
+
+def _http_post(url: str, payload: dict) -> dict:
+    request = Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urlopen(request, timeout=3) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

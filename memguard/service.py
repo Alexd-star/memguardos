@@ -13,6 +13,7 @@ from memguard.config import (
     normalize_namespace,
 )
 from memguard.extraction.entity import extract_entities, extract_relations
+from memguard.extraction.semantic import HybridMemoryExtractor
 from memguard.forgetting.planner import ForgetPlanner
 from memguard.ingestion.behavior import BehaviorEvent, load_shell_history
 from memguard.ingestion.config import config_entry_to_memory_text, load_config_entries, validate_config_entry
@@ -40,6 +41,7 @@ class MemGuardService:
         else:
             self.pattern_path = custom_patterns_path(self.namespace)
         self.detector = SensitiveDetector(load_patterns(self.pattern_path))
+        self.extractor = HybridMemoryExtractor()
         self.retriever = HybridRetriever()
         self.conflicts = ConflictResolver()
         self.forget_planner = ForgetPlanner()
@@ -77,19 +79,20 @@ class MemGuardService:
             stored_text = self.detector.redact(clean_text, source_uri)
             sensitivity.redacted = True
 
-        memory_type = self._classify_memory(stored_text)
-        subtype = self._classify_subtype(stored_text, memory_type, source_kind)
+        extraction = self.extractor.extract(stored_text, source_kind)
+        memory_type = extraction.memory_type
+        subtype = extraction.subtype
         record = make_memory(
             content=stored_text,
             memory_type=memory_type,
             source=MemorySource(kind=source_kind, uri=source_uri),
-            summary=self._summarize(stored_text, memory_type),
+            summary=extraction.summary,
             subtype=subtype,
             scope=self.namespace,
             tier=tier or self._default_tier(memory_type, source_kind),
             sensitivity=sensitivity,
         )
-        record.confidence = min(record.confidence, quality.score)
+        record.confidence = min(record.confidence, quality.score, extraction.confidence)
         self._enrich_graph(record)
         self.store.append(record)
         self.meta.upsert_memory(record)
@@ -105,9 +108,10 @@ class MemGuardService:
                 "sensitivity": record.sensitivity.level,
                 "labels": record.sensitivity.labels,
                 "quality": quality.to_dict(),
+                "extraction": extraction.to_dict(),
             },
         )
-        return {"stored": True, "record": record, "quality": quality.to_dict()}
+        return {"stored": True, "record": record, "quality": quality.to_dict(), "extraction": extraction.to_dict()}
 
     def ingest_tool_result(self, tool_result: ToolResult, source_uri: str = "tool_result") -> Dict[str, object]:
         return self.ingest_text(
@@ -259,18 +263,19 @@ class MemGuardService:
             stored_text = self.detector.redact(clean_text, previous.source.uri)
             sensitivity.redacted = True
 
-        memory_type = self._classify_memory(stored_text)
+        extraction = self.extractor.extract(stored_text, "update")
+        memory_type = extraction.memory_type
         record = MemoryRecord(
             memory_id=previous.memory_id,
             type=memory_type,
-            subtype=self._classify_subtype(stored_text, memory_type, "update"),
+            subtype=extraction.subtype,
             scope=previous.scope,
             tier=previous.tier,
             content=stored_text,
-            summary=self._summarize(stored_text, memory_type),
+            summary=extraction.summary,
             source=MemorySource(kind="update", uri=previous.memory_id),
             evidence=[stored_text[:240]],
-            confidence=min(previous.confidence, quality.score),
+            confidence=min(previous.confidence, quality.score, extraction.confidence),
             importance=previous.importance,
             language=previous.language,
             entities=previous.entities,
@@ -282,8 +287,17 @@ class MemGuardService:
         self._enrich_graph(record)
         self.store.append(record)
         self.meta.upsert_memory(record)
-        self._audit("update", memory_id, {"reason": reason, "version_id": record.version.version_id, "quality": quality.to_dict()})
-        return {"updated": True, "record": record, "quality": quality.to_dict()}
+        self._audit(
+            "update",
+            memory_id,
+            {
+                "reason": reason,
+                "version_id": record.version.version_id,
+                "quality": quality.to_dict(),
+                "extraction": extraction.to_dict(),
+            },
+        )
+        return {"updated": True, "record": record, "quality": quality.to_dict(), "extraction": extraction.to_dict()}
 
     def list_memories(self, include_deleted: bool = False, tier: Optional[str] = None) -> List[Dict[str, object]]:
         return self.meta.list_memories(include_deleted=include_deleted, tier=tier)
@@ -824,6 +838,26 @@ class MemGuardService:
             },
         )
         return status
+
+    def explain_extraction(self, text: str, source_kind: str = "manual") -> Dict[str, object]:
+        clean_text, quality = assess_text_quality(text, source_kind=source_kind)
+        if not quality.accepted:
+            return {
+                "accepted": False,
+                "quality": quality.to_dict(),
+                "reason": "input quality check rejected the memory",
+            }
+        sensitivity = self.detector.classify(clean_text, "")
+        redacted = self.detector.redact(clean_text, "") if sensitivity.labels else clean_text
+        extraction = self.extractor.extract(redacted, source_kind)
+        return {
+            "accepted": True,
+            "source_kind": source_kind,
+            "quality": quality.to_dict(),
+            "sensitivity": sensitivity.__dict__,
+            "redacted_for_extraction": sensitivity.redacted or bool(sensitivity.labels),
+            "extraction": extraction.to_dict(),
+        }
 
     def namespace_status(self) -> Dict[str, object]:
         store_path = self.store.path

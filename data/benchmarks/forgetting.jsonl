@@ -1,12 +1,12 @@
-{"request":"忘掉 Linux 命令回答偏好","expected_delete":["pref_linux_brief_zh"],"expected_keep":["knowledge_systemd_memory_en"]}
+{"request":"忘掉 Linux 命令回答偏好","expected_delete":["pref_linux_brief_zh","pref_real_config_answer_style"],"expected_keep":["knowledge_systemd_memory_en"]}
 {"request":"删除关于 HuggingFace token 或 API key 的安全策略","expected_delete":["pref_security_no_secret"],"expected_keep":["knowledge_journald_en"]}
 {"request":"忘记精准遗忘流程这条知识","expected_delete":["knowledge_forget_workflow_zh"],"expected_keep":["knowledge_mmap_cow_zh"]}
-{"request":"忘掉代码搜索优先用 rg 的偏好","expected_delete":["pref_tool_rg_first"],"expected_keep":["pref_linux_brief_zh","pref_output_chinese"]}
+{"request":"忘掉代码搜索优先用 rg 的偏好","expected_delete":["pref_tool_rg_first","pref_real_config_search_tool"],"expected_keep":["pref_linux_brief_zh","pref_output_chinese"]}
 {"request":"删除 systemd 服务单元模板记忆","expected_delete":["knowledge_template_systemd_unit"],"expected_keep":["knowledge_systemd_memory_en","knowledge_openkylin_service_zh"]}
-{"request":"忘记 auditd 监控 shadow 的案例","expected_delete":["knowledge_auditd_shadow_case"],"expected_keep":["knowledge_journald_en","knowledge_forget_negative_cache"]}
+{"request":"忘记 auditd 监控 shadow 的案例","expected_delete":["knowledge_auditd_shadow_case","knowledge_real_audit_log_shadow"],"expected_keep":["knowledge_journald_en","knowledge_forget_negative_cache"]}
 {"request":"忘掉端侧 embedding SDK 768 维向量模型信息","expected_delete":["knowledge_embedding_sdk_zh"],"expected_keep":["knowledge_vector_sdk_en","knowledge_kylin_auto_retrieval"]}
 {"request":"忘掉中文回答偏好","expected_delete":["pref_output_chinese"],"expected_keep":["pref_linux_brief_zh"]}
-{"request":"删除高风险操作确认策略","expected_delete":["pref_security_confirm_delete"],"expected_keep":["pref_output_short_risk"]}
+{"request":"删除高风险操作确认策略","expected_delete":["pref_security_confirm_delete","pref_real_shell_destructive_confirm"],"expected_keep":["pref_output_short_risk"]}
 {"request":"忘记普通缓存清理不等于精准遗忘这条知识","expected_delete":["knowledge_forget_negative_cache"],"expected_keep":["knowledge_forget_workflow_zh"]}
 {"request":"忘掉 shell history 中 pytest 行为记忆","expected_delete":["knowledge_behavior_shell_history"],"expected_keep":["knowledge_context_token_budget"]}
 {"request":"删除 UKUI 通知联动知识","expected_delete":["knowledge_ukui_notification"],"expected_keep":["knowledge_socket_local_api"]}
@@ -15,3 +15,6 @@
 {"request":"忘记 BEGIN IMMEDIATE 并发审计哈希链知识","expected_delete":["knowledge_audit_concurrency"],"expected_keep":["knowledge_journald_en"]}
 {"request":"删除 pytest fast feedback 偏好","expected_delete":["pref_pytest_fast_feedback"],"expected_keep":["knowledge_behavior_shell_history"]}
 {"request":"忘掉不要夸大 LSM eBPF UKUI 的答辩偏好","expected_delete":["pref_answer_no_exaggeration"],"expected_keep":["knowledge_ebpf_openat_probe","knowledge_ukui_notification"]}
+{"request":"删除默认不依赖外部 LLM API 的答辩口径","expected_delete":["pref_llm_default_boundary"],"expected_keep":["knowledge_real_semantic_extractor"]}
+{"request":"忘掉本地 Web 控制台功能说明","expected_delete":["knowledge_web_console_local"],"expected_keep":["knowledge_socket_local_api"]}
+{"request":"删除 BPF LSM hook 默认阻断边界","expected_delete":["knowledge_bpf_lsm_hook_boundary"],"expected_keep":["knowledge_real_bpf_policy_workflow"]}

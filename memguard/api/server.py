@@ -32,6 +32,10 @@ def handle_request(service: MemGuardService, request: Dict[str, object], auth_to
         token_budget = request.get("token_budget")
         token_budget = int(token_budget) if token_budget else None
         return {"ok": True, "result": service.build_context(query, limit=limit, max_chars=max_chars, token_budget=token_budget)}
+    if command == "explain_extraction":
+        text = str(request.get("text", ""))
+        source_kind = str(request.get("source_kind", "manual"))
+        return {"ok": True, "result": _jsonable(service.explain_extraction(text, source_kind=source_kind))}
     if command == "namespace_status":
         return {"ok": True, "result": service.namespace_status()}
     if command == "memory_policy":
@@ -99,6 +103,7 @@ def handle_request(service: MemGuardService, request: Dict[str, object], auth_to
                     "scope": record.scope,
                     "namespace": service.namespace,
                     "tier": record.tier,
+                    "extraction": result.get("extraction"),
                 },
             }
         sensitivity = result.get("sensitivity")

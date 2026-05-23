@@ -110,9 +110,11 @@ EOF
 | `vector_probe.txt` | Kylin 向量数据库 SDK 探针 |
 | `quality_report.txt` | 输入清洗、格式标准化与质量校验证据 |
 | `natural_patterns.txt` | 自然语言自定义敏感规则证据 |
+| `semantic_extraction.txt` | 可解释混合抽取与可选语义增强入口证据 |
 | `behavior_history.txt` | shell 用户行为轨迹接入证据 |
 | `build_prompt.txt` | RAG 上下文与 LLM prompt 渲染证据 |
 | `generate_answer.txt` | 默认关闭的可选 LLM adapter dry-run 证据 |
+| `web_dashboard.txt` | 本地 Web 控制台 smoke 证据 |
 | `agent_batch_search.txt` | OS Agent 任务规划、工具调用、结果生成多查询并发检索证据 |
 | `api_auth.txt` | 本地 Agent API token 鉴权证据 |
 | `namespace_isolation.txt` | namespace 多会话记忆隔离证据 |
@@ -122,6 +124,8 @@ EOF
 | `ukui_deep_plugins.txt` | Peony/UKUI 控制中心深度插件源码与构建环境探针 |
 | `ukui_plugin_build.txt` | Peony 右键插件与 UKUI 控制中心插件真实构建证据 |
 | `ukui_plugin_install.txt` | UKUI 插件系统目录安装尝试与只读根文件系统边界 |
+| `ukui_plugin_visible.txt` | UKUI 插件安装产物、依赖和人工可见性检查步骤 |
+| `bpf_lsm_policy.txt` | BPF LSM JSON denylist 策略生成证据 |
 | `bpf_lsm_enforcer.txt` | BPF LSM 强制拦截增强环境、构建和 attach 探针 |
 | `systemd_cgroup.txt` | systemd/cgroup 服务限制证据 |
 | `journald.txt` | journald 日志证据 |
@@ -193,9 +197,11 @@ cp "${OUT_DIR}/eval_report_openkylin.md" docs/eval_report_openkylin.md
 
 run_shell_capture "quality_report" "\"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '  普通知识：   systemd   可用 MemoryMax 限制服务内存。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '!!! --- ***' || true; \"${PYTHON_BIN}\" -m memguard.cli.memctl quality-report"
 run_shell_capture "natural_patterns" "\"${PYTHON_BIN}\" -m memguard.cli.memctl patterns suggest '把员工工号，格式以 MG- 开头后接 6 位数字，作为敏感信息'; \"${PYTHON_BIN}\" -m memguard.cli.memctl patterns add-natural '把员工工号，格式以 MG- 开头后接 6 位数字，作为敏感信息'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '员工工号 MG-123456 需要脱敏保存。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl search '员工工号' --top-k 3; \"${PYTHON_BIN}\" -m memguard.cli.memctl patterns list"
+run_shell_capture "semantic_extraction" "\"${PYTHON_BIN}\" -m memguard.cli.memctl explain-extraction --text '真实案例：systemd service failed with exit_code=1，修复后运行 pytest。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '语义抽取增强流程：默认 deterministic semantic rules；设置 MEMGUARD_EXTRACTOR_COMMAND 后可调用本地 NER 或 LLM 返回 JSON schema。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl audit --type ingest --limit 2"
 run_capture "behavior_history" "${PYTHON_BIN}" -m memguard.cli.memctl ingest-history --file "$HOME/.bash_history" --limit 20
 run_capture "build_prompt" "${PYTHON_BIN}" -m memguard.cli.memctl build-prompt "openKylin 服务内存限制" --top-k 5 --token-budget 1200
 run_capture "generate_answer" "${PYTHON_BIN}" -m memguard.cli.memctl generate-answer "openKylin 服务内存限制" --top-k 5 --token-budget 1200 --provider dry-run
+run_capture "web_dashboard" "${PYTHON_BIN}" scripts/web_dashboard_smoke.py
 run_shell_capture "agent_batch_search" "\"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '任务规划记忆：openKylin systemd cgroup MemoryMax 约束。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '工具调用记忆：Linux 验证优先使用 rg、pytest、journalctl。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '结果生成记忆：答辩先给结论，再给指标证据和边界。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl batch-search '任务规划 systemd cgroup' '工具调用 pytest journalctl' '结果生成 答辩 证据' --top-k 3 --workers 3; \"${PYTHON_BIN}\" -m memguard.cli.memctl audit --type batch_search --limit 3; \"${PYTHON_BIN}\" -m memguard.cli.memctl verify-audit"
 run_capture "memory_policy" "${PYTHON_BIN}" -m memguard.cli.memctl memory-policy --eviction-limit 10
 run_shell_capture "namespace_isolation" "NS_HOME='${OUT_DIR}/namespace_home'; rm -rf \"\${NS_HOME}\"; mkdir -p \"\${NS_HOME}\"; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl --namespace alpha ingest --text 'alpha 会话只保存 openKylin systemd MemoryMax 方案。'; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl --namespace beta ingest --text 'beta 会话只保存 auditd shadow access 方案。'; echo '--- alpha search MemoryMax ---'; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl --namespace alpha search MemoryMax --top-k 3; echo '--- beta search MemoryMax should be empty ---'; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl --namespace beta search MemoryMax --top-k 3; echo '--- beta search auditd ---'; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl --namespace beta search auditd --top-k 3; echo '--- namespace status ---'; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl --namespace alpha namespace-status; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl --namespace beta namespace-status; MEMGUARD_HOME=\"\${NS_HOME}\" \"${PYTHON_BIN}\" -m memguard.cli.memctl namespaces"
@@ -262,6 +268,8 @@ fi
 run_self_logging_capture "ukui_deep_plugins" bash scripts/probe_ukui_deep_plugins.sh "${OUT_DIR}"
 run_capture "ukui_plugin_build" bash scripts/build_ukui_plugins.sh
 run_capture "ukui_plugin_install" bash scripts/install_ukui_plugins.sh --no-build
+run_capture "ukui_plugin_visible" bash scripts/verify_ukui_plugins.sh
+run_capture "bpf_lsm_policy" "${PYTHON_BIN}" scripts/generate_bpf_lsm_policy.py --policy data/demo/bpf_lsm_policy.json --output "${OUT_DIR}/memguard_lsm_policy.generated.h"
 run_self_logging_capture "bpf_lsm_enforcer" bash scripts/run_bpf_lsm_enforcer.sh "${OUT_DIR}"
 
 if [ "$RUN_10K" -eq 1 ]; then

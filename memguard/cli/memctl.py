@@ -34,6 +34,9 @@ def build_parser() -> argparse.ArgumentParser:
     ingest.add_argument("--file", help="File path to ingest")
     ingest.add_argument("--source-kind", default="manual")
     ingest.add_argument("--tier", choices=["working", "session", "long_term"], help="Memory tier")
+    explain_extraction = sub.add_parser("explain-extraction", help="Explain preference/knowledge extraction without storing memory")
+    explain_extraction.add_argument("--text", required=True)
+    explain_extraction.add_argument("--source-kind", default="manual")
 
     tool_result = sub.add_parser("ingest-tool-result", help="Ingest a structured tool execution result JSON")
     tool_result.add_argument("--file", required=True, help="JSON file containing command/cwd/exit_code/stdout/stderr/duration_ms")
@@ -141,6 +144,11 @@ def build_parser() -> argparse.ArgumentParser:
     audit.add_argument("--type", dest="event_type")
     sub.add_parser("quality-report", help="Show recent input quality validation audit events")
 
+    web = sub.add_parser("web", help="Run a localhost Web dashboard for review and demos")
+    web.add_argument("--host", default="127.0.0.1")
+    web.add_argument("--port", type=int, default=8765)
+    web.add_argument("--auth-token-file", default="", help="Optional bearer token file for dashboard API calls")
+
     patterns = sub.add_parser("patterns", help="List or add custom sensitive patterns")
     pattern_sub = patterns.add_subparsers(dest="pattern_command", required=True)
     pattern_sub.add_parser("list", help="List custom patterns")
@@ -193,6 +201,7 @@ def main(argv: list[str] | None = None) -> int:
                             "tier": record.tier,
                             "confidence": record.confidence,
                             "quality": result.get("quality"),
+                            "extraction": result.get("extraction"),
                         },
                         ensure_ascii=False,
                     )
@@ -202,6 +211,10 @@ def main(argv: list[str] | None = None) -> int:
                 if result.get("sensitivity"):
                     payload["sensitivity"] = result["sensitivity"].__dict__
                 print(json.dumps(payload, ensure_ascii=False))
+            return 0
+
+        if args.command == "explain-extraction":
+            print(json.dumps(service.explain_extraction(args.text, source_kind=args.source_kind), ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "ingest-tool-result":
@@ -401,6 +414,13 @@ def main(argv: list[str] | None = None) -> int:
             events = service.audit(limit=20, event_type="quality_reject")
             ingests = service.audit(limit=20, event_type="ingest")
             print(json.dumps({"quality_reject": events, "recent_ingest_quality": ingests}, ensure_ascii=False, indent=2))
+            return 0
+
+        if args.command == "web":
+            token = Path(args.auth_token_file).read_text(encoding="utf-8").strip() if args.auth_token_file else ""
+            from memguard.web.dashboard import run_dashboard
+
+            run_dashboard(service, host=args.host, port=args.port, auth_token=token)
             return 0
 
         if args.command == "patterns":

@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 67,
-    "passed": 67,
+    "total": 72,
+    "passed": 72,
     "failed": 0,
     "warnings": 0
   },
@@ -11,84 +11,84 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 1746",
+      "detail": "中文字符数 1896",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/项目介绍总览.md",
       "ok": true,
-      "detail": "中文字符数 5031",
+      "detail": "中文字符数 5280",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/概要设计说明书.md",
       "ok": true,
-      "detail": "中文字符数 901",
+      "detail": "中文字符数 1042",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/详细设计说明书.md",
       "ok": true,
-      "detail": "中文字符数 1668",
+      "detail": "中文字符数 2118",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/部署手册.md",
       "ok": true,
-      "detail": "中文字符数 511",
+      "detail": "中文字符数 638",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/用户手册.md",
       "ok": true,
-      "detail": "中文字符数 1193",
+      "detail": "中文字符数 1386",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 1766",
+      "detail": "中文字符数 1894",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/赛题符合性说明.md",
       "ok": true,
-      "detail": "中文字符数 947",
+      "detail": "中文字符数 1054",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/正式提交材料说明.md",
       "ok": true,
-      "detail": "中文字符数 498",
+      "detail": "中文字符数 505",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/评委证据包索引.md",
       "ok": true,
-      "detail": "中文字符数 1224",
+      "detail": "中文字符数 1394",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/安全设计说明书.md",
       "ok": true,
-      "detail": "中文字符数 951",
+      "detail": "中文字符数 1013",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/操作系统机制说明.md",
       "ok": true,
-      "detail": "中文字符数 1360",
+      "detail": "中文字符数 1447",
       "severity": "P0"
     },
     {
@@ -102,14 +102,14 @@
       "category": "中文文档",
       "name": "docs/答辩提纲.md",
       "ok": true,
-      "detail": "中文字符数 1003",
+      "detail": "中文字符数 1175",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/演示视频脚本.md",
       "ok": true,
-      "detail": "中文字符数 491",
+      "detail": "中文字符数 611",
       "severity": "P0"
     },
     {
@@ -142,6 +142,13 @@
     },
     {
       "category": "源码与脚本",
+      "name": "memguard/extraction/semantic.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
       "name": "memguard/sensitivity/detector.py",
       "ok": true,
       "detail": "存在",
@@ -163,6 +170,13 @@
     },
     {
       "category": "源码与脚本",
+      "name": "memguard/web/dashboard.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
       "name": "scripts/install_openkylin.sh",
       "ok": true,
       "detail": "存在",
@@ -177,7 +191,28 @@
     },
     {
       "category": "源码与脚本",
+      "name": "scripts/generate_bpf_lsm_policy.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
       "name": "scripts/package_submission.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/web_dashboard_smoke.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/verify_ukui_plugins.sh",
       "ok": true,
       "detail": "存在",
       "severity": "P0"
@@ -270,7 +305,7 @@
       "category": "量化评测",
       "name": "负载 P95 延迟小于 500ms",
       "ok": true,
-      "detail": "当前 14.6450，要求 <= 500.0000",
+      "detail": "当前 17.9910，要求 <= 500.0000",
       "severity": "P0"
     },
     {
@@ -305,7 +340,7 @@
       "category": "量化评测",
       "name": "benchmark 用例规模",
       "ok": true,
-      "detail": "总用例/种子数 126",
+      "detail": "总用例/种子数 159",
       "severity": "P1"
     },
     {

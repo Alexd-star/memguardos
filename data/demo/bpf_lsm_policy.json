@@ -1,0 +1,15 @@
+{
+  "name": "memguardos_review_safe_policy",
+  "mode": "static_compile_time_denylist",
+  "deny_substrings": [
+    "/tmp/memguardos_lsm_secret",
+    "/home/demo/.aws/credentials",
+    "/home/demo/.kube/config",
+    "/home/demo/.ssh/id_ed25519",
+    "/srv/memguardos/secrets/"
+  ],
+  "notes": [
+    "This demo policy uses review-safe demo paths.",
+    "Do not add login-chain files such as /etc/shadow to a live desktop without an isolated test plan."
+  ]
+}

@@ -45,7 +45,11 @@ def run(latency_size: int = 200, latency_queries: int = 100) -> dict:
             knowledge_fp = 0
             seeds = load_jsonl(BENCHMARK_DIR / "memory_seed.jsonl")
             for row in seeds:
-                result = service.ingest_text(row["text"], source_kind="benchmark", source_uri=row["label"])
+                result = service.ingest_text(
+                    row["text"],
+                    source_kind=row.get("source_kind", "benchmark"),
+                    source_uri=row.get("source_uri", row["label"]),
+                )
                 if not result["stored"]:
                     continue
                 record = result["record"]

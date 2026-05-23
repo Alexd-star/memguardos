@@ -115,6 +115,8 @@ def _anchor_policy_passes(request: str, matched_distinctive: List[str], strong_m
     if "rg" in lowered_request:
         return "rg" in matched
     if "shell history" in lowered_request:
+        if "pytest" in lowered_request:
+            return "pytest" in matched and "shell" in matched and "history" in matched
         return "shell" in matched and "history" in matched
     if "huggingface" in lowered_request or "api key" in lowered_request.lower():
         return "token" in matched and bool({"api", "key", "huggingface"} & matched)
@@ -126,6 +128,13 @@ def _anchor_policy_passes(request: str, matched_distinctive: List[str], strong_m
         return "embedding" in matched
     if "auditd" in lowered_request:
         return "auditd" in matched
+    if "web" in lowered_request and ("控制" in request or "控制台" in request):
+        return "web" in matched and bool({"控制", "制台", "控制台"} & matched)
+    if "bpf" in lowered_request and "lsm" in lowered_request:
+        has_bpf = bool({"bpf", "ebpf"} & matched)
+        if "hook" in lowered_request or "阻断" in request or "拦截" in request:
+            return has_bpf and "lsm" in matched and bool({"hook", "file_open"} & matched) and bool({"阻断", "拦截", "deny"} & matched)
+        return has_bpf and "lsm" in matched
     if "systemd" in lowered_request:
         return "systemd" in matched
     latin_terms = [keyword for keyword in matched_distinctive if re.search(r"[A-Za-z]", keyword)]

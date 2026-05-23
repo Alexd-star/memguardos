@@ -4,6 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 OUT_DIR="${1:-docs/evidence/latest}"
+POLICY_JSON="${2:-}"
 mkdir -p "${OUT_DIR}"
 LOG="${OUT_DIR}/bpf_lsm_enforcer.txt"
 : >"${LOG}"
@@ -31,6 +32,11 @@ fi
 if ! command -v clang >/dev/null 2>&1 || ! command -v pkg-config >/dev/null 2>&1 || ! pkg-config --exists libbpf; then
   echo "clang/pkg-config/libbpf-dev missing; enter openKylin maintenance mode and install development packages." | tee -a "${LOG}"
   exit 2
+fi
+
+if [ -n "${POLICY_JSON}" ]; then
+  echo "generating BPF LSM policy from ${POLICY_JSON}" | tee -a "${LOG}"
+  python3 scripts/generate_bpf_lsm_policy.py --policy "${POLICY_JSON}" | tee -a "${LOG}"
 fi
 
 make -C native/bpf_lsm clean all | tee -a "${LOG}"
