@@ -5,6 +5,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcess>
+#include <QFile>
+#include <QTextStream>
 #include <QUrl>
 
 Peony::PluginInterface::PluginType MemGuardPeonyPlugin::pluginType()
@@ -45,13 +47,27 @@ QString MemGuardPeonyPlugin::testPlugin()
 QList<QAction *> MemGuardPeonyPlugin::menuActions(Peony::MenuPluginInterface::Types types, const QString &uri, const QStringList &selectionUris)
 {
     QList<QAction *> actions;
-    if (!enabled_ || !types.testFlag(Peony::MenuPluginInterface::DirectoryView))
+    QFile log(QStringLiteral("/tmp/memguardos_peony_plugin.log"));
+    if (log.open(QIODevice::Append | QIODevice::Text)) {
+        QTextStream out(&log);
+        out << "menuActions enabled=" << enabled_
+            << " types=" << static_cast<int>(types)
+            << " uri=" << uri
+            << " selections=" << selectionUris.join(QStringLiteral(","))
+            << "\n";
+    }
+
+    const bool supportedMenu = types.testFlag(Peony::MenuPluginInterface::DirectoryView)
+        || types.testFlag(Peony::MenuPluginInterface::DesktopWindow)
+        || (!selectionUris.isEmpty());
+    if (!enabled_ || !supportedMenu)
         return actions;
 
     lastSelection_ = selectionUris;
     fallbackUri_ = uri;
 
     auto *action = new QAction(QIcon::fromTheme(QStringLiteral("security-high")), QStringLiteral("发送到 MemGuardOS 记忆安全扫描"));
+    action->setObjectName(QStringLiteral("memguardos-peony-memory-scan"));
     QObject::connect(action, &QAction::triggered, this, &MemGuardPeonyPlugin::sendSelectionToMemGuard);
     actions << action;
     return actions;
