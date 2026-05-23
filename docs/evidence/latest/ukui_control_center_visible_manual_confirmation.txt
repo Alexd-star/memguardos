@@ -1,0 +1,5 @@
+# UKUI Control Center UI visible confirmation
+confirmed_at=2026-05-24T02:07:31+08:00
+entry_text=MemGuardOS 记忆安全
+buttons=运行 doctor,验证审计链,检查 Kylin SDK
+status=visible_in_user_screenshot

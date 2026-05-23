@@ -6,7 +6,7 @@
 
 日期：2026-05-18 至 2026-05-23
 
-说明：本页记录已经完成的 openKylin 证据。最新证据包采集时间为 `20260523_233923`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、可解释语义抽取、本地 Web 控制台、Kylin embedding 实际检索重排、Kylin 向量数据库探针、BPF JSON 策略生成、BPF LSM 安全测试文件强制拒绝、Peony/UKUI 原生插件构建、UKUI 插件可见性核查和 10k 规模评测。
+说明：本页记录已经完成的 openKylin 证据。基础证据包采集时间为 `20260523_233923`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、可解释语义抽取、本地 Web 控制台、Kylin embedding 实际检索重排、Kylin 向量数据库探针、BPF JSON 策略生成、BPF LSM 安全测试文件强制拒绝、Peony/UKUI 原生插件构建、UKUI 插件可见性核查和 10k 规模评测。`2026-05-24` 已补充 Peony 右键菜单和 UKUI 控制中心桌面可见验证证据。
 
 环境：
 
@@ -59,7 +59,7 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 - 真实 auditd 日志接入已验证：访问 `/etc/shadow` 后解析出的事件被 `sensitive_block` 阻断
 - BPF LSM 强制拦截已验证：访问 `/tmp/memguardos_lsm_secret` 返回 `Permission denied`，证据为 `enforcement_result=denied`
 - BPF LSM JSON 策略生成已验证：`bpf_lsm_policy.txt` 记录从 JSON denylist 生成可审查静态 header
-- Peony/UKUI 原生插件已构建：Peony 右键菜单插件和 UKUI 控制中心插件均构建出 `.so`；系统目录安装因根文件系统只读未完成，`ukui_plugin_visible.txt` 已记录构建产物、动态依赖、关键字符串和人工可见性核查步骤
+- Peony/UKUI 原生插件已构建：Peony 右键菜单插件和 UKUI 控制中心插件均构建出 `.so`；只读 `/usr` 场景已通过 bind mount 演示安装处理，Peony 右键菜单项和 UKUI 控制中心入口均已在桌面可见验证
 - 可解释语义抽取已验证：`semantic_extraction.txt` 记录 `explain-extraction`、抽取信号、类型/子类型和写入审计
 - 本地 Web 控制台已验证：`web_dashboard.txt` 记录页面加载、写入、检索和抽取解释 smoke 通过
 - SDK 状态：embedding 模型信息显示 768 维端侧文本模型，Python/C++ 探针均可返回 768 维向量；实际检索可使用 `kylin_sdk` 作为可选重排后端；vector SDK 库和服务可用
@@ -220,7 +220,7 @@ bash scripts/install_ukui_plugins.sh --no-build
 
 - Peony 右键菜单插件构建产物：`native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so`。
 - UKUI 控制中心插件构建产物：`native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so`。
-- 安装到 `/usr/lib/x86_64-linux-gnu/...` 时返回“只读文件系统”，因此当前只宣称源码和 `.so` 构建成功，不宣称 UI 已可见。
+- openKylin ostree/overlay 只读 `/usr` 场景已通过 bind mount 演示安装处理；Peony 右键菜单项“发送到 MemGuardOS 记忆安全扫描”已在桌面右键菜单中可见验证，UKUI 控制中心入口“MemGuardOS 记忆安全”以及 `运行 doctor`、`验证审计链`、`检查 Kylin SDK` 三个按钮已在设置界面中可见验证。
 
 ## 10. 一键验证
 

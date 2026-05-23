@@ -35,6 +35,9 @@
 | `ukui_plugin_build.txt` | Peony 右键插件与 UKUI 控制中心插件真实构建证据 |
 | `ukui_plugin_install.txt` | UKUI 插件系统目录安装尝试与只读根文件系统边界 |
 | `ukui_plugin_visible.txt` | UKUI 插件安装产物、依赖和人工可见性检查步骤 |
+| `ukui_plugin_visible_final.txt` | 当前 Peony/UKUI 插件安装产物、依赖和元数据最终核查 |
+| `ukui_peony_visible_manual_confirmation.txt` | Peony 右键菜单项人工截图可见确认记录 |
+| `ukui_control_center_visible_manual_confirmation.txt` | UKUI 控制中心入口人工截图可见确认记录 |
 | `bpf_lsm_policy.txt` | BPF LSM JSON denylist 策略生成证据 |
 | `bpf_lsm_enforcer.txt` | BPF LSM 强制拦截增强环境、构建和 attach 探针 |
 | `systemd_cgroup.txt` | systemd/cgroup 服务限制证据 |

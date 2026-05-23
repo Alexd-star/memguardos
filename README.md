@@ -60,7 +60,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | 精准遗忘 | 自然语言候选、dry-run、确认删除、tombstone、FTS/图谱清理、compact、明文探针验证 | `memctl forget`、`memctl verify-forget` |
 | 敏感治理 | PII、凭据、私钥、银行卡、中文地址、OS 高风险路径、自定义正则、自然语言敏感规则 | `memguard/sensitivity/` |
 | 多会话隔离 | namespace 独立段文件、SQLite、敏感规则、审计链；systemd 模板服务配合 cgroup | `memctl --namespace`、`memguardd@.service` |
-| OS 集成 | systemd、cgroup、journald、auditd、BPF LSM 可选强制拦截、JSON denylist 策略生成、UKUI/Peony 原生插件源码 | `scripts/`、`native/` |
+| OS 集成 | systemd、cgroup、journald、auditd、BPF LSM 可选强制拦截、JSON denylist 策略生成、Peony 右键菜单可见验证、UKUI 控制中心可见验证 | `scripts/`、`native/` |
 | Agent API | 本地 Unix socket JSON API，支持 health、ingest、search、batch_search、build_context、forget、audit 等 | `memguard/api/server.py` |
 | Kylin SDK 适配 | Kylin embedding/vector SDK 探测，embedding 可选重排后端，默认保留稳定 fallback | `memctl sdk-status`、`memguard/retrieval/kylin_sdk.py` |
 | 本地控制台 | 无外部依赖的 localhost Web 控制台，覆盖状态、写入、抽取解释、检索、RAG 上下文、遗忘和审计 | `memctl web`、`memguard/web/dashboard.py` |
@@ -214,6 +214,7 @@ python -m memguard.eval.run_eval --latency-size 10000 --latency-queries 150 --ou
 | 功能、指标和 openKylin 结果 | [docs/测试报告.md](docs/测试报告.md) |
 | 评委现场证据文件 | [docs/评委证据包索引.md](docs/评委证据包索引.md) |
 | OS 机制实现 | [docs/操作系统机制说明.md](docs/操作系统机制说明.md) |
+| Peony/UKUI 桌面集成 | [docs/Peony与UKUI桌面集成实现说明.md](docs/Peony与UKUI桌面集成实现说明.md) |
 | Kylin SDK 适配 | [docs/麒麟SDK集成证据.md](docs/麒麟SDK集成证据.md) |
 | 安全与精准遗忘 | [docs/安全设计说明书.md](docs/安全设计说明书.md) |
 
@@ -267,7 +268,7 @@ dist/memguardos_full_repository_<时间戳>_manifest.json
 - Kylin embedding SDK：已完成真实向量探针和可选重排检索证据；默认主路径仍保留 FTS/hash/graph fallback。
 - 语义抽取：默认采用可解释、可复现的 deterministic semantic rules；显式配置 `MEMGUARD_EXTRACTOR_COMMAND` 后可接本地 NER/LLM JSON 增强器，增强器失败会自动回退。
 - BPF LSM：已在 openKylin 对安全测试文件完成强制拒绝验证；支持从 JSON 生成可审查静态 denylist；默认不拦截 `/etc/shadow`、SSH、sudo 或 PAM 链路。
-- UKUI：Peony/UKUI 控制中心插件源码已构建 `.so`；系统 UI 可见性以目标系统安装和重启桌面组件后的验证为准。
+- UKUI/Peony：Peony 右键菜单插件已在 openKylin 桌面右键菜单中可见验证；UKUI 控制中心入口“MemGuardOS 记忆安全”及 `运行 doctor`、`验证审计链`、`检查 Kylin SDK` 按钮已可见验证。
 - Web 控制台：用于本地演示和评审操作，默认绑定 `127.0.0.1`，不作为公网 SaaS 管理台。
 - 用户行为：支持 shell 行为、工具结果、OS 事件和 auditd 事件；不宣称全量桌面行为捕获。
 - 外部 LLM：默认不依赖外部 API；只有显式选择 provider 时才调用本地命令或兼容远程端点。

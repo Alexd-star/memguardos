@@ -1,0 +1,4 @@
+# Peony UI visible confirmation
+confirmed_at=2026-05-24T02:02:39+08:00
+menu_text=发送到 MemGuardOS 记忆安全扫描
+status=visible_in_user_screenshot

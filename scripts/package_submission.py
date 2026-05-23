@@ -57,6 +57,7 @@ FORMAL_DOCS = {
     "docs/详细设计说明书.md",
     "docs/安全设计说明书.md",
     "docs/操作系统机制说明.md",
+    "docs/Peony与UKUI桌面集成实现说明.md",
     "docs/麒麟SDK集成证据.md",
     "docs/openKylin验证记录.md",
     "docs/部署手册.md",
