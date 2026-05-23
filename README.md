@@ -34,12 +34,12 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | 类别 | 当前结果 |
 |---|---:|
 | 本地单元测试 | 49 passed |
-| openKylin 单元测试证据 | 42 passed |
+| openKylin 单元测试证据 | 49 passed |
 | 本地 1k 负载 P95 | 17.991 ms |
-| openKylin 1k 负载 P95 | 76.182 ms |
-| openKylin 10k 负载 P95 | 343.328 ms |
-| openKylin 10k 负载 P99 | 432.702 ms |
-| openKylin 10k RSS | 66116 KB |
+| openKylin 1k 负载 P95 | 34.816 ms |
+| openKylin 10k 负载 P95 | 89.639 ms |
+| openKylin 10k 负载 P99 | 104.343 ms |
+| openKylin 10k RSS | 112072 KB |
 | Recall@5 / 跨语言 Recall@5 | 1.0000 / 1.0000 |
 | 敏感阻断 F1 / 脱敏 F1 / 标签 F1 | 1.0000 / 1.0000 / 1.0000 |
 | 精准遗忘候选精确率 / 召回率 | 1.0000 / 1.0000 |

@@ -25,12 +25,12 @@
 ### 验证结果
 
 - 本地单元测试：`49 passed`。
-- openKylin 最新证据包单元测试：`42 passed`。
+- openKylin 最新证据包单元测试：`49 passed`。
 - 本地 1k 负载 P95：`17.991 ms`。
 - 本地 6 线程并发检索 P95：`121.101 ms`。
 - 本地 Agent 批量检索 P95：`4.888 ms`。
-- openKylin 1k 负载 P95：`76.182 ms`。
-- openKylin 10k 负载 P95：`343.328 ms`。
+- openKylin 1k 负载 P95：`34.816 ms`。
+- openKylin 10k 负载 P95：`89.639 ms`。
 - benchmark 扩充到 45/40/25/20/10/13/6，覆盖真实风格 auditd 日志、shell history、手动配置冲突、生产故障、自然语言敏感规则、更多 OS 敏感路径、namespace/cgroup、Kylin 可选检索和并发审计样例。
 - Kylin embedding 实际检索：`vector_backend: "kylin_sdk"`。
 - BPF LSM：openKylin 上构建并 attach，对 `/tmp/memguardos_lsm_secret` 返回 `Permission denied`，证据为 `enforcement_result=denied`。

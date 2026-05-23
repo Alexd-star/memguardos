@@ -4,9 +4,9 @@
 
 ## 0. 已验证 VM 快照
 
-日期：2026-05-18 至 2026-05-22
+日期：2026-05-18 至 2026-05-23
 
-说明：本页记录已经完成的 openKylin 证据。最新证据包采集时间为 `20260522_234709`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、Kylin embedding 实际检索重排、Kylin 向量数据库探针、BPF LSM 安全测试文件强制拒绝、Peony/UKUI 原生插件构建和 10k 规模评测。
+说明：本页记录已经完成的 openKylin 证据。最新证据包采集时间为 `20260523_233923`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、可解释语义抽取、本地 Web 控制台、Kylin embedding 实际检索重排、Kylin 向量数据库探针、BPF JSON 策略生成、BPF LSM 安全测试文件强制拒绝、Peony/UKUI 原生插件构建、UKUI 插件可见性核查和 10k 规模评测。
 
 环境：
 
@@ -42,23 +42,26 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 
 最新结果：
 
-- 单元测试：`42 passed`
+- 单元测试：`49 passed`
 - 负载评测：1000 条记忆，120 次检索请求
-- 最新 1k 负载 P95：76.182 ms
+- 最新 1k 负载 P95：34.816 ms
 - 5k 负载 P95：142.534 ms
-- 10k 负载 P95：343.328 ms
-- 最新 openKylin RSS：34668.0 KB
-- 10k 评测 RSS：66116.0 KB
-- 纯文本基线 Recall@5：0.7800
+- 10k 负载 P95：89.639 ms
+- 最新 openKylin RSS：112100.0 KB
+- 10k 评测 RSS：112072.0 KB
+- 纯文本基线 Recall@5：0.8375
 - 完整 MemGuardOS Recall@5：1.0000
-- 该证据包采集时的 benchmark：30 条种子记忆、25 条检索用例、25 条敏感检测用例、17 条精准遗忘用例、10 条冲突解决用例、13 条图谱检索用例、6 条数据质量用例。当前代码已扩充到 45/40/25/20/10/13/6，提交前复跑证据包后会同步刷新。
+- 该证据包采集时的 benchmark：45 条种子记忆、40 条检索用例、25 条敏感检测用例、20 条精准遗忘用例、10 条冲突解决用例、13 条图谱检索用例、6 条数据质量用例。当前证据包已同步为 45/40/25/20/10/13/6。
 - 类型/子类型准确率、Recall@5、敏感阻断 F1、脱敏 F1、敏感标签 F1、遗忘精确率/召回率、冲突正确率、图谱 Recall@5 均为 1.0000
 - 审计哈希链验证通过
 - 并发审计验证通过：6 线程共 72 条事件，`verify.ok=true`
 - OS 敏感路径 smoke test 被正确阻断
 - 真实 auditd 日志接入已验证：访问 `/etc/shadow` 后解析出的事件被 `sensitive_block` 阻断
 - BPF LSM 强制拦截已验证：访问 `/tmp/memguardos_lsm_secret` 返回 `Permission denied`，证据为 `enforcement_result=denied`
-- Peony/UKUI 原生插件已构建：Peony 右键菜单插件和 UKUI 控制中心插件均构建出 `.so`；系统目录安装因根文件系统只读未完成
+- BPF LSM JSON 策略生成已验证：`bpf_lsm_policy.txt` 记录从 JSON denylist 生成可审查静态 header
+- Peony/UKUI 原生插件已构建：Peony 右键菜单插件和 UKUI 控制中心插件均构建出 `.so`；系统目录安装因根文件系统只读未完成，`ukui_plugin_visible.txt` 已记录构建产物、动态依赖、关键字符串和人工可见性核查步骤
+- 可解释语义抽取已验证：`semantic_extraction.txt` 记录 `explain-extraction`、抽取信号、类型/子类型和写入审计
+- 本地 Web 控制台已验证：`web_dashboard.txt` 记录页面加载、写入、检索和抽取解释 smoke 通过
 - SDK 状态：embedding 模型信息显示 768 维端侧文本模型，Python/C++ 探针均可返回 768 维向量；实际检索可使用 `kylin_sdk` 作为可选重排后端；vector SDK 库和服务可用
 - 自然语言敏感规则：`patterns suggest` 和 `patterns add-natural` 可从“工号格式”指令生成受限正则，并在写入记忆时完成脱敏
 

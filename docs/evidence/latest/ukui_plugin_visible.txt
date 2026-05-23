@@ -1,0 +1,47 @@
+$ bash scripts/verify_ukui_plugins.sh
+
+# MemGuardOS UKUI visible-plugin verification
+2026-05-23T23:41:01+08:00
+XDG_CURRENT_DESKTOP=
+DISPLAY=
+
+## native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so
+-rwxrwxr-x 1 luo luo 42336  5月23日 23:40 native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so
+native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, BuildID[sha1]=5874b5c18331240cc978db93ea9993f3d8b7113a, not stripped
+	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007fa798931000)
+	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007fa79825e000)
+	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007fa797d0a000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fa79786d000)
+kDescriptionx<Send selected files to MemGuardOS as OS-agent memory events.dKeys
+memguardos-peony-menu-plugindNamex
+MemGuardOS Peony Menu Plugin
+
+## native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so
+-rwxrwxr-x 1 luo luo 42360  5月23日 23:41 native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so
+native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so: ELF 64-bit LSB shared object, x86-64, version 1 (GNU/Linux), dynamically linked, BuildID[sha1]=3213a960769e6cb8327bbd4b23713447c822dea8, not stripped
+	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007f75fd4b6000)
+	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007f75fcde3000)
+	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007f75fc88f000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f75fc3f2000)
+kDescriptionxEUKUI Control Center entry for MemGuardOS local agent memory security.dKeys
+memguardos-memory-securitydNamex
+MemGuardOS Memory Security
+
+## /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
+missing
+
+## /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
+missing
+
+## runtime processes
+3167 /usr/bin/peony-qt-desktop -w -d
+pgrep: pattern that searches for process name longer than 15 characters will result in zero matches
+Try `pgrep -f' option to match against the complete command line.
+
+## manual visible checks
+1. Run: peony -q 2>/dev/null || killall peony
+2. Open Peony file manager and right-click a local file.
+3. Confirm the menu item "发送到 MemGuardOS 记忆安全扫描" is visible.
+4. Click the menu item and confirm notify-send shows a MemGuardOS message.
+5. Open UKUI control center, security category, and confirm "MemGuardOS 记忆安全" is visible.
+6. Click "运行 doctor", "验证审计链", and "检查 Kylin SDK"; confirm command output appears.

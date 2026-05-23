@@ -1,0 +1,123 @@
+$ .venv/bin/python -m memguard.cli.memctl memory-policy --eviction-limit 10
+
+{
+  "namespace": "default",
+  "policy": {
+    "working": "当前任务临时上下文，优先淘汰，不进入长期沉淀。",
+    "session": "本轮会话/阶段性任务记忆，可在任务结束后批量淘汰或挑选沉淀。",
+    "long_term": "稳定偏好、知识、安全策略和可复用经验，默认保留并参与 RAG。",
+    "eviction_order": [
+      "working",
+      "session"
+    ],
+    "promotion_path": "working/session -> long_term",
+    "compaction": "遗忘或层级淘汰后可执行 compact，清理追加段文件中的旧明文。"
+  },
+  "tiers": {
+    "working": {
+      "count": 0,
+      "content_chars": 0,
+      "summary_chars": 0,
+      "approx_payload_bytes": 0,
+      "sensitivity": {},
+      "sources": {},
+      "oldest_updated_at": "",
+      "newest_updated_at": ""
+    },
+    "session": {
+      "count": 4,
+      "content_chars": 560,
+      "summary_chars": 536,
+      "approx_payload_bytes": 1136,
+      "sensitivity": {
+        "none": 4
+      },
+      "sources": {
+        "user_behavior": 4
+      },
+      "oldest_updated_at": "2026-05-23T15:40:53.364892+00:00",
+      "newest_updated_at": "2026-05-23T15:40:53.396738+00:00"
+    },
+    "long_term": {
+      "count": 6,
+      "content_chars": 282,
+      "summary_chars": 312,
+      "approx_payload_bytes": 1022,
+      "sensitivity": {
+        "none": 5,
+        "low": 1
+      },
+      "sources": {
+        "manual": 6
+      },
+      "oldest_updated_at": "2026-05-23T15:40:51.349970+00:00",
+      "newest_updated_at": "2026-05-23T15:40:54.483987+00:00"
+    }
+  },
+  "counts": {
+    "live": 10,
+    "metadata_records": 10,
+    "segment_records": 10,
+    "stale_or_deleted": 0,
+    "eviction_candidates": 4
+  },
+  "storage": {
+    "segment_path": "/var/tmp/memguardos_evidence_20260523_233923/memory.segment",
+    "segment_bytes": 21897,
+    "sqlite_path": "/var/tmp/memguardos_evidence_20260523_233923/memguard.sqlite3",
+    "sqlite_total_bytes": 122880,
+    "approx_total_bytes": 144777,
+    "bytes_per_live_memory": 14477.7
+  },
+  "eviction_candidates": [
+    {
+      "memory_id": "mem_01632cc021ee4c50",
+      "tier": "session",
+      "type": "knowledge",
+      "subtype": "behavior_risk",
+      "source_kind": "user_behavior",
+      "updated_at": "2026-05-23T15:40:53.364892+00:00",
+      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=1 command=sudo apt updata"
+    },
+    {
+      "memory_id": "mem_cb698eb6b47b4647",
+      "tier": "session",
+      "type": "knowledge",
+      "subtype": "behavior_risk",
+      "source_kind": "user_behavior",
+      "updated_at": "2026-05-23T15:40:53.376097+00:00",
+      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=2 command=sudo apt update"
+    },
+    {
+      "memory_id": "mem_f551244480994bc3",
+      "tier": "session",
+      "type": "knowledge",
+      "subtype": "behavior_risk",
+      "source_kind": "user_behavior",
+      "updated_at": "2026-05-23T15:40:53.386413+00:00",
+      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=3 command=sudo apt install -y openssh-server "
+    },
+    {
+      "memory_id": "mem_7f7d8bd088534b44",
+      "tier": "session",
+      "type": "knowledge",
+      "subtype": "behavior_risk",
+      "source_kind": "user_behavior",
+      "updated_at": "2026-05-23T15:40:53.396738+00:00",
+      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=4 command=sudo systemctl enable --now ssh"
+    }
+  ],
+  "recommendations": [
+    "session 层存在阶段性记忆，适合在演示中展示中期记忆淘汰和沉淀。"
+  ],
+  "cgroup": {
+    "platform": "Linux",
+    "is_linux": true,
+    "cgroup_v2_mounted": true,
+    "proc_cgroup": "0::/user.slice/user-1000.slice/session-20.scope",
+    "memory_current": null,
+    "memory_max": null,
+    "cpu_max": null,
+    "pid": 16315
+  }
+}

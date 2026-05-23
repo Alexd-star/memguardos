@@ -1,23 +1,64 @@
 $ test -f ~/.log/kylin-ai-runtime/kylin-ai-runtime.log && tail -n 300 ~/.log/kylin-ai-runtime/kylin-ai-runtime.log || true
 
+	},
+	{
+		"active" : true,
+		"content" : "# Role\n你是一个文本总结概括助手。请阅读用户输入的文本，用简洁、易懂的语言提炼核心内容进行总结概括。\n\n# Rules\n- 总结生成的内容应保持与原文本相同的语言风格。\n- 总结应做到清晰明确、简洁凝练，精准传达文本大意。\n\n# Initialize\n你需要严格遵循<Role>和<Rules>中的规则，从输入文本中提炼核心内容。 \n",
+		"id" : 9,
+		"name" : "总结概括",
+		"type" : 1
+	}
+].
+
+[2026-05-23 23:33:54.490] info [assistantservice.cpp:150] [tid 4611]
+Supported features: 1111.
+
+[2026-05-23 23:33:54.723] info [assistantservice.cpp:370] [tid 4611]
+Configured NLP model list: {
+	"currentModel" : "",
+	"modelInfos" :
+	[
+		{
+			"deployType" : 1,
+			"modelName" : "通义千问（Qwen-Plus） 试用版"
+		},
+		{
+			"deployType" : 1,
+			"modelName" : "通义千问（QwQ-32B） 试用版"
+		},
+		{
+			"deployType" : 1,
+			"modelName" : "DeepSeek-R1 试用版"
+		},
+		{
+			"deployType" : 1,
+			"modelName" : "DeepSeek-V3 试用版"
+		}
+	]
+}
+
+[2026-05-23 23:33:54.919] info [assistantservice.cpp:391] [tid 4611]
+Set current NLP model:
+
+[2026-05-23 23:33:54.920] info [engineselector.cpp:164] [tid 4611]
 Get current deploy type: 1.
 
-[2026-05-22 23:40:26.410] info [engineselector.cpp:171] [tid 4418]
+[2026-05-23 23:33:54.920] info [engineselector.cpp:171] [tid 4611]
 Get current model name: 通义千问（Qwen-Plus） 试用版.
 
-[2026-05-22 23:40:26.410] info [prompttemplate.cpp:149] [tid 4418]
+[2026-05-23 23:33:54.920] info [prompttemplate.cpp:149] [tid 4611]
 System Language: zh_CN
 
-[2026-05-22 23:40:26.410] info [prompttemplate.cpp:41] [tid 4418]
+[2026-05-23 23:33:54.920] info [prompttemplate.cpp:41] [tid 4611]
 Prompt config file: /etc/kylin-ai/engines/ai-engines/freetrial/prompt.json, prompt file path:/etc/kylin-ai/engines/ai-engines/freetrial/qwen-plus/prompts
 
-[2026-05-22 23:40:26.411] info [prompttemplate.cpp:149] [tid 4418]
+[2026-05-23 23:33:54.921] info [prompttemplate.cpp:149] [tid 4611]
 System Language: zh_CN
 
-[2026-05-22 23:40:26.411] info [prompttemplate.cpp:41] [tid 4418]
+[2026-05-23 23:33:54.921] info [prompttemplate.cpp:41] [tid 4611]
 Prompt config file: /home/luo/.config/kylin-ai/engines/ai-engines/freetrial/prompt.json, prompt file path:/home/luo/.config/kylin-ai/engines/ai-engines/freetrial/prompts
 
-[2026-05-22 23:40:26.418] info [assistantservice.cpp:720] [tid 4418]
+[2026-05-23 23:33:54.926] info [assistantservice.cpp:720] [tid 4611]
 Aiassistant prompts json: [
 	{
 		"active" : true,
@@ -91,7 +132,7 @@ Aiassistant prompts json: [
 	}
 ].
 
-[2026-05-22 23:40:26.420] info [assistantservice.cpp:370] [tid 4418]
+[2026-05-23 23:33:54.927] info [assistantservice.cpp:370] [tid 4611]
 Configured NLP model list: {
 	"currentModel" : "",
 	"modelInfos" :
@@ -115,7 +156,7 @@ Configured NLP model list: {
 	]
 }
 
-[2026-05-22 23:40:26.421] info [assistantservice.cpp:370] [tid 4418]
+[2026-05-23 23:33:54.928] info [assistantservice.cpp:370] [tid 4611]
 Configured NLP model list: {
 	"currentModel" : "",
 	"modelInfos" :
@@ -139,163 +180,122 @@ Configured NLP model list: {
 	]
 }
 
-[2026-05-22 23:40:35.179] info [configserver.cpp:32] [tid 4417]
-Config new connection
-
-[2026-05-22 23:40:35.188] info [configservice.cpp:362] [tid 4417]
-GetFreeTrialModels: [
-	{
-		"apiUrl" : "",
-		"capability" : 0,
-		"debName" : "",
-		"deployType" : 1,
-		"is3rdModel" : false,
-		"modelName" : "通义千问（Qwen-Plus） 试用版",
-		"modelVersion" : "qwen-plus",
-		"vendor" : "阿里百炼"
-	},
-	{
-		"apiUrl" : "",
-		"capability" : 0,
-		"debName" : "",
-		"deployType" : 1,
-		"is3rdModel" : false,
-		"modelName" : "通义千问（QwQ-32B） 试用版",
-		"modelVersion" : "qwq-32b",
-		"vendor" : "阿里百炼"
-	},
-	{
-		"apiUrl" : "",
-		"capability" : 0,
-		"debName" : "",
-		"deployType" : 1,
-		"is3rdModel" : false,
-		"modelName" : "DeepSeek-R1 试用版",
-		"modelVersion" : "deepseek-r1",
-		"vendor" : "阿里百炼"
-	},
-	{
-		"apiUrl" : "",
-		"capability" : 0,
-		"debName" : "",
-		"deployType" : 1,
-		"is3rdModel" : false,
-		"modelName" : "DeepSeek-V3 试用版",
-		"modelVersion" : "deepseek-v3",
-		"vendor" : "阿里百炼"
-	}
-], Capability: 0.
-
-[2026-05-22 23:40:35.189] info [configservice.cpp:232] [tid 4417]
-GetCurrentModelName: 通义千问（Qwen-Plus） 试用版, Capability: 0, DeployType: 1.
-
-[2026-05-22 23:40:35.195] info [configservice.cpp:232] [tid 4417]
-GetCurrentModelName: 通义千问（Qwen-Plus） 试用版, Capability: 0, DeployType: 1.
-
-[2026-05-22 23:40:35.195] info [configservice.cpp:232] [tid 4417]
-GetCurrentModelName: , Capability: 1, DeployType: 1.
-
-[2026-05-22 23:40:35.195] info [configservice.cpp:232] [tid 4417]
-GetCurrentModelName: , Capability: 2, DeployType: 1.
-
-[2026-05-22 23:40:35.210] info [configservice.cpp:232] [tid 4417]
-GetCurrentModelName: , Capability: 0, DeployType: 0.
-
-[2026-05-22 23:40:35.214] info [configservice.cpp:232] [tid 4417]
-GetCurrentModelName: , Capability: 0, DeployType: 2.
-
-[2026-05-22 23:46:42.930] info [coretextembeddingserver.cpp:33] [tid 4423]
+[2026-05-23 23:37:58.041] info [coretextembeddingserver.cpp:33] [tid 4616]
 Text Embedding new connection
 
-[2026-05-22 23:46:42.933] info [coretextembeddingservice.cpp:138] [tid 4423]
-[onHandleInitEngine] service: The sessionId of the engine is 1211750392
+[2026-05-23 23:37:58.042] info [coretextembeddingservice.cpp:138] [tid 4616]
+[onHandleInitEngine] service: The sessionId of the engine is 1721582073
 
-[2026-05-22 23:46:42.933] info [coretextembeddingservice.cpp:139] [tid 4423]
+[2026-05-23 23:37:58.042] info [coretextembeddingservice.cpp:139] [tid 4616]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-05-22 23:46:50.826] info [coretextembeddingservice.cpp:147] [tid 4423]
+[2026-05-23 23:38:07.467] info [coretextembeddingservice.cpp:147] [tid 4616]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-05-22 23:46:52.101] info [coretextembeddingserver.cpp:33] [tid 4423]
+[2026-05-23 23:38:07.473] info [coretextembeddingserver.cpp:33] [tid 4616]
 Text Embedding new connection
 
-[2026-05-22 23:46:52.103] info [coretextembeddingservice.cpp:138] [tid 4423]
-[onHandleInitEngine] service: The sessionId of the engine is 1608085448
+[2026-05-23 23:38:07.478] info [coretextembeddingservice.cpp:138] [tid 4616]
+[onHandleInitEngine] service: The sessionId of the engine is 39791613
 
-[2026-05-22 23:46:52.103] info [coretextembeddingservice.cpp:139] [tid 4423]
+[2026-05-23 23:38:07.478] info [coretextembeddingservice.cpp:139] [tid 4616]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-05-22 23:46:52.117] info [coretextembeddingservice.cpp:147] [tid 4423]
+[2026-05-23 23:38:07.482] info [coretextembeddingservice.cpp:147] [tid 4616]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-05-22 23:46:52.403] info [coretextembeddingserver.cpp:33] [tid 4423]
+[2026-05-23 23:38:08.221] info [coretextembeddingserver.cpp:33] [tid 4616]
 Text Embedding new connection
 
-[2026-05-22 23:46:52.404] info [coretextembeddingservice.cpp:138] [tid 4423]
-[onHandleInitEngine] service: The sessionId of the engine is 1819924602
+[2026-05-23 23:38:08.221] info [coretextembeddingservice.cpp:138] [tid 4616]
+[onHandleInitEngine] service: The sessionId of the engine is 1688415645
 
-[2026-05-22 23:46:52.404] info [coretextembeddingservice.cpp:139] [tid 4423]
+[2026-05-23 23:38:08.221] info [coretextembeddingservice.cpp:139] [tid 4616]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-05-22 23:46:52.408] info [coretextembeddingservice.cpp:147] [tid 4423]
+[2026-05-23 23:38:08.227] info [coretextembeddingservice.cpp:147] [tid 4616]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-05-22 23:47:09.564] info [coretextembeddingserver.cpp:33] [tid 4423]
+[2026-05-23 23:38:08.729] info [coretextembeddingserver.cpp:33] [tid 4616]
 Text Embedding new connection
 
-[2026-05-22 23:47:09.564] info [coretextembeddingservice.cpp:138] [tid 4423]
-[onHandleInitEngine] service: The sessionId of the engine is 397626220
+[2026-05-23 23:38:08.730] info [coretextembeddingservice.cpp:138] [tid 4616]
+[onHandleInitEngine] service: The sessionId of the engine is 819080406
 
-[2026-05-22 23:47:09.564] info [coretextembeddingservice.cpp:139] [tid 4423]
+[2026-05-23 23:38:08.730] info [coretextembeddingservice.cpp:139] [tid 4616]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-05-22 23:47:09.566] info [coretextembeddingservice.cpp:147] [tid 4423]
+[2026-05-23 23:38:08.731] info [coretextembeddingservice.cpp:147] [tid 4616]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-05-22 23:47:09.960] info [coretextembeddingserver.cpp:33] [tid 4423]
+[2026-05-23 23:38:08.908] info [coretextembeddingserver.cpp:33] [tid 4616]
 Text Embedding new connection
 
-[2026-05-22 23:47:09.960] info [coretextembeddingservice.cpp:138] [tid 4423]
-[onHandleInitEngine] service: The sessionId of the engine is 88188818
+[2026-05-23 23:38:08.909] info [coretextembeddingservice.cpp:138] [tid 4616]
+[onHandleInitEngine] service: The sessionId of the engine is 1769847245
 
-[2026-05-22 23:47:09.960] info [coretextembeddingservice.cpp:139] [tid 4423]
+[2026-05-23 23:38:08.909] info [coretextembeddingservice.cpp:139] [tid 4616]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-05-22 23:47:09.974] info [coretextembeddingservice.cpp:147] [tid 4423]
+[2026-05-23 23:38:08.920] info [coretextembeddingservice.cpp:147] [tid 4616]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-05-22 23:47:10.404] info [coretextembeddingserver.cpp:33] [tid 4423]
+[2026-05-23 23:39:24.345] info [coretextembeddingserver.cpp:33] [tid 4616]
 Text Embedding new connection
 
-[2026-05-22 23:47:10.405] info [coretextembeddingservice.cpp:138] [tid 4423]
-[onHandleInitEngine] service: The sessionId of the engine is 2011009667
+[2026-05-23 23:39:24.348] info [coretextembeddingservice.cpp:138] [tid 4616]
+[onHandleInitEngine] service: The sessionId of the engine is 2053923564
 
-[2026-05-22 23:47:10.405] info [coretextembeddingservice.cpp:139] [tid 4423]
+[2026-05-23 23:39:24.348] info [coretextembeddingservice.cpp:139] [tid 4616]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-05-22 23:47:10.408] info [coretextembeddingservice.cpp:147] [tid 4423]
+[2026-05-23 23:39:24.350] info [coretextembeddingservice.cpp:147] [tid 4616]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-05-22 23:47:10.516] info [coretextembeddingserver.cpp:33] [tid 4423]
+[2026-05-23 23:39:24.834] info [coretextembeddingserver.cpp:33] [tid 4616]
 Text Embedding new connection
 
-[2026-05-22 23:47:10.517] info [coretextembeddingservice.cpp:138] [tid 4423]
-[onHandleInitEngine] service: The sessionId of the engine is 1442500383
+[2026-05-23 23:39:24.835] info [coretextembeddingservice.cpp:138] [tid 4616]
+[onHandleInitEngine] service: The sessionId of the engine is 1509793762
 
-[2026-05-22 23:47:10.517] info [coretextembeddingservice.cpp:139] [tid 4423]
+[2026-05-23 23:39:24.835] info [coretextembeddingservice.cpp:139] [tid 4616]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-05-22 23:47:10.519] info [coretextembeddingservice.cpp:147] [tid 4423]
+[2026-05-23 23:39:24.837] info [coretextembeddingservice.cpp:147] [tid 4616]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-05-22 23:47:12.774] info [coretextembeddingserver.cpp:33] [tid 4423]
+[2026-05-23 23:39:25.275] info [coretextembeddingserver.cpp:33] [tid 4616]
 Text Embedding new connection
 
-[2026-05-22 23:47:12.775] info [coretextembeddingservice.cpp:138] [tid 4423]
-[onHandleInitEngine] service: The sessionId of the engine is 1388637915
+[2026-05-23 23:39:25.276] info [coretextembeddingservice.cpp:138] [tid 4616]
+[onHandleInitEngine] service: The sessionId of the engine is 810454247
 
-[2026-05-22 23:47:12.775] info [coretextembeddingservice.cpp:139] [tid 4423]
+[2026-05-23 23:39:25.276] info [coretextembeddingservice.cpp:139] [tid 4616]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-05-22 23:47:12.776] info [coretextembeddingservice.cpp:147] [tid 4423]
+[2026-05-23 23:39:25.277] info [coretextembeddingservice.cpp:147] [tid 4616]
+[onHandleInitEngine] load text embedding model success.
+
+[2026-05-23 23:39:25.431] info [coretextembeddingserver.cpp:33] [tid 4616]
+Text Embedding new connection
+
+[2026-05-23 23:39:25.431] info [coretextembeddingservice.cpp:138] [tid 4616]
+[onHandleInitEngine] service: The sessionId of the engine is 2056345859
+
+[2026-05-23 23:39:25.431] info [coretextembeddingservice.cpp:139] [tid 4616]
+[onHandleInitEngine] start load text embedding model.
+
+[2026-05-23 23:39:25.433] info [coretextembeddingservice.cpp:147] [tid 4616]
+[onHandleInitEngine] load text embedding model success.
+
+[2026-05-23 23:39:27.378] info [coretextembeddingserver.cpp:33] [tid 4616]
+Text Embedding new connection
+
+[2026-05-23 23:39:27.378] info [coretextembeddingservice.cpp:138] [tid 4616]
+[onHandleInitEngine] service: The sessionId of the engine is 2102368989
+
+[2026-05-23 23:39:27.378] info [coretextembeddingservice.cpp:139] [tid 4616]
+[onHandleInitEngine] start load text embedding model.
+
+[2026-05-23 23:39:27.380] info [coretextembeddingservice.cpp:147] [tid 4616]
 [onHandleInitEngine] load text embedding model success.

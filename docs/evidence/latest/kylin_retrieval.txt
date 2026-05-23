@@ -1,4 +1,4 @@
-$ KYLIN_RETRIEVAL_HOME='docs/evidence/openkylin_20260522_234709/kylin_retrieval_home'; rm -rf "${KYLIN_RETRIEVAL_HOME}"; mkdir -p "${KYLIN_RETRIEVAL_HOME}"; MEMGUARD_HOME="${KYLIN_RETRIEVAL_HOME}" MEMGUARD_EMBEDDING_BACKEND=auto MEMGUARD_KYLIN_EMBEDDING_TIMEOUT=90 ".venv/bin/python" - <<'PY'
+$ KYLIN_RETRIEVAL_HOME='docs/evidence/openkylin_20260523_233923/kylin_retrieval_home'; rm -rf "${KYLIN_RETRIEVAL_HOME}"; mkdir -p "${KYLIN_RETRIEVAL_HOME}"; MEMGUARD_HOME="${KYLIN_RETRIEVAL_HOME}" MEMGUARD_EMBEDDING_BACKEND=auto MEMGUARD_KYLIN_EMBEDDING_TIMEOUT=90 ".venv/bin/python" - <<'PY'
 import json
 
 from memguard.service import MemGuardService
@@ -14,9 +14,9 @@ PY
 {
   "hits": [
     {
-      "memory_id": "mem_49f5946ed91a479d",
+      "memory_id": "mem_12cb24042c6345a3",
       "type": "knowledge",
-      "subtype": "workflow",
+      "subtype": "fact",
       "scope": "default",
       "tier": "long_term",
       "summary": "知识记忆：openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。",
@@ -26,16 +26,16 @@ PY
       "sensitivity_level": "none",
       "sensitivity_labels": "[]",
       "sensitivity_redacted": 0,
-      "version_id": "ver_8a4173b7bef34b76",
+      "version_id": "ver_0f9d7287faa04b2f",
       "deleted": 0,
-      "updated_at": "2026-05-22T15:47:13.830927+00:00",
+      "updated_at": "2026-05-23T15:39:28.615484+00:00",
       "rank": -1.3512476007677544e-06,
       "score": 0.7351,
       "match_source": "hybrid",
       "vector_backend": "kylin_sdk"
     },
     {
-      "memory_id": "mem_f82f3c5080534e71",
+      "memory_id": "mem_1b4e382724eb4c9b",
       "type": "knowledge",
       "subtype": "fact",
       "scope": "default",
@@ -47,9 +47,9 @@ PY
       "sensitivity_level": "none",
       "sensitivity_labels": "[]",
       "sensitivity_redacted": 0,
-      "version_id": "ver_c07f587e310d45ee",
+      "version_id": "ver_2c4fa26d22b34abc",
       "deleted": 0,
-      "updated_at": "2026-05-22T15:47:13.841372+00:00",
+      "updated_at": "2026-05-23T15:39:28.625616+00:00",
       "score": 0.3505,
       "match_source": "hybrid",
       "vector_backend": "kylin_sdk"
@@ -62,7 +62,19 @@ PY
       "name": "hash",
       "available": true,
       "dim": 128,
-      "fallback": false
+      "fallback": false,
+      "token_cache": {
+        "hits": 8,
+        "misses": 3,
+        "maxsize": 8192,
+        "currsize": 3
+      },
+      "vector_cache": {
+        "hits": 0,
+        "misses": 3,
+        "maxsize": 16384,
+        "currsize": 3
+      }
     },
     "kylin": {
       "name": "kylin_sdk",

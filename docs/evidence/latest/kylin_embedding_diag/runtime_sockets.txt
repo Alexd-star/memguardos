@@ -1,14 +1,14 @@
 $ ls -la '/tmp/.kylin-ai-runtime-unix/1000' 2>/dev/null || true; test -S '/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock' && echo 'core-textembedding socket: present' || echo 'core-textembedding socket: missing'
 
 总计 8
-drwxrwxrwx 2 luo luo 4096  5月22日 23:40 .
-drwxrwxrwx 3 luo luo 4096  5月22日 23:40 ..
-srwxrwxr-x 1 luo luo    0  5月22日 23:40 assistant.sock
-srwxrwxr-x 1 luo luo    0  5月22日 23:40 config.sock
-srwxrwxr-x 1 luo luo    0  5月22日 23:40 core-imageembedding.sock
-srwxrwxr-x 1 luo luo    0  5月22日 23:40 core-speech.sock
-srwxrwxr-x 1 luo luo    0  5月22日 23:40 core-textembedding.sock
-srwxrwxr-x 1 luo luo    0  5月22日 23:40 core-vision.sock
-srwxrwxr-x 1 luo luo    0  5月22日 23:40 genai-nlp.sock
-srwxrwxr-x 1 luo luo    0  5月22日 23:40 genai-vision.sock
+drwxrwxrwx 2 luo luo 4096  5月23日 23:33 .
+drwxrwxrwx 3 luo luo 4096  5月23日 23:33 ..
+srwxrwxr-x 1 luo luo    0  5月23日 23:33 assistant.sock
+srwxrwxr-x 1 luo luo    0  5月23日 23:33 config.sock
+srwxrwxr-x 1 luo luo    0  5月23日 23:33 core-imageembedding.sock
+srwxrwxr-x 1 luo luo    0  5月23日 23:33 core-speech.sock
+srwxrwxr-x 1 luo luo    0  5月23日 23:33 core-textembedding.sock
+srwxrwxr-x 1 luo luo    0  5月23日 23:33 core-vision.sock
+srwxrwxr-x 1 luo luo    0  5月23日 23:33 genai-nlp.sock
+srwxrwxr-x 1 luo luo    0  5月23日 23:33 genai-vision.sock
 core-textembedding socket: present

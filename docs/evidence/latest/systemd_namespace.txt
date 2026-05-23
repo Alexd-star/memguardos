@@ -21,27 +21,45 @@ CPUQuota=50%
 WantedBy=multi-user.target
 ● memguardd@demo-a.service - MemGuardOS namespaced agent memory service (demo-a)
      Loaded: loaded (/etc/systemd/system/memguardd@.service; disabled; preset: enabled)
-     Active: active (running) since Fri 2026-05-22 23:52:27 CST; 125ms ago
-   Main PID: 34355 (python3)
-      Tasks: 1 (limit: 6991)
-     Memory: 11.5M (max: 512.0M available: 500.4M peak: 11.5M)
-        CPU: 70ms
+     Active: active (running) since Sat 2026-05-23 23:39:10 CST; 6min ago
+   Main PID: 9604 (python3)
+      Tasks: 2 (limit: 6991)
+     Memory: 15.7M (max: 512.0M available: 496.2M peak: 17.7M)
+        CPU: 302ms
      CGroup: /system.slice/system-memguardd.slice/memguardd@demo-a.service
-             └─34355 /usr/bin/python3 -m memguard.daemon --interval 60 --namespace demo-a --socket /run/memguardos-demo-a/memguard.sock --socket-mode 660
+             └─9604 /usr/bin/python3 -m memguard.daemon --interval 60 --namespace demo-a --socket /run/memguardos-demo-a/memguard.sock --socket-mode 660
 
-5月 22 23:52:27 luo-pc systemd[1]: Started memguardd@demo-a.service - MemGuardOS namespaced agent memory service (demo-a).
+5月 23 23:39:11 luo-pc memguardd[9609]: {"detail": {"cgroup_v2": true, "namespace": "demo-a", "namespace_home": "/root/.memguardos/namespaces/demo-a", "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-a.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_started", "memory_id": null}
+5月 23 23:39:11 luo-pc python3[9604]: {"status": "ready", "python": "3.12.2", "namespace": "demo-a", "namespace_home": "/root/.memguardos/namespaces/demo-a", "cgroup_v2": true, "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-a.service"}
+5月 23 23:39:11 luo-pc memguardd[9617]: {"detail": {"auth_enabled": false, "mode": "0o660", "path": "/run/memguardos-demo-a/memguard.sock"}, "event_type": "api_socket_ready", "memory_id": null}
+5月 23 23:39:11 luo-pc memguardd[9618]: {"detail": {"cgroup_v2": true, "namespace": "demo-a", "namespace_home": "/root/.memguardos/namespaces/demo-a", "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-a.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 23 23:40:11 luo-pc memguardd[11597]: {"detail": {"cgroup_v2": true, "namespace": "demo-a", "namespace_home": "/root/.memguardos/namespaces/demo-a", "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-a.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 23 23:41:11 luo-pc memguardd[16949]: {"detail": {"cgroup_v2": true, "namespace": "demo-a", "namespace_home": "/root/.memguardos/namespaces/demo-a", "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-a.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 23 23:42:11 luo-pc memguardd[24752]: {"detail": {"cgroup_v2": true, "namespace": "demo-a", "namespace_home": "/root/.memguardos/namespaces/demo-a", "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-a.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 23 23:43:11 luo-pc memguardd[30465]: {"detail": {"cgroup_v2": true, "namespace": "demo-a", "namespace_home": "/root/.memguardos/namespaces/demo-a", "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-a.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 23 23:44:11 luo-pc memguardd[34790]: {"detail": {"cgroup_v2": true, "namespace": "demo-a", "namespace_home": "/root/.memguardos/namespaces/demo-a", "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-a.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 23 23:45:11 luo-pc memguardd[39356]: {"detail": {"cgroup_v2": true, "namespace": "demo-a", "namespace_home": "/root/.memguardos/namespaces/demo-a", "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-a.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
 
 ● memguardd@demo-b.service - MemGuardOS namespaced agent memory service (demo-b)
      Loaded: loaded (/etc/systemd/system/memguardd@.service; disabled; preset: enabled)
-     Active: active (running) since Fri 2026-05-22 23:52:27 CST; 22ms ago
-   Main PID: 34356 (python3)
-      Tasks: 1 (limit: 6991)
-     Memory: 3.9M (max: 512.0M available: 508.0M peak: 3.9M)
-        CPU: 16ms
+     Active: active (running) since Sat 2026-05-23 23:39:10 CST; 6min ago
+   Main PID: 9605 (python3)
+      Tasks: 2 (limit: 6991)
+     Memory: 15.5M (max: 512.0M available: 496.4M peak: 17.5M)
+        CPU: 329ms
      CGroup: /system.slice/system-memguardd.slice/memguardd@demo-b.service
-             └─34356 /usr/bin/python3 -m memguard.daemon --interval 60 --namespace demo-b --socket /run/memguardos-demo-b/memguard.sock --socket-mode 660
+             └─9605 /usr/bin/python3 -m memguard.daemon --interval 60 --namespace demo-b --socket /run/memguardos-demo-b/memguard.sock --socket-mode 660
 
-5月 22 23:52:27 luo-pc systemd[1]: Started memguardd@demo-b.service - MemGuardOS namespaced agent memory service (demo-b).
+5月 23 23:39:10 luo-pc systemd[1]: Started memguardd@demo-b.service - MemGuardOS namespaced agent memory service (demo-b).
+5月 23 23:39:11 luo-pc memguardd[9622]: {"detail": {"cgroup_v2": true, "namespace": "demo-b", "namespace_home": "/root/.memguardos/namespaces/demo-b", "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-b.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_started", "memory_id": null}
+5月 23 23:39:11 luo-pc python3[9605]: {"status": "ready", "python": "3.12.2", "namespace": "demo-b", "namespace_home": "/root/.memguardos/namespaces/demo-b", "cgroup_v2": true, "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-b.service"}
+5月 23 23:39:11 luo-pc memguardd[9625]: {"detail": {"auth_enabled": false, "mode": "0o660", "path": "/run/memguardos-demo-b/memguard.sock"}, "event_type": "api_socket_ready", "memory_id": null}
+5月 23 23:39:11 luo-pc memguardd[9626]: {"detail": {"cgroup_v2": true, "namespace": "demo-b", "namespace_home": "/root/.memguardos/namespaces/demo-b", "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-b.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 23 23:41:11 luo-pc memguardd[16962]: {"detail": {"cgroup_v2": true, "namespace": "demo-b", "namespace_home": "/root/.memguardos/namespaces/demo-b", "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-b.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 23 23:42:11 luo-pc memguardd[24763]: {"detail": {"cgroup_v2": true, "namespace": "demo-b", "namespace_home": "/root/.memguardos/namespaces/demo-b", "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-b.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 23 23:43:11 luo-pc memguardd[30475]: {"detail": {"cgroup_v2": true, "namespace": "demo-b", "namespace_home": "/root/.memguardos/namespaces/demo-b", "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-b.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 23 23:44:11 luo-pc memguardd[34797]: {"detail": {"cgroup_v2": true, "namespace": "demo-b", "namespace_home": "/root/.memguardos/namespaces/demo-b", "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-b.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+5月 23 23:45:11 luo-pc memguardd[39367]: {"detail": {"cgroup_v2": true, "namespace": "demo-b", "namespace_home": "/root/.memguardos/namespaces/demo-b", "proc_cgroup": "0::/system.slice/system-memguardd.slice/memguardd@demo-b.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
 ControlGroup=/system.slice/system-memguardd.slice/memguardd@demo-a.service
 CPUQuotaPerSecUSec=500ms
 MemoryMax=536870912
@@ -58,12 +76,12 @@ MemoryMax=536870912
 {
   "namespace": "demo-a",
   "is_default": false,
-  "home": "/var/tmp/memguardos_evidence_20260522_234709",
-  "namespace_home": "/var/tmp/memguardos_evidence_20260522_234709/namespaces/demo-a",
-  "storage_root": "/var/tmp/memguardos_evidence_20260522_234709/namespaces/demo-a",
-  "store_path": "/var/tmp/memguardos_evidence_20260522_234709/namespaces/demo-a/memory.segment",
-  "db_path": "/var/tmp/memguardos_evidence_20260522_234709/namespaces/demo-a/memguard.sqlite3",
-  "custom_patterns_path": "/var/tmp/memguardos_evidence_20260522_234709/namespaces/demo-a/sensitive_patterns.json",
+  "home": "/var/tmp/memguardos_evidence_20260523_233923",
+  "namespace_home": "/var/tmp/memguardos_evidence_20260523_233923/namespaces/demo-a",
+  "storage_root": "/var/tmp/memguardos_evidence_20260523_233923/namespaces/demo-a",
+  "store_path": "/var/tmp/memguardos_evidence_20260523_233923/namespaces/demo-a/memory.segment",
+  "db_path": "/var/tmp/memguardos_evidence_20260523_233923/namespaces/demo-a/memguard.sqlite3",
+  "custom_patterns_path": "/var/tmp/memguardos_evidence_20260523_233923/namespaces/demo-a/sensitive_patterns.json",
   "store_exists": true,
   "db_exists": true,
   "custom_patterns_exists": false,
@@ -77,12 +95,12 @@ MemoryMax=536870912
 {
   "namespace": "demo-b",
   "is_default": false,
-  "home": "/var/tmp/memguardos_evidence_20260522_234709",
-  "namespace_home": "/var/tmp/memguardos_evidence_20260522_234709/namespaces/demo-b",
-  "storage_root": "/var/tmp/memguardos_evidence_20260522_234709/namespaces/demo-b",
-  "store_path": "/var/tmp/memguardos_evidence_20260522_234709/namespaces/demo-b/memory.segment",
-  "db_path": "/var/tmp/memguardos_evidence_20260522_234709/namespaces/demo-b/memguard.sqlite3",
-  "custom_patterns_path": "/var/tmp/memguardos_evidence_20260522_234709/namespaces/demo-b/sensitive_patterns.json",
+  "home": "/var/tmp/memguardos_evidence_20260523_233923",
+  "namespace_home": "/var/tmp/memguardos_evidence_20260523_233923/namespaces/demo-b",
+  "storage_root": "/var/tmp/memguardos_evidence_20260523_233923/namespaces/demo-b",
+  "store_path": "/var/tmp/memguardos_evidence_20260523_233923/namespaces/demo-b/memory.segment",
+  "db_path": "/var/tmp/memguardos_evidence_20260523_233923/namespaces/demo-b/memguard.sqlite3",
+  "custom_patterns_path": "/var/tmp/memguardos_evidence_20260523_233923/namespaces/demo-b/sensitive_patterns.json",
   "store_exists": true,
   "db_exists": true,
   "custom_patterns_exists": false,

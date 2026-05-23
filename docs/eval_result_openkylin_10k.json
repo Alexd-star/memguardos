@@ -1,16 +1,22 @@
 {
   "dataset": {
-    "seed_memories": 30,
-    "retrieval_cases": 25,
+    "seed_memories": 45,
+    "retrieval_cases": 40,
     "sensitive_cases": 25,
-    "forgetting_cases": 17,
+    "forgetting_cases": 20,
     "conflict_cases": 10,
     "graph_cases": 13,
     "quality_cases": 6
   },
   "preference_and_knowledge_extraction": {
     "type_accuracy": 1.0,
-    "subtype_accuracy": 1.0
+    "subtype_accuracy": 1.0,
+    "preference_precision": 1.0,
+    "preference_true_positive": 10,
+    "preference_false_positive": 0,
+    "knowledge_precision": 1.0,
+    "knowledge_true_positive": 33,
+    "knowledge_false_positive": 0
   },
   "data_quality": {
     "decision_accuracy": 1.0,
@@ -20,11 +26,11 @@
   "retrieval": {
     "mean_recall_at_5": 1.0,
     "cross_language_recall_at_5": 1.0,
-    "p50_latency_ms": 21.022,
-    "p95_latency_ms": 22.994
+    "p50_latency_ms": 12.819,
+    "p95_latency_ms": 14.036
   },
   "baseline_comparison": {
-    "text_only_recall_at_5": 0.78,
+    "text_only_recall_at_5": 0.8375,
     "hybrid_no_graph_recall_at_5": 1.0,
     "full_memguardos_recall_at_5": 1.0
   },
@@ -46,30 +52,76 @@
   },
   "memory_tiers": {
     "flow_ok": true,
-    "working_session_long_term_supported": true
+    "working_session_long_term_supported": true,
+    "policy_report_ok": true,
+    "eviction_candidates_before": 1,
+    "stale_or_deleted_after": 3
   },
   "latency_load": {
     "memory_count": 10000,
     "query_count": 150,
-    "p50_latency_ms": 283.759,
-    "p95_latency_ms": 343.328,
-    "p99_latency_ms": 432.702,
-    "segment_kb": 28225.447,
-    "sqlite_kb": 39108.0,
-    "total_store_kb": 71537.783
+    "p50_latency_ms": 81.771,
+    "p95_latency_ms": 89.639,
+    "p99_latency_ms": 104.343,
+    "segment_kb": 28205.916,
+    "sqlite_kb": 43320.0,
+    "total_store_kb": 75706.111
+  },
+  "concurrent_search": {
+    "memory_count": 1000,
+    "query_count": 150,
+    "workers": 6,
+    "read_path_audit": "disabled_for_latency_measurement",
+    "errors": [],
+    "ok": true,
+    "p50_latency_ms": 353.366,
+    "p95_latency_ms": 388.536,
+    "p99_latency_ms": 442.886,
+    "audit_chain_ok": true,
+    "audit_events_checked": 1000,
+    "policy_eviction_candidates": 5
+  },
+  "agent_batch_search": {
+    "ok": true,
+    "query_count": 4,
+    "workers": 4,
+    "hits_per_query": [
+      4,
+      2,
+      3,
+      3
+    ],
+    "total_latency_ms": 43.784,
+    "p95_latency_ms": 11.848,
+    "audit_chain_ok": true,
+    "read_path_audit": "single_batch_audit_event"
+  },
+  "rag_context_budget": {
+    "token_budget": 280,
+    "estimated_context_tokens": 174,
+    "estimated_package_tokens": 636,
+    "context_chars": 442,
+    "truncated": true,
+    "over_token_budget": false,
+    "redaction_enforced": true,
+    "memory_count": 3,
+    "policy": "仅使用已返回且已脱敏的记忆作为 OS Agent 生成上下文；不得输出被精准遗忘或被敏感策略阻断的明文。"
   },
   "resource_usage": {
-    "eval_wall_time_ms": 262494.882,
-    "eval_cpu_time_ms": 175773.107,
-    "tracemalloc_current_kb": 211.499,
-    "tracemalloc_peak_kb": 15480.809,
-    "process_rss_kb": 66116.0
+    "eval_wall_time_ms": 254588.102,
+    "eval_cpu_time_ms": 162972.889,
+    "tracemalloc_current_kb": 9485.146,
+    "tracemalloc_peak_kb": 23434.663,
+    "process_rss_kb": 112072.0,
+    "baseline_rss_kb": 28300.0,
+    "rss_delta_kb": 83772.0,
+    "baseline_method": "current process RSS sampled before MemGuardService initialization"
   },
   "storage_footprint": {
-    "main_segment_kb": 82.857,
-    "main_sqlite_kb": 4.0,
-    "total_eval_store_kb": 3972.276,
-    "bytes_per_live_memory": 88426.326
+    "main_segment_kb": 118.227,
+    "main_sqlite_kb": 260.0,
+    "total_eval_store_kb": 4561.435,
+    "bytes_per_live_memory": 76572.279
   },
-  "memory_count": 46
+  "memory_count": 61
 }
