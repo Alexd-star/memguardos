@@ -34,13 +34,13 @@ EXCLUDED_PATTERNS = [
 
 ROLE_DESCRIPTIONS = {
     "作品主体/核心代码": "memguard/",
-    "作品主体/脚本": "runtime, deployment, validation, evidence, and OS integration scripts",
+    "作品主体/脚本": "运行、部署、验证、证据采集和操作系统集成脚本",
     "作品主体/原生增强": "native/",
     "作品主体/测试": "tests/",
     "作品主体/数据与评测样例": "data/",
-    "正式中文文档": "README.md and selected docs/ files for competition review",
+    "正式中文文档": "README.md 以及面向竞赛评审的精选 docs/ 文档",
     "证据包": "docs/evidence/",
-    "过程与工程支撑文档": "requirement tracking, changelog, contribution, CI, templates, and self-check reports",
+    "过程与工程支撑文档": "需求追踪、变更日志、贡献指南、CI、模板和自检报告",
     "GitHub工程化支撑": ".github/, .devcontainer/, CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, CODE_OF_CONDUCT.md, requirements-dev.txt, .dockerignore, .gitattributes, .gitignore",
     "开发环境支撑": "Dockerfile",
     "项目配置": "pyproject.toml, LICENSE",
