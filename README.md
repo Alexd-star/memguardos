@@ -250,8 +250,11 @@ memguardos/
 正式竞赛提交包由完整工程仓库生成：
 
 ```bash
+python scripts/release_preflight.py
 python scripts/package_submission.py
 ```
+
+`release_preflight.py` 会顺序执行编译检查、ruff、单元测试、文档链接检查、Web 控制台 smoke、竞赛就绪自检，并在未指定 `--skip-package` 时生成提交包。它属于工程自检工具，不会放入正式竞赛提交包主体。
 
 生成结果包括：
 

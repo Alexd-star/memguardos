@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-05-24T18:04:34.422328+00:00",
+  "generated_at": "2026-05-24T18:10:33.013526+00:00",
   "root": "D:\\Luo_docs\\竞赛\\研创赛\\memguardos\\docs\\evidence\\latest",
   "file_count": 64,
-  "total_bytes": 446040,
+  "total_bytes": 446107,
   "files": [
     {
       "path": "agent_batch_search.txt",
@@ -222,7 +222,7 @@
     {
       "path": "pytest.txt",
       "bytes": 100,
-      "sha256": "354070301faa23d655be342c8ca70f3673cc2d51a68396bfbd4e17b8bb78981b"
+      "sha256": "a070bb01bcdd4c2c31ce3e137e6f39b9cd5dcc6c483a20dfa77dfb4ba8f49f1e"
     },
     {
       "path": "quality_report.txt",
@@ -321,8 +321,8 @@
     },
     {
       "path": "web_dashboard.txt",
-      "bytes": 311,
-      "sha256": "3c8ec86c927c9a9709f8b7c0782791cb2d1cfe33c5baa425920dfb01d46da0de"
+      "bytes": 378,
+      "sha256": "eb76267143ff97343bbfe5b514c02c74bcf132d0eb55b3d21372c3ad5d2ea216"
     }
   ]
 }

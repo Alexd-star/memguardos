@@ -17,6 +17,7 @@ def test_competition_package_keeps_formal_and_process_materials_separate():
     ]
     process_paths = [
         "scripts/package_submission.py",
+        "scripts/release_preflight.py",
         "scripts/check_competition_ready.py",
         "scripts/check_docs_links.py",
         "docs/赛题要求逐句符合性核查.md",

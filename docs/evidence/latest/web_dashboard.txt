@@ -1,4 +1,4 @@
-MemGuardOS dashboard listening on http://127.0.0.1:46231
+MemGuardOS dashboard listening on http://127.0.0.1:47085
 {
   "page_ok": true,
   "diagnostics_tab_ok": true,
@@ -9,5 +9,7 @@ MemGuardOS dashboard listening on http://127.0.0.1:46231
   "audit_ok": true,
   "retrieval_ok": true,
   "policy_ok": true,
-  "url": "http://127.0.0.1:46231"
+  "invalid_json_rejected": true,
+  "large_payload_rejected": true,
+  "url": "http://127.0.0.1:47085"
 }

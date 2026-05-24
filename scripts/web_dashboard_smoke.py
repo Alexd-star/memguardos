@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Thread
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 import json
 import socket
@@ -29,6 +30,8 @@ def main() -> int:
         audit = _http_get_json(base + "/api/verify-audit")
         retrieval = _http_get_json(base + "/api/retrieval-status")
         policy = _http_get_json(base + "/api/memory-policy")
+        invalid_json_status, invalid_json = _http_post_raw(base + "/api/ingest", b"{", "application/json")
+        large_status, large_body = _http_post_raw(base + "/api/ingest", b"x" * 262145, "application/json")
         result = {
             "page_ok": "MemGuardOS 控制台" in page,
             "diagnostics_tab_ok": "系统诊断" in page,
@@ -39,6 +42,8 @@ def main() -> int:
             "audit_ok": audit.get("ok") is True,
             "retrieval_ok": retrieval.get("ok") is True,
             "policy_ok": policy.get("ok") is True,
+            "invalid_json_rejected": invalid_json_status == 400 and invalid_json.get("error") == "invalid_json",
+            "large_payload_rejected": large_status == 413 and large_body.get("error") == "payload_too_large",
             "url": base,
         }
         print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -51,6 +56,8 @@ def main() -> int:
             and result["audit_ok"]
             and result["retrieval_ok"]
             and result["policy_ok"]
+            and result["invalid_json_rejected"]
+            and result["large_payload_rejected"]
         )
         return 0 if ok else 2
 
@@ -90,6 +97,20 @@ def _http_post(url: str, payload: dict) -> dict:
     )
     with urlopen(request, timeout=3) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def _http_post_raw(url: str, payload: bytes, content_type: str) -> tuple[int, dict]:
+    request = Request(
+        url,
+        data=payload,
+        headers={"Content-Type": content_type},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=3) as response:
+            return int(response.status), json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        return int(exc.code), json.loads(exc.read().decode("utf-8"))
 
 
 if __name__ == "__main__":

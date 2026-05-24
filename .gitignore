@@ -13,3 +13,4 @@ dist/
 local_notes/
 docs/evidence/openkylin_*/
 docs/evidence/kylin_embedding_diag_*/
+docs/release_preflight.json

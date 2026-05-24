@@ -1014,8 +1014,16 @@ def test_local_api_handler_and_unix_socket(tmp_path):
             client.connect(str(socket_path))
             client.sendall(json.dumps({"command": "health"}).encode("utf-8") + b"\n")
             response = client.recv(4096).decode("utf-8")
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+            client.settimeout(3)
+            client.connect(str(socket_path))
+            client.sendall(b'{"command":"health","padding":"' + (b"x" * (1024 * 1024 + 1)) + b'"}\n')
+            oversized_response = client.recv(4096).decode("utf-8")
         stop["value"] = True
         thread.join(timeout=2.0)
         assert json.loads(response)["ok"] is True
+        oversized = json.loads(oversized_response)
+        assert oversized["ok"] is False
+        assert oversized["error"] == "payload_too_large"
     finally:
         service.close()

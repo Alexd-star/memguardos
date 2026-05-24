@@ -41,8 +41,14 @@ jobs:
       - name: Docs link check
         run: python scripts/check_docs_links.py
 
+      - name: Web dashboard smoke
+        run: python scripts/web_dashboard_smoke.py
+
       - name: Evaluation smoke
         run: python -m memguard.eval.run_eval --latency-size 100 --latency-queries 100 --output docs/eval_result_ci.json --markdown docs/eval_report_ci.md
 
       - name: Competition readiness smoke
         run: python scripts/check_competition_ready.py --eval docs/eval_result_ci.json --allow-missing-openkylin
+
+      - name: Submission package smoke
+        run: python scripts/package_submission.py
