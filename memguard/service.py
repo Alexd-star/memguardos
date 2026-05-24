@@ -956,7 +956,7 @@ class MemGuardService:
     @staticmethod
     def _classify_memory(text: str) -> str:
         lowered = text.lower()
-        preference_markers = ["以后", "偏好", "喜欢", "不要", "请总是", "请先", "请优先", "prefer", "style", "答辩材料"]
+        preference_markers = ["以后", "偏好", "喜欢", "不要", "请总是", "请先", "请优先", "prefer", "style", "输出口径"]
         security_markers = ["安全策略", "不要保存", "脱敏", "secret", "password", "api key", "私钥", "密钥", "访问令牌"]
         if "tool result:" in lowered:
             return "knowledge"
@@ -984,7 +984,7 @@ class MemGuardService:
         if memory_type == "preference":
             if any(marker in lowered for marker in ["linux", "rg", "grep", "pytest", "tool", "工具"]):
                 return "tool_preference"
-            if any(marker in lowered for marker in ["简洁", "详细", "中文", "英文", "style", "回答", "最短", "风险提醒", "答辩", "材料", "证据边界"]):
+            if any(marker in lowered for marker in ["简洁", "详细", "中文", "英文", "style", "回答", "最短", "风险提醒", "口径", "材料", "证据边界"]):
                 return "output_style"
             if any(marker in lowered for marker in ["命令"]):
                 return "tool_preference"

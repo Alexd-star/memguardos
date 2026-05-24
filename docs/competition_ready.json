@@ -11,14 +11,14 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 2028",
+      "detail": "中文字符数 2056",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/项目介绍总览.md",
       "ok": true,
-      "detail": "中文字符数 5386",
+      "detail": "中文字符数 5412",
       "severity": "P0"
     },
     {
@@ -39,7 +39,7 @@
       "category": "中文文档",
       "name": "docs/部署手册.md",
       "ok": true,
-      "detail": "中文字符数 1119",
+      "detail": "中文字符数 1141",
       "severity": "P0"
     },
     {
@@ -74,7 +74,7 @@
       "category": "中文文档",
       "name": "docs/评委证据包索引.md",
       "ok": true,
-      "detail": "中文字符数 1613",
+      "detail": "中文字符数 1645",
       "severity": "P0"
     },
     {
@@ -88,14 +88,14 @@
       "category": "中文文档",
       "name": "docs/操作系统机制说明.md",
       "ok": true,
-      "detail": "中文字符数 1491",
+      "detail": "中文字符数 1570",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/Peony与UKUI桌面集成实现说明.md",
       "ok": true,
-      "detail": "中文字符数 2023",
+      "detail": "中文字符数 2247",
       "severity": "P0"
     },
     {
@@ -109,7 +109,7 @@
       "category": "中文文档",
       "name": "docs/答辩提纲.md",
       "ok": true,
-      "detail": "中文字符数 1222",
+      "detail": "中文字符数 1252",
       "severity": "P0"
     },
     {
@@ -536,14 +536,14 @@
       "category": "openKylin证据",
       "name": "manifest 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 61 个证据文件",
+      "detail": "覆盖 64 个证据文件",
       "severity": "P0"
     },
     {
       "category": "openKylin证据",
       "name": "SHA256SUMS 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 61 个证据文件",
+      "detail": "覆盖 64 个证据文件",
       "severity": "P0"
     },
     {

@@ -108,7 +108,7 @@ class HybridMemoryExtractor:
         elif memory_type == "sensitive_policy":
             subtype = "security_policy"
         elif memory_type == "preference":
-            if "evidence_boundary_intent" in signals or "答辩" in lowered or "口径" in lowered:
+            if "evidence_boundary_intent" in signals or "口径" in lowered:
                 subtype = "output_style"
             elif "style_intent" in signals and any(marker in lowered for marker in ["最短", "简洁", "concise", "risk", "风险提醒", "answer.style"]):
                 subtype = "output_style"
@@ -205,7 +205,7 @@ class HybridMemoryExtractor:
             signals.append("preference_intent")
         if any(marker in lowered for marker in ["rg", "grep", "pytest", "tool", "工具", "命令", "shell"]):
             signals.append("tool_preference_intent")
-        if any(marker in lowered for marker in ["简洁", "详细", "中文", "英文", "回答", "最短", "风险提醒", "证据边界", "答辩"]):
+        if any(marker in lowered for marker in ["简洁", "详细", "中文", "英文", "回答", "最短", "风险提醒", "证据边界", "口径", "材料"]):
             signals.append("style_intent")
         if any(marker in lowered for marker in ["安全策略", "不要保存", "脱敏", "访问令牌"]):
             signals.append("security_policy_intent")

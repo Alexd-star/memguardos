@@ -1,0 +1,62 @@
+# MemGuardOS UKUI visible-plugin verification
+2026-05-24T19:28:37+08:00
+XDG_CURRENT_DESKTOP=
+DISPLAY=
+
+## native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so
+-rwxrwxr-x 1 luo luo 48112  5月24日 19:28 native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so
+native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, BuildID[sha1]=cb14eab00490a6a7c8ae501c5f443edd5955a596, not stripped
+	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007f7a10652000)
+	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007f7a0ff7f000)
+	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007f7a0fa2b000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f7a0f58e000)
+kDescriptionx<Send selected files to MemGuardOS as OS-agent memory events.dKeys
+memguardos-peony-menu-plugindNamex
+MemGuardOS Peony Menu Plugingversione3.2.2
+
+## native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so
+-rwxrwxr-x 1 luo luo 64992  5月24日 19:28 native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so
+native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so: ELF 64-bit LSB shared object, x86-64, version 1 (GNU/Linux), dynamically linked, BuildID[sha1]=aca2c9dbd0f00015fc03aa07d2142646b37027fc, not stripped
+	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007f6d61f20000)
+	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007f6d6184d000)
+	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007f6d612f9000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f6d60e5c000)
+kDescriptionxEUKUI Control Center entry for MemGuardOS local agent memory security.dKeys
+memguardos-memory-securitydNamex
+MemGuardOS Memory Securitygversione3.2.2
+
+## /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
+-rwxr-xr-x 1 root root 48112  5月24日 19:28 /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
+/usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, BuildID[sha1]=cb14eab00490a6a7c8ae501c5f443edd5955a596, not stripped
+	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007f02cb33c000)
+	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007f02cac69000)
+	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007f02ca715000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f02ca278000)
+kDescriptionx<Send selected files to MemGuardOS as OS-agent memory events.dKeys
+memguardos-peony-menu-plugindNamex
+MemGuardOS Peony Menu Plugingversione3.2.2
+
+## /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
+-rwxr-xr-x 1 root root 64992  5月24日 19:28 /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
+/usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so: ELF 64-bit LSB shared object, x86-64, version 1 (GNU/Linux), dynamically linked, BuildID[sha1]=aca2c9dbd0f00015fc03aa07d2142646b37027fc, not stripped
+	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007fe413909000)
+	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007fe413236000)
+	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007fe412ce2000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fe412845000)
+kDescriptionxEUKUI Control Center entry for MemGuardOS local agent memory security.dKeys
+memguardos-memory-securitydNamex
+MemGuardOS Memory Securitygversione3.2.2
+
+## runtime processes
+45485 /usr/bin/peony-intelligent-data-management-service
+57535 /usr/bin/peony-qt-desktop -w -d
+57599 peony /home/luo/桌面
+
+## manual visible checks
+1. Run: peony -q 2>/dev/null || killall peony
+2. Open Peony file manager and right-click a local file.
+3. Confirm the menu item "发送到 MemGuardOS 记忆安全扫描" is visible.
+4. Click the menu item and confirm notify-send shows a MemGuardOS message.
+5. Open UKUI control center, security category, and confirm "MemGuardOS 记忆安全" is visible.
+6. Click "运行环境检查", "校验审计链", "检查端侧向量能力", and "导出诊断报告"; confirm command output appears.
+7. Click "打开本地控制台"; confirm http://127.0.0.1:8765 opens.

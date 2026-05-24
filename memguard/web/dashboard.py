@@ -15,7 +15,7 @@ def run_dashboard(
     port: int = 8765,
     auth_token: str = "",
 ) -> None:
-    """Run a dependency-free local dashboard for demos and review."""
+    """Run a dependency-free local dashboard for local operation and inspection."""
 
     class Handler(_DashboardHandler):
         store_path = service.store.path

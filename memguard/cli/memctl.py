@@ -144,7 +144,12 @@ def build_parser() -> argparse.ArgumentParser:
     audit.add_argument("--type", dest="event_type")
     sub.add_parser("quality-report", help="Show recent input quality validation audit events")
 
-    web = sub.add_parser("web", help="Run a localhost Web dashboard for review and demos")
+    diagnostics = sub.add_parser("diagnostics", help="Export local operational diagnostics")
+    diagnostics.add_argument("--probe-sdk", action="store_true", help="Run a real Kylin embedding SDK probe in the diagnostics report")
+    diagnostics.add_argument("--probe-timeout", type=float, default=90.0, help="Timeout in seconds for the optional SDK probe")
+    diagnostics.add_argument("--audit-limit", type=int, default=20, help="Number of recent audit events to include")
+
+    web = sub.add_parser("web", help="Run a localhost Web dashboard for local operation and inspection")
     web.add_argument("--host", default="127.0.0.1")
     web.add_argument("--port", type=int, default=8765)
     web.add_argument("--auth-token-file", default="", help="Optional bearer token file for dashboard API calls")
@@ -416,6 +421,27 @@ def main(argv: list[str] | None = None) -> int:
             ingests = service.audit(limit=20, event_type="ingest")
             print(json.dumps({"quality_reject": events, "recent_ingest_quality": ingests}, ensure_ascii=False, indent=2))
             return 0
+
+        if args.command == "diagnostics":
+            namespace = service.namespace_status()
+            retrieval = service.retrieval_status()
+            memory_policy = service.memory_policy_status()
+            sdk = kylin_sdk_status(probe_embedding=args.probe_sdk, probe_timeout=args.probe_timeout)
+            audit_chain = service.verify_audit()
+            payload = {
+                "ok": bool(audit_chain.get("ok")),
+                "namespace": service.namespace,
+                "doctor": doctor_report(namespace=service.namespace),
+                "runtime_status": cgroup_status(),
+                "namespace_status": namespace,
+                "retrieval_status": retrieval,
+                "memory_policy": memory_policy,
+                "kylin_sdk": sdk,
+                "audit_chain": audit_chain,
+                "recent_audit": service.audit(limit=args.audit_limit),
+            }
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+            return 0 if payload["ok"] else 2
 
         if args.command == "web":
             token = Path(args.auth_token_file).read_text(encoding="utf-8").strip() if args.auth_token_file else ""

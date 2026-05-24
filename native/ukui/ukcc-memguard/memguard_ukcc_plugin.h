@@ -25,4 +25,5 @@ private:
     QWidget *page_ = nullptr;
     QTextEdit *output_ = nullptr;
     void runMemctl(const QStringList &args);
+    void openDashboard();
 };

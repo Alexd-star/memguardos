@@ -6,7 +6,7 @@
 
 日期：2026-05-18 至 2026-05-23
 
-说明：本页记录已经完成的 openKylin 证据。基础证据包采集时间为 `20260523_233923`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、可解释语义抽取、本地 Web 控制台、Kylin embedding 实际检索重排、Kylin 向量数据库探针、BPF JSON 策略生成、BPF LSM 安全测试文件强制拒绝、Peony/UKUI 原生插件构建、UKUI 插件可见性核查和 10k 规模评测。`2026-05-24` 已补充 Peony 右键菜单、UKUI 控制中心桌面可见验证证据，以及 Debian 安装包构建和离线解包 smoke 证据。
+说明：本页记录已经完成的 openKylin 证据。基础证据包采集时间为 `20260523_233923`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、可解释语义抽取、本地 Web 控制台、Kylin embedding 实际检索重排、Kylin 向量数据库探针、BPF JSON 策略生成、BPF LSM 安全测试文件强制拒绝、Peony/UKUI 原生插件构建、UKUI 插件可见性核查和 10k 规模评测。`2026-05-24` 已补充 Peony 右键菜单、UKUI 控制中心桌面可见验证证据、Debian 安装包构建、离线解包 smoke 证据、企业化控制中心面板、默认演示库审计链重建验证和诊断报告证据。
 
 环境：
 
@@ -42,7 +42,7 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 
 最新结果：
 
-- 单元测试：`50 passed`
+- 单元测试：`51 passed`
 - 负载评测：1000 条记忆，120 次检索请求
 - 最新 1k 负载 P95：34.816 ms
 - 5k 负载 P95：142.534 ms
@@ -60,6 +60,7 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 - BPF LSM 强制拦截已验证：访问 `/tmp/memguardos_lsm_secret` 返回 `Permission denied`，证据为 `enforcement_result=denied`
 - BPF LSM JSON 策略生成已验证：`bpf_lsm_policy.txt` 记录从 JSON denylist 生成可审查静态 header
 - Peony/UKUI 原生插件已构建：Peony 右键菜单插件和 UKUI 控制中心插件均构建出 `.so`；只读 `/usr` 场景已通过 bind mount 演示安装处理，Peony 右键菜单项和 UKUI 控制中心入口均已在桌面可见验证
+- 默认用户演示库已归档旧历史数据并重建：`default_audit_after_reset.txt` 显示当前默认库 `verify-audit` 为 `ok=true`，避免最终 UI 演示时被旧审计链分叉数据干扰
 - 可解释语义抽取已验证：`semantic_extraction.txt` 记录 `explain-extraction`、抽取信号、类型/子类型和写入审计
 - 本地 Web 控制台已验证：`web_dashboard.txt` 记录页面加载、写入、检索和抽取解释 smoke 通过
 - SDK 状态：embedding 模型信息显示 768 维端侧文本模型，Python/C++ 探针均可返回 768 维向量；实际检索可使用 `kylin_sdk` 作为可选重排后端；vector SDK 库和服务可用
@@ -220,7 +221,9 @@ bash scripts/install_ukui_plugins.sh --no-build
 
 - Peony 右键菜单插件构建产物：`native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so`。
 - UKUI 控制中心插件构建产物：`native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so`。
-- openKylin ostree/overlay 只读 `/usr` 场景已通过 bind mount 演示安装处理；Peony 右键菜单项“发送到 MemGuardOS 记忆安全扫描”已在桌面右键菜单中可见验证，UKUI 控制中心入口“MemGuardOS 记忆安全”以及 `运行 doctor`、`验证审计链`、`检查 Kylin SDK` 三个按钮已在设置界面中可见验证。
+- openKylin ostree/overlay 只读 `/usr` 场景已通过 bind mount 演示安装处理；Peony 右键菜单项“发送到 MemGuardOS 记忆安全扫描”已在桌面右键菜单中可见验证，UKUI 控制中心入口“MemGuardOS 记忆安全”已在设置界面中可见验证。当前源码已将控制中心升级为本机运维面板，提供运行环境检查、审计链校验、端侧向量能力检查、诊断报告和本地控制台入口。
+- `ukui_enterprise_panel.txt` 记录新控制中心插件 `.so` 已重新构建并安装到系统插件目录，字符串核查包含【运行环境检查】、【校验审计链】、【检查端侧向量能力】、【导出诊断报告】和【打开本地控制台】。
+- `diagnostics_probe_after_reset.txt` 记录默认用户库重建后的诊断报告：`audit_chain.ok=true`，Kylin embedding 实际探针 `ok=true`、维度为 `768`。
 
 ## 10. 一键验证
 

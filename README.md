@@ -33,8 +33,8 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地单元测试 | 50 passed |
-| openKylin 单元测试证据 | 50 passed |
+| 本地单元测试 | 51 passed |
+| openKylin 单元测试证据 | 51 passed |
 | 本地 1k 负载 P95 | 17.991 ms |
 | openKylin 1k 负载 P95 | 34.816 ms |
 | openKylin 10k 负载 P95 | 89.639 ms |
@@ -279,8 +279,8 @@ dist/memguardos_full_repository_<时间戳>_manifest.json
 - Kylin embedding SDK：已完成真实向量探针和可选重排检索证据；默认主路径仍保留 FTS/hash/graph fallback。
 - 语义抽取：默认采用可解释、可复现的 deterministic semantic rules；显式配置 `MEMGUARD_EXTRACTOR_COMMAND` 后可接本地 NER/LLM JSON 增强器，增强器失败会自动回退。
 - BPF LSM：已在 openKylin 对安全测试文件完成强制拒绝验证；支持从 JSON 生成可审查静态 denylist；默认不拦截 `/etc/shadow`、SSH、sudo 或 PAM 链路。
-- UKUI/Peony：Peony 右键菜单插件已在 openKylin 桌面右键菜单中可见验证；UKUI 控制中心入口“MemGuardOS 记忆安全”及 `运行 doctor`、`验证审计链`、`检查 Kylin SDK` 按钮已可见验证。
-- Web 控制台：用于本地演示和评审操作，默认绑定 `127.0.0.1`，不作为公网 SaaS 管理台。
+- UKUI/Peony：Peony 右键菜单插件已在 openKylin 桌面右键菜单中可见验证；UKUI 控制中心入口“MemGuardOS 记忆安全”已升级为本机运维面板，包含运行环境检查、审计链校验、端侧向量能力检查、诊断报告和本地控制台入口。
+- Web 控制台：用于本地运维、调试和评审操作，默认绑定 `127.0.0.1`，不作为公网 SaaS 管理台。
 - 用户行为：支持 shell 行为、工具结果、OS 事件和 auditd 事件；不宣称全量桌面行为捕获。
 - 外部 LLM：默认不依赖外部 API；只有显式选择 provider 时才调用本地命令或兼容远程端点。
 

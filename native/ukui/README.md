@@ -3,9 +3,9 @@
 该目录提供两个可选 UKUI 原生插件原型：
 
 - `peony-memguard`：Peony 文件管理器右键菜单插件，把选中文件路径作为 `peony_context_menu` OS 事件发送给 `memctl ingest-os-event`，触发 MemGuardOS 的敏感路径识别与审计。
-- `ukcc-memguard`：UKUI 控制中心插件入口，展示 MemGuardOS 本地状态、审计链和 Kylin SDK 检查命令输出。
+- `ukcc-memguard`：UKUI 控制中心插件入口，提供运行环境检查、审计链校验、端侧向量能力检查、诊断报告和本地控制台入口。
 
-这两个插件需要 `libpeony-dev`、`libukcc-dev`、Qt5 开发包和 openKylin 插件安装能力。当前默认主路径仍是 CLI、daemon、Unix socket API 和本地 Web 控制台；插件属于冲击 openKylin 生态加分项的原生桌面增强。
+这两个插件需要 `libpeony-dev`、`libukcc-dev`、Qt5 开发包和 openKylin 插件安装能力。当前默认主路径仍是 CLI、daemon、Unix socket API 和本地 Web 控制台；插件属于面向 openKylin 桌面生态的原生增强。
 
 Peony 会检查 Qt 插件元数据中的 `version` 字段。openKylin 2.0 SP2 当前 `pkg-config --modversion peony` 返回 `3.2.2`，因此 `common.json` 中显式写入 `version: 3.2.2`，避免插件能被 `QPluginLoader` 单独加载、但被 Peony 插件管理器过滤。
 
@@ -37,6 +37,6 @@ openKylin ostree/overlay 环境可能把 `/usr` 挂载为只读。`scripts/insta
 
 - Peony 文件右键菜单可见【发送到 MemGuardOS 记忆安全扫描】。
 - UKUI 设置/控制中心可见【MemGuardOS 记忆安全】入口。
-- 控制中心页面可见【运行 doctor】、【验证审计链】、【检查 Kylin SDK】按钮。
+- 控制中心页面可见【运行环境检查】、【校验审计链】、【检查端侧向量能力】、【导出诊断报告】和【打开本地控制台】操作。
 
 详细实现、根因分析和证据索引见 `docs/Peony与UKUI桌面集成实现说明.md`。

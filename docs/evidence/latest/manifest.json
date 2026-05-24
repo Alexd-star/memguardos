@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-05-24T11:03:09.793455+00:00",
+  "generated_at": "2026-05-24T17:28:19.540455+00:00",
   "root": "D:\\Luo_docs\\竞赛\\研创赛\\memguardos\\docs\\evidence\\latest",
-  "file_count": 61,
-  "total_bytes": 357937,
+  "file_count": 64,
+  "total_bytes": 387507,
   "files": [
     {
       "path": "agent_batch_search.txt",
@@ -53,6 +53,16 @@
       "path": "deb_package.txt",
       "bytes": 3964,
       "sha256": "b1189bc064028db91576b5a7d7979d0f1319159a34f2b06c10917a5abd40a3a7"
+    },
+    {
+      "path": "default_audit_after_reset.txt",
+      "bytes": 116,
+      "sha256": "c0652fa0535b1ca56049d214acc7ec6a76bab4b598ae783faa70baeab8ab6c8f"
+    },
+    {
+      "path": "diagnostics_probe_after_reset.txt",
+      "bytes": 24891,
+      "sha256": "8892c1bf5a62c9ab712c4d8fc158d08956a889ee112219fba5add35e4c1cb5e2"
     },
     {
       "path": "doctor.txt",
@@ -211,8 +221,8 @@
     },
     {
       "path": "pytest.txt",
-      "bytes": 133,
-      "sha256": "881883b2c59a5eb856524e1a6bd4781ccf45117f6ae898c0e7ce3ca820b2ec05"
+      "bytes": 100,
+      "sha256": "907df250fe394ac27a67ef470a56bbc9b700438d24a0b4a0259f52e0dbf374b8"
     },
     {
       "path": "quality_report.txt",
@@ -221,13 +231,13 @@
     },
     {
       "path": "README.md",
-      "bytes": 3458,
-      "sha256": "ca8b572fdf7ac7fef9d8f513ca8831f5ea0bc1c9f7c67f573061fef4239ec732"
+      "bytes": 3798,
+      "sha256": "631bcdf2c521e1ab2fa341aa15766e7084d639912966bcadbe0da7fd48a8dfd7"
     },
     {
       "path": "sdk_embedding_probe.txt",
-      "bytes": 8089,
-      "sha256": "35d35cdafdd2631a1640fc0e36101fe1445d280ef5dc38b7a83d3aa86f4a5494"
+      "bytes": 7999,
+      "sha256": "0c961a7665811a697ac32c8876e9abaf1d24f96aca84e82195df71f906159410"
     },
     {
       "path": "sdk_status.txt",
@@ -258,6 +268,11 @@
       "path": "ukui_deep_plugins.txt",
       "bytes": 8852,
       "sha256": "a52a3e2758d3af039cd06121c044148553e0215ded68d3633bdfa0dac2639ced"
+    },
+    {
+      "path": "ukui_enterprise_panel.txt",
+      "bytes": 4346,
+      "sha256": "6d316e624d0ce001f8684df9bac98f616fb9b254b980c44d381e20653131aba0"
     },
     {
       "path": "ukui_notify.txt",

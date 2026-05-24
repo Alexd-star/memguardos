@@ -9,7 +9,7 @@ MemGuardOS 的默认主链路是 CLI、daemon、Unix socket API 和本地 Web �
 1. 在 Peony 文件管理器右键菜单中增加“发送到 MemGuardOS 记忆安全扫描”动作。
 2. 用户右键选中文件后，可以把文件路径转换为统一 OS event，写入 MemGuardOS 记忆系统。
 3. OS event 进入既有敏感检测、审计链和检索链路，复用核心安全能力。
-4. 提供 UKUI 控制中心插件入口，用于展示 MemGuardOS 本地状态、审计链和 Kylin SDK 检查命令输出。
+4. 提供 UKUI 控制中心插件入口，用于展示本机运行状态、审计完整性、端侧向量能力、诊断报告和本地控制台入口。
 5. 在 openKylin 只读 `/usr` 的 ostree/overlay 环境中，提供可复现的演示安装方法。
 
 这个设计避免把桌面联动做成单纯的 `notify-send` 脚本，而是接入 openKylin 的真实插件接口。
@@ -350,18 +350,20 @@ MemGuardOS ...
 
 ```text
 MemGuardOS 记忆安全
-查看本机 Agent 记忆服务状态、审计链和 openKylin 适配。
+管理本机 Agent 记忆服务的运行状态、审计完整性、端侧向量能力和诊断信息。
 ```
 
-页面提供三个按钮：
+页面提供面向本机运维的常用操作：
 
 ```text
-运行 doctor
-验证审计链
-检查 Kylin SDK
+运行环境检查
+校验审计链
+检查端侧向量能力
+导出诊断报告
+打开本地控制台
 ```
 
-当前已经由人工截图确认 UKUI 控制中心入口和按钮可见，证据记录为：
+当前已经由人工截图确认 UKUI 控制中心入口可见；最新版本已将原始命令按钮升级为本机运维面板。历史可见性证据记录为：
 
 ```text
 docs/evidence/latest/ukui_control_center_visible_manual_confirmation.txt
@@ -375,6 +377,8 @@ entry_text=MemGuardOS 记忆安全
 buttons=运行 doctor,验证审计链,检查 Kylin SDK
 status=visible_in_user_screenshot
 ```
+
+新版本的按钮文本更接近企业交付语义：用户看到的是“运行环境检查”和“端侧向量能力”，而不是底层命令名；“导出诊断报告”会调用 `memctl diagnostics --probe-sdk` 汇总 doctor、namespace、检索状态、记忆策略、Kylin SDK 和审计链结果；“打开本地控制台”会启动并打开 `http://127.0.0.1:8765`，用于本机管理员查看记忆、检索、RAG 上下文、精准遗忘和审计记录。
 
 ## 9. 点击后的后端验证
 
@@ -426,7 +430,7 @@ python3 -m memguard.cli.memctl ingest-os-event --json '{"event_type":"peony_cont
 4. Peony 插件元数据包含与系统一致的 `version: 3.2.2`。
 5. Peony 菜单函数对 `DirectoryView` 和 `DesktopWindow` 均返回菜单项。
 6. Peony 右键菜单项已在 openKylin 桌面可见验证。
-7. UKUI 控制中心入口和三个操作按钮已在 openKylin 设置界面可见验证。
+7. UKUI 控制中心入口已在 openKylin 设置界面可见验证；当前源码提供本机运维面板，覆盖运行环境检查、审计链校验、端侧向量能力、诊断报告和本地控制台入口。
 8. 菜单点击后的 OS event 写入链路已验证。
 
 仍需准确表述的边界：

@@ -346,6 +346,27 @@ def test_verify_audit_failure_propagates_to_api_and_cli(tmp_path, monkeypatch, c
     assert payload["ok"] is False
 
 
+def test_diagnostics_cli_exports_operational_report(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "diagnostics-home"))
+    monkeypatch.delenv("MEMGUARD_NAMESPACE", raising=False)
+
+    assert memctl_main(["ingest", "--text", "知识：systemd 可以限制本机 Agent 服务资源。"]) == 0
+    capsys.readouterr()
+    assert memctl_main(["diagnostics", "--audit-limit", "5"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["ok"] is True
+    assert payload["namespace"] == "default"
+    assert payload["audit_chain"]["ok"] is True
+    assert payload["namespace_status"]["live_record_count"] >= 1
+    assert "doctor" in payload
+    assert "runtime_status" in payload
+    assert "retrieval_status" in payload
+    assert "memory_policy" in payload
+    assert payload["kylin_sdk"]["embedding"]["embedding_probe"] is None
+    assert len(payload["recent_audit"]) <= 5
+
+
 def test_concurrent_audit_writes_preserve_hash_chain(tmp_path):
     db_path = tmp_path / "concurrent.sqlite3"
     workers = 6

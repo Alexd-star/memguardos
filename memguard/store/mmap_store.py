@@ -8,9 +8,9 @@ from memguard.models import MemoryRecord, MemorySource, Sensitivity, VersionInfo
 class AppendOnlyMemoryStore:
     """Append-only JSONL segment store.
 
-    Reads use mmap so the storage layer demonstrates an OS-backed memory mapping
-    mechanism. Updates and deletions never overwrite old records; they append a
-    new version or a tombstone.
+    Reads use mmap so the storage layer can scan append-only segments with
+    OS-backed memory mapping. Updates and deletions never overwrite old records;
+    they append a new version or a tombstone.
     """
 
     def __init__(self, path: Path):
