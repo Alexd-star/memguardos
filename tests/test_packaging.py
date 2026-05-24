@@ -73,9 +73,28 @@ def test_submission_package_inspector_accepts_required_formal_materials(tmp_path
     assert report["ok"] is True
     assert report["missing_required"] == []
     assert report["forbidden_hits"] == []
+    assert report["local_path_hits"] == []
 
 
 def test_submission_archive_smoke_command_names_are_stable():
     assert command_name(["python", "-m", "compileall", "-q", "memguard"]) == "compileall"
     assert command_name(["python", "scripts/web_dashboard_smoke.py"]) == "web_dashboard_smoke.py"
     assert command_name([]) == "unknown"
+
+
+def test_submission_package_inspector_rejects_local_paths_in_formal_docs(tmp_path):
+    package = tmp_path / "submission.zip"
+    manifest = tmp_path / "submission_manifest.json"
+    names = sorted(REQUIRED_PATHS)
+    with ZipFile(package, "w", ZIP_DEFLATED) as zf:
+        for name in names:
+            body = "cd D:\\Luo_docs\\竞赛\\研创赛\\memguardos" if name == "README.md" else "x"
+            zf.writestr(name, body)
+    manifest.write_text(
+        '{"files": [%s]}'
+        % ",".join('{"path": "%s", "role": "%s"}' % (name, classify_file(Path(name))) for name in names),
+        encoding="utf-8",
+    )
+    report = inspect_package(package, manifest)
+    assert report["ok"] is False
+    assert report["local_path_hits"] == [{"path": "README.md", "line": 1, "markers": ["D:\\", "Luo_docs"]}]

@@ -11,7 +11,7 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 2299",
+      "detail": "中文字符数 2298",
       "severity": "P0"
     },
     {
@@ -95,7 +95,7 @@
       "category": "中文文档",
       "name": "docs/Peony与UKUI桌面集成实现说明.md",
       "ok": true,
-      "detail": "中文字符数 2251",
+      "detail": "中文字符数 2259",
       "severity": "P0"
     },
     {
@@ -361,7 +361,7 @@
       "category": "openKylin证据",
       "name": "证据目录",
       "ok": true,
-      "detail": "D:\\Luo_docs\\竞赛\\研创赛\\memguardos\\docs\\evidence\\latest",
+      "detail": "docs/evidence/latest",
       "severity": "P0"
     },
     {

@@ -122,7 +122,7 @@ flowchart LR
 ### 1. 安装与测试
 
 ```powershell
-cd D:\Luo_docs\竞赛\研创赛\memguardos
+cd <项目目录>
 python -m pip install -e ".[dev]"
 python -m pytest -q
 python scripts/demo_smoke.py

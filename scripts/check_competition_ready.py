@@ -196,7 +196,7 @@ def check_eval(eval_path: Path) -> List[Check]:
 
 def check_openkylin_evidence(evidence_dir: Path, allow_missing: bool = False) -> List[Check]:
     severity = "P1" if allow_missing else "P0"
-    checks = [Check("openKylin证据", "证据目录", evidence_dir.exists(), str(evidence_dir), severity=severity)]
+    checks = [Check("openKylin证据", "证据目录", evidence_dir.exists(), _display_path(evidence_dir), severity=severity)]
     if not evidence_dir.exists():
         return checks
     for rel in REQUIRED_EVIDENCE:
@@ -336,6 +336,13 @@ def _nested_get(data: Dict[str, Any], keys: List[str]) -> Optional[Any]:
 def _resolve(path: str) -> Path:
     raw = Path(path)
     return raw if raw.is_absolute() else ROOT / raw
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return path.relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(path)
 
 
 def _expected_evidence_paths(evidence_dir: Path) -> List[str]:

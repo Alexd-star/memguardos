@@ -96,7 +96,7 @@ memguardos-peony-memory-scan
 ```json
 {
   "event_type": "peony_context_menu",
-  "path": "/home/luo/桌面/memguardos-ui-test.txt",
+  "path": "/home/<用户>/桌面/memguardos-ui-test.txt",
   "process": "peony",
   "action": "inspect"
 }
@@ -218,7 +218,7 @@ sudo install -m 755 "${plugin}" "${dest_dir}/${dest_name}"
 该服务开机后执行：
 
 ```bash
-/bin/bash /home/luo/memguardos/scripts/install_ukui_plugins.sh --no-build
+/bin/bash /home/<用户>/memguardos/scripts/install_ukui_plugins.sh --no-build
 ```
 
 当前服务状态：
@@ -397,13 +397,13 @@ python3 -c "import memguard; print(memguard.__file__)"
 内容：
 
 ```text
-/home/luo/memguardos
+/home/<用户>/memguardos
 ```
 
 之后执行：
 
 ```bash
-python3 -m memguard.cli.memctl ingest-os-event --json '{"event_type":"peony_context_menu_probe","path":"/home/luo/桌面/memguardos-ui-test.txt","process":"peony","action":"inspect"}'
+python3 -m memguard.cli.memctl ingest-os-event --json '{"event_type":"peony_context_menu_probe","path":"/home/<用户>/桌面/memguardos-ui-test.txt","process":"peony","action":"inspect"}'
 ```
 
 返回：

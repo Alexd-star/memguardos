@@ -82,6 +82,15 @@ FORBIDDEN_SUFFIXES = {
     ".tmp",
 }
 
+LOCAL_PATH_MARKERS = {
+    "D:\\",
+    "C:\\Users\\",
+    "/home/luo",
+    "Luo_docs",
+    "26312",
+    "192.168.73.128",
+}
+
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
@@ -130,8 +139,9 @@ def inspect_package(package: Path, manifest: Path | None = None) -> dict[str, ob
         if classify_file(Path(name)) not in COMPETITION_ROLES),
         key=lambda item: item["path"],
     )
+    local_path_hits = scan_formal_docs_for_local_paths(package, names)
     manifest_report = inspect_manifest(manifest, name_set) if manifest else {"available": False}
-    ok = not missing_required and not forbidden_hits and not bad_roles and bool(manifest_report.get("ok", True))
+    ok = not missing_required and not forbidden_hits and not bad_roles and not local_path_hits and bool(manifest_report.get("ok", True))
     return {
         "ok": ok,
         "package": str(package),
@@ -139,6 +149,7 @@ def inspect_package(package: Path, manifest: Path | None = None) -> dict[str, ob
         "missing_required": missing_required,
         "forbidden_hits": forbidden_hits,
         "bad_roles": bad_roles,
+        "local_path_hits": local_path_hits,
         "manifest": manifest_report,
     }
 
@@ -173,6 +184,22 @@ def is_forbidden(name: str) -> bool:
     if "__pycache__" in parts:
         return True
     return any(name.endswith(suffix) for suffix in FORBIDDEN_SUFFIXES)
+
+
+def scan_formal_docs_for_local_paths(package: Path, names: list[str]) -> list[dict[str, object]]:
+    hits: list[dict[str, object]] = []
+    formal_docs = [name for name in names if classify_file(Path(name)) == "正式中文文档"]
+    with ZipFile(package) as zf:
+        for name in formal_docs:
+            try:
+                text = zf.read(name).decode("utf-8")
+            except UnicodeDecodeError:
+                continue
+            for line_no, line in enumerate(text.splitlines(), start=1):
+                matched = sorted(marker for marker in LOCAL_PATH_MARKERS if marker in line)
+                if matched:
+                    hits.append({"path": name, "line": line_no, "markers": matched})
+    return hits
 
 
 if __name__ == "__main__":
