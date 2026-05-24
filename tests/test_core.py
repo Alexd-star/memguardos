@@ -318,6 +318,34 @@ def test_audit_hash_chain_verification(tmp_path):
         service.close()
 
 
+def test_verify_audit_failure_propagates_to_api_and_cli(tmp_path, monkeypatch, capsys):
+    service = make_service(tmp_path)
+    try:
+        service.ingest_text("普通知识：journalctl 可以查看服务日志。")
+        service.meta.conn.execute("UPDATE audit SET event_hash = ? WHERE audit_id = 1", ("tampered",))
+        service.meta.conn.commit()
+        assert service.verify_audit()["ok"] is False
+        api_result = handle_request(service, {"command": "verify_audit"})
+        assert api_result["ok"] is False
+    finally:
+        service.close()
+
+    home = tmp_path / "cli-home"
+    monkeypatch.setenv("MEMGUARD_HOME", str(home))
+    monkeypatch.delenv("MEMGUARD_NAMESPACE", raising=False)
+    assert memctl_main(["ingest", "--text", "普通知识：journalctl 可以查看服务日志。"]) == 0
+    capsys.readouterr()
+    db = SQLiteMetaStore(default_db_path())
+    try:
+        db.conn.execute("UPDATE audit SET event_hash = ? WHERE audit_id = 1", ("tampered",))
+        db.conn.commit()
+    finally:
+        db.close()
+    assert memctl_main(["verify-audit"]) == 2
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is False
+
+
 def test_concurrent_audit_writes_preserve_hash_chain(tmp_path):
     db_path = tmp_path / "concurrent.sqlite3"
     workers = 6
@@ -423,6 +451,9 @@ def test_kylin_sdk_status_is_safe_on_current_platform():
     assert status["vector_store"]["backend"] == "kysdk_vector_engine_client"
     assert "fallback" in status["embedding"]
     assert "fallback" in status["vector_store"]
+    assert status["embedding"]["embedding_probe"] is None
+    assert status["embedding"]["inference_ready"] is None
+    assert status["embedding"]["ready_for_default_retrieval"] is None
 
 
 def test_default_retrieval_backend_is_hash(tmp_path):

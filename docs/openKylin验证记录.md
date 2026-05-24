@@ -42,7 +42,7 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 
 最新结果：
 
-- 单元测试：`49 passed`
+- 单元测试：`50 passed`
 - 负载评测：1000 条记忆，120 次检索请求
 - 最新 1k 负载 P95：34.816 ms
 - 5k 负载 P95：142.534 ms

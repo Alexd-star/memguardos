@@ -87,11 +87,12 @@ class KylinEmbeddingBackend:
             "embedding_probe": None,
             "available": False,
             "inference_ready": None if not probe else False,
-            "ready_for_default_retrieval": False,
+            "ready_for_default_retrieval": None if not probe else False,
             "fallback": "hash_embedding",
             "diagnosis": {
                 "success_condition": "library_loadable and model_info and embedding_probe.ok",
                 "availability_meaning": "available means SDK metadata is reachable; inference_ready means a real embedding call succeeded.",
+                "probe_meaning": "embedding_probe is null when sdk-status runs without --probe-embedding; use --probe-embedding to verify real inference readiness.",
                 "timeout_hint": "If model_info is present but embedding_probe returns 'Timeout was reached', inspect kylin-ai-runtime sockets, kytensor.service, Triton repository index, ondevice plugin logs, and model repository links.",
             },
         }

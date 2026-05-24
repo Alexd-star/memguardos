@@ -33,8 +33,8 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地单元测试 | 49 passed |
-| openKylin 单元测试证据 | 49 passed |
+| 本地单元测试 | 50 passed |
+| openKylin 单元测试证据 | 50 passed |
 | 本地 1k 负载 P95 | 17.991 ms |
 | openKylin 1k 负载 P95 | 34.816 ms |
 | openKylin 10k 负载 P95 | 89.639 ms |

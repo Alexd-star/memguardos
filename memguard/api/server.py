@@ -82,7 +82,8 @@ def handle_request(service: MemGuardService, request: Dict[str, object], auth_to
             )),
         }
     if command == "verify_audit":
-        return {"ok": True, "result": _jsonable(service.verify_audit())}
+        result = _jsonable(service.verify_audit())
+        return {"ok": bool(result.get("ok")) if isinstance(result, dict) else False, "result": result}
     if command == "retrieval_status":
         return {"ok": True, "result": _jsonable(service.retrieval_status())}
     if command == "ingest":

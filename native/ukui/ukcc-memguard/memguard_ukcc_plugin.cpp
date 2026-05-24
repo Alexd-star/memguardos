@@ -2,8 +2,10 @@
 
 #include <QHBoxLayout>
 #include <QIcon>
+#include <QFileInfo>
 #include <QLabel>
 #include <QProcess>
+#include <QRegularExpression>
 #include <QPushButton>
 #include <QVBoxLayout>
 
@@ -47,7 +49,9 @@ QWidget *MemGuardUkccPlugin::pluginUi()
 
     connect(doctor, &QPushButton::clicked, this, [this]() { runMemctl(QStringList() << QStringLiteral("doctor")); });
     connect(audit, &QPushButton::clicked, this, [this]() { runMemctl(QStringList() << QStringLiteral("verify-audit")); });
-    connect(sdk, &QPushButton::clicked, this, [this]() { runMemctl(QStringList() << QStringLiteral("sdk-status")); });
+    connect(sdk, &QPushButton::clicked, this, [this]() {
+        runMemctl(QStringList() << QStringLiteral("sdk-status") << QStringLiteral("--probe-embedding") << QStringLiteral("--probe-timeout") << QStringLiteral("90"));
+    });
     return page_;
 }
 
@@ -80,7 +84,30 @@ void MemGuardUkccPlugin::runMemctl(const QStringList &args)
     if (!output_)
         return;
     QProcess process;
-    process.start(QStringLiteral("python3"), QStringList() << QStringLiteral("-m") << QStringLiteral("memguard.cli.memctl") << args);
-    process.waitForFinished(10000);
-    output_->setPlainText(QString::fromLocal8Bit(process.readAllStandardOutput()) + QString::fromLocal8Bit(process.readAllStandardError()));
+    process.setProcessChannelMode(QProcess::MergedChannels);
+    QString program = QStringLiteral("python3");
+    QStringList commandArgs;
+    if (QFileInfo::exists(QStringLiteral("/usr/bin/memctl"))) {
+        program = QStringLiteral("/usr/bin/memctl");
+        commandArgs = args;
+    } else {
+        commandArgs << QStringLiteral("-m") << QStringLiteral("memguard.cli.memctl") << args;
+    }
+    process.start(program, commandArgs);
+    if (!process.waitForFinished(120000)) {
+        process.kill();
+        process.waitForFinished(1000);
+        output_->setPlainText(QStringLiteral("命令超时：") + program + QStringLiteral(" ") + commandArgs.join(QStringLiteral(" ")));
+        return;
+    }
+    QString text = QString::fromLocal8Bit(process.readAll());
+    text.remove(QRegularExpression(QStringLiteral("\\x1B\\[[0-?]*[ -/]*[@-~]")));
+    QStringList kept;
+    for (const QString &line : text.split(QLatin1Char('\n'))) {
+        if (!line.contains(QStringLiteral("Proxy init engine sessionId")))
+            kept << line;
+    }
+    if (process.exitCode() != 0)
+        kept.prepend(QStringLiteral("命令退出码：%1").arg(process.exitCode()));
+    output_->setPlainText(kept.join(QLatin1Char('\n')).trimmed());
 }

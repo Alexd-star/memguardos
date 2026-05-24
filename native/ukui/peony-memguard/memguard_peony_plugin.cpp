@@ -87,9 +87,14 @@ void MemGuardPeonyPlugin::sendSelectionToMemGuard() const
     event.insert(QStringLiteral("action"), QStringLiteral("inspect"));
     const QString payload = QString::fromUtf8(QJsonDocument(event).toJson(QJsonDocument::Compact));
 
-    QProcess::startDetached(QStringLiteral("python3"), QStringList()
-        << QStringLiteral("-m") << QStringLiteral("memguard.cli.memctl")
-        << QStringLiteral("ingest-os-event") << QStringLiteral("--json") << payload);
+    if (QFileInfo::exists(QStringLiteral("/usr/bin/memctl"))) {
+        QProcess::startDetached(QStringLiteral("/usr/bin/memctl"), QStringList()
+            << QStringLiteral("ingest-os-event") << QStringLiteral("--json") << payload);
+    } else {
+        QProcess::startDetached(QStringLiteral("python3"), QStringList()
+            << QStringLiteral("-m") << QStringLiteral("memguard.cli.memctl")
+            << QStringLiteral("ingest-os-event") << QStringLiteral("--json") << payload);
+    }
     QProcess::startDetached(QStringLiteral("notify-send"), QStringList()
         << QStringLiteral("MemGuardOS")
         << QStringLiteral("已将 Peony 选中文件发送到记忆安全扫描"));

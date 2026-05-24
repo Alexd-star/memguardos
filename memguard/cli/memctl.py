@@ -399,8 +399,9 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "verify-audit":
-            print(json.dumps(service.verify_audit(), ensure_ascii=False, indent=2))
-            return 0
+            result = service.verify_audit()
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result.get("ok") else 2
 
         if args.command == "resolve-conflicts":
             print(json.dumps(service.resolve_conflicts(), ensure_ascii=False, indent=2))

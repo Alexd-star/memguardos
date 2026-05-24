@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-05-24T04:58:26.673846+00:00",
+  "generated_at": "2026-05-24T11:03:09.793455+00:00",
   "root": "D:\\Luo_docs\\竞赛\\研创赛\\memguardos\\docs\\evidence\\latest",
   "file_count": 61,
-  "total_bytes": 357768,
+  "total_bytes": 357937,
   "files": [
     {
       "path": "agent_batch_search.txt",
@@ -212,7 +212,7 @@
     {
       "path": "pytest.txt",
       "bytes": 133,
-      "sha256": "9ffc2f9ecd60c0a5d00ac411dcbea780d87c16173184827f97c43e8030133945"
+      "sha256": "881883b2c59a5eb856524e1a6bd4781ccf45117f6ae898c0e7ce3ca820b2ec05"
     },
     {
       "path": "quality_report.txt",
@@ -226,13 +226,13 @@
     },
     {
       "path": "sdk_embedding_probe.txt",
-      "bytes": 8004,
-      "sha256": "8a01af42e5791837b8fdfe371f12e4a6f568ee7d940dce7c730d9ce70c9418d9"
+      "bytes": 8089,
+      "sha256": "35d35cdafdd2631a1640fc0e36101fe1445d280ef5dc38b7a83d3aa86f4a5494"
     },
     {
       "path": "sdk_status.txt",
-      "bytes": 7673,
-      "sha256": "902627640faa5c81040e160fa5a6f2be0d90663be178fc2d8cb196445e9a4b90"
+      "bytes": 7757,
+      "sha256": "3ea096e6ff91b05146a699e1fabf4d4dd48e0a8cbd2ac621fcd3f2cae8fe0807"
     },
     {
       "path": "semantic_extraction.txt",

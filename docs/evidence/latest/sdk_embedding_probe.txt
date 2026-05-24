@@ -1,6 +1,5 @@
 $ .venv/bin/python -m memguard.cli.memctl sdk-status --probe-embedding --probe-timeout 90
 
-[1779550765277] [32minfo [0m Proxy init engine sessionId:810454247.
 {
   "embedding": {
     "backend": "kylin_coreai_embedding",
@@ -207,7 +206,7 @@ $ .venv/bin/python -m memguard.cli.memctl sdk-status --probe-embedding --probe-t
         0.011692
       ],
       "subprocess_returncode": 0,
-      "stderr_tail": "[1779550765433] \u001b[32minfo \u001b[0m Proxy init engine sessionId:2056345859."
+      "stderr_tail": "[1779620268967] \u001b[32minfo \u001b[0m Proxy init engine sessionId:510380472."
     },
     "available": true,
     "inference_ready": true,
@@ -216,6 +215,7 @@ $ .venv/bin/python -m memguard.cli.memctl sdk-status --probe-embedding --probe-t
     "diagnosis": {
       "success_condition": "library_loadable and model_info and embedding_probe.ok",
       "availability_meaning": "available means SDK metadata is reachable; inference_ready means a real embedding call succeeded.",
+      "probe_meaning": "embedding_probe is null when sdk-status runs without --probe-embedding; use --probe-embedding to verify real inference readiness.",
       "timeout_hint": "If model_info is present but embedding_probe returns 'Timeout was reached', inspect kylin-ai-runtime sockets, kytensor.service, Triton repository index, ondevice plugin logs, and model repository links."
     }
   },
