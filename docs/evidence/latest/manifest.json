@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-05-24T17:28:19.540455+00:00",
+  "generated_at": "2026-05-24T17:34:45.354625+00:00",
   "root": "D:\\Luo_docs\\竞赛\\研创赛\\memguardos\\docs\\evidence\\latest",
   "file_count": 64,
-  "total_bytes": 387507,
+  "total_bytes": 393695,
   "files": [
     {
       "path": "agent_batch_search.txt",
@@ -51,18 +51,18 @@
     },
     {
       "path": "deb_package.txt",
-      "bytes": 3964,
-      "sha256": "b1189bc064028db91576b5a7d7979d0f1319159a34f2b06c10917a5abd40a3a7"
+      "bytes": 10250,
+      "sha256": "a337edca7a10c4c9a63652efde881e0f6d8aa8c40532b90facfdc99abfc8d4f4"
     },
     {
       "path": "default_audit_after_reset.txt",
-      "bytes": 116,
-      "sha256": "c0652fa0535b1ca56049d214acc7ec6a76bab4b598ae783faa70baeab8ab6c8f"
+      "bytes": 117,
+      "sha256": "9b85942f7afe98d8217e29a5f616f235cd0218d03beaa9f4c7a1506c1f4eca3a"
     },
     {
       "path": "diagnostics_probe_after_reset.txt",
-      "bytes": 24891,
-      "sha256": "8892c1bf5a62c9ab712c4d8fc158d08956a889ee112219fba5add35e4c1cb5e2"
+      "bytes": 24880,
+      "sha256": "e80b9023707e459c4e75e45978be8ded893983ee1d0f0b2ab1906727ab37e591"
     },
     {
       "path": "doctor.txt",
@@ -222,7 +222,7 @@
     {
       "path": "pytest.txt",
       "bytes": 100,
-      "sha256": "907df250fe394ac27a67ef470a56bbc9b700438d24a0b4a0259f52e0dbf374b8"
+      "sha256": "0b62c9586692e8199913201335c63f3fb66fd8d9e886728b0a8ecc38f4407674"
     },
     {
       "path": "quality_report.txt",
@@ -236,8 +236,8 @@
     },
     {
       "path": "sdk_embedding_probe.txt",
-      "bytes": 7999,
-      "sha256": "0c961a7665811a697ac32c8876e9abaf1d24f96aca84e82195df71f906159410"
+      "bytes": 7998,
+      "sha256": "89b68a8751ad1f29159d7c488d6ad16d288a1732f69aaeda5933ef8473da5353"
     },
     {
       "path": "sdk_status.txt",
@@ -271,8 +271,8 @@
     },
     {
       "path": "ukui_enterprise_panel.txt",
-      "bytes": 4346,
-      "sha256": "6d316e624d0ce001f8684df9bac98f616fb9b254b980c44d381e20653131aba0"
+      "bytes": 4259,
+      "sha256": "71337d1f85aef3038d5cbd7a9beaec51c032d119b0a3d4d888c14ce18a41faaf"
     },
     {
       "path": "ukui_notify.txt",

@@ -204,7 +204,7 @@
         0.011692
       ],
       "subprocess_returncode": 0,
-      "stderr_tail": "[1779622247890] \u001b[32minfo \u001b[0m Proxy init engine sessionId:1749082076."
+      "stderr_tail": "[1779644016075] \u001b[32minfo \u001b[0m Proxy init engine sessionId:733753979."
     },
     "available": true,
     "inference_ready": true,
