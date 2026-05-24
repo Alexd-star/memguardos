@@ -52,3 +52,6 @@ jobs:
 
       - name: Submission package smoke
         run: python scripts/package_submission.py
+
+      - name: Submission package audit
+        run: python scripts/inspect_submission_package.py

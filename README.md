@@ -256,6 +256,14 @@ python scripts/package_submission.py
 
 `release_preflight.py` 会顺序执行编译检查、ruff、单元测试、文档链接检查、Web 控制台 smoke、竞赛就绪自检，并在未指定 `--skip-package` 时生成提交包。它属于工程自检工具，不会放入正式竞赛提交包主体。
 
+生成后可单独审计提交包内容：
+
+```bash
+python scripts/inspect_submission_package.py
+```
+
+该审计会检查正式包是否包含核心代码、正式中文文档和最新证据，同时确认未混入 GitHub/CI、预检脚本、自检报告、缓存、数据库、段文件等过程或运行时材料。
+
 生成结果包括：
 
 ```text

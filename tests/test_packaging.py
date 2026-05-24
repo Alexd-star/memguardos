@@ -1,5 +1,7 @@
 from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile
 
+from scripts.inspect_submission_package import REQUIRED_PATHS, inspect_package
 from scripts.package_submission import COMPETITION_ROLES, classify_file
 
 
@@ -17,6 +19,7 @@ def test_competition_package_keeps_formal_and_process_materials_separate():
     ]
     process_paths = [
         "scripts/package_submission.py",
+        "scripts/inspect_submission_package.py",
         "scripts/release_preflight.py",
         "scripts/check_competition_ready.py",
         "scripts/check_docs_links.py",
@@ -32,3 +35,38 @@ def test_competition_package_keeps_formal_and_process_materials_separate():
         assert classify_file(Path(rel)) in COMPETITION_ROLES, rel
     for rel in process_paths:
         assert classify_file(Path(rel)) not in COMPETITION_ROLES, rel
+
+
+def test_submission_package_inspector_rejects_process_materials(tmp_path):
+    package = tmp_path / "submission.zip"
+    manifest = tmp_path / "submission_manifest.json"
+    names = sorted(REQUIRED_PATHS | {"scripts/release_preflight.py"})
+    with ZipFile(package, "w", ZIP_DEFLATED) as zf:
+        for name in names:
+            zf.writestr(name, "x")
+    manifest.write_text(
+        '{"files": [%s]}'
+        % ",".join('{"path": "%s", "role": "%s"}' % (name, classify_file(Path(name))) for name in names),
+        encoding="utf-8",
+    )
+    report = inspect_package(package, manifest)
+    assert report["ok"] is False
+    assert "scripts/release_preflight.py" in report["forbidden_hits"]
+
+
+def test_submission_package_inspector_accepts_required_formal_materials(tmp_path):
+    package = tmp_path / "submission.zip"
+    manifest = tmp_path / "submission_manifest.json"
+    names = sorted(REQUIRED_PATHS)
+    with ZipFile(package, "w", ZIP_DEFLATED) as zf:
+        for name in names:
+            zf.writestr(name, "x")
+    manifest.write_text(
+        '{"files": [%s]}'
+        % ",".join('{"path": "%s", "role": "%s"}' % (name, classify_file(Path(name))) for name in names),
+        encoding="utf-8",
+    )
+    report = inspect_package(package, manifest)
+    assert report["ok"] is True
+    assert report["missing_required"] == []
+    assert report["forbidden_hits"] == []
