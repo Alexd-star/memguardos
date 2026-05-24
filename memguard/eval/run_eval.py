@@ -421,7 +421,7 @@ def run_agent_batch_search_eval(root: Path) -> dict:
         seeds = [
             "任务规划记忆：openKylin OS Agent 规划阶段优先读取 systemd、cgroup、auditd 和 namespace 约束。",
             "工具调用记忆：执行 Linux 检查时优先使用 rg、systemctl status、journalctl 和 python -m pytest。",
-            "结果生成记忆：答辩输出需要先给结论，再列证据指标和不可夸大的边界。",
+            "结果生成记忆：运维报告需要先给结论，再列证据指标和不可夸大的边界。",
             "安全策略记忆：生成前上下文必须使用脱敏内容，不得复原 Token、手机号或私钥。",
             "知识记忆：mmap 段文件依赖页缓存，适合端侧轻量记忆加载和顺序扫描。",
             "知识记忆：Kylin embedding SDK 可作为可选重排后端，默认保留 hash fallback。",
@@ -431,7 +431,7 @@ def run_agent_batch_search_eval(root: Path) -> dict:
         queries = [
             "任务规划 openKylin systemd cgroup",
             "工具调用 Linux pytest journalctl rg",
-            "结果生成 答辩 证据 边界",
+            "结果生成 运维报告 证据 边界",
             "安全策略 脱敏 Token 私钥",
         ]
         batch = service.batch_search(queries, limit=4, workers=4)

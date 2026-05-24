@@ -1,5 +1,4 @@
-$ .venv/bin/python -m memguard.cli.memctl sdk-status
-
+[1779645654439] [32minfo [0m Proxy init engine sessionId:873257414.
 {
   "embedding": {
     "backend": "kylin_coreai_embedding",
@@ -195,10 +194,22 @@ $ .venv/bin/python -m memguard.cli.memctl sdk-status
       "name": "ensemble-embd_gte-base_uint8-text",
       "ondevice": true
     },
-    "embedding_probe": null,
+    "embedding_probe": {
+      "ok": true,
+      "dim": 768,
+      "sample": [
+        -0.086721,
+        -0.023629,
+        -0.007548,
+        0.027401,
+        0.011692
+      ],
+      "subprocess_returncode": 0,
+      "stderr_tail": "[1779645654522] \u001b[32minfo \u001b[0m Proxy init engine sessionId:854315721."
+    },
     "available": true,
-    "inference_ready": null,
-    "ready_for_default_retrieval": null,
+    "inference_ready": true,
+    "ready_for_default_retrieval": true,
     "fallback": "hash_embedding",
     "diagnosis": {
       "success_condition": "library_loadable and model_info and embedding_probe.ok",

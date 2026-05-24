@@ -1,54 +1,58 @@
 # MemGuardOS UKUI visible-plugin verification
-2026-05-25T01:33:35+08:00
+2026-05-25T02:00:53+08:00
 XDG_CURRENT_DESKTOP=
 DISPLAY=
 
 ## native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so
--rwxrwxr-x 1 luo luo 48112  5月25日 01:33 native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so
+-rwxrwxr-x 1 luo luo 48112  5月25日 02:00 native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so
 native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, BuildID[sha1]=cb14eab00490a6a7c8ae501c5f443edd5955a596, not stripped
-	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007f8a32918000)
-	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007f8a32245000)
-	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007f8a31cf1000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f8a31854000)
+	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007f2f662ea000)
+	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007f2f65c17000)
+	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007f2f656c3000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f2f65226000)
 kDescriptionx<Send selected files to MemGuardOS as OS-agent memory events.dKeys
 memguardos-peony-menu-plugindNamex
 MemGuardOS Peony Menu Plugingversione3.2.2
 
 ## native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so
--rwxrwxr-x 1 luo luo 64992  5月25日 01:33 native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so
-native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so: ELF 64-bit LSB shared object, x86-64, version 1 (GNU/Linux), dynamically linked, BuildID[sha1]=aca2c9dbd0f00015fc03aa07d2142646b37027fc, not stripped
-	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007f6a8ce33000)
-	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007f6a8c760000)
-	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007f6a8c20c000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f6a8bd6f000)
+-rwxrwxr-x 1 luo luo 78032  5月25日 02:00 native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so
+native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so: ELF 64-bit LSB shared object, x86-64, version 1 (GNU/Linux), dynamically linked, BuildID[sha1]=184a475d78c81fae550fcba5e1a515f61f5ed3bf, not stripped
+	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007feb34901000)
+	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007feb3422e000)
+	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007feb33cda000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007feb3383d000)
 kDescriptionxEUKUI Control Center entry for MemGuardOS local agent memory security.dKeys
 memguardos-memory-securitydNamex
 MemGuardOS Memory Securitygversione3.2.2
 
 ## /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
--rwxr-xr-x 1 root root 48112  5月25日 01:33 /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
+-rwxr-xr-x 1 root root 48112  5月25日 02:00 /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
 /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, BuildID[sha1]=cb14eab00490a6a7c8ae501c5f443edd5955a596, not stripped
-	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007fd5b3cc8000)
-	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007fd5b35f5000)
-	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007fd5b30a1000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fd5b2c04000)
+	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007fb0f0eed000)
+	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007fb0f081a000)
+	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007fb0f02c6000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fb0efe29000)
 kDescriptionx<Send selected files to MemGuardOS as OS-agent memory events.dKeys
 memguardos-peony-menu-plugindNamex
 MemGuardOS Peony Menu Plugingversione3.2.2
 
 ## /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
--rwxr-xr-x 1 root root 64992  5月25日 01:33 /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
-/usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so: ELF 64-bit LSB shared object, x86-64, version 1 (GNU/Linux), dynamically linked, BuildID[sha1]=aca2c9dbd0f00015fc03aa07d2142646b37027fc, not stripped
-	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007fc8fdfb1000)
-	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007fc8fd8de000)
-	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007fc8fd38a000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fc8fceed000)
+-rwxr-xr-x 1 root root 78032  5月25日 02:00 /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
+/usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so: ELF 64-bit LSB shared object, x86-64, version 1 (GNU/Linux), dynamically linked, BuildID[sha1]=184a475d78c81fae550fcba5e1a515f61f5ed3bf, not stripped
+	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007fc1631ce000)
+	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007fc162afb000)
+	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007fc1625a7000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fc16210a000)
 kDescriptionxEUKUI Control Center entry for MemGuardOS local agent memory security.dKeys
 memguardos-memory-securitydNamex
 MemGuardOS Memory Securitygversione3.2.2
 
 ## runtime processes
 3239 /usr/bin/peony-qt-desktop -w -d
+9922 peony /home/luo/桌面
+9948 /usr/bin/peony-intelligent-data-management-service
+pgrep: pattern that searches for process name longer than 15 characters will result in zero matches
+Try `pgrep -f' option to match against the complete command line.
 
 ## manual visible checks
 1. Run: peony -q 2>/dev/null || killall peony

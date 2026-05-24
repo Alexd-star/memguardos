@@ -26,17 +26,33 @@ def main() -> int:
         search = _http_get_json(base + "/api/search?q=openKylin%20%E6%9C%8D%E5%8A%A1")
         explain = _http_get_json(base + "/api/explain-extraction?text=%E8%AF%B7%E4%BB%A5%E5%90%8E%E7%94%A8%E4%B8%AD%E6%96%87%E7%AE%80%E6%B4%81%E5%9B%9E%E7%AD%94")
         status = _http_get_json(base + "/api/status")
+        audit = _http_get_json(base + "/api/verify-audit")
+        retrieval = _http_get_json(base + "/api/retrieval-status")
+        policy = _http_get_json(base + "/api/memory-policy")
         result = {
             "page_ok": "MemGuardOS 控制台" in page,
+            "diagnostics_tab_ok": "系统诊断" in page,
             "ingest_ok": bool(ingest.get("ok") and ingest.get("result", {}).get("stored")),
             "search_hits": len(search.get("result", [])),
             "extraction_type": explain.get("result", {}).get("extraction", {}).get("memory_type"),
             "live_record_count": status.get("result", {}).get("live_record_count"),
+            "audit_ok": audit.get("ok") is True,
+            "retrieval_ok": retrieval.get("ok") is True,
+            "policy_ok": policy.get("ok") is True,
             "url": base,
         }
         print(json.dumps(result, ensure_ascii=False, indent=2))
         service.close()
-        return 0 if result["page_ok"] and result["ingest_ok"] and result["search_hits"] >= 1 else 2
+        ok = (
+            result["page_ok"]
+            and result["diagnostics_tab_ok"]
+            and result["ingest_ok"]
+            and result["search_hits"] >= 1
+            and result["audit_ok"]
+            and result["retrieval_ok"]
+            and result["policy_ok"]
+        )
+        return 0 if ok else 2
 
 
 def _free_port() -> int:

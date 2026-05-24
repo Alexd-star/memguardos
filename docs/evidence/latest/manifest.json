@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-05-24T17:34:45.354625+00:00",
+  "generated_at": "2026-05-24T18:04:34.422328+00:00",
   "root": "D:\\Luo_docs\\竞赛\\研创赛\\memguardos\\docs\\evidence\\latest",
   "file_count": 64,
-  "total_bytes": 393695,
+  "total_bytes": 446040,
   "files": [
     {
       "path": "agent_batch_search.txt",
-      "bytes": 10826,
-      "sha256": "d5a196ad121c81d442bd81ff398a483d98267566a7ba4412c0342a3cf294d770"
+      "bytes": 10071,
+      "sha256": "2daae5fca3e31c09eebb8ef9b53538a7e3f467e58014aef2b9e362517603c94b"
     },
     {
       "path": "api_auth.txt",
@@ -51,8 +51,8 @@
     },
     {
       "path": "deb_package.txt",
-      "bytes": 10250,
-      "sha256": "a337edca7a10c4c9a63652efde881e0f6d8aa8c40532b90facfdc99abfc8d4f4"
+      "bytes": 7954,
+      "sha256": "5f67423e04a97f600b27514d1ddb1d5b4e655e73117d6e18adfc766ce505b9db"
     },
     {
       "path": "default_audit_after_reset.txt",
@@ -61,8 +61,8 @@
     },
     {
       "path": "diagnostics_probe_after_reset.txt",
-      "bytes": 24880,
-      "sha256": "e80b9023707e459c4e75e45978be8ded893983ee1d0f0b2ab1906727ab37e591"
+      "bytes": 33333,
+      "sha256": "d27b0cedf3fa26f06cd656cdb244fc82c9e31c4cd0eaed503aee2098e81e30b1"
     },
     {
       "path": "doctor.txt",
@@ -116,8 +116,8 @@
     },
     {
       "path": "journald.txt",
-      "bytes": 103673,
-      "sha256": "4edbabb96e3a9efcd65f0a78dba71f0b8a624e76c3b0ac1932c0ff09af18bd2f"
+      "bytes": 151428,
+      "sha256": "5ba62c3d8a4b310ea0ef232670f88b122979f3ee3f3e89f73a4c48bf9f398b44"
     },
     {
       "path": "kylin_embedding_diag/environment.txt",
@@ -206,8 +206,8 @@
     },
     {
       "path": "memory_policy.txt",
-      "bytes": 4118,
-      "sha256": "fe14d32800e26a98397094785dbe4f3109e24695e41de994b6fd598804ba9001"
+      "bytes": 2762,
+      "sha256": "44011154471f95b202c39ca283e8401538226a52fecdef5fe63aca2da65635da"
     },
     {
       "path": "namespace_isolation.txt",
@@ -222,7 +222,7 @@
     {
       "path": "pytest.txt",
       "bytes": 100,
-      "sha256": "0b62c9586692e8199913201335c63f3fb66fd8d9e886728b0a8ecc38f4407674"
+      "sha256": "354070301faa23d655be342c8ca70f3673cc2d51a68396bfbd4e17b8bb78981b"
     },
     {
       "path": "quality_report.txt",
@@ -241,8 +241,8 @@
     },
     {
       "path": "sdk_status.txt",
-      "bytes": 7757,
-      "sha256": "3ea096e6ff91b05146a699e1fabf4d4dd48e0a8cbd2ac621fcd3f2cae8fe0807"
+      "bytes": 8068,
+      "sha256": "61ab88296879a1c050e8a0261110f621675405d387e25dc1061ea28c54143672"
     },
     {
       "path": "semantic_extraction.txt",
@@ -271,8 +271,8 @@
     },
     {
       "path": "ukui_enterprise_panel.txt",
-      "bytes": 4259,
-      "sha256": "71337d1f85aef3038d5cbd7a9beaec51c032d119b0a3d4d888c14ce18a41faaf"
+      "bytes": 4509,
+      "sha256": "8ae7c87f85e3fe4670bbb281c7f3f9f5813776cd407921fd43344b93610784ce"
     },
     {
       "path": "ukui_notify.txt",
@@ -286,13 +286,13 @@
     },
     {
       "path": "ukui_plugin_build.txt",
-      "bytes": 6579,
-      "sha256": "cc4d018765938c57299e150b0fdaf6d30bc3064e2d24703d20aba1212433c4e0"
+      "bytes": 6541,
+      "sha256": "02214cf9cb41f414e41b15e09843400c3eee21525f949eb7696a2e079d276e3e"
     },
     {
       "path": "ukui_plugin_install.txt",
-      "bytes": 217,
-      "sha256": "1c2a149addc8e8c067b6bc0448578b1ad3b80fc80c45147972887b78144bf53e"
+      "bytes": 250,
+      "sha256": "e80aca1da38cf6e6d057ffb4b5ba977f19e4c52b85b0f32e796616af6824786f"
     },
     {
       "path": "ukui_plugin_visible.txt",
@@ -316,13 +316,13 @@
     },
     {
       "path": "verify_audit.txt",
-      "bytes": 173,
-      "sha256": "b9acf8391a93d5bddef792ea8608711ee6917b2d72f33ed8c65150cc67ed6b88"
+      "bytes": 117,
+      "sha256": "8c99135c079b5fc3dea71a74f35df4fbe88d5a74e941a3db67337b81ec1426ca"
     },
     {
       "path": "web_dashboard.txt",
-      "bytes": 267,
-      "sha256": "d0ba11521dd348514e5adcbc7845465a19e09a561fb21a375f3fbe10c9214aa8"
+      "bytes": 311,
+      "sha256": "3c8ec86c927c9a9709f8b7c0782791cb2d1cfe33c5baa425920dfb01d46da0de"
     }
   ]
 }

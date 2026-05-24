@@ -1,9 +1,13 @@
 #pragma once
 
+#include <QList>
 #include <QObject>
 #include <QWidget>
 #include <QTextEdit>
 #include <ukcc/interface/interface.h>
+
+class QLabel;
+class QPushButton;
 
 class MemGuardUkccPlugin : public QObject, public CommonInterface
 {
@@ -24,6 +28,9 @@ public:
 private:
     QWidget *page_ = nullptr;
     QTextEdit *output_ = nullptr;
+    QLabel *status_ = nullptr;
+    QList<QPushButton *> actionButtons_;
     void runMemctl(const QStringList &args);
     void openDashboard();
+    void setBusy(bool busy, const QString &message);
 };

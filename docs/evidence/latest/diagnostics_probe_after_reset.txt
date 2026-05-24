@@ -1,3 +1,5 @@
+[1779645654866] [32minfo [0m Proxy init engine sessionId:162631936.
+[1779645655141] [32minfo [0m Proxy init engine sessionId:415873214.
 {
   "ok": true,
   "namespace": "default",
@@ -20,10 +22,10 @@
       "db_exists": true,
       "custom_patterns_exists": false,
       "store_bytes": 6575,
-      "db_bytes": 69632,
+      "db_bytes": 73728,
       "record_count": 3,
       "live_record_count": 3,
-      "audit_event_count": 15
+      "audit_event_count": 26
     },
     "store_path": "/home/luo/.memguardos/memory.segment",
     "db_path": "/home/luo/.memguardos/memguard.sqlite3",
@@ -43,11 +45,11 @@
       "platform": "Linux",
       "is_linux": true,
       "cgroup_v2_mounted": true,
-      "proc_cgroup": "0::/user.slice/user-1000.slice/session-5.scope",
+      "proc_cgroup": "0::/user.slice/user-1000.slice/session-25.scope",
       "memory_current": null,
       "memory_max": null,
       "cpu_max": null,
-      "pid": 9212
+      "pid": 17728
     },
     "kylin_ai_sdk": {
       "embedding": {
@@ -281,11 +283,11 @@
     "platform": "Linux",
     "is_linux": true,
     "cgroup_v2_mounted": true,
-    "proc_cgroup": "0::/user.slice/user-1000.slice/session-5.scope",
+    "proc_cgroup": "0::/user.slice/user-1000.slice/session-25.scope",
     "memory_current": null,
     "memory_max": null,
     "cpu_max": null,
-    "pid": 9212
+    "pid": 17728
   },
   "namespace_status": {
     "namespace": "default",
@@ -300,11 +302,11 @@
     "db_exists": true,
     "custom_patterns_exists": false,
     "store_bytes": 6575,
-    "db_bytes": 69632,
+    "db_bytes": 73728,
     "uses_custom_paths": false,
     "record_count": 3,
     "live_record_count": 3,
-    "audit_event_count": 12
+    "audit_event_count": 23
   },
   "retrieval_status": {
     "requested_backend": "hash",
@@ -400,9 +402,9 @@
       "segment_path": "/home/luo/.memguardos/memory.segment",
       "segment_bytes": 6575,
       "sqlite_path": "/home/luo/.memguardos/memguard.sqlite3",
-      "sqlite_total_bytes": 118912,
-      "approx_total_bytes": 125487,
-      "bytes_per_live_memory": 41829.0
+      "sqlite_total_bytes": 123008,
+      "approx_total_bytes": 129583,
+      "bytes_per_live_memory": 43194.333
     },
     "eviction_candidates": [
       {
@@ -422,11 +424,11 @@
       "platform": "Linux",
       "is_linux": true,
       "cgroup_v2_mounted": true,
-      "proc_cgroup": "0::/user.slice/user-1000.slice/session-5.scope",
+      "proc_cgroup": "0::/user.slice/user-1000.slice/session-25.scope",
       "memory_current": null,
       "memory_max": null,
       "cpu_max": null,
-      "pid": 9212
+      "pid": 17728
     }
   },
   "kylin_sdk": {
@@ -635,7 +637,7 @@
           0.011692
         ],
         "subprocess_returncode": 0,
-        "stderr_tail": "[1779644016627] \u001b[32minfo \u001b[0m Proxy init engine sessionId:528841881."
+        "stderr_tail": "[1779645654953] \u001b[32minfo \u001b[0m Proxy init engine sessionId:842054068."
       },
       "available": true,
       "inference_ready": true,
@@ -670,10 +672,109 @@
   },
   "audit_chain": {
     "ok": true,
-    "checked": 15,
-    "head_hash": "fc37459f9119c7317ee3c343e817a13d3947c31563cd4dcd08b294d76789f8c7"
+    "checked": 26,
+    "head_hash": "fc8da5f7962fb4bd70a9ad24d04ddf55419825e8da2f279e8b4fdb4d93caa687"
   },
   "recent_audit": [
+    {
+      "audit_id": 26,
+      "event_type": "memory_policy_status",
+      "memory_id": null,
+      "detail": "{\"approx_total_bytes\": 129583, \"eviction_candidates\": 1, \"live\": 3, \"namespace\": \"default\", \"stale_or_deleted\": 0}",
+      "created_at": "2026-05-24T18:00:54.717063+00:00",
+      "prev_hash": "fb71de14b19aa3bba1fbf9eb6ef09dc18ab7d7ee45007b8947b867e1ac6340b6",
+      "event_hash": "fc8da5f7962fb4bd70a9ad24d04ddf55419825e8da2f279e8b4fdb4d93caa687"
+    },
+    {
+      "audit_id": 25,
+      "event_type": "retrieval_status",
+      "memory_id": null,
+      "detail": "{\"last_backend_used\": \"hash\", \"namespace\": \"default\", \"requested_backend\": \"hash\"}",
+      "created_at": "2026-05-24T18:00:54.708021+00:00",
+      "prev_hash": "95d0347682984504a21565a286393385476666ad4bb28ae5457155ed48342da5",
+      "event_hash": "fb71de14b19aa3bba1fbf9eb6ef09dc18ab7d7ee45007b8947b867e1ac6340b6"
+    },
+    {
+      "audit_id": 24,
+      "event_type": "namespace_status",
+      "memory_id": null,
+      "detail": "{\"live_record_count\": 3, \"namespace\": \"default\", \"namespace_home\": \"/home/luo/.memguardos\", \"record_count\": 3}",
+      "created_at": "2026-05-24T18:00:54.696461+00:00",
+      "prev_hash": "156f62d9182cfe98177ac5bf5555055f3c6353a9162341722fc5e605768978c9",
+      "event_hash": "95d0347682984504a21565a286393385476666ad4bb28ae5457155ed48342da5"
+    },
+    {
+      "audit_id": 23,
+      "event_type": "daemon_started",
+      "memory_id": null,
+      "detail": "{\"cgroup_v2\": true, \"namespace\": \"default\", \"namespace_home\": \"/home/luo/.memguardos\", \"proc_cgroup\": \"0::/user.slice/user-1000.slice/session-25.scope\", \"python\": \"3.12.2\", \"status\": \"ready\"}",
+      "created_at": "2026-05-24T18:00:50.470874+00:00",
+      "prev_hash": "4a9443c59f6963a93a63454fef6c7ae35463f230df6663d8d157ae6c77de41ae",
+      "event_hash": "156f62d9182cfe98177ac5bf5555055f3c6353a9162341722fc5e605768978c9"
+    },
+    {
+      "audit_id": 22,
+      "event_type": "memory_policy_status",
+      "memory_id": null,
+      "detail": "{\"approx_total_bytes\": 133727, \"eviction_candidates\": 1, \"live\": 3, \"namespace\": \"default\", \"stale_or_deleted\": 0}",
+      "created_at": "2026-05-24T18:00:16.634789+00:00",
+      "prev_hash": "dc9046e82fc79f2a18be75b631d5b7f9d1565080f6d2b7b981a86ee09a0a5d40",
+      "event_hash": "4a9443c59f6963a93a63454fef6c7ae35463f230df6663d8d157ae6c77de41ae"
+    },
+    {
+      "audit_id": 21,
+      "event_type": "retrieval_status",
+      "memory_id": null,
+      "detail": "{\"last_backend_used\": \"hash\", \"namespace\": \"default\", \"requested_backend\": \"hash\"}",
+      "created_at": "2026-05-24T18:00:16.626234+00:00",
+      "prev_hash": "8c201b733e31dcfca6173c1a12aa031ea816560477cc5ea459c73f7139aa253b",
+      "event_hash": "dc9046e82fc79f2a18be75b631d5b7f9d1565080f6d2b7b981a86ee09a0a5d40"
+    },
+    {
+      "audit_id": 20,
+      "event_type": "namespace_status",
+      "memory_id": null,
+      "detail": "{\"live_record_count\": 3, \"namespace\": \"default\", \"namespace_home\": \"/home/luo/.memguardos\", \"record_count\": 3}",
+      "created_at": "2026-05-24T18:00:16.617000+00:00",
+      "prev_hash": "a1f975d69ddd57f47a74e9d68efeda911ff944f9b8dd965e3d33fa7021caf768",
+      "event_hash": "8c201b733e31dcfca6173c1a12aa031ea816560477cc5ea459c73f7139aa253b"
+    },
+    {
+      "audit_id": 19,
+      "event_type": "daemon_started",
+      "memory_id": null,
+      "detail": "{\"cgroup_v2\": true, \"namespace\": \"default\", \"namespace_home\": \"/home/luo/.memguardos\", \"proc_cgroup\": \"0::/user.slice/user-1000.slice/session-21.scope\", \"python\": \"3.12.2\", \"status\": \"ready\"}",
+      "created_at": "2026-05-24T17:59:33.058921+00:00",
+      "prev_hash": "e3f9da61d519149671b9b86343fd516fc45af1b7a39dca0d4d34f75eb7728232",
+      "event_hash": "a1f975d69ddd57f47a74e9d68efeda911ff944f9b8dd965e3d33fa7021caf768"
+    },
+    {
+      "audit_id": 18,
+      "event_type": "memory_policy_status",
+      "memory_id": null,
+      "detail": "{\"approx_total_bytes\": 125487, \"eviction_candidates\": 1, \"live\": 3, \"namespace\": \"default\", \"stale_or_deleted\": 0}",
+      "created_at": "2026-05-24T17:33:41.536427+00:00",
+      "prev_hash": "0ce90edf341d1c0216ae4f5e27f870818fccfc3c31150ad443930a4f1818b057",
+      "event_hash": "e3f9da61d519149671b9b86343fd516fc45af1b7a39dca0d4d34f75eb7728232"
+    },
+    {
+      "audit_id": 17,
+      "event_type": "retrieval_status",
+      "memory_id": null,
+      "detail": "{\"last_backend_used\": \"hash\", \"namespace\": \"default\", \"requested_backend\": \"hash\"}",
+      "created_at": "2026-05-24T17:33:41.526551+00:00",
+      "prev_hash": "e298ec622764b1cf98e225c5c37288d0d50fc71c8941f40dd41f38cc4f60db9d",
+      "event_hash": "0ce90edf341d1c0216ae4f5e27f870818fccfc3c31150ad443930a4f1818b057"
+    },
+    {
+      "audit_id": 16,
+      "event_type": "namespace_status",
+      "memory_id": null,
+      "detail": "{\"live_record_count\": 3, \"namespace\": \"default\", \"namespace_home\": \"/home/luo/.memguardos\", \"record_count\": 3}",
+      "created_at": "2026-05-24T17:33:41.515826+00:00",
+      "prev_hash": "fc37459f9119c7317ee3c343e817a13d3947c31563cd4dcd08b294d76789f8c7",
+      "event_hash": "e298ec622764b1cf98e225c5c37288d0d50fc71c8941f40dd41f38cc4f60db9d"
+    },
     {
       "audit_id": 15,
       "event_type": "memory_policy_status",
@@ -700,6 +801,60 @@
       "created_at": "2026-05-24T17:33:36.321352+00:00",
       "prev_hash": "0329a63be1faf63528b9679a6c08a728bb09ec4a55a783b8d9e1aa7eb2b7ff59",
       "event_hash": "6e10ff52a3f3f82bd3a6cc7fb0447913576c51d3d96e77751b7b2833a0eae01b"
+    },
+    {
+      "audit_id": 12,
+      "event_type": "daemon_started",
+      "memory_id": null,
+      "detail": "{\"cgroup_v2\": true, \"namespace\": \"default\", \"namespace_home\": \"/home/luo/.memguardos\", \"proc_cgroup\": \"0::/user.slice/user-1000.slice/session-5.scope\", \"python\": \"3.12.2\", \"status\": \"ready\"}",
+      "created_at": "2026-05-24T17:33:29.417591+00:00",
+      "prev_hash": "31573650c33cf67c705c963a6ba4e92c86547beed20ddebe1f3e72f459af39a4",
+      "event_hash": "0329a63be1faf63528b9679a6c08a728bb09ec4a55a783b8d9e1aa7eb2b7ff59"
+    },
+    {
+      "audit_id": 11,
+      "event_type": "daemon_started",
+      "memory_id": null,
+      "detail": "{\"cgroup_v2\": true, \"namespace\": \"default\", \"namespace_home\": \"/home/luo/.memguardos\", \"proc_cgroup\": \"0::/user.slice/user-1000.slice/session-178.scope\", \"python\": \"3.12.2\", \"status\": \"ready\"}",
+      "created_at": "2026-05-24T11:37:34.728917+00:00",
+      "prev_hash": "3b64f59d1f2bbc81f28ffbd1cc178a3425038261ceb990f10d45634b2717a620",
+      "event_hash": "31573650c33cf67c705c963a6ba4e92c86547beed20ddebe1f3e72f459af39a4"
+    },
+    {
+      "audit_id": 10,
+      "event_type": "memory_policy_status",
+      "memory_id": null,
+      "detail": "{\"approx_total_bytes\": 129655, \"eviction_candidates\": 1, \"live\": 3, \"namespace\": \"default\", \"stale_or_deleted\": 0}",
+      "created_at": "2026-05-24T11:33:10.142525+00:00",
+      "prev_hash": "a7802021cb312472cff726d29c129ffe5cc4f3ca86a0b6ea5d682824a84f75a7",
+      "event_hash": "3b64f59d1f2bbc81f28ffbd1cc178a3425038261ceb990f10d45634b2717a620"
+    },
+    {
+      "audit_id": 9,
+      "event_type": "retrieval_status",
+      "memory_id": null,
+      "detail": "{\"last_backend_used\": \"hash\", \"namespace\": \"default\", \"requested_backend\": \"hash\"}",
+      "created_at": "2026-05-24T11:33:10.132472+00:00",
+      "prev_hash": "c74d853a7849c8113ffc5cafe769e38bf3cf5795d3040a920b8fa4633603c896",
+      "event_hash": "a7802021cb312472cff726d29c129ffe5cc4f3ca86a0b6ea5d682824a84f75a7"
+    },
+    {
+      "audit_id": 8,
+      "event_type": "namespace_status",
+      "memory_id": null,
+      "detail": "{\"live_record_count\": 3, \"namespace\": \"default\", \"namespace_home\": \"/home/luo/.memguardos\", \"record_count\": 3}",
+      "created_at": "2026-05-24T11:33:10.121202+00:00",
+      "prev_hash": "c1fa862ebe7489d8569aa0319e49d285c6382d498507fa40371570af30b13cfc",
+      "event_hash": "c74d853a7849c8113ffc5cafe769e38bf3cf5795d3040a920b8fa4633603c896"
+    },
+    {
+      "audit_id": 7,
+      "event_type": "memory_policy_status",
+      "memory_id": null,
+      "detail": "{\"approx_total_bytes\": 117295, \"eviction_candidates\": 1, \"live\": 3, \"namespace\": \"default\", \"stale_or_deleted\": 0}",
+      "created_at": "2026-05-24T11:29:19.171032+00:00",
+      "prev_hash": "a78991edfab59b7726720dd08d14bf0b0429b2b66500160e8aafbf68e329baea",
+      "event_hash": "c1fa862ebe7489d8569aa0319e49d285c6382d498507fa40371570af30b13cfc"
     }
   ]
 }

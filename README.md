@@ -63,7 +63,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | OS 集成 | systemd、cgroup、journald、auditd、BPF LSM 可选强制拦截、JSON denylist 策略生成、Peony 右键菜单可见验证、UKUI 控制中心可见验证 | `scripts/`、`native/` |
 | Agent API | 本地 Unix socket JSON API，支持 health、ingest、search、batch_search、build_context、forget、audit 等 | `memguard/api/server.py` |
 | Kylin SDK 适配 | Kylin embedding/vector SDK 探测，embedding 可选重排后端，默认保留稳定 fallback | `memctl sdk-status`、`memguard/retrieval/kylin_sdk.py` |
-| 本地控制台 | 无外部依赖的 localhost Web 控制台，覆盖状态、写入、抽取解释、检索、RAG 上下文、遗忘和审计 | `memctl web`、`memguard/web/dashboard.py` |
+| 本地控制台 | 无外部依赖的 localhost Web 控制台，覆盖状态、写入、抽取解释、检索、RAG 上下文、精准遗忘、审计和系统诊断 | `memctl web`、`memguard/web/dashboard.py` |
 
 ## 系统架构
 
@@ -140,7 +140,7 @@ python -m memguard.cli.memctl search "Linux 命令回答偏好"
 ### 3. 为 Agent 构建 RAG 上下文
 
 ```powershell
-python -m memguard.cli.memctl batch-search "任务规划 systemd cgroup" "工具调用 pytest journalctl" "结果生成 答辩证据"
+python -m memguard.cli.memctl batch-search "任务规划 systemd cgroup" "工具调用 pytest journalctl" "结果生成 运维证据"
 python -m memguard.cli.memctl build-context "openKylin 服务内存限制" --top-k 5 --token-budget 1200
 python -m memguard.cli.memctl build-prompt "openKylin 服务内存限制" --top-k 5 --token-budget 1200
 ```

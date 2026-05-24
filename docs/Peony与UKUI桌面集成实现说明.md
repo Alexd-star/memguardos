@@ -378,7 +378,7 @@ buttons=运行 doctor,验证审计链,检查 Kylin SDK
 status=visible_in_user_screenshot
 ```
 
-新版本的按钮文本更接近企业交付语义：用户看到的是“运行环境检查”和“端侧向量能力”，而不是底层命令名；“导出诊断报告”会调用 `memctl diagnostics --probe-sdk` 汇总 doctor、namespace、检索状态、记忆策略、Kylin SDK 和审计链结果；“打开本地控制台”会启动并打开 `http://127.0.0.1:8765`，用于本机管理员查看记忆、检索、RAG 上下文、精准遗忘和审计记录。
+新版本的按钮文本更接近企业交付语义：用户看到的是“运行环境检查”和“端侧向量能力”，而不是底层命令名；“导出诊断报告”会调用 `memctl diagnostics --probe-sdk` 汇总 doctor、namespace、检索状态、记忆策略、Kylin SDK 和审计链结果；“打开本地控制台”会启动并打开 `http://127.0.0.1:8765`，用于本机管理员查看记忆、检索、RAG 上下文、精准遗忘、审计记录和系统诊断。
 
 ## 9. 点击后的后端验证
 

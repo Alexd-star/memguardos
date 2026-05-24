@@ -1,11 +1,13 @@
-$ .venv/bin/python scripts/web_dashboard_smoke.py
-
-MemGuardOS dashboard listening on http://127.0.0.1:36291
+MemGuardOS dashboard listening on http://127.0.0.1:46231
 {
   "page_ok": true,
+  "diagnostics_tab_ok": true,
   "ingest_ok": true,
   "search_hits": 1,
   "extraction_type": "preference",
   "live_record_count": 1,
-  "url": "http://127.0.0.1:36291"
+  "audit_ok": true,
+  "retrieval_ok": true,
+  "policy_ok": true,
+  "url": "http://127.0.0.1:46231"
 }

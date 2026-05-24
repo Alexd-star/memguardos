@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import shlex
 import subprocess
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from typing import Any
@@ -71,11 +73,16 @@ def _generate_with_local_command(prompt: str, *, command: str, timeout: float) -
     if not command.strip():
         raise LLMAdapterError("local-command provider requires --command")
     try:
+        command_args = shlex.split(command)
+    except ValueError as exc:
+        raise LLMAdapterError(f"local-command provider received an invalid command: {exc}") from exc
+    if not command_args:
+        raise LLMAdapterError("local-command provider requires a non-empty executable")
+    try:
         completed = subprocess.run(
-            command,
+            command_args,
             input=prompt,
             text=True,
-            shell=True,
             capture_output=True,
             timeout=timeout,
             check=False,
@@ -90,7 +97,7 @@ def _generate_with_local_command(prompt: str, *, command: str, timeout: float) -
         generated=True,
         prompt=prompt,
         answer=completed.stdout.strip(),
-        endpoint=command,
+        endpoint=command_args[0],
     )
 
 
@@ -106,6 +113,9 @@ def _generate_with_openai_compatible(
         raise LLMAdapterError("openai-compatible provider requires --endpoint")
     if not model.strip():
         raise LLMAdapterError("openai-compatible provider requires --model")
+    parsed_endpoint = urllib.parse.urlparse(endpoint)
+    if parsed_endpoint.scheme not in {"http", "https"} or not parsed_endpoint.netloc:
+        raise LLMAdapterError("openai-compatible provider requires an http(s) endpoint URL")
 
     payload = {
         "model": model,
@@ -124,9 +134,12 @@ def _generate_with_openai_compatible(
     request = urllib.request.Request(endpoint, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
-            raw = response.read().decode("utf-8")
+            response_bytes = response.read(2 * 1024 * 1024 + 1)
     except urllib.error.URLError as exc:
         raise LLMAdapterError(f"openai-compatible request failed: {exc}") from exc
+    if len(response_bytes) > 2 * 1024 * 1024:
+        raise LLMAdapterError("openai-compatible response exceeded 2 MiB limit")
+    raw = response_bytes.decode("utf-8")
 
     try:
         data = json.loads(raw)

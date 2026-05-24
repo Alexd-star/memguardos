@@ -811,6 +811,12 @@ def test_optional_llm_adapter_is_explicit_and_safe_by_default():
     local = generate_answer("memguard", provider="local-command", command=command)
     assert local.generated is True
     assert local.answer == "MEMGUARD"
+    injected = generate_answer(
+        "memguard",
+        provider="local-command",
+        command=f'"{sys.executable}" -c "import sys; print(sys.stdin.read())" & echo SHOULD_NOT_RUN',
+    )
+    assert injected.answer == "memguard"
 
 
 def test_entity_relation_extraction():
@@ -958,6 +964,15 @@ def test_local_api_handler_and_unix_socket(tmp_path):
         assert batch["result"]["ok"] is True
         assert batch["result"]["query_count"] == 2
         assert handle_request(service, {"command": "batch_search", "queries": "Linux 命令"})["ok"] is False
+        bad_limit = handle_request(service, {"command": "search", "query": "Linux", "limit": "bad"})
+        assert bad_limit["ok"] is False
+        assert bad_limit["error"] == "invalid_request"
+        too_many_workers = handle_request(service, {"command": "batch_search", "queries": ["Linux"], "workers": 999})
+        assert too_many_workers["ok"] is False
+        assert too_many_workers["error"] == "invalid_request"
+        too_many_queries = handle_request(service, {"command": "batch_search", "queries": ["Linux"] * 101})
+        assert too_many_queries["ok"] is False
+        assert too_many_queries["error"] == "invalid_request"
         policy = handle_request(service, {"command": "memory_policy", "eviction_limit": 3})
         assert policy["ok"] is True
         assert policy["result"]["counts"]["live"] >= 1

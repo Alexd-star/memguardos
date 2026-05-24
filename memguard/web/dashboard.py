@@ -50,6 +50,12 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/memory-policy":
             self._send_api({"command": "memory_policy"})
             return
+        if parsed.path == "/api/verify-audit":
+            self._send_api({"command": "verify_audit"})
+            return
+        if parsed.path == "/api/retrieval-status":
+            self._send_api({"command": "retrieval_status"})
+            return
         if parsed.path == "/api/search":
             params = parse_qs(parsed.query)
             query = params.get("q", [""])[0]
@@ -85,7 +91,10 @@ class _DashboardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
-        payload = self._read_json()
+        payload, payload_error = self._read_json()
+        if payload_error:
+            self._send_json({"ok": False, "error": payload_error}, status=413 if payload_error == "payload_too_large" else 400)
+            return
         if parsed.path == "/api/ingest":
             self._send_api(
                 {
@@ -112,16 +121,21 @@ class _DashboardHandler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:
         return
 
-    def _read_json(self) -> dict[str, Any]:
+    def _read_json(self) -> tuple[dict[str, Any], str]:
         length = _safe_int(self.headers.get("Content-Length", "0"), 0)
         if length <= 0:
-            return {}
+            return {}, ""
+        if length > 262144:
+            self.rfile.read(min(length, 262144))
+            return {}, "payload_too_large"
         raw = self.rfile.read(length).decode("utf-8", errors="replace")
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
-            return {}
-        return data if isinstance(data, dict) else {}
+            return {}, "invalid_json"
+        if not isinstance(data, dict):
+            return {}, "json_body_must_be_object"
+        return data, ""
 
     def _send_api(self, request: dict[str, Any]) -> None:
         token = _request_token(self.headers.get("Authorization", ""))
@@ -141,6 +155,8 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
         self.wfile.write(raw)
@@ -150,6 +166,9 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Security-Policy", "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; base-uri 'none'")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
         self.wfile.write(raw)
@@ -191,17 +210,24 @@ def _dashboard_html() -> str:
     section.active { display:block; }
     h2 { font-size:20px; margin:0 0 14px; }
     .grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:12px; }
-    .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px; }
+    .panel { min-width:0; overflow:hidden; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px; }
     label { display:block; font-size:13px; color:var(--muted); margin:10px 0 5px; }
     textarea, input, select { width:100%; border:1px solid var(--line); border-radius:6px; padding:9px 10px; font:14px/1.45 Consolas, "Microsoft YaHei", monospace; background:white; color:var(--ink); }
     textarea { min-height:120px; resize:vertical; }
     .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
     button.primary { border:0; background:var(--accent); color:white; border-radius:6px; padding:9px 12px; cursor:pointer; min-height:36px; }
     button.secondary { border:1px solid var(--line); background:white; color:var(--ink); border-radius:6px; padding:9px 12px; cursor:pointer; min-height:36px; }
+    button:disabled { opacity:.55; cursor:progress; }
     pre { white-space:pre-wrap; word-break:break-word; background:#0b1220; color:#d1e9ff; border-radius:8px; padding:12px; min-height:220px; overflow:auto; }
     .metric { font-size:24px; font-weight:700; color:var(--accent); margin-top:4px; }
     .muted { color:var(--muted); font-size:13px; }
     .warning { color:var(--warn); font-weight:650; }
+    .statusline { display:flex; align-items:center; gap:10px; margin:0 0 14px; color:var(--muted); font-size:13px; }
+    .badge { display:inline-flex; align-items:center; min-height:24px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--muted); }
+    .badge.ok { border-color:#99f6e4; background:#ccfbf1; color:#115e59; }
+    .badge.bad { border-color:#fecaca; background:#fee2e2; color:#991b1b; }
+    .error { display:none; margin:0 0 12px; padding:10px 12px; border:1px solid #fecaca; background:#fff1f2; color:#991b1b; border-radius:8px; }
+    #storageRoot { word-break:break-all; overflow-wrap:anywhere; }
     @media (max-width: 900px) {
       main { grid-template-columns: 1fr; }
       nav { border-right:0; border-bottom:1px solid var(--line); display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:8px; }
@@ -226,10 +252,13 @@ def _dashboard_html() -> str:
       <button data-tab="context">RAG 上下文</button>
       <button data-tab="forget">精准遗忘</button>
       <button data-tab="audit">审计</button>
+      <button data-tab="diagnostics">诊断</button>
     </nav>
     <div>
+      <div id="errorBox" class="error"></div>
       <section id="overview" class="active">
         <h2>运行状态</h2>
+        <div class="statusline"><span id="healthBadge" class="badge">连接中</span><span id="lastUpdated">等待刷新</span></div>
         <div class="grid">
           <div class="panel"><div class="muted">实时记忆</div><div class="metric" id="liveCount">-</div></div>
           <div class="panel"><div class="muted">审计事件</div><div class="metric" id="auditCount">-</div></div>
@@ -243,7 +272,7 @@ def _dashboard_html() -> str:
           <label>文本</label><textarea id="ingestText">以后回答 openKylin 服务问题时，先给 systemctl 命令，再说明风险。</textarea>
           <label>来源类型</label><select id="sourceKind"><option>manual</option><option>dashboard</option><option>tool_result</option><option>user_behavior</option><option>os_event</option></select>
           <label>记忆层级</label><select id="tier"><option value="">自动</option><option>working</option><option>session</option><option>long_term</option></select>
-          <div class="actions"><button class="primary" onclick="ingest()">写入</button><button class="secondary" onclick="explainExtraction()">解释抽取</button></div>
+          <div class="actions"><button class="primary" onclick="ingest(event)">写入</button><button class="secondary" onclick="explainExtraction(event)">解释抽取</button></div>
         </div>
         <pre id="ingestOut"></pre>
       </section>
@@ -251,7 +280,7 @@ def _dashboard_html() -> str:
         <h2>混合检索</h2>
         <div class="panel">
           <label>查询</label><input id="searchQuery" value="openKylin 服务内存限制">
-          <div class="actions"><button class="primary" onclick="search()">检索</button></div>
+          <div class="actions"><button class="primary" onclick="search(event)">检索</button></div>
         </div>
         <pre id="searchOut"></pre>
       </section>
@@ -260,7 +289,7 @@ def _dashboard_html() -> str:
         <div class="panel">
           <label>问题</label><input id="contextQuery" value="openKylin 服务内存限制">
           <label>token 预算</label><input id="tokenBudget" type="number" value="1200">
-          <div class="actions"><button class="primary" onclick="contextBuild()">构建</button></div>
+          <div class="actions"><button class="primary" onclick="contextBuild(event)">构建</button></div>
         </div>
         <pre id="contextOut"></pre>
       </section>
@@ -268,15 +297,27 @@ def _dashboard_html() -> str:
         <h2>精准遗忘</h2>
         <div class="panel">
           <label>自然语言请求</label><input id="forgetRequest" value="忘掉 temporary project codename">
-          <div class="actions"><button class="secondary" onclick="forget(false)">Dry-run</button><button class="primary" onclick="forget(true)">确认遗忘并 compact</button></div>
+          <div class="actions"><button class="secondary" onclick="forget(event, false)">Dry-run</button><button class="primary" onclick="forget(event, true)">确认遗忘并 compact</button></div>
           <p class="warning">确认遗忘会写入 tombstone 并清理可访问索引。</p>
         </div>
         <pre id="forgetOut"></pre>
       </section>
       <section id="audit">
         <h2>审计记录</h2>
-        <div class="actions"><button class="primary" onclick="audit()">刷新</button></div>
+        <div class="actions"><button class="primary" onclick="audit(event)">刷新</button></div>
         <pre id="auditOut"></pre>
+      </section>
+      <section id="diagnostics">
+        <h2>系统诊断</h2>
+        <div class="panel">
+          <div class="actions">
+            <button class="primary" onclick="verifyAudit(event)">校验审计链</button>
+            <button class="secondary" onclick="retrievalStatus(event)">检索后端</button>
+            <button class="secondary" onclick="memoryPolicy(event)">记忆策略</button>
+          </div>
+          <p class="muted">诊断输出用于本机管理员定位审计、检索和冷热分层状态。敏感内容会按核心链路的脱敏规则处理。</p>
+        </div>
+        <pre id="diagnosticsOut"></pre>
       </section>
     </div>
   </main>
@@ -297,8 +338,51 @@ def _dashboard_html() -> str:
       if (token) headers['Authorization'] = 'Bearer ' + token;
       return headers;
     }
-    async function getJson(url) { const r = await fetch(url, {headers: authHeaders()}); return await r.json(); }
-    async function postJson(url, data) { const r = await fetch(url, {method:'POST', headers:authHeaders({'Content-Type':'application/json'}), body:JSON.stringify(data)}); return await r.json(); }
+    function showError(message) {
+      const box = document.getElementById('errorBox');
+      box.style.display = message ? 'block' : 'none';
+      box.textContent = message || '';
+    }
+    async function withBusy(event, work) {
+      const button = event && event.currentTarget ? event.currentTarget : null;
+      const label = button ? button.textContent : '';
+      if (button) {
+        button.disabled = true;
+        button.textContent = '处理中...';
+      }
+      try {
+        return await work();
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = label;
+        }
+      }
+    }
+    async function getJson(url) {
+      try {
+        const r = await fetch(url, {headers: authHeaders()});
+        const data = await r.json();
+        if (!r.ok || data.ok === false) showError(data.error ? (data.error + (data.detail ? ': ' + data.detail : '')) : '请求失败');
+        else showError('');
+        return data;
+      } catch (err) {
+        showError('无法连接本地控制台服务：' + err);
+        return {ok:false, error:String(err)};
+      }
+    }
+    async function postJson(url, data) {
+      try {
+        const r = await fetch(url, {method:'POST', headers:authHeaders({'Content-Type':'application/json'}), body:JSON.stringify(data)});
+        const payload = await r.json();
+        if (!r.ok || payload.ok === false) showError(payload.error ? (payload.error + (payload.detail ? ': ' + payload.detail : '')) : '请求失败');
+        else showError('');
+        return payload;
+      } catch (err) {
+        showError('无法连接本地控制台服务：' + err);
+        return {ok:false, error:String(err)};
+      }
+    }
     async function refresh() {
       const status = await getJson('/api/status');
       document.getElementById('overviewOut').textContent = pretty(status);
@@ -307,21 +391,52 @@ def _dashboard_html() -> str:
       document.getElementById('liveCount').textContent = result.live_record_count ?? '-';
       document.getElementById('auditCount').textContent = result.audit_event_count ?? '-';
       document.getElementById('storageRoot').textContent = result.storage_root || '-';
+      document.getElementById('healthBadge').textContent = status.ok ? '运行正常' : '状态异常';
+      document.getElementById('healthBadge').className = 'badge ' + (status.ok ? 'ok' : 'bad');
+      document.getElementById('lastUpdated').textContent = '最后刷新：' + new Date().toLocaleTimeString();
     }
-    async function ingest() {
-      const data = {text: ingestText.value, source_kind: sourceKind.value, tier: tier.value};
-      ingestOut.textContent = pretty(await postJson('/api/ingest', data));
-      await refresh();
+    async function ingest(event) {
+      await withBusy(event, async () => {
+        const data = {text: ingestText.value, source_kind: sourceKind.value, tier: tier.value};
+        ingestOut.textContent = pretty(await postJson('/api/ingest', data));
+        await refresh();
+      });
     }
-    async function explainExtraction() {
-      const url = '/api/explain-extraction?text=' + encodeURIComponent(ingestText.value) + '&source_kind=' + encodeURIComponent(sourceKind.value);
-      ingestOut.textContent = pretty(await getJson(url));
+    async function explainExtraction(event) {
+      await withBusy(event, async () => {
+        const url = '/api/explain-extraction?text=' + encodeURIComponent(ingestText.value) + '&source_kind=' + encodeURIComponent(sourceKind.value);
+        ingestOut.textContent = pretty(await getJson(url));
+      });
     }
-    async function search() { searchOut.textContent = pretty(await getJson('/api/search?q=' + encodeURIComponent(searchQuery.value) + '&top_k=5')); }
-    async function contextBuild() { contextOut.textContent = pretty(await getJson('/api/context?q=' + encodeURIComponent(contextQuery.value) + '&token_budget=' + encodeURIComponent(tokenBudget.value))); }
-    async function forget(confirm) { forgetOut.textContent = pretty(await postJson('/api/forget', {request: forgetRequest.value, confirm, compact: confirm})); await refresh(); }
-    async function audit() { auditOut.textContent = pretty(await getJson('/api/audit?limit=30')); }
-    refresh(); audit();
+    async function search(event) {
+      await withBusy(event, async () => { searchOut.textContent = pretty(await getJson('/api/search?q=' + encodeURIComponent(searchQuery.value) + '&top_k=5')); });
+    }
+    async function contextBuild(event) {
+      await withBusy(event, async () => { contextOut.textContent = pretty(await getJson('/api/context?q=' + encodeURIComponent(contextQuery.value) + '&token_budget=' + encodeURIComponent(tokenBudget.value))); });
+    }
+    async function forget(event, confirmForget) {
+      if (confirmForget && !window.confirm('确认执行精准遗忘并压缩段文件？该操作会写入 tombstone 并清理可访问索引。')) return;
+      await withBusy(event, async () => {
+        forgetOut.textContent = pretty(await postJson('/api/forget', {request: forgetRequest.value, confirm: confirmForget, compact: confirmForget}));
+        await refresh();
+      });
+    }
+    async function audit(event) {
+      await withBusy(event, async () => { auditOut.textContent = pretty(await getJson('/api/audit?limit=30')); });
+    }
+    async function verifyAudit(event) {
+      await withBusy(event, async () => {
+        diagnosticsOut.textContent = pretty(await getJson('/api/verify-audit'));
+        await refresh();
+      });
+    }
+    async function retrievalStatus(event) {
+      await withBusy(event, async () => { diagnosticsOut.textContent = pretty(await getJson('/api/retrieval-status')); });
+    }
+    async function memoryPolicy(event) {
+      await withBusy(event, async () => { diagnosticsOut.textContent = pretty(await getJson('/api/memory-policy')); });
+    }
+    refresh(); audit(null);
   </script>
 </body>
 </html>"""

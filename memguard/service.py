@@ -1060,7 +1060,7 @@ class MemGuardService:
         if working_count:
             recommendations.append("working 层存在临时记忆，任务结束后优先执行 evict-tier working 或挑选 promote 到 long_term。")
         if session_count:
-            recommendations.append("session 层存在阶段性记忆，适合在演示中展示中期记忆淘汰和沉淀。")
+            recommendations.append("session 层存在阶段性记忆，建议在任务结束后按项目、会话或时间窗口进行淘汰或沉淀。")
         if stale_count:
             recommendations.append("存在已删除或旧版本记录，建议执行 compact 以压缩 mmap 段文件并清理旧明文。")
         if total_bytes > 64 * 1024 * 1024:

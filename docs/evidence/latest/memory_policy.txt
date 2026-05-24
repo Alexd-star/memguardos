@@ -1,5 +1,3 @@
-$ .venv/bin/python -m memguard.cli.memctl memory-policy --eviction-limit 10
-
 {
   "namespace": "default",
   "policy": {
@@ -15,6 +13,20 @@ $ .venv/bin/python -m memguard.cli.memctl memory-policy --eviction-limit 10
   },
   "tiers": {
     "working": {
+      "count": 1,
+      "content_chars": 104,
+      "summary_chars": 109,
+      "approx_payload_bytes": 231,
+      "sensitivity": {
+        "none": 1
+      },
+      "sources": {
+        "os_event": 1
+      },
+      "oldest_updated_at": "2026-05-24T11:29:18.800310+00:00",
+      "newest_updated_at": "2026-05-24T11:29:18.800310+00:00"
+    },
+    "session": {
       "count": 0,
       "content_chars": 0,
       "summary_chars": 0,
@@ -24,100 +36,58 @@ $ .venv/bin/python -m memguard.cli.memctl memory-policy --eviction-limit 10
       "oldest_updated_at": "",
       "newest_updated_at": ""
     },
-    "session": {
-      "count": 4,
-      "content_chars": 560,
-      "summary_chars": 536,
-      "approx_payload_bytes": 1136,
-      "sensitivity": {
-        "none": 4
-      },
-      "sources": {
-        "user_behavior": 4
-      },
-      "oldest_updated_at": "2026-05-23T15:40:53.364892+00:00",
-      "newest_updated_at": "2026-05-23T15:40:53.396738+00:00"
-    },
     "long_term": {
-      "count": 6,
-      "content_chars": 282,
-      "summary_chars": 312,
-      "approx_payload_bytes": 1022,
+      "count": 5,
+      "content_chars": 216,
+      "summary_chars": 241,
+      "approx_payload_bytes": 883,
       "sensitivity": {
-        "none": 5,
-        "low": 1
+        "none": 5
       },
       "sources": {
-        "manual": 6
+        "manual": 5
       },
-      "oldest_updated_at": "2026-05-23T15:40:51.349970+00:00",
-      "newest_updated_at": "2026-05-23T15:40:54.483987+00:00"
+      "oldest_updated_at": "2026-05-24T11:29:18.442376+00:00",
+      "newest_updated_at": "2026-05-24T18:03:06.854799+00:00"
     }
   },
   "counts": {
-    "live": 10,
-    "metadata_records": 10,
-    "segment_records": 10,
+    "live": 6,
+    "metadata_records": 6,
+    "segment_records": 6,
     "stale_or_deleted": 0,
-    "eviction_candidates": 4
+    "eviction_candidates": 1
   },
   "storage": {
-    "segment_path": "/var/tmp/memguardos_evidence_20260523_233923/memory.segment",
-    "segment_bytes": 21897,
-    "sqlite_path": "/var/tmp/memguardos_evidence_20260523_233923/memguard.sqlite3",
-    "sqlite_total_bytes": 122880,
-    "approx_total_bytes": 144777,
-    "bytes_per_live_memory": 14477.7
+    "segment_path": "/home/luo/.memguardos/memory.segment",
+    "segment_bytes": 10937,
+    "sqlite_path": "/home/luo/.memguardos/memguard.sqlite3",
+    "sqlite_total_bytes": 110592,
+    "approx_total_bytes": 121529,
+    "bytes_per_live_memory": 20254.833
   },
   "eviction_candidates": [
     {
-      "memory_id": "mem_01632cc021ee4c50",
-      "tier": "session",
+      "memory_id": "mem_6de4abcfaccc4c27",
+      "tier": "working",
       "type": "knowledge",
-      "subtype": "behavior_risk",
-      "source_kind": "user_behavior",
-      "updated_at": "2026-05-23T15:40:53.364892+00:00",
-      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=1 command=sudo apt updata"
-    },
-    {
-      "memory_id": "mem_cb698eb6b47b4647",
-      "tier": "session",
-      "type": "knowledge",
-      "subtype": "behavior_risk",
-      "source_kind": "user_behavior",
-      "updated_at": "2026-05-23T15:40:53.376097+00:00",
-      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=2 command=sudo apt update"
-    },
-    {
-      "memory_id": "mem_f551244480994bc3",
-      "tier": "session",
-      "type": "knowledge",
-      "subtype": "behavior_risk",
-      "source_kind": "user_behavior",
-      "updated_at": "2026-05-23T15:40:53.386413+00:00",
-      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=3 command=sudo apt install -y openssh-server "
-    },
-    {
-      "memory_id": "mem_7f7d8bd088534b44",
-      "tier": "session",
-      "type": "knowledge",
-      "subtype": "behavior_risk",
-      "source_kind": "user_behavior",
-      "updated_at": "2026-05-23T15:40:53.396738+00:00",
-      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=4 command=sudo systemctl enable --now ssh"
+      "subtype": "os_event",
+      "source_kind": "os_event",
+      "updated_at": "2026-05-24T11:29:18.800310+00:00",
+      "summary": "知识记忆：OS event: peony_context_menu_probe action=inspect path=/home/luo/桌面/memguardos-ui-test.txt process=peony"
     }
   ],
   "recommendations": [
-    "session 层存在阶段性记忆，适合在演示中展示中期记忆淘汰和沉淀。"
+    "working 层存在临时记忆，任务结束后优先执行 evict-tier working 或挑选 promote 到 long_term。"
   ],
   "cgroup": {
     "platform": "Linux",
     "is_linux": true,
     "cgroup_v2_mounted": true,
-    "proc_cgroup": "0::/user.slice/user-1000.slice/session-20.scope",
+    "proc_cgroup": "0::/user.slice/user-1000.slice/session-32.scope",
     "memory_current": null,
     "memory_max": null,
     "cpu_max": null,
-    "pid": 16315
+    "pid": 18554
   }
 }

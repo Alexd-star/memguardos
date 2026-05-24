@@ -7,11 +7,27 @@
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
+#include <QPointer>
 #include <QProcess>
 #include <QRegularExpression>
 #include <QPushButton>
+#include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
+
+static QString cleanCommandOutput(const QString &rawText, int exitCode)
+{
+    QString text = rawText;
+    text.remove(QRegularExpression(QStringLiteral("\\x1B\\[[0-?]*[ -/]*[@-~]")));
+    QStringList kept;
+    for (const QString &line : text.split(QLatin1Char('\n'))) {
+        if (!line.contains(QStringLiteral("Proxy init engine sessionId")))
+            kept << line;
+    }
+    if (exitCode != 0)
+        kept.prepend(QStringLiteral("命令退出码：%1").arg(exitCode));
+    return kept.join(QLatin1Char('\n')).trimmed();
+}
 
 QString MemGuardUkccPlugin::plugini18nName()
 {
@@ -34,6 +50,8 @@ QWidget *MemGuardUkccPlugin::pluginUi()
     title->setObjectName(QStringLiteral("memguardos-title"));
     auto *desc = new QLabel(QStringLiteral("管理本机 Agent 记忆服务的运行状态、审计完整性、端侧向量能力和诊断信息。"));
     desc->setWordWrap(true);
+    status_ = new QLabel(QStringLiteral("就绪"));
+    status_->setWordWrap(true);
 
     auto *statusBox = new QGroupBox(QStringLiteral("运行状态"));
     auto *statusGrid = new QGridLayout(statusBox);
@@ -56,12 +74,14 @@ QWidget *MemGuardUkccPlugin::pluginUi()
     buttons->addWidget(sdk, 0, 2);
     buttons->addWidget(diagnostics, 1, 0);
     buttons->addWidget(dashboard, 1, 1);
+    actionButtons_ = QList<QPushButton *>() << health << audit << sdk << diagnostics << dashboard;
 
     output_ = new QTextEdit;
     output_->setReadOnly(true);
 
     layout->addWidget(title);
     layout->addWidget(desc);
+    layout->addWidget(status_);
     layout->addWidget(statusBox);
     layout->addWidget(opsBox);
     layout->addWidget(output_);
@@ -106,8 +126,11 @@ void MemGuardUkccPlugin::runMemctl(const QStringList &args)
 {
     if (!output_)
         return;
-    QProcess process;
-    process.setProcessChannelMode(QProcess::MergedChannels);
+    setBusy(true, QStringLiteral("正在执行：") + args.join(QStringLiteral(" ")));
+    output_->setPlainText(QStringLiteral("正在执行，请稍候..."));
+    auto *process = new QProcess(this);
+    QPointer<QProcess> processGuard(process);
+    process->setProcessChannelMode(QProcess::MergedChannels);
     QString program = QStringLiteral("python3");
     QStringList commandArgs;
     if (QFileInfo::exists(QStringLiteral("/usr/bin/memctl"))) {
@@ -116,23 +139,34 @@ void MemGuardUkccPlugin::runMemctl(const QStringList &args)
     } else {
         commandArgs << QStringLiteral("-m") << QStringLiteral("memguard.cli.memctl") << args;
     }
-    process.start(program, commandArgs);
-    if (!process.waitForFinished(180000)) {
-        process.kill();
-        process.waitForFinished(1000);
+    connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError error) {
+        Q_UNUSED(error);
+        process->setProperty("handledError", true);
+        output_->setPlainText(QStringLiteral("命令启动失败：") + process->errorString());
+        setBusy(false, QStringLiteral("执行失败"));
+        process->deleteLater();
+    });
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, [this, process](int exitCode, QProcess::ExitStatus exitStatus) {
+        Q_UNUSED(exitStatus);
+        if (process->property("handledError").toBool())
+            return;
+        if (process->property("timedOut").toBool()) {
+            process->deleteLater();
+            return;
+        }
+        output_->setPlainText(cleanCommandOutput(QString::fromLocal8Bit(process->readAll()), exitCode));
+        setBusy(false, exitCode == 0 ? QStringLiteral("执行完成") : QStringLiteral("执行失败"));
+        process->deleteLater();
+    });
+    QTimer::singleShot(180000, this, [this, processGuard, program, commandArgs]() {
+        if (!processGuard || processGuard->state() == QProcess::NotRunning)
+            return;
+        processGuard->setProperty("timedOut", true);
+        processGuard->kill();
         output_->setPlainText(QStringLiteral("命令超时：") + program + QStringLiteral(" ") + commandArgs.join(QStringLiteral(" ")));
-        return;
-    }
-    QString text = QString::fromLocal8Bit(process.readAll());
-    text.remove(QRegularExpression(QStringLiteral("\\x1B\\[[0-?]*[ -/]*[@-~]")));
-    QStringList kept;
-    for (const QString &line : text.split(QLatin1Char('\n'))) {
-        if (!line.contains(QStringLiteral("Proxy init engine sessionId")))
-            kept << line;
-    }
-    if (process.exitCode() != 0)
-        kept.prepend(QStringLiteral("命令退出码：%1").arg(process.exitCode()));
-    output_->setPlainText(kept.join(QLatin1Char('\n')).trimmed());
+        setBusy(false, QStringLiteral("执行超时"));
+    });
+    process->start(program, commandArgs);
 }
 
 void MemGuardUkccPlugin::openDashboard()
@@ -146,9 +180,25 @@ void MemGuardUkccPlugin::openDashboard()
         commandArgs << QStringLiteral("-m") << QStringLiteral("memguard.cli.memctl")
                     << QStringLiteral("web") << QStringLiteral("--host") << QStringLiteral("127.0.0.1") << QStringLiteral("--port") << QStringLiteral("8765");
     }
-    QProcess::startDetached(program, commandArgs);
-    QDesktopServices::openUrl(QUrl(QStringLiteral("http://127.0.0.1:8765")));
+    const bool started = QProcess::startDetached(program, commandArgs);
+    const bool opened = QDesktopServices::openUrl(QUrl(QStringLiteral("http://127.0.0.1:8765")));
+    setBusy(false, started ? QStringLiteral("本地控制台已打开") : QStringLiteral("本地控制台启动失败"));
     if (output_) {
-        output_->setPlainText(QStringLiteral("已尝试启动并打开本地控制台：http://127.0.0.1:8765\n如果端口已被占用，请直接刷新浏览器页面或稍后重试。"));
+        output_->setPlainText(
+            QStringLiteral("本地控制台地址：http://127.0.0.1:8765\n")
+            + QStringLiteral("服务启动：") + (started ? QStringLiteral("已发起") : QStringLiteral("失败")) + QStringLiteral("\n")
+            + QStringLiteral("浏览器打开：") + (opened ? QStringLiteral("已发起") : QStringLiteral("失败")) + QStringLiteral("\n")
+            + QStringLiteral("如果端口已被占用，请直接刷新浏览器页面或稍后重试。")
+        );
+    }
+}
+
+void MemGuardUkccPlugin::setBusy(bool busy, const QString &message)
+{
+    if (status_)
+        status_->setText(message);
+    for (QPushButton *button : actionButtons_) {
+        if (button)
+            button->setEnabled(!busy);
     }
 }

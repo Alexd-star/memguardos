@@ -132,7 +132,7 @@ Version: ${VERSION}
 Section: utils
 Priority: optional
 Architecture: ${ARCH}
-Maintainer: MemGuardOS Competition Team <memguardos@example.com>
+Maintainer: MemGuardOS Project Team <memguardos@example.com>
 Depends: ${DEPENDS}
 Installed-Size: ${INSTALLED_SIZE}
 Homepage: https://github.com/Alexd-star/memguardos

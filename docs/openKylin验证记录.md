@@ -62,7 +62,7 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 - Peony/UKUI 原生插件已构建：Peony 右键菜单插件和 UKUI 控制中心插件均构建出 `.so`；只读 `/usr` 场景已通过 bind mount 演示安装处理，Peony 右键菜单项和 UKUI 控制中心入口均已在桌面可见验证
 - 默认用户演示库已归档旧历史数据并重建：`default_audit_after_reset.txt` 显示当前默认库 `verify-audit` 为 `ok=true`，避免最终 UI 演示时被旧审计链分叉数据干扰
 - 可解释语义抽取已验证：`semantic_extraction.txt` 记录 `explain-extraction`、抽取信号、类型/子类型和写入审计
-- 本地 Web 控制台已验证：`web_dashboard.txt` 记录页面加载、写入、检索和抽取解释 smoke 通过
+- 本地 Web 控制台已验证：`web_dashboard.txt` 记录页面加载、写入、检索、抽取解释、审计链、检索后端和记忆策略 smoke 通过
 - SDK 状态：embedding 模型信息显示 768 维端侧文本模型，Python/C++ 探针均可返回 768 维向量；实际检索可使用 `kylin_sdk` 作为可选重排后端；vector SDK 库和服务可用
 - 自然语言敏感规则：`patterns suggest` 和 `patterns add-natural` 可从“工号格式”指令生成受限正则，并在写入记忆时完成脱敏
 
