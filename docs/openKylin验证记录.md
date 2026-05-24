@@ -6,7 +6,7 @@
 
 日期：2026-05-18 至 2026-05-23
 
-说明：本页记录已经完成的 openKylin 证据。基础证据包采集时间为 `20260523_233923`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、可解释语义抽取、本地 Web 控制台、Kylin embedding 实际检索重排、Kylin 向量数据库探针、BPF JSON 策略生成、BPF LSM 安全测试文件强制拒绝、Peony/UKUI 原生插件构建、UKUI 插件可见性核查和 10k 规模评测。`2026-05-24` 已补充 Peony 右键菜单和 UKUI 控制中心桌面可见验证证据。
+说明：本页记录已经完成的 openKylin 证据。基础证据包采集时间为 `20260523_233923`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、可解释语义抽取、本地 Web 控制台、Kylin embedding 实际检索重排、Kylin 向量数据库探针、BPF JSON 策略生成、BPF LSM 安全测试文件强制拒绝、Peony/UKUI 原生插件构建、UKUI 插件可见性核查和 10k 规模评测。`2026-05-24` 已补充 Peony 右键菜单、UKUI 控制中心桌面可见验证证据，以及 Debian 安装包构建和离线解包 smoke 证据。
 
 环境：
 

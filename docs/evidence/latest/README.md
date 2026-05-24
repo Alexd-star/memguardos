@@ -38,6 +38,7 @@
 | `ukui_plugin_visible_final.txt` | 当前 Peony/UKUI 插件安装产物、依赖和元数据最终核查 |
 | `ukui_peony_visible_manual_confirmation.txt` | Peony 右键菜单项人工截图可见确认记录 |
 | `ukui_control_center_visible_manual_confirmation.txt` | UKUI 控制中心入口人工截图可见确认记录 |
+| `deb_package.txt` | MemGuardOS Debian 安装包构建、包内容和离线解包 smoke 证据 |
 | `bpf_lsm_policy.txt` | BPF LSM JSON denylist 策略生成证据 |
 | `bpf_lsm_enforcer.txt` | BPF LSM 强制拦截增强环境、构建和 attach 探针 |
 | `systemd_cgroup.txt` | systemd/cgroup 服务限制证据 |

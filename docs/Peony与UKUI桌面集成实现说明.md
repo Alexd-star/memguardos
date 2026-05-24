@@ -28,6 +28,7 @@ MemGuardOS 的默认主链路是 CLI、daemon、Unix socket API 和本地 Web �
 | `native/ukui/ukcc-memguard/ukcc-memguard.json` | UKCC 插件元数据，包含 `version: 3.2.2` |
 | `scripts/build_ukui_plugins.sh` | 构建 Peony/UKCC 两个 `.so` |
 | `scripts/install_ukui_plugins.sh` | 安装插件，支持只读 `/usr` 下的 bind mount 演示安装 |
+| `scripts/build_deb.sh` | 生成 MemGuardOS Debian 安装包，并在依赖存在时把 Peony/UKUI 插件打入系统插件目录 |
 | `scripts/probe_ukui_deep_plugins.sh` | 探测开发包、插件目录和系统环境 |
 | `scripts/verify_ukui_plugins.sh` | 检查构建产物、安装产物、动态依赖、关键字符串和人工可见性步骤 |
 
@@ -431,7 +432,8 @@ python3 -m memguard.cli.memctl ingest-os-event --json '{"event_type":"peony_cont
 仍需准确表述的边界：
 
 1. bind mount 安装方式用于 openKylin 只读 `/usr` 环境下的评审演示和本地验证，不等同于正式 `.deb` 包安装。
-2. 后续若要产品化交付，应制作 `.deb` 包或 openKylin 官方扩展包，交给系统包管理器安装，而不是依赖 `/var/tmp` bind mount。
+2. 项目已经提供 `scripts/build_deb.sh` 用于生成 `.deb` 安装包；该包会把插件安装到系统插件目录，适合在允许系统包写入的维护模式或等效环境中验证。
+3. 后续若进入长期产品化交付，还可以进一步制作 openKylin 官方扩展包或拆分 `memguardos` 与 `memguardos-ukui` 两个二进制包。
 
 ## 11. 对赛题的意义
 

@@ -78,6 +78,7 @@ FORMAL_SCRIPTS = {
     "scripts/auditd_to_memguard.sh",
     "scripts/bpftrace_sensitive_open.bt",
     "scripts/build_ukui_plugins.sh",
+    "scripts/build_deb.sh",
     "scripts/collect_openkylin_evidence.sh",
     "scripts/demo_smoke.py",
     "scripts/diagnose_kylin_embedding.sh",

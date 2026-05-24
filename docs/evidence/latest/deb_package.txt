@@ -1,0 +1,93 @@
+$ bash scripts/build_deb.sh
+
+build_status=ok
+deb_path=dist/memguardos_0.1.0_amd64.deb
+3c6d47b7336b32e912bdba9b406daf8ab59763d631f8779235072cd37010ce97  dist/memguardos_0.1.0_amd64.deb
+-rw-r--r-- 1 luo luo 215K  5月24日 12:43 dist/memguardos_0.1.0_amd64.deb
+
+--- dpkg-deb --info ---
+ 新格式的 Debian 软件包，格式版本 2.0。
+ 大小 220028 字节：主控包=5468 字节。
+     792 bytes,    15 lines      control
+   12183 bytes,   156 lines      md5sums
+     174 字节，    9 行   *  postinst             #!/bin/sh
+     107 字节，    6 行   *  postrm               #!/bin/sh
+     198 字节，    8 行   *  prerm                #!/bin/sh
+ Package: memguardos
+ Version: 0.1.0
+ Section: utils
+ Priority: optional
+ Architecture: amd64
+ Maintainer: MemGuardOS Competition Team <memguardos@example.com>
+ Depends: python3 (>= 3.9), systemd, libqt5core5a, libqt5widgets5, peony, ukui-control-center, libpeony3, libukcc3
+ Installed-Size: 2048
+ Homepage: https://github.com/Alexd-star/memguardos
+ Description: Linux-oriented OS Agent memory extraction and precise forgetting
+  MemGuardOS provides a local memory substrate for Linux/openKylin OS Agents.
+  It supports multi-source preference and knowledge memory extraction,
+  mmap-backed append-only storage, SQLite FTS metadata, graph relations,
+  sensitive information filtering, auditable precise forgetting, systemd/cgroup
+  deployment, auditd/journald integration and optional UKUI desktop plugins.
+
+--- required contents ---
+-rw-r--r-- root/root       406 2026-05-24 12:43 ./lib/systemd/system/memguardd.service
+-rw-rw-r-- root/root     48400 2026-05-23 23:23 ./opt/memguardos/memguard/service.py
+-rw-rw-r-- root/root       406 2026-05-23 23:23 ./opt/memguardos/scripts/memguardd.service
+-rwxr-xr-x root/root       123 2026-05-24 12:43 ./usr/bin/memctl
+-rwxr-xr-x root/root       119 2026-05-24 12:43 ./usr/bin/memguardd
+drwxrwxr-x root/root         0 2026-05-24 12:43 ./usr/lib/x86_64-linux-gnu/peony-extensions/
+-rwxr-xr-x root/root     43504 2026-05-24 12:43 ./usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
+drwxrwxr-x root/root         0 2026-05-24 12:43 ./usr/lib/x86_64-linux-gnu/ukui-control-center/
+-rwxr-xr-x root/root     42360 2026-05-24 12:43 ./usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
+
+--- offline extract smoke ---
+offline_extract_doctor=ok
+{
+  "python": "3.12.2",
+  "platform": "Linux-6.6.0-19-generic-x86_64-with-glibc2.38",
+  "home": "/home/luo/.memguardos",
+  "namespace": "default",
+  "namespace_status": {
+    "namespace": "default",
+    "is_default": true,
+    "home": "/home/luo/.memguardos",
+    "home_exists": true,
+    "namespace_home": "/home/luo/.memguardos",
+    "namespace_home_exists": true,
+    "store_path": "/home/luo/.memguardos/memory.segment",
+    "db_path": "/home/luo/.memguardos/memguard.sqlite3",
+    "custom_patterns_path": "/home/luo/.memguardos/sensitive_patterns.json",
+    "store_exists": true,
+    "db_exists": true,
+    "custom_patterns_exists": false,
+    "store_bytes": 1285343,
+    "db_bytes": 1896448,
+    "record_count": 468,
+    "live_record_count": 468,
+    "audit_event_count": 1088
+  },
+  "store_path": "/home/luo/.memguardos/memory.segment",
+  "db_path": "/home/luo/.memguardos/memguard.sqlite3",
+  "sqlite_version": "3.42.0",
+  "commands": {
+    "systemctl": "/usr/bin/systemctl",
+    "journalctl": "/usr/bin/journalctl",
+    "systemd-cat": "/usr/bin/systemd-cat",
+    "auditctl": "/usr/sbin/auditctl",
+    "bpftrace": null
+  },
+  "paths": {
+    "proc": true,
+    "sys_fs_cgroup": true
+  },
+  "cgroup": {
+    "platform": "Linux",
+
+--- plugin ldd missing dependencies ---
+peony_missing=
+ukcc_missing=
+
+--- apt install state ---
+apt_install_state=blocked_by_openKylin_current_mode
+apt_error=当前模式禁止执行（unpack）操作，ostree-pkgs-guard returned error code 2
+next_step=进入 openKylin 维护模式后执行 sudo apt install ./dist/memguardos_0.1.0_amd64.deb

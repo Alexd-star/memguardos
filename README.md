@@ -192,6 +192,17 @@ python -m memguard.cli.memctl sdk-status --probe-embedding --probe-timeout 90
 MEMGUARD_EMBEDDING_BACKEND=auto python -m memguard.cli.memctl search "openKylin 服务内存限制" --top-k 2
 ```
 
+生成 openKylin/Debian 安装包：
+
+```bash
+bash scripts/build_deb.sh
+sudo apt install ./dist/memguardos_0.1.0_amd64.deb
+memctl doctor
+sudo systemctl start memguardd
+```
+
+`build_deb.sh` 会把 MemGuardOS 安装到 `/opt/memguardos`，提供 `/usr/bin/memctl` 和 `/usr/bin/memguardd` 包装命令，安装 `memguardd.service` 与 `memguardd@.service`，并在 Peony/UKUI 构建依赖存在时把两个原生桌面插件 `.so` 一并打入 `.deb`。该包用于产品化安装验证；正式竞赛提交仍以 `memguardos_competition_submission_*.zip` 为主。
+
 ## 评测与证据
 
 本地 1k 负载评测：

@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 78,
-    "passed": 78,
+    "total": 80,
+    "passed": 80,
     "failed": 0,
     "warnings": 0
   },
@@ -11,14 +11,14 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 1965",
+      "detail": "中文字符数 2028",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/项目介绍总览.md",
       "ok": true,
-      "detail": "中文字符数 5370",
+      "detail": "中文字符数 5386",
       "severity": "P0"
     },
     {
@@ -39,7 +39,7 @@
       "category": "中文文档",
       "name": "docs/部署手册.md",
       "ok": true,
-      "detail": "中文字符数 834",
+      "detail": "中文字符数 1119",
       "severity": "P0"
     },
     {
@@ -53,14 +53,14 @@
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 1917",
+      "detail": "中文字符数 1973",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/赛题符合性说明.md",
       "ok": true,
-      "detail": "中文字符数 1055",
+      "detail": "中文字符数 1058",
       "severity": "P0"
     },
     {
@@ -74,7 +74,7 @@
       "category": "中文文档",
       "name": "docs/评委证据包索引.md",
       "ok": true,
-      "detail": "中文字符数 1487",
+      "detail": "中文字符数 1613",
       "severity": "P0"
     },
     {
@@ -95,7 +95,7 @@
       "category": "中文文档",
       "name": "docs/Peony与UKUI桌面集成实现说明.md",
       "ok": true,
-      "detail": "中文字符数 1948",
+      "detail": "中文字符数 2023",
       "severity": "P0"
     },
     {
@@ -192,6 +192,13 @@
     {
       "category": "源码与脚本",
       "name": "scripts/collect_openkylin_evidence.sh",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/build_deb.sh",
       "ok": true,
       "detail": "存在",
       "severity": "P0"
@@ -464,6 +471,13 @@
     },
     {
       "category": "openKylin证据",
+      "name": "deb_package.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
       "name": "ukui_plugin_build.txt",
       "ok": true,
       "detail": "存在且非空",
@@ -522,14 +536,14 @@
       "category": "openKylin证据",
       "name": "manifest 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 60 个证据文件",
+      "detail": "覆盖 61 个证据文件",
       "severity": "P0"
     },
     {
       "category": "openKylin证据",
       "name": "SHA256SUMS 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 60 个证据文件",
+      "detail": "覆盖 61 个证据文件",
       "severity": "P0"
     },
     {

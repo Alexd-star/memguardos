@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-05-24T04:22:03.281666+00:00",
+  "generated_at": "2026-05-24T04:58:26.673846+00:00",
   "root": "D:\\Luo_docs\\竞赛\\研创赛\\memguardos\\docs\\evidence\\latest",
-  "file_count": 60,
-  "total_bytes": 353706,
+  "file_count": 61,
+  "total_bytes": 357768,
   "files": [
     {
       "path": "agent_batch_search.txt",
@@ -48,6 +48,11 @@
       "path": "build_prompt.txt",
       "bytes": 919,
       "sha256": "522962141d1b2bf6ecfcfe5655c105d758adfc9730685d18b2e8b641c7b1e471"
+    },
+    {
+      "path": "deb_package.txt",
+      "bytes": 3964,
+      "sha256": "b1189bc064028db91576b5a7d7979d0f1319159a34f2b06c10917a5abd40a3a7"
     },
     {
       "path": "doctor.txt",
@@ -216,8 +221,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 3360,
-      "sha256": "4313344d12620023012255d78336518d8535bd5bc9b63a94d1253c32a9afb46c"
+      "bytes": 3458,
+      "sha256": "ca8b572fdf7ac7fef9d8f513ca8831f5ea0bc1c9f7c67f573061fef4239ec732"
     },
     {
       "path": "sdk_embedding_probe.txt",

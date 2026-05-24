@@ -125,6 +125,7 @@ EOF
 | `ukui_plugin_build.txt` | Peony 右键插件与 UKUI 控制中心插件真实构建证据 |
 | `ukui_plugin_install.txt` | UKUI 插件系统目录安装尝试与只读根文件系统边界 |
 | `ukui_plugin_visible.txt` | UKUI 插件安装产物、依赖和人工可见性检查步骤 |
+| `deb_package.txt` | MemGuardOS Debian 安装包构建、包内容和离线解包 smoke 证据 |
 | `bpf_lsm_policy.txt` | BPF LSM JSON denylist 策略生成证据 |
 | `bpf_lsm_enforcer.txt` | BPF LSM 强制拦截增强环境、构建和 attach 探针 |
 | `systemd_cgroup.txt` | systemd/cgroup 服务限制证据 |
@@ -269,6 +270,7 @@ run_self_logging_capture "ukui_deep_plugins" bash scripts/probe_ukui_deep_plugin
 run_capture "ukui_plugin_build" bash scripts/build_ukui_plugins.sh
 run_capture "ukui_plugin_install" bash scripts/install_ukui_plugins.sh --no-build
 run_capture "ukui_plugin_visible" bash scripts/verify_ukui_plugins.sh
+run_shell_capture "deb_package" "bash scripts/build_deb.sh; DEB_VERSION=\$(sed -n 's/^version = \"\\([^\"]*\\)\"/\\1/p' pyproject.toml | head -n1); DEB_PATH=\"dist/memguardos_\${DEB_VERSION}_\$(dpkg --print-architecture).deb\"; echo \"DEB_PATH=\${DEB_PATH}\"; sha256sum \"\${DEB_PATH}\"; dpkg-deb --info \"\${DEB_PATH}\"; echo '--- required contents ---'; dpkg-deb --contents \"\${DEB_PATH}\" | egrep 'usr/bin/memctl|memguardd.service|peony-extensions|ukui-control-center|opt/memguardos/memguard/service.py'; rm -rf /tmp/memguardos-deb-root; mkdir -p /tmp/memguardos-deb-root; dpkg-deb -x \"\${DEB_PATH}\" /tmp/memguardos-deb-root; PYTHONPATH=/tmp/memguardos-deb-root/opt/memguardos python3 -m memguard.cli.memctl doctor >/tmp/memguardos-deb-doctor.txt; echo 'offline_extract_doctor=ok'; ldd /tmp/memguardos-deb-root/usr/lib/\$(dpkg-architecture -qDEB_HOST_MULTIARCH)/peony-extensions/libpeony-menu-plugin-memguardos.so | grep 'not found' && exit 2 || true; ldd /tmp/memguardos-deb-root/usr/lib/\$(dpkg-architecture -qDEB_HOST_MULTIARCH)/ukui-control-center/libmemguardos-ukcc-plugin.so | grep 'not found' && exit 2 || true; echo 'plugin_ldd_missing=0'; dpkg -s memguardos >/dev/null 2>&1 && echo 'apt_install_state=installed' || echo 'apt_install_state=not_installed_or_blocked_by_current_ostree_mode'"
 run_capture "bpf_lsm_policy" "${PYTHON_BIN}" scripts/generate_bpf_lsm_policy.py --policy data/demo/bpf_lsm_policy.json --output "${OUT_DIR}/memguard_lsm_policy.generated.h"
 run_self_logging_capture "bpf_lsm_enforcer" bash scripts/run_bpf_lsm_enforcer.sh "${OUT_DIR}"
 

@@ -7,6 +7,7 @@ def test_competition_package_keeps_formal_and_process_materials_separate():
     formal_paths = [
         "memguard/service.py",
         "scripts/install_openkylin.sh",
+        "scripts/build_deb.sh",
         "scripts/collect_openkylin_evidence.sh",
         "native/bpf_lsm/memguard_lsm.bpf.c",
         "docs/项目介绍总览.md",
