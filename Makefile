@@ -1,4 +1,4 @@
-.PHONY: test eval demo doctor lint coverage docs-check web-smoke competition-ready preflight ci package package-audit clean
+.PHONY: test eval demo doctor lint coverage docs-check web-smoke competition-ready preflight ci package package-audit package-smoke clean
 
 test:
 	python -m pytest -q
@@ -42,9 +42,13 @@ ci: lint test docs-check web-smoke competition-ready
 package:
 	python scripts/package_submission.py
 	python scripts/inspect_submission_package.py
+	python scripts/smoke_submission_archive.py
 
 package-audit:
 	python scripts/inspect_submission_package.py
+
+package-smoke:
+	python scripts/smoke_submission_archive.py
 
 clean:
 	python -c "import pathlib, shutil; [shutil.rmtree(p) for p in pathlib.Path('.').rglob('__pycache__') if p.is_dir()]; [shutil.rmtree(p) for p in pathlib.Path('.').rglob('.pytest_cache') if p.is_dir()]"

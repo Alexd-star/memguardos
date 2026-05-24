@@ -75,6 +75,7 @@ def _steps(*, include_package: bool) -> list[tuple[str, list[str]]]:
     if include_package:
         steps.append(("submission package", [py, "scripts/package_submission.py"]))
         steps.append(("submission package audit", [py, "scripts/inspect_submission_package.py"]))
+        steps.append(("submission archive smoke", [py, "scripts/smoke_submission_archive.py"]))
     return steps
 
 

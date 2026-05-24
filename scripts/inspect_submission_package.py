@@ -47,6 +47,7 @@ REQUIRED_PATHS = {
 FORBIDDEN_EXACT = {
     "scripts/package_submission.py",
     "scripts/release_preflight.py",
+    "scripts/smoke_submission_archive.py",
     "scripts/check_competition_ready.py",
     "scripts/check_docs_links.py",
     "docs/赛题要求逐句符合性核查.md",

@@ -264,6 +264,14 @@ python scripts/inspect_submission_package.py
 
 该审计会检查正式包是否包含核心代码、正式中文文档和最新证据，同时确认未混入 GitHub/CI、预检脚本、自检报告、缓存、数据库、段文件等过程或运行时材料。
 
+为确认平台上传的压缩包本身可以独立运行核心演示，可继续执行归档包 smoke：
+
+```bash
+python scripts/smoke_submission_archive.py
+```
+
+该命令会读取最新 `memguardos_competition_submission_*.zip`，先复用提交包内容审计，再将正式包解压到临时目录，并从解压后的源码运行编译检查、CLI 演示 smoke 和 Web 控制台 smoke。它是交付前质检工具，不会放入正式竞赛提交包主体。
+
 生成结果包括：
 
 ```text
