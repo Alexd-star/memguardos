@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 72,
-    "passed": 72,
+    "total": 78,
+    "passed": 78,
     "failed": 0,
     "warnings": 0
   },
@@ -11,35 +11,35 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 1896",
+      "detail": "中文字符数 1965",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/项目介绍总览.md",
       "ok": true,
-      "detail": "中文字符数 5280",
+      "detail": "中文字符数 5370",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/概要设计说明书.md",
       "ok": true,
-      "detail": "中文字符数 1042",
+      "detail": "中文字符数 1035",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/详细设计说明书.md",
       "ok": true,
-      "detail": "中文字符数 2118",
+      "detail": "中文字符数 2129",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/部署手册.md",
       "ok": true,
-      "detail": "中文字符数 638",
+      "detail": "中文字符数 834",
       "severity": "P0"
     },
     {
@@ -53,28 +53,28 @@
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 1894",
+      "detail": "中文字符数 1917",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/赛题符合性说明.md",
       "ok": true,
-      "detail": "中文字符数 1054",
+      "detail": "中文字符数 1055",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/正式提交材料说明.md",
       "ok": true,
-      "detail": "中文字符数 505",
+      "detail": "中文字符数 518",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/评委证据包索引.md",
       "ok": true,
-      "detail": "中文字符数 1394",
+      "detail": "中文字符数 1487",
       "severity": "P0"
     },
     {
@@ -88,7 +88,14 @@
       "category": "中文文档",
       "name": "docs/操作系统机制说明.md",
       "ok": true,
-      "detail": "中文字符数 1447",
+      "detail": "中文字符数 1491",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/Peony与UKUI桌面集成实现说明.md",
+      "ok": true,
+      "detail": "中文字符数 1948",
       "severity": "P0"
     },
     {
@@ -102,7 +109,7 @@
       "category": "中文文档",
       "name": "docs/答辩提纲.md",
       "ok": true,
-      "detail": "中文字符数 1175",
+      "detail": "中文字符数 1222",
       "severity": "P0"
     },
     {
@@ -471,6 +478,27 @@
     },
     {
       "category": "openKylin证据",
+      "name": "ukui_plugin_visible_final.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "ukui_peony_visible_manual_confirmation.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "ukui_control_center_visible_manual_confirmation.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
       "name": "natural_patterns.txt",
       "ok": true,
       "detail": "存在且非空",
@@ -489,6 +517,20 @@
       "ok": true,
       "detail": "哈希清单存在",
       "severity": "P1"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "manifest 覆盖全部证据文件",
+      "ok": true,
+      "detail": "覆盖 60 个证据文件",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "SHA256SUMS 覆盖全部证据文件",
+      "ok": true,
+      "detail": "覆盖 60 个证据文件",
+      "severity": "P0"
     },
     {
       "category": "工程卫生",

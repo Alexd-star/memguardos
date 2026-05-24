@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-05-23T15:51:57.764873+00:00",
+  "generated_at": "2026-05-24T04:22:03.281666+00:00",
   "root": "D:\\Luo_docs\\竞赛\\研创赛\\memguardos\\docs\\evidence\\latest",
-  "file_count": 56,
-  "total_bytes": 344537,
+  "file_count": 60,
+  "total_bytes": 353706,
   "files": [
     {
       "path": "agent_batch_search.txt",
@@ -216,8 +216,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 3035,
-      "sha256": "b7deb53831879d85b5c051faf30dd0dd8c6ba0ac9de2ce38a6f4941c2abe2be6"
+      "bytes": 3360,
+      "sha256": "4313344d12620023012255d78336518d8535bd5bc9b63a94d1253c32a9afb46c"
     },
     {
       "path": "sdk_embedding_probe.txt",
@@ -245,6 +245,11 @@
       "sha256": "1d602a627153467371cf71ee6a3f81c048a44d911e0199de315099f0c403df42"
     },
     {
+      "path": "ukui_control_center_visible_manual_confirmation.txt",
+      "bytes": 209,
+      "sha256": "aafadc066d842e124ed0c69ff9d77c4e10e3a0568a12eaf95be0bf78c84658e8"
+    },
+    {
       "path": "ukui_deep_plugins.txt",
       "bytes": 8852,
       "sha256": "a52a3e2758d3af039cd06121c044148553e0215ded68d3633bdfa0dac2639ced"
@@ -253,6 +258,11 @@
       "path": "ukui_notify.txt",
       "bytes": 155,
       "sha256": "1db61721a143da7c12aea8507e312ceff5bbb1a101f5dec62fc45342e6ee7cda"
+    },
+    {
+      "path": "ukui_peony_visible_manual_confirmation.txt",
+      "bytes": 155,
+      "sha256": "be18547778d90afd61f331eca4d2cc50f18e71fc433eff767702f7ad8ca4aed5"
     },
     {
       "path": "ukui_plugin_build.txt",
@@ -268,6 +278,16 @@
       "path": "ukui_plugin_visible.txt",
       "bytes": 2714,
       "sha256": "bc999a279a7a5238ce1782e5c9b63c49883a8228f773ed1ac9213cd299082187"
+    },
+    {
+      "path": "ukui_plugin_visible_after_version_metadata.txt",
+      "bytes": 4240,
+      "sha256": "8557099bc93b7cf060e0a64e2138e129dcfbd51a3e866ec00986546bab187bae"
+    },
+    {
+      "path": "ukui_plugin_visible_final.txt",
+      "bytes": 4240,
+      "sha256": "2afa0ef97b3e45a47049159f1740922c05e9c54a0936026d3e6570ffc86e6b1b"
     },
     {
       "path": "vector_probe.txt",

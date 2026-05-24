@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,6 +34,7 @@ REQUIRED_DOCS = [
     "docs/评委证据包索引.md",
     "docs/安全设计说明书.md",
     "docs/操作系统机制说明.md",
+    "docs/Peony与UKUI桌面集成实现说明.md",
     "docs/麒麟SDK集成证据.md",
     "docs/答辩提纲.md",
     "docs/演示视频脚本.md",
@@ -77,8 +79,13 @@ REQUIRED_EVIDENCE = [
     "bpf_lsm_enforcer.txt",
     "ukui_plugin_build.txt",
     "ukui_plugin_install.txt",
+    "ukui_plugin_visible_final.txt",
+    "ukui_peony_visible_manual_confirmation.txt",
+    "ukui_control_center_visible_manual_confirmation.txt",
     "natural_patterns.txt",
 ]
+
+EVIDENCE_MANIFEST_EXCLUDED = {"manifest.json", "SHA256SUMS.txt", "evidence_manifest.txt"}
 
 
 @dataclass
@@ -198,6 +205,54 @@ def check_openkylin_evidence(evidence_dir: Path, allow_missing: bool = False) ->
     sha = evidence_dir / "SHA256SUMS.txt"
     checks.append(Check("openKylin证据", "manifest.json", manifest.exists(), "证据清单存在" if manifest.exists() else "缺少证据清单", severity="P1"))
     checks.append(Check("openKylin证据", "SHA256SUMS.txt", sha.exists(), "哈希清单存在" if sha.exists() else "缺少哈希清单", severity="P1"))
+    checks.extend(check_evidence_manifest_freshness(evidence_dir, severity=severity))
+    return checks
+
+
+def check_evidence_manifest_freshness(evidence_dir: Path, severity: str) -> List[Check]:
+    manifest_path = evidence_dir / "manifest.json"
+    sha_path = evidence_dir / "SHA256SUMS.txt"
+    expected_paths = _expected_evidence_paths(evidence_dir)
+    checks: List[Check] = []
+
+    if manifest_path.exists():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            entries = {str(item.get("path")): item for item in manifest.get("files", [])}
+            missing = sorted(set(expected_paths) - set(entries))
+            extra = sorted(set(entries) - set(expected_paths))
+            stale_hashes = [
+                rel
+                for rel, item in entries.items()
+                if rel in expected_paths and item.get("sha256") != _sha256_file(evidence_dir / rel)
+            ]
+            ok = not missing and not extra and not stale_hashes and int(manifest.get("file_count", -1)) == len(expected_paths)
+            detail = "覆盖 %s 个证据文件" % len(expected_paths)
+            if not ok:
+                detail = "缺失 %s，额外 %s，哈希过期 %s，manifest file_count=%s，实际=%s" % (
+                    len(missing),
+                    len(extra),
+                    len(stale_hashes),
+                    manifest.get("file_count"),
+                    len(expected_paths),
+                )
+            checks.append(Check("openKylin证据", "manifest 覆盖全部证据文件", ok, detail, severity=severity))
+        except Exception as exc:  # pragma: no cover - defensive report path
+            checks.append(Check("openKylin证据", "manifest 覆盖全部证据文件", False, "manifest 解析失败：%s" % exc, severity=severity))
+
+    if sha_path.exists():
+        sha_lines = {}
+        for raw_line in sha_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if "  " not in raw_line:
+                continue
+            digest, rel = raw_line.split("  ", 1)
+            sha_lines[rel] = digest
+        missing = sorted(set(expected_paths) - set(sha_lines))
+        stale = sorted(rel for rel in expected_paths if rel in sha_lines and sha_lines[rel] != _sha256_file(evidence_dir / rel))
+        ok = not missing and not stale
+        detail = "覆盖 %s 个证据文件" % len(expected_paths) if ok else "缺失 %s，哈希过期 %s" % (len(missing), len(stale))
+        checks.append(Check("openKylin证据", "SHA256SUMS 覆盖全部证据文件", ok, detail, severity=severity))
+
     return checks
 
 
@@ -279,6 +334,22 @@ def _nested_get(data: Dict[str, Any], keys: List[str]) -> Optional[Any]:
 def _resolve(path: str) -> Path:
     raw = Path(path)
     return raw if raw.is_absolute() else ROOT / raw
+
+
+def _expected_evidence_paths(evidence_dir: Path) -> List[str]:
+    return sorted(
+        path.relative_to(evidence_dir).as_posix()
+        for path in evidence_dir.rglob("*")
+        if path.is_file() and path.name not in EVIDENCE_MANIFEST_EXCLUDED
+    )
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 if __name__ == "__main__":
