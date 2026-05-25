@@ -51,7 +51,7 @@ PY
   "verify": {
     "ok": true,
     "checked": 72,
-    "head_hash": "0d44d0cd961b06856d1378f5bb63ef6cdb949713f2b51d3e63b3049df6ed54a6"
+    "head_hash": "688ed0b4f9a65c2dca27d9c27e4937979842f1d3469fae29b916704e37fa9eac"
   },
   "expected_events": 72
 }

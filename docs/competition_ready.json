@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 80,
-    "passed": 80,
+    "total": 84,
+    "passed": 84,
     "failed": 0,
     "warnings": 0
   },
@@ -12,6 +12,27 @@
       "name": "README.md",
       "ok": true,
       "detail": "中文字符数 2298",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/正式提交材料说明.md",
+      "ok": true,
+      "detail": "中文字符数 620",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/最终提交说明.md",
+      "ok": true,
+      "detail": "中文字符数 2702",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/平台摘要.md",
+      "ok": true,
+      "detail": "中文字符数 2703",
       "severity": "P0"
     },
     {
@@ -33,48 +54,6 @@
       "name": "docs/详细设计说明书.md",
       "ok": true,
       "detail": "中文字符数 2241",
-      "severity": "P0"
-    },
-    {
-      "category": "中文文档",
-      "name": "docs/部署手册.md",
-      "ok": true,
-      "detail": "中文字符数 1214",
-      "severity": "P0"
-    },
-    {
-      "category": "中文文档",
-      "name": "docs/用户手册.md",
-      "ok": true,
-      "detail": "中文字符数 1477",
-      "severity": "P0"
-    },
-    {
-      "category": "中文文档",
-      "name": "docs/测试报告.md",
-      "ok": true,
-      "detail": "中文字符数 2024",
-      "severity": "P0"
-    },
-    {
-      "category": "中文文档",
-      "name": "docs/赛题符合性说明.md",
-      "ok": true,
-      "detail": "中文字符数 1058",
-      "severity": "P0"
-    },
-    {
-      "category": "中文文档",
-      "name": "docs/正式提交材料说明.md",
-      "ok": true,
-      "detail": "中文字符数 620",
-      "severity": "P0"
-    },
-    {
-      "category": "中文文档",
-      "name": "docs/评委证据包索引.md",
-      "ok": true,
-      "detail": "中文字符数 1663",
       "severity": "P0"
     },
     {
@@ -107,9 +86,58 @@
     },
     {
       "category": "中文文档",
+      "name": "docs/openKylin验证记录.md",
+      "ok": true,
+      "detail": "中文字符数 1393",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/部署手册.md",
+      "ok": true,
+      "detail": "中文字符数 1214",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/用户手册.md",
+      "ok": true,
+      "detail": "中文字符数 1477",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/测试报告.md",
+      "ok": true,
+      "detail": "中文字符数 2045",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/赛题符合性说明.md",
+      "ok": true,
+      "detail": "中文字符数 1058",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/评委证据包索引.md",
+      "ok": true,
+      "detail": "中文字符数 1663",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
       "name": "docs/答辩提纲.md",
       "ok": true,
       "detail": "中文字符数 1252",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/答辩稿.md",
+      "ok": true,
+      "detail": "中文字符数 5838",
       "severity": "P0"
     },
     {

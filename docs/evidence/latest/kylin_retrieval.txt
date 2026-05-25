@@ -1,4 +1,4 @@
-$ KYLIN_RETRIEVAL_HOME='docs/evidence/openkylin_20260523_233923/kylin_retrieval_home'; rm -rf "${KYLIN_RETRIEVAL_HOME}"; mkdir -p "${KYLIN_RETRIEVAL_HOME}"; MEMGUARD_HOME="${KYLIN_RETRIEVAL_HOME}" MEMGUARD_EMBEDDING_BACKEND=auto MEMGUARD_KYLIN_EMBEDDING_TIMEOUT=90 ".venv/bin/python" - <<'PY'
+$ KYLIN_RETRIEVAL_HOME='docs/evidence/openkylin_20260525_221101/kylin_retrieval_home'; rm -rf "${KYLIN_RETRIEVAL_HOME}"; mkdir -p "${KYLIN_RETRIEVAL_HOME}"; MEMGUARD_HOME="${KYLIN_RETRIEVAL_HOME}" MEMGUARD_EMBEDDING_BACKEND=auto MEMGUARD_KYLIN_EMBEDDING_TIMEOUT=90 ".venv/bin/python" - <<'PY'
 import json
 
 from memguard.service import MemGuardService
@@ -14,7 +14,7 @@ PY
 {
   "hits": [
     {
-      "memory_id": "mem_12cb24042c6345a3",
+      "memory_id": "mem_d979ceef26d84472",
       "type": "knowledge",
       "subtype": "fact",
       "scope": "default",
@@ -26,16 +26,16 @@ PY
       "sensitivity_level": "none",
       "sensitivity_labels": "[]",
       "sensitivity_redacted": 0,
-      "version_id": "ver_0f9d7287faa04b2f",
+      "version_id": "ver_3de6c6ad14564651",
       "deleted": 0,
-      "updated_at": "2026-05-23T15:39:28.615484+00:00",
+      "updated_at": "2026-05-25T14:11:07.733003+00:00",
       "rank": -1.3512476007677544e-06,
       "score": 0.7351,
       "match_source": "hybrid",
       "vector_backend": "kylin_sdk"
     },
     {
-      "memory_id": "mem_1b4e382724eb4c9b",
+      "memory_id": "mem_e1d6ffe23d9e43d4",
       "type": "knowledge",
       "subtype": "fact",
       "scope": "default",
@@ -47,9 +47,9 @@ PY
       "sensitivity_level": "none",
       "sensitivity_labels": "[]",
       "sensitivity_redacted": 0,
-      "version_id": "ver_2c4fa26d22b34abc",
+      "version_id": "ver_8f0480c3e2ba4b93",
       "deleted": 0,
-      "updated_at": "2026-05-23T15:39:28.625616+00:00",
+      "updated_at": "2026-05-25T14:11:07.746406+00:00",
       "score": 0.3505,
       "match_source": "hybrid",
       "vector_backend": "kylin_sdk"

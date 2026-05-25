@@ -1,3 +1,5 @@
+$ .venv/bin/python -m memguard.cli.memctl memory-policy --eviction-limit 10
+
 {
   "namespace": "default",
   "policy": {
@@ -13,20 +15,6 @@
   },
   "tiers": {
     "working": {
-      "count": 1,
-      "content_chars": 104,
-      "summary_chars": 109,
-      "approx_payload_bytes": 231,
-      "sensitivity": {
-        "none": 1
-      },
-      "sources": {
-        "os_event": 1
-      },
-      "oldest_updated_at": "2026-05-24T11:29:18.800310+00:00",
-      "newest_updated_at": "2026-05-24T11:29:18.800310+00:00"
-    },
-    "session": {
       "count": 0,
       "content_chars": 0,
       "summary_chars": 0,
@@ -36,58 +24,100 @@
       "oldest_updated_at": "",
       "newest_updated_at": ""
     },
-    "long_term": {
-      "count": 5,
-      "content_chars": 216,
-      "summary_chars": 241,
-      "approx_payload_bytes": 883,
+    "session": {
+      "count": 4,
+      "content_chars": 560,
+      "summary_chars": 536,
+      "approx_payload_bytes": 1136,
       "sensitivity": {
-        "none": 5
+        "none": 4
       },
       "sources": {
-        "manual": 5
+        "user_behavior": 4
       },
-      "oldest_updated_at": "2026-05-24T11:29:18.442376+00:00",
-      "newest_updated_at": "2026-05-24T18:03:06.854799+00:00"
+      "oldest_updated_at": "2026-05-25T14:12:01.638667+00:00",
+      "newest_updated_at": "2026-05-25T14:12:01.671820+00:00"
+    },
+    "long_term": {
+      "count": 6,
+      "content_chars": 284,
+      "summary_chars": 314,
+      "approx_payload_bytes": 1034,
+      "sensitivity": {
+        "none": 5,
+        "low": 1
+      },
+      "sources": {
+        "manual": 6
+      },
+      "oldest_updated_at": "2026-05-25T14:12:00.094910+00:00",
+      "newest_updated_at": "2026-05-25T14:12:02.737428+00:00"
     }
   },
   "counts": {
-    "live": 6,
-    "metadata_records": 6,
-    "segment_records": 6,
+    "live": 10,
+    "metadata_records": 10,
+    "segment_records": 10,
     "stale_or_deleted": 0,
-    "eviction_candidates": 1
+    "eviction_candidates": 4
   },
   "storage": {
-    "segment_path": "/home/luo/.memguardos/memory.segment",
-    "segment_bytes": 10937,
-    "sqlite_path": "/home/luo/.memguardos/memguard.sqlite3",
-    "sqlite_total_bytes": 110592,
-    "approx_total_bytes": 121529,
-    "bytes_per_live_memory": 20254.833
+    "segment_path": "/var/tmp/memguardos_evidence_20260525_221101/memory.segment",
+    "segment_bytes": 21906,
+    "sqlite_path": "/var/tmp/memguardos_evidence_20260525_221101/memguard.sqlite3",
+    "sqlite_total_bytes": 122880,
+    "approx_total_bytes": 144786,
+    "bytes_per_live_memory": 14478.6
   },
   "eviction_candidates": [
     {
-      "memory_id": "mem_6de4abcfaccc4c27",
-      "tier": "working",
+      "memory_id": "mem_6d66ca8cbc534b5d",
+      "tier": "session",
       "type": "knowledge",
-      "subtype": "os_event",
-      "source_kind": "os_event",
-      "updated_at": "2026-05-24T11:29:18.800310+00:00",
-      "summary": "知识记忆：OS event: peony_context_menu_probe action=inspect path=/home/luo/桌面/memguardos-ui-test.txt process=peony"
+      "subtype": "behavior_risk",
+      "source_kind": "user_behavior",
+      "updated_at": "2026-05-25T14:12:01.638667+00:00",
+      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=1 command=sudo apt updata"
+    },
+    {
+      "memory_id": "mem_f95cde6340c94e0a",
+      "tier": "session",
+      "type": "knowledge",
+      "subtype": "behavior_risk",
+      "source_kind": "user_behavior",
+      "updated_at": "2026-05-25T14:12:01.649602+00:00",
+      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=2 command=sudo apt update"
+    },
+    {
+      "memory_id": "mem_0a9105982f1f4875",
+      "tier": "session",
+      "type": "knowledge",
+      "subtype": "behavior_risk",
+      "source_kind": "user_behavior",
+      "updated_at": "2026-05-25T14:12:01.660559+00:00",
+      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=3 command=sudo apt install -y openssh-server "
+    },
+    {
+      "memory_id": "mem_9365e9b21f404293",
+      "tier": "session",
+      "type": "knowledge",
+      "subtype": "behavior_risk",
+      "source_kind": "user_behavior",
+      "updated_at": "2026-05-25T14:12:01.671820+00:00",
+      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=4 command=sudo systemctl enable --now ssh"
     }
   ],
   "recommendations": [
-    "working 层存在临时记忆，任务结束后优先执行 evict-tier working 或挑选 promote 到 long_term。"
+    "session 层存在阶段性记忆，建议在任务结束后按项目、会话或时间窗口进行淘汰或沉淀。"
   ],
   "cgroup": {
     "platform": "Linux",
     "is_linux": true,
     "cgroup_v2_mounted": true,
-    "proc_cgroup": "0::/user.slice/user-1000.slice/session-32.scope",
+    "proc_cgroup": "0::/user.slice/user-1000.slice/session-73.scope",
     "memory_current": null,
     "memory_max": null,
     "cpu_max": null,
-    "pid": 18554
+    "pid": 235954
   }
 }

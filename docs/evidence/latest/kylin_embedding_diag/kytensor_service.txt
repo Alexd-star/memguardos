@@ -13,23 +13,23 @@ RestartSec=5
 WantedBy=default.target
 ● kytensor.service - Kylin triton inference server
      Loaded: loaded (/usr/lib/systemd/system/kytensor.service; enabled; preset: enabled)
-     Active: active (running) since Sat 2026-05-23 23:33:36 CST; 5min ago
-   Main PID: 1103 (kytensor)
+     Active: active (running) since Mon 2026-05-25 01:31:26 CST; 20h ago
+   Main PID: 1095 (kytensor)
       Tasks: 124 (limit: 6991)
-     Memory: 1.9G (peak: 1.9G)
-        CPU: 17.948s
+     Memory: 1.6G (peak: 1.9G swap: 36.7M swap peak: 36.7M)
+        CPU: 1min 39.717s
      CGroup: /system.slice/kytensor.service
-             ├─1103 /usr/bin/kytensor --model-repository=/opt/appdata/kylin-ai/model-repository --model-control-mode=explicit --http-address=127.0.0.1 --grpc-address=127.0.0.1
-             └─7776 /opt/tritonserver/backends/python/triton_python_backend_stub /opt/appdata/kylin-ai/model-repository/tokenizer_gte-base_uint8-text/1/model.py triton_python_backend_shm_region_fbc1dc4c-69d6-4852-a1e3-e9412a02d970 1048576 1048576 1103 /opt/tritonserver/backends/python 336 tokenizer_gte-base_uint8-text_0 DEFAULT
+             ├─1095 /usr/bin/kytensor --model-repository=/opt/appdata/kylin-ai/model-repository --model-control-mode=explicit --http-address=127.0.0.1 --grpc-address=127.0.0.1
+             └─7501 /opt/tritonserver/backends/python/triton_python_backend_stub /opt/appdata/kylin-ai/model-repository/tokenizer_gte-base_uint8-text/1/model.py triton_python_backend_shm_region_a1de26c3-be15-4d0d-a624-7ab4306009da 1048576 1048576 1095 /opt/tritonserver/backends/python 336 tokenizer_gte-base_uint8-text_0 DEFAULT
 
-5月 23 23:37:58 luo-pc bash[1103]: I0523 15:37:58.054027 1103 onnxruntime.cc:3051] "TRITONBACKEND_ModelInstanceInitialize: embd_gte-base_uint8-text_0 (CPU device 0)"
-5月 23 23:37:58 luo-pc bash[1103]: I0523 15:37:58.056945 1103 onnxruntime.cc:3051] "TRITONBACKEND_ModelInstanceInitialize: embd_gte-base_uint8-text_1 (CPU device 0)"
-5月 23 23:38:00 luo-pc bash[7754]: None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
-5月 23 23:38:02 luo-pc bash[1103]: I0523 15:38:02.757640 1103 python_be.cc:2249] "TRITONBACKEND_ModelInstanceInitialize: tokenizer_gte-base_uint8-text_0 (CPU device 0)"
-5月 23 23:38:04 luo-pc bash[7776]: None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
-5月 23 23:38:06 luo-pc bash[1103]: I0523 15:38:06.165624 1103 model_lifecycle.cc:839] "successfully loaded 'tokenizer_gte-base_uint8-text'"
-5月 23 23:38:07 luo-pc bash[1103]: I0523 15:38:07.446803 1103 model_lifecycle.cc:839] "successfully loaded 'embd_gte-base_uint8-text'"
-5月 23 23:38:07 luo-pc bash[1103]: I0523 15:38:07.450672 1103 model_lifecycle.cc:472] "loading: ensemble-embd_gte-base_uint8-text:1"
-5月 23 23:38:07 luo-pc bash[1103]: I0523 15:38:07.454211 1103 model_lifecycle.cc:839] "successfully loaded 'ensemble-embd_gte-base_uint8-text'"
-5月 23 23:39:25 luo-pc bash[1103]: W0523 15:39:25.444987 1103 pinned_memory_manager.cc:170] "failed to allocate pinned system memory: no pinned memory pool, falling back to non-pinned system memory"
+5月 25 01:33:05 luo-pc bash[1095]: I0524 17:33:05.293976 1095 onnxruntime.cc:3051] "TRITONBACKEND_ModelInstanceInitialize: embd_gte-base_uint8-text_0 (CPU device 0)"
+5月 25 01:33:05 luo-pc bash[1095]: I0524 17:33:05.294208 1095 onnxruntime.cc:3051] "TRITONBACKEND_ModelInstanceInitialize: embd_gte-base_uint8-text_1 (CPU device 0)"
+5月 25 01:33:07 luo-pc bash[7475]: None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+5月 25 01:33:10 luo-pc bash[1095]: I0524 17:33:10.002931 1095 python_be.cc:2249] "TRITONBACKEND_ModelInstanceInitialize: tokenizer_gte-base_uint8-text_0 (CPU device 0)"
+5月 25 01:33:11 luo-pc bash[7501]: None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+5月 25 01:33:12 luo-pc bash[1095]: I0524 17:33:12.923761 1095 model_lifecycle.cc:839] "successfully loaded 'embd_gte-base_uint8-text'"
+5月 25 01:33:13 luo-pc bash[1095]: I0524 17:33:13.609168 1095 model_lifecycle.cc:839] "successfully loaded 'tokenizer_gte-base_uint8-text'"
+5月 25 01:33:13 luo-pc bash[1095]: I0524 17:33:13.609594 1095 model_lifecycle.cc:472] "loading: ensemble-embd_gte-base_uint8-text:1"
+5月 25 01:33:13 luo-pc bash[1095]: I0524 17:33:13.610346 1095 model_lifecycle.cc:839] "successfully loaded 'ensemble-embd_gte-base_uint8-text'"
+5月 25 01:33:36 luo-pc bash[1095]: W0524 17:33:36.082190 1095 pinned_memory_manager.cc:170] "failed to allocate pinned system memory: no pinned memory pool, falling back to non-pinned system memory"
 [{"name":"embd_cn-clip_512-uint8-image"},{"name":"embd_cn-clip_512-uint8-text"},{"name":"embd_gte-base_uint8-text","version":"1","state":"READY"},{"name":"ensemble-embd_cn-clip_512-uint8-text"},{"name":"ensemble-embd_gte-base_uint8-text","version":"1","state":"READY"},{"name":"matting_portrait","version":"1","state":"READY"},{"name":"model_bank","version":"1","state":"READY"},{"name":"ocr_ppocr","version":"1","state":"READY"},{"name":"tokenizer_cn-clip_512-uint8-text"},{"name":"tokenizer_gte-base_uint8-text","version":"1","state":"READY"}]

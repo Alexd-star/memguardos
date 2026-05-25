@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.package_submission import COMPETITION_ROLES, DIST, classify_file  # noqa: E402
+from scripts.package_submission import COMPETITION_ROLES, DIST, FORMAL_DOCS, classify_file  # noqa: E402
 
 
 REQUIRED_PATHS = {
@@ -31,18 +31,13 @@ REQUIRED_PATHS = {
     "native/bpf_lsm/memguard_lsm.bpf.c",
     "native/ukui/peony-memguard/memguard_peony_plugin.cpp",
     "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp",
-    "docs/项目介绍总览.md",
-    "docs/最终提交说明.md",
-    "docs/赛题符合性说明.md",
-    "docs/测试报告.md",
-    "docs/评委证据包索引.md",
     "docs/evidence/latest/pytest.txt",
     "docs/evidence/latest/web_dashboard.txt",
     "docs/evidence/latest/sdk_status.txt",
     "docs/evidence/latest/verify_audit.txt",
     "docs/evidence/latest/manifest.json",
     "docs/evidence/latest/SHA256SUMS.txt",
-}
+} | FORMAL_DOCS
 
 FORBIDDEN_EXACT = {
     "scripts/package_submission.py",

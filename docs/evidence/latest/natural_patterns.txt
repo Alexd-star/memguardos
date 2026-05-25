@@ -31,10 +31,10 @@ $ ".venv/bin/python" -m memguard.cli.memctl patterns suggest '把员工工号，
     }
   }
 }
-{"stored": true, "memory_id": "mem_364a66d1107c454a", "type": "sensitive_policy", "subtype": "security_policy", "tier": "long_term", "confidence": 0.8500000000000001, "quality": {"accepted": true, "score": 1.0, "issues": [], "warnings": [], "original_chars": 22, "normalized_chars": 22, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "sensitive_policy", "subtype": "security_policy", "summary": "安全策略：员工工号 [REDACTED:employee_id] 需要脱敏保存。", "confidence": 0.85, "method": "deterministic_semantic_rules", "signals": ["source_manual", "security_policy_intent"], "enhancer_used": false, "enhancer_error": ""}}
+{"stored": true, "memory_id": "mem_795c71982ee34078", "type": "sensitive_policy", "subtype": "security_policy", "tier": "long_term", "confidence": 0.8500000000000001, "quality": {"accepted": true, "score": 1.0, "issues": [], "warnings": [], "original_chars": 22, "normalized_chars": 22, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "sensitive_policy", "subtype": "security_policy", "summary": "安全策略：员工工号 [REDACTED:employee_id] 需要脱敏保存。", "confidence": 0.85, "method": "deterministic_semantic_rules", "signals": ["source_manual", "security_policy_intent"], "enhancer_used": false, "enhancer_error": ""}}
 [
   {
-    "memory_id": "mem_364a66d1107c454a",
+    "memory_id": "mem_795c71982ee34078",
     "type": "sensitive_policy",
     "subtype": "security_policy",
     "scope": "default",
@@ -46,16 +46,16 @@ $ ".venv/bin/python" -m memguard.cli.memctl patterns suggest '把员工工号，
     "sensitivity_level": "low",
     "sensitivity_labels": "[\"employee_id\"]",
     "sensitivity_redacted": 1,
-    "version_id": "ver_fd5b5b7467644413",
+    "version_id": "ver_e4d5126631304b71",
     "deleted": 0,
-    "updated_at": "2026-05-23T15:40:52.194974+00:00",
+    "updated_at": "2026-05-25T14:12:00.791314+00:00",
     "rank": -1.3479212253829322e-06,
     "score": 0.7229,
     "match_source": "hybrid",
     "vector_backend": "hash"
   },
   {
-    "memory_id": "mem_14177b92cbab4a68",
+    "memory_id": "mem_c668081b04a64afe",
     "type": "knowledge",
     "subtype": "fact",
     "scope": "default",
@@ -67,9 +67,9 @@ $ ".venv/bin/python" -m memguard.cli.memctl patterns suggest '把员工工号，
     "sensitivity_level": "none",
     "sensitivity_labels": "[]",
     "sensitivity_redacted": 0,
-    "version_id": "ver_50f8741865484399",
+    "version_id": "ver_c534e86ee1974463",
     "deleted": 0,
-    "updated_at": "2026-05-23T15:40:51.349970+00:00",
+    "updated_at": "2026-05-25T14:12:00.094910+00:00",
     "score": 0.1309,
     "match_source": "hybrid",
     "vector_backend": "hash"

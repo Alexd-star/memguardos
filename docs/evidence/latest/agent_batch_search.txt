@@ -1,6 +1,8 @@
-{"stored": true, "memory_id": "mem_34cf3f1789ee48c6", "type": "knowledge", "subtype": "fact", "tier": "long_term", "confidence": 0.8500000000000001, "quality": {"accepted": true, "score": 0.95, "issues": [], "warnings": ["normalized_whitespace_or_control_chars"], "original_chars": 45, "normalized_chars": 45, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "knowledge", "subtype": "fact", "summary": "知识记忆：任务规划记忆:openKylin systemd cgroup MemoryMax 约束。", "confidence": 0.85, "method": "deterministic_semantic_rules", "signals": ["source_manual", "os_lifecycle_signal"], "enhancer_used": false, "enhancer_error": ""}}
-{"stored": true, "memory_id": "mem_be5770d04e5e4fd7", "type": "knowledge", "subtype": "workflow", "tier": "long_term", "confidence": 0.875, "quality": {"accepted": true, "score": 0.95, "issues": [], "warnings": ["normalized_whitespace_or_control_chars"], "original_chars": 41, "normalized_chars": 41, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "knowledge", "subtype": "workflow", "summary": "知识记忆：工具调用记忆:Linux 验证优先使用 rg、pytest、journalctl。", "confidence": 0.875, "method": "deterministic_semantic_rules", "signals": ["source_manual", "tool_preference_intent", "workflow_signal"], "enhancer_used": false, "enhancer_error": ""}}
-{"stored": true, "memory_id": "mem_a1b2e4ba852a4b28", "type": "knowledge", "subtype": "fact", "tier": "long_term", "confidence": 0.8250000000000001, "quality": {"accepted": true, "score": 0.95, "issues": [], "warnings": ["normalized_whitespace_or_control_chars"], "original_chars": 26, "normalized_chars": 26, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "knowledge", "subtype": "fact", "summary": "知识记忆：结果生成记忆:运维报告先给结论,再给指标证据和边界。", "confidence": 0.825, "method": "deterministic_semantic_rules", "signals": ["source_manual"], "enhancer_used": false, "enhancer_error": ""}}
+$ ".venv/bin/python" -m memguard.cli.memctl ingest --text '任务规划记忆：openKylin systemd cgroup MemoryMax 约束。'; ".venv/bin/python" -m memguard.cli.memctl ingest --text '工具调用记忆：Linux 验证优先使用 rg、pytest、journalctl。'; ".venv/bin/python" -m memguard.cli.memctl ingest --text '结果生成记忆：运维报告先给结论，再给指标证据和边界。'; ".venv/bin/python" -m memguard.cli.memctl batch-search '任务规划 systemd cgroup' '工具调用 pytest journalctl' '结果生成 运维报告 证据' --top-k 3 --workers 3; ".venv/bin/python" -m memguard.cli.memctl audit --type batch_search --limit 3; ".venv/bin/python" -m memguard.cli.memctl verify-audit
+
+{"stored": true, "memory_id": "mem_6fbba3a8d7744076", "type": "knowledge", "subtype": "fact", "tier": "long_term", "confidence": 0.8500000000000001, "quality": {"accepted": true, "score": 0.95, "issues": [], "warnings": ["normalized_whitespace_or_control_chars"], "original_chars": 45, "normalized_chars": 45, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "knowledge", "subtype": "fact", "summary": "知识记忆：任务规划记忆:openKylin systemd cgroup MemoryMax 约束。", "confidence": 0.85, "method": "deterministic_semantic_rules", "signals": ["source_manual", "os_lifecycle_signal"], "enhancer_used": false, "enhancer_error": ""}}
+{"stored": true, "memory_id": "mem_37456648bdfd4022", "type": "knowledge", "subtype": "workflow", "tier": "long_term", "confidence": 0.875, "quality": {"accepted": true, "score": 0.95, "issues": [], "warnings": ["normalized_whitespace_or_control_chars"], "original_chars": 41, "normalized_chars": 41, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "knowledge", "subtype": "workflow", "summary": "知识记忆：工具调用记忆:Linux 验证优先使用 rg、pytest、journalctl。", "confidence": 0.875, "method": "deterministic_semantic_rules", "signals": ["source_manual", "tool_preference_intent", "workflow_signal"], "enhancer_used": false, "enhancer_error": ""}}
+{"stored": true, "memory_id": "mem_a17e1e251b5e4ea5", "type": "knowledge", "subtype": "fact", "tier": "long_term", "confidence": 0.8250000000000001, "quality": {"accepted": true, "score": 0.95, "issues": [], "warnings": ["normalized_whitespace_or_control_chars"], "original_chars": 26, "normalized_chars": 26, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "knowledge", "subtype": "fact", "summary": "知识记忆：结果生成记忆:运维报告先给结论,再给指标证据和边界。", "confidence": 0.825, "method": "deterministic_semantic_rules", "signals": ["source_manual"], "enhancer_used": false, "enhancer_error": ""}}
 {
   "query_count": 3,
   "workers": 3,
@@ -11,7 +13,7 @@
       "query": "任务规划 systemd cgroup",
       "hits": [
         {
-          "memory_id": "mem_34cf3f1789ee48c6",
+          "memory_id": "mem_6fbba3a8d7744076",
           "type": "knowledge",
           "subtype": "fact",
           "scope": "default",
@@ -23,37 +25,37 @@
           "sensitivity_level": "none",
           "sensitivity_labels": "[]",
           "sensitivity_redacted": 0,
-          "version_id": "ver_9ef6acde74004525",
+          "version_id": "ver_feff354644fe4bf1",
           "deleted": 0,
-          "updated_at": "2026-05-24T18:03:06.538115+00:00",
-          "rank": -1.7320024768284918,
+          "updated_at": "2026-05-25T14:12:02.417614+00:00",
+          "rank": -4.897779415503798,
           "score": 0.7486,
           "match_source": "hybrid",
           "vector_backend": "hash"
         },
         {
-          "memory_id": "mem_fa8b7d5bc7a3421b",
+          "memory_id": "mem_c668081b04a64afe",
           "type": "knowledge",
-          "subtype": "workflow",
+          "subtype": "fact",
           "scope": "default",
           "tier": "long_term",
-          "summary": "知识记忆：知识:openKylin 本机 Agent 服务可以通过 systemd、cgroup、journald 和 auditd 进行运行约束与审计。",
-          "content": "知识:openKylin 本机 Agent 服务可以通过 systemd、cgroup、journald 和 auditd 进行运行约束与审计。",
+          "summary": "知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。",
+          "content": "普通知识: systemd 可用 MemoryMax 限制服务内存。",
           "source_kind": "manual",
           "source_uri": "inline",
           "sensitivity_level": "none",
           "sensitivity_labels": "[]",
           "sensitivity_redacted": 0,
-          "version_id": "ver_36bc3a00b0504d54",
+          "version_id": "ver_c534e86ee1974463",
           "deleted": 0,
-          "updated_at": "2026-05-24T11:29:18.618786+00:00",
-          "rank": -1.5018643524467532,
-          "score": 0.4138,
+          "updated_at": "2026-05-25T14:12:00.094910+00:00",
+          "rank": -1.9968076810125786,
+          "score": 0.3589,
           "match_source": "hybrid",
           "vector_backend": "hash"
         },
         {
-          "memory_id": "mem_be5770d04e5e4fd7",
+          "memory_id": "mem_37456648bdfd4022",
           "type": "knowledge",
           "subtype": "workflow",
           "scope": "default",
@@ -65,22 +67,22 @@
           "sensitivity_level": "none",
           "sensitivity_labels": "[]",
           "sensitivity_redacted": 0,
-          "version_id": "ver_4e1edf4230a54020",
+          "version_id": "ver_4559c94499344fcd",
           "deleted": 0,
-          "updated_at": "2026-05-24T18:03:06.701520+00:00",
+          "updated_at": "2026-05-25T14:12:02.571867+00:00",
           "score": 0.1747,
           "match_source": "hybrid",
           "vector_backend": "hash"
         }
       ],
-      "latency_ms": 5.661
+      "latency_ms": 4.236
     },
     {
       "index": 1,
       "query": "工具调用 pytest journalctl",
       "hits": [
         {
-          "memory_id": "mem_be5770d04e5e4fd7",
+          "memory_id": "mem_37456648bdfd4022",
           "type": "knowledge",
           "subtype": "workflow",
           "scope": "default",
@@ -92,43 +94,63 @@
           "sensitivity_level": "none",
           "sensitivity_labels": "[]",
           "sensitivity_redacted": 0,
-          "version_id": "ver_4e1edf4230a54020",
+          "version_id": "ver_4559c94499344fcd",
           "deleted": 0,
-          "updated_at": "2026-05-24T18:03:06.701520+00:00",
-          "rank": -3.8285341961431985,
+          "updated_at": "2026-05-25T14:12:02.571867+00:00",
+          "rank": -5.890308652161853,
           "score": 0.6827,
           "match_source": "hybrid",
           "vector_backend": "hash"
         },
         {
-          "memory_id": "mem_c2723b82643843ed",
-          "type": "preference",
-          "subtype": "tool_preference",
+          "memory_id": "mem_e12f9b11c0374bf8",
+          "type": "knowledge",
+          "subtype": "workflow",
           "scope": "default",
           "tier": "long_term",
-          "summary": "用户偏好：偏好:回答 Linux 运维问题时先给结论,再给命令和风险提示。",
-          "content": "偏好:回答 Linux 运维问题时先给结论,再给命令和风险提示。",
+          "summary": "知识记忆：语义抽取增强流程:默认 deterministic semantic rules;设置 MEMGUARD_EXTRACTOR_COMMAND 后可调用本地 NER 或 LLM 返回 JSON schema。",
+          "content": "语义抽取增强流程:默认 deterministic semantic rules;设置 MEMGUARD_EXTRACTOR_COMMAND 后可调用本地 NER 或 LLM 返回 JSON schema。",
           "source_kind": "manual",
           "source_uri": "inline",
           "sensitivity_level": "none",
           "sensitivity_labels": "[]",
           "sensitivity_redacted": 0,
-          "version_id": "ver_26cb0836bc7942ff",
+          "version_id": "ver_56d4e21877ae4fd8",
           "deleted": 0,
-          "updated_at": "2026-05-24T11:29:18.442376+00:00",
-          "score": 0.1449,
+          "updated_at": "2026-05-25T14:12:01.353131+00:00",
+          "score": 0.2242,
+          "match_source": "hybrid",
+          "vector_backend": "hash"
+        },
+        {
+          "memory_id": "mem_9365e9b21f404293",
+          "type": "knowledge",
+          "subtype": "behavior_risk",
+          "scope": "default",
+          "tier": "session",
+          "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=4 command=sudo systemctl enable --now ssh",
+          "content": "User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=4 command=sudo systemctl enable --now ssh",
+          "source_kind": "user_behavior",
+          "source_uri": "/home/luo/.bash_history#4",
+          "sensitivity_level": "none",
+          "sensitivity_labels": "[]",
+          "sensitivity_redacted": 0,
+          "version_id": "ver_2fc4a2269b5f4f59",
+          "deleted": 0,
+          "updated_at": "2026-05-25T14:12:01.671820+00:00",
+          "score": 0.1868,
           "match_source": "hybrid",
           "vector_backend": "hash"
         }
       ],
-      "latency_ms": 2.618
+      "latency_ms": 4.365
     },
     {
       "index": 2,
       "query": "结果生成 运维报告 证据",
       "hits": [
         {
-          "memory_id": "mem_a1b2e4ba852a4b28",
+          "memory_id": "mem_a17e1e251b5e4ea5",
           "type": "knowledge",
           "subtype": "fact",
           "scope": "default",
@@ -140,79 +162,59 @@
           "sensitivity_level": "none",
           "sensitivity_labels": "[]",
           "sensitivity_redacted": 0,
-          "version_id": "ver_f50022722bd74034",
+          "version_id": "ver_76a11128c36a4ce3",
           "deleted": 0,
-          "updated_at": "2026-05-24T18:03:06.854799+00:00",
+          "updated_at": "2026-05-25T14:12:02.737428+00:00",
           "score": 0.6253,
           "match_source": "hybrid",
           "vector_backend": "hash"
         },
         {
-          "memory_id": "mem_6de4abcfaccc4c27",
-          "type": "knowledge",
-          "subtype": "os_event",
-          "scope": "default",
-          "tier": "working",
-          "summary": "知识记忆：OS event: peony_context_menu_probe action=inspect path=/home/luo/桌面/memguardos-ui-test.txt process=peony",
-          "content": "OS event: peony_context_menu_probe action=inspect path=/home/luo/桌面/memguardos-ui-test.txt process=peony",
-          "source_kind": "os_event",
-          "source_uri": "/home/luo/桌面/memguardos-ui-test.txt",
-          "sensitivity_level": "none",
-          "sensitivity_labels": "[]",
-          "sensitivity_redacted": 0,
-          "version_id": "ver_36bda5a3f38c42a3",
-          "deleted": 0,
-          "updated_at": "2026-05-24T11:29:18.800310+00:00",
-          "score": 0.1911,
-          "match_source": "hybrid",
-          "vector_backend": "hash"
-        },
-        {
-          "memory_id": "mem_c2723b82643843ed",
-          "type": "preference",
-          "subtype": "tool_preference",
+          "memory_id": "mem_795c71982ee34078",
+          "type": "sensitive_policy",
+          "subtype": "security_policy",
           "scope": "default",
           "tier": "long_term",
-          "summary": "用户偏好：偏好:回答 Linux 运维问题时先给结论,再给命令和风险提示。",
-          "content": "偏好:回答 Linux 运维问题时先给结论,再给命令和风险提示。",
+          "summary": "安全策略：员工工号 [REDACTED:employee_id] 需要脱敏保存。",
+          "content": "员工工号 [REDACTED:employee_id] 需要脱敏保存。",
           "source_kind": "manual",
           "source_uri": "inline",
-          "sensitivity_level": "none",
-          "sensitivity_labels": "[]",
-          "sensitivity_redacted": 0,
-          "version_id": "ver_26cb0836bc7942ff",
+          "sensitivity_level": "low",
+          "sensitivity_labels": "[\"employee_id\"]",
+          "sensitivity_redacted": 1,
+          "version_id": "ver_e4d5126631304b71",
           "deleted": 0,
-          "updated_at": "2026-05-24T11:29:18.442376+00:00",
-          "score": 0.1213,
+          "updated_at": "2026-05-25T14:12:00.791314+00:00",
+          "score": 0.2075,
           "match_source": "hybrid",
           "vector_backend": "hash"
         }
       ],
-      "latency_ms": 3.517
+      "latency_ms": 3.88
     }
   ],
   "latency": {
-    "total_ms": 8.571,
-    "p50_ms": 3.517,
-    "p95_ms": 5.661,
-    "p99_ms": 5.661
+    "total_ms": 10.209,
+    "p50_ms": 4.236,
+    "p95_ms": 4.365,
+    "p99_ms": 4.365
   },
   "errors": [],
   "ok": true
 }
 [
   {
-    "audit_id": 30,
+    "audit_id": 21,
     "event_type": "batch_search",
     "memory_id": null,
-    "detail": "{\"errors\": 0, \"namespace\": \"default\", \"p95_ms\": 5.661, \"query_count\": 3, \"total_ms\": 8.571, \"workers\": 3}",
-    "created_at": "2026-05-24T18:03:07.006303+00:00",
-    "prev_hash": "b910dfbe53a79ba0b078d352cdcd593c387a617912897a7223ba953f9f5b306b",
-    "event_hash": "59e3668fd474e9eda466c8fe6c9d800f4d5877898651d6716d682c6fca701554"
+    "detail": "{\"errors\": 0, \"namespace\": \"default\", \"p95_ms\": 4.365, \"query_count\": 3, \"total_ms\": 10.209, \"workers\": 3}",
+    "created_at": "2026-05-25T14:12:02.910818+00:00",
+    "prev_hash": "753436cf87c1e1df2a9b1dbc505db41c3e625ba8f4b2c9688df9ed2320123086",
+    "event_hash": "ccfcf6fb7e3ee9ede35e7b4b57eae6ba31474c69accf503c9c53f2c2c22e2e2a"
   }
 ]
 {
   "ok": true,
-  "checked": 30,
-  "head_hash": "59e3668fd474e9eda466c8fe6c9d800f4d5877898651d6716d682c6fca701554"
+  "checked": 21,
+  "head_hash": "ccfcf6fb7e3ee9ede35e7b4b57eae6ba31474c69accf503c9c53f2c2c22e2e2a"
 }

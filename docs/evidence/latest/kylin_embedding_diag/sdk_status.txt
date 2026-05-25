@@ -1,6 +1,6 @@
 $ python3 -m memguard.cli.memctl sdk-status
 
-[1779550767380] [32minfo [0m Proxy init engine sessionId:2102368989.
+[1779718266440] [32minfo [0m Proxy init engine sessionId:1896914244.
 {
   "embedding": {
     "backend": "kylin_coreai_embedding",
@@ -199,11 +199,12 @@ $ python3 -m memguard.cli.memctl sdk-status
     "embedding_probe": null,
     "available": true,
     "inference_ready": null,
-    "ready_for_default_retrieval": false,
+    "ready_for_default_retrieval": null,
     "fallback": "hash_embedding",
     "diagnosis": {
       "success_condition": "library_loadable and model_info and embedding_probe.ok",
       "availability_meaning": "available means SDK metadata is reachable; inference_ready means a real embedding call succeeded.",
+      "probe_meaning": "embedding_probe is null when sdk-status runs without --probe-embedding; use --probe-embedding to verify real inference readiness.",
       "timeout_hint": "If model_info is present but embedding_probe returns 'Timeout was reached', inspect kylin-ai-runtime sockets, kytensor.service, Triton repository index, ondevice plugin logs, and model repository links."
     }
   },

@@ -34,7 +34,7 @@ def build_manifest(root: Path) -> dict:
         )
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "root": str(root),
+        "root": display_root(root),
         "file_count": len(entries),
         "total_bytes": sum(item["bytes"] for item in entries),
         "files": entries,
@@ -46,6 +46,13 @@ def write_outputs(root: Path, manifest: dict) -> None:
     (root / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     lines = ["%s  %s" % (item["sha256"], item["path"]) for item in manifest["files"]]
     (root / "SHA256SUMS.txt").write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+
+
+def display_root(root: Path) -> str:
+    try:
+        return root.relative_to(Path.cwd().resolve()).as_posix()
+    except ValueError:
+        return root.name
 
 
 def main() -> int:

@@ -1,3 +1,5 @@
+$ bash scripts/build_deb.sh; DEB_VERSION=$(sed -n 's/^version = "\([^"]*\)"/\1/p' pyproject.toml | head -n1); DEB_PATH="dist/memguardos_${DEB_VERSION}_$(dpkg --print-architecture).deb"; echo "DEB_PATH=${DEB_PATH}"; sha256sum "${DEB_PATH}"; dpkg-deb --info "${DEB_PATH}"; echo '--- required contents ---'; dpkg-deb --contents "${DEB_PATH}" | egrep 'usr/bin/memctl|memguardd.service|peony-extensions|ukui-control-center|opt/memguardos/memguard/service.py'; rm -rf /tmp/memguardos-deb-root; mkdir -p /tmp/memguardos-deb-root; dpkg-deb -x "${DEB_PATH}" /tmp/memguardos-deb-root; PYTHONPATH=/tmp/memguardos-deb-root/opt/memguardos python3 -m memguard.cli.memctl doctor >/tmp/memguardos-deb-doctor.txt; echo 'offline_extract_doctor=ok'; ldd /tmp/memguardos-deb-root/usr/lib/$(dpkg-architecture -qDEB_HOST_MULTIARCH)/peony-extensions/libpeony-menu-plugin-memguardos.so | grep 'not found' && exit 2 || true; ldd /tmp/memguardos-deb-root/usr/lib/$(dpkg-architecture -qDEB_HOST_MULTIARCH)/ukui-control-center/libmemguardos-ukcc-plugin.so | grep 'not found' && exit 2 || true; echo 'plugin_ldd_missing=0'; dpkg -s memguardos >/dev/null 2>&1 && echo 'apt_install_state=installed' || echo 'apt_install_state=not_installed_or_blocked_by_current_ostree_mode'
+
 Info: creating stash file /home/luo/memguardos/native/ukui/build/peony-memguard/.qmake.stash
 g++ -c -pipe -O2 -std=gnu++1z -pthread -Wall -Wextra -D_REENTRANT -fPIC -DQT_WIDGETS_LIB -DQT_NETWORK_LIB -D_REENTRANT -DQT_GUI_LIB -DQT_CORE_LIB -DQT_NO_DEBUG -DQT_PLUGIN -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -I../../peony-memguard -I. -I/usr/include/peony-qt/fileop -I/usr/include/peony-qt/model -I/usr/include/peony-qt/controls -I/usr/include/peony-qt -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/gio-unix-2.0 -I/usr/include/poppler/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QGSettings -I/usr/include/udisks2 -I/usr/include/gudev-1.0 -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/gdk-pixbuf-2.0 -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/poppler -I/usr/include/libpng16 -I/usr/include/x86_64-linux-gnu -I/usr/include/webp -I/usr/include/libmount -I/usr/include/blkid -I. -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -o memguard_peony_plugin.o ../../peony-memguard/memguard_peony_plugin.cpp
 g++ -pipe -O2 -std=gnu++1z -pthread -Wall -Wextra -dM -E -o moc_predefs.h /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
@@ -21,9 +23,9 @@ architecture=amd64
 multiarch=x86_64-linux-gnu
 ukui_plugins_included=1
  新格式的 Debian 软件包，格式版本 2.0。
- 大小 248664 字节：主控包=5592 字节。
+ 大小 253036 字节：主控包=5716 字节。
      788 bytes,    15 lines      control
-   12490 bytes,   160 lines      md5sums
+   12817 bytes,   164 lines      md5sums
      174 字节，    9 行   *  postinst             #!/bin/sh
      107 字节，    6 行   *  postrm               #!/bin/sh
      198 字节，    8 行   *  prerm                #!/bin/sh
@@ -34,7 +36,7 @@ ukui_plugins_included=1
  Architecture: amd64
  Maintainer: MemGuardOS Project Team <memguardos@example.com>
  Depends: python3 (>= 3.9), systemd, libqt5core5a, libqt5widgets5, peony, ukui-control-center, libpeony3, libukcc3
- Installed-Size: 2196
+ Installed-Size: 2224
  Homepage: https://github.com/Alexd-star/memguardos
  Description: Linux-oriented OS Agent memory extraction and precise forgetting
   MemGuardOS provides a local memory substrate for Linux/openKylin OS Agents.
@@ -42,3 +44,40 @@ ukui_plugins_included=1
   mmap-backed append-only storage, SQLite FTS metadata, graph relations,
   sensitive information filtering, auditable precise forgetting, systemd/cgroup
   deployment, auditd/journald integration and optional UKUI desktop plugins.
+DEB_PATH=dist/memguardos_0.1.0_amd64.deb
+c4915a978844577782bc3c6276661dea003fde32cac3c24d58197cd186a6a816  dist/memguardos_0.1.0_amd64.deb
+ 新格式的 Debian 软件包，格式版本 2.0。
+ 大小 253036 字节：主控包=5716 字节。
+     788 bytes,    15 lines      control
+   12817 bytes,   164 lines      md5sums
+     174 字节，    9 行   *  postinst             #!/bin/sh
+     107 字节，    6 行   *  postrm               #!/bin/sh
+     198 字节，    8 行   *  prerm                #!/bin/sh
+ Package: memguardos
+ Version: 0.1.0
+ Section: utils
+ Priority: optional
+ Architecture: amd64
+ Maintainer: MemGuardOS Project Team <memguardos@example.com>
+ Depends: python3 (>= 3.9), systemd, libqt5core5a, libqt5widgets5, peony, ukui-control-center, libpeony3, libukcc3
+ Installed-Size: 2224
+ Homepage: https://github.com/Alexd-star/memguardos
+ Description: Linux-oriented OS Agent memory extraction and precise forgetting
+  MemGuardOS provides a local memory substrate for Linux/openKylin OS Agents.
+  It supports multi-source preference and knowledge memory extraction,
+  mmap-backed append-only storage, SQLite FTS metadata, graph relations,
+  sensitive information filtering, auditable precise forgetting, systemd/cgroup
+  deployment, auditd/journald integration and optional UKUI desktop plugins.
+--- required contents ---
+-rw-r--r-- root/root       406 2026-05-25 22:12 ./lib/systemd/system/memguardd.service
+-rw-rw-r-- root/root     48427 2026-05-25 01:49 ./opt/memguardos/memguard/service.py
+-rw-rw-r-- root/root       406 2026-05-25 01:30 ./opt/memguardos/scripts/memguardd.service
+-rwxr-xr-x root/root       123 2026-05-25 22:12 ./usr/bin/memctl
+drwxrwxr-x root/root         0 2026-05-25 22:12 ./usr/lib/x86_64-linux-gnu/peony-extensions/
+-rwxr-xr-x root/root     48112 2026-05-25 22:12 ./usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
+drwxrwxr-x root/root         0 2026-05-25 22:12 ./usr/lib/x86_64-linux-gnu/ukui-control-center/
+-rwxr-xr-x root/root     78032 2026-05-25 22:12 ./usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
+[1779718333792] [32minfo [0m Proxy init engine sessionId:25309967.
+offline_extract_doctor=ok
+plugin_ldd_missing=0
+apt_install_state=not_installed_or_blocked_by_current_ostree_mode

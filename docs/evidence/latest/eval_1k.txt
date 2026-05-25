@@ -1,4 +1,4 @@
-$ .venv/bin/python -m memguard.eval.run_eval --latency-size 1000 --latency-queries 120 --output docs/evidence/openkylin_20260523_233923/eval_result_openkylin.json --markdown docs/evidence/openkylin_20260523_233923/eval_report_openkylin.md
+$ .venv/bin/python -m memguard.eval.run_eval --latency-size 1000 --latency-queries 120 --output docs/evidence/openkylin_20260525_221101/eval_result_openkylin.json --markdown docs/evidence/openkylin_20260525_221101/eval_report_openkylin.md
 
 {
   "dataset": {
@@ -28,8 +28,8 @@ $ .venv/bin/python -m memguard.eval.run_eval --latency-size 1000 --latency-queri
   "retrieval": {
     "mean_recall_at_5": 1.0,
     "cross_language_recall_at_5": 1.0,
-    "p50_latency_ms": 19.047,
-    "p95_latency_ms": 44.197
+    "p50_latency_ms": 12.999,
+    "p95_latency_ms": 14.353
   },
   "baseline_comparison": {
     "text_only_recall_at_5": 0.8375,
@@ -62,12 +62,12 @@ $ .venv/bin/python -m memguard.eval.run_eval --latency-size 1000 --latency-queri
   "latency_load": {
     "memory_count": 1000,
     "query_count": 120,
-    "p50_latency_ms": 21.346,
-    "p95_latency_ms": 34.816,
-    "p99_latency_ms": 47.856,
-    "segment_kb": 2820.606,
-    "sqlite_kb": 4368.0,
-    "total_store_kb": 11356.731
+    "p50_latency_ms": 18.936,
+    "p95_latency_ms": 22.448,
+    "p99_latency_ms": 34.33,
+    "segment_kb": 2820.6,
+    "sqlite_kb": 4392.0,
+    "total_store_kb": 11352.561
   },
   "concurrent_search": {
     "memory_count": 1000,
@@ -76,9 +76,9 @@ $ .venv/bin/python -m memguard.eval.run_eval --latency-size 1000 --latency-queri
     "read_path_audit": "disabled_for_latency_measurement",
     "errors": [],
     "ok": true,
-    "p50_latency_ms": 344.914,
-    "p95_latency_ms": 407.995,
-    "p99_latency_ms": 521.806,
+    "p50_latency_ms": 310.826,
+    "p95_latency_ms": 350.735,
+    "p99_latency_ms": 437.932,
     "audit_chain_ok": true,
     "audit_events_checked": 1000,
     "policy_eviction_candidates": 5
@@ -90,11 +90,11 @@ $ .venv/bin/python -m memguard.eval.run_eval --latency-size 1000 --latency-queri
     "hits_per_query": [
       4,
       2,
-      3,
+      2,
       3
     ],
-    "total_latency_ms": 43.257,
-    "p95_latency_ms": 13.455,
+    "total_latency_ms": 17.841,
+    "p95_latency_ms": 3.219,
     "audit_chain_ok": true,
     "read_path_audit": "single_batch_audit_event"
   },
@@ -110,20 +110,20 @@ $ .venv/bin/python -m memguard.eval.run_eval --latency-size 1000 --latency-queri
     "policy": "仅使用已返回且已脱敏的记忆作为 OS Agent 生成上下文；不得输出被精准遗忘或被敏感策略阻断的明文。"
   },
   "resource_usage": {
-    "eval_wall_time_ms": 41724.573,
-    "eval_cpu_time_ms": 22567.481,
-    "tracemalloc_current_kb": 9474.882,
-    "tracemalloc_peak_kb": 23424.244,
-    "process_rss_kb": 112100.0,
-    "baseline_rss_kb": 28312.0,
-    "rss_delta_kb": 83788.0,
+    "eval_wall_time_ms": 33453.056,
+    "eval_cpu_time_ms": 17523.021,
+    "tracemalloc_current_kb": 9490.518,
+    "tracemalloc_peak_kb": 23439.707,
+    "process_rss_kb": 112284.0,
+    "baseline_rss_kb": 28332.0,
+    "rss_delta_kb": 83952.0,
     "baseline_method": "current process RSS sampled before MemGuardService initialization"
   },
   "storage_footprint": {
     "main_segment_kb": 118.227,
     "main_sqlite_kb": 260.0,
-    "total_eval_store_kb": 4577.528,
-    "bytes_per_live_memory": 76842.443
+    "total_eval_store_kb": 4561.435,
+    "bytes_per_live_memory": 76572.279
   },
   "memory_count": 61
 }
