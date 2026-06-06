@@ -48,7 +48,7 @@ def test_submission_package_inspector_rejects_process_materials(tmp_path):
     names = sorted(REQUIRED_PATHS | {"scripts/release_preflight.py", "scripts/smoke_submission_archive.py"})
     with ZipFile(package, "w", ZIP_DEFLATED) as zf:
         for name in names:
-            zf.writestr(name, "x")
+            zf.writestr(name, sample_submission_body(name))
     manifest.write_text(
         '{"files": [%s]}'
         % ",".join('{"path": "%s", "role": "%s"}' % (name, classify_file(Path(name))) for name in names),
@@ -66,7 +66,7 @@ def test_submission_package_inspector_accepts_required_formal_materials(tmp_path
     names = sorted(REQUIRED_PATHS)
     with ZipFile(package, "w", ZIP_DEFLATED) as zf:
         for name in names:
-            zf.writestr(name, "x")
+            zf.writestr(name, sample_submission_body(name))
     manifest.write_text(
         '{"files": [%s]}'
         % ",".join('{"path": "%s", "role": "%s"}' % (name, classify_file(Path(name))) for name in names),
@@ -101,6 +101,51 @@ def test_submission_package_inspector_rejects_local_paths_in_formal_docs(tmp_pat
     report = inspect_package(package, manifest)
     assert report["ok"] is False
     assert report["local_path_hits"] == [{"path": "README.md", "line": 1, "markers": ["D:\\", "Luo_docs"]}]
+
+
+def test_submission_package_inspector_rejects_weak_sdk_evidence(tmp_path):
+    package = tmp_path / "submission.zip"
+    manifest = tmp_path / "submission_manifest.json"
+    names = sorted(REQUIRED_PATHS)
+    with ZipFile(package, "w", ZIP_DEFLATED) as zf:
+        for name in names:
+            body = sample_submission_body(name)
+            if name == "docs/evidence/latest/sdk_embedding_probe.txt":
+                body = '{"embedding":{"inference_ready":null,"embedding_probe":null}}\n'
+            zf.writestr(name, body)
+    manifest.write_text(
+        '{"files": [%s]}'
+        % ",".join('{"path": "%s", "role": "%s"}' % (name, classify_file(Path(name))) for name in names),
+        encoding="utf-8",
+    )
+    report = inspect_package(package, manifest)
+    assert report["ok"] is False
+    assert any(item["path"] == "docs/evidence/latest/sdk_embedding_probe.txt" for item in report["evidence_content_failures"])
+
+
+def sample_submission_body(name: str) -> str:
+    if name == "docs/evidence/latest/pytest.txt":
+        return "60 passed in 22.65s\n"
+    if name == "docs/evidence/latest/sdk_embedding_probe.txt":
+        return '$ memctl sdk-status --probe-embedding\n\n{"embedding":{"inference_ready":true,"embedding_probe":{"dim":768}}}\n'
+    if name == "docs/evidence/latest/eval_result_openkylin_10k.json":
+        return """
+{
+  "latency_load": {"p95_latency_ms": 19.115, "p99_latency_ms": 118.875},
+  "resource_usage": {"process_rss_kb": 129176},
+  "procedural_memory": {
+    "recall_at_5": 1.0,
+    "hierarchical_graph_layers_ok": true,
+    "context_explainability_ok": true
+  },
+  "agent_batch_search": {"p95_latency_ms": 17.204}
+}
+""".strip()
+    if name == "docs/evidence/latest/build_context_explainability.txt":
+        return '{"explainability":{"selection_trace":[]}}\n'
+    if name == "docs/evidence/latest/hierarchical_graph_search.txt":
+        return '{"layers":{"summary":[],"entity_relation":[],"chunk":[]},"explainability":{"retrieval_path":["summary","entity_relation","chunk"]}}\n'
+    return "x"
 
 
 def test_competition_ready_checks_procedural_memory_metrics(tmp_path):
