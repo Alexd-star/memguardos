@@ -75,6 +75,8 @@ REQUIRED_EVIDENCE = [
     "embedding_cpp_probe.txt",
     "vector_probe.txt",
     "kylin_retrieval.txt",
+    "build_context_explainability.txt",
+    "hierarchical_graph_search.txt",
     "temporal_status.txt",
     "namespace_isolation.txt",
     "systemd_cgroup.txt",
@@ -192,6 +194,10 @@ def check_eval(eval_path: Path) -> List[Check]:
         _bool_check(result, "量化评测", "并发检索", ["concurrent_search", "ok"]),
         _bool_check(result, "量化评测", "Agent 批量检索", ["agent_batch_search", "ok"]),
         _bool_check(result, "量化评测", "RAG 脱敏保持", ["rag_context_budget", "redaction_enforced"]),
+        _metric_check(result, "量化评测", "程序性记忆 Recall@5", ["procedural_memory", "recall_at_5"], 0.90),
+        _metric_check(result, "量化评测", "程序性记忆子类型命中率", ["procedural_memory", "procedural_subtype_hit_rate"], 0.90),
+        _bool_check(result, "量化评测", "层次图谱检索三层检查", ["procedural_memory", "hierarchical_graph_layers_ok"]),
+        _bool_check(result, "量化评测", "RAG 上下文解释性检查", ["procedural_memory", "context_explainability_ok"]),
     ]
     dataset = result.get("dataset", {})
     total_cases = sum(int(dataset.get(key, 0)) for key in dataset)
@@ -212,7 +218,59 @@ def check_openkylin_evidence(evidence_dir: Path, allow_missing: bool = False) ->
     sha = evidence_dir / "SHA256SUMS.txt"
     checks.append(Check("openKylin证据", "manifest.json", manifest.exists(), "证据清单存在" if manifest.exists() else "缺少证据清单", severity="P1"))
     checks.append(Check("openKylin证据", "SHA256SUMS.txt", sha.exists(), "哈希清单存在" if sha.exists() else "缺少哈希清单", severity="P1"))
+    checks.extend(check_openkylin_metrics(evidence_dir, severity=severity))
     checks.extend(check_evidence_manifest_freshness(evidence_dir, severity=severity))
+    return checks
+
+
+def check_openkylin_metrics(evidence_dir: Path, severity: str) -> List[Check]:
+    checks: List[Check] = []
+    eval_10k = _load_evidence_json(evidence_dir / "eval_result_openkylin_10k.json")
+    if eval_10k is None:
+        checks.append(Check("openKylin指标", "10k 评测 JSON", False, "eval_result_openkylin_10k.json 不存在或无法解析", severity=severity))
+    else:
+        checks.extend(
+            [
+                _metric_check(eval_10k, "openKylin指标", "10k 负载 P95 < 500ms", ["latency_load", "p95_latency_ms"], 500.0, upper_bound=True),
+                _metric_check(eval_10k, "openKylin指标", "10k 负载 P99 < 500ms", ["latency_load", "p99_latency_ms"], 500.0, upper_bound=True),
+                _metric_check(eval_10k, "openKylin指标", "10k 进程 RSS < 256MB", ["resource_usage", "process_rss_kb"], 256 * 1024, upper_bound=True),
+                _metric_check(eval_10k, "openKylin指标", "10k 程序性记忆 Recall@5", ["procedural_memory", "recall_at_5"], 0.90),
+                _bool_check(eval_10k, "openKylin指标", "10k 层次图谱检索检查", ["procedural_memory", "hierarchical_graph_layers_ok"]),
+                _bool_check(eval_10k, "openKylin指标", "10k 上下文解释性检查", ["procedural_memory", "context_explainability_ok"]),
+                _metric_check(eval_10k, "openKylin指标", "10k Agent 批量检索 P95 < 100ms", ["agent_batch_search", "p95_latency_ms"], 100.0, upper_bound=True),
+            ]
+        )
+
+    sdk_probe = _load_evidence_json_from_capture(evidence_dir / "sdk_embedding_probe.txt")
+    if sdk_probe is None:
+        checks.append(Check("openKylin指标", "Kylin embedding 真实推理", False, "sdk_embedding_probe.txt 不存在或无法解析 JSON", severity=severity))
+    else:
+        inference_ready = _nested_get(sdk_probe, ["embedding", "inference_ready"])
+        probe_dim = _nested_get(sdk_probe, ["embedding", "embedding_probe", "dim"])
+        checks.append(Check("openKylin指标", "Kylin embedding 真实推理", bool(inference_ready), "inference_ready=%s" % inference_ready, severity=severity))
+        checks.append(Check("openKylin指标", "Kylin embedding 维度 768", probe_dim == 768, "dim=%s" % probe_dim, severity=severity))
+
+    context_text = _read_text_if_exists(evidence_dir / "build_context_explainability.txt")
+    checks.append(
+        Check(
+            "openKylin指标",
+            "build-context 解释性证据",
+            "explainability" in context_text and "selection_trace" in context_text,
+            "包含 explainability 与 selection_trace" if context_text else "证据缺失",
+            severity=severity,
+        )
+    )
+    graph_text = _read_text_if_exists(evidence_dir / "hierarchical_graph_search.txt")
+    graph_ok = all(token in graph_text for token in ('"summary"', '"entity_relation"', '"chunk"', '"retrieval_path"'))
+    checks.append(
+        Check(
+            "openKylin指标",
+            "层次图谱三层证据",
+            graph_ok,
+            "包含 summary/entity_relation/chunk/retrieval_path" if graph_text else "证据缺失",
+            severity=severity,
+        )
+    )
     return checks
 
 
@@ -336,6 +394,35 @@ def _nested_get(data: Dict[str, Any], keys: List[str]) -> Optional[Any]:
             return None
         current = current[key]
     return current
+
+
+def _load_evidence_json(path: Path) -> Optional[Dict[str, Any]]:
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _load_evidence_json_from_capture(path: Path) -> Optional[Dict[str, Any]]:
+    text = _read_text_if_exists(path)
+    if not text:
+        return None
+    start = text.find("{")
+    if start < 0:
+        return None
+    decoder = json.JSONDecoder()
+    try:
+        payload, _ = decoder.raw_decode(text[start:])
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _read_text_if_exists(path: Path) -> str:
+    return path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
 
 
 def _resolve(path: str) -> Path:

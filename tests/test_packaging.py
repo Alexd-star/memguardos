@@ -4,6 +4,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from scripts.inspect_submission_package import REQUIRED_PATHS, inspect_package
 from scripts.package_submission import COMPETITION_ROLES, ROOT, classify_file, should_skip
 from scripts.smoke_submission_archive import command_name
+from scripts.check_competition_ready import check_eval, check_openkylin_metrics
 
 
 def test_competition_package_keeps_formal_and_process_materials_separate():
@@ -100,3 +101,81 @@ def test_submission_package_inspector_rejects_local_paths_in_formal_docs(tmp_pat
     report = inspect_package(package, manifest)
     assert report["ok"] is False
     assert report["local_path_hits"] == [{"path": "README.md", "line": 1, "markers": ["D:\\", "Luo_docs"]}]
+
+
+def test_competition_ready_checks_procedural_memory_metrics(tmp_path):
+    eval_json = tmp_path / "eval.json"
+    eval_json.write_text(
+        """
+{
+  "preference_and_knowledge_extraction": {"preference_precision": 1.0, "knowledge_precision": 1.0},
+  "retrieval": {"mean_recall_at_5": 1.0, "cross_language_recall_at_5": 1.0},
+  "sensitive_detection": {"block_f1": 1.0, "label_f1": 1.0},
+  "forgetting": {"candidate_precision": 1.0, "candidate_recall": 1.0},
+  "conflict_resolution": {"correctness": 1.0},
+  "latency_load": {"p95_latency_ms": 10.0},
+  "memory_tiers": {"policy_report_ok": true},
+  "concurrent_search": {"ok": true},
+  "agent_batch_search": {"ok": true},
+  "rag_context_budget": {"redaction_enforced": true},
+  "procedural_memory": {
+    "recall_at_5": 1.0,
+    "procedural_subtype_hit_rate": 1.0,
+    "hierarchical_graph_layers_ok": true,
+    "context_explainability_ok": true
+  },
+  "dataset": {
+    "seed_memories": 45,
+    "retrieval_cases": 40,
+    "sensitive_cases": 25,
+    "forgetting_cases": 20,
+    "conflict_cases": 10,
+    "graph_cases": 13,
+    "quality_cases": 6,
+    "procedural_cases": 3
+  }
+}
+""".strip(),
+        encoding="utf-8",
+    )
+
+    checks = check_eval(eval_json)
+    by_name = {item.name: item for item in checks}
+    assert by_name["程序性记忆 Recall@5"].ok is True
+    assert by_name["程序性记忆子类型命中率"].ok is True
+    assert by_name["层次图谱检索三层检查"].ok is True
+    assert by_name["RAG 上下文解释性检查"].ok is True
+    assert by_name["benchmark 用例规模"].detail == "总用例/种子数 162"
+
+
+def test_competition_ready_checks_openkylin_metric_evidence(tmp_path):
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    (evidence / "eval_result_openkylin_10k.json").write_text(
+        """
+{
+  "latency_load": {"p95_latency_ms": 19.115, "p99_latency_ms": 118.875},
+  "resource_usage": {"process_rss_kb": 129176},
+  "procedural_memory": {
+    "recall_at_5": 1.0,
+    "hierarchical_graph_layers_ok": true,
+    "context_explainability_ok": true
+  },
+  "agent_batch_search": {"p95_latency_ms": 17.204}
+}
+""".strip(),
+        encoding="utf-8",
+    )
+    (evidence / "sdk_embedding_probe.txt").write_text(
+        '$ python -m memguard.cli.memctl sdk-status --probe-embedding\n\n{"embedding":{"inference_ready":true,"embedding_probe":{"dim":768}}}\n',
+        encoding="utf-8",
+    )
+    (evidence / "build_context_explainability.txt").write_text('{"explainability":{"selection_trace":[]}}\n', encoding="utf-8")
+    (evidence / "hierarchical_graph_search.txt").write_text(
+        '{"layers":{"summary":[],"entity_relation":[],"chunk":[]},"explainability":{"retrieval_path":["summary","entity_relation","chunk"]}}\n',
+        encoding="utf-8",
+    )
+
+    checks = check_openkylin_metrics(evidence, severity="P0")
+    assert checks
+    assert all(item.ok for item in checks)

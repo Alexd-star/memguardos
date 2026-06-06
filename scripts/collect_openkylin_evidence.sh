@@ -133,6 +133,8 @@ EOF
 | `semantic_extraction.txt` | 可解释混合抽取与可选语义增强入口证据 |
 | `behavior_history.txt` | shell 用户行为轨迹接入证据 |
 | `build_prompt.txt` | RAG 上下文与 LLM prompt 渲染证据 |
+| `build_context_explainability.txt` | RAG 上下文来源分布、过滤策略和 selection trace 证据 |
+| `hierarchical_graph_search.txt` | 摘要层、实体关系层和原文层的层次图谱检索证据 |
 | `generate_answer.txt` | 默认关闭的可选 LLM adapter dry-run 证据 |
 | `web_dashboard.txt` | 本地 Web 控制台 smoke 证据 |
 | `agent_batch_search.txt` | OS Agent 任务规划、工具调用、结果生成多查询并发检索证据 |
@@ -226,6 +228,8 @@ run_shell_capture "natural_patterns" "\"${PYTHON_BIN}\" -m memguard.cli.memctl p
 run_shell_capture "semantic_extraction" "\"${PYTHON_BIN}\" -m memguard.cli.memctl explain-extraction --text '真实案例：systemd service failed with exit_code=1，修复后运行 pytest。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '语义抽取增强流程：默认 deterministic semantic rules；设置 MEMGUARD_EXTRACTOR_COMMAND 后可调用本地 NER 或 LLM 返回 JSON schema。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl audit --type ingest --limit 2"
 run_capture "behavior_history" "${PYTHON_BIN}" -m memguard.cli.memctl ingest-history --file "$HOME/.bash_history" --limit 20
 run_capture "build_prompt" "${PYTHON_BIN}" -m memguard.cli.memctl build-prompt "openKylin 服务内存限制" --top-k 5 --token-budget 1200
+run_capture "build_context_explainability" "${PYTHON_BIN}" -m memguard.cli.memctl build-context "openKylin 服务内存限制" --top-k 5 --token-budget 1200
+run_capture "hierarchical_graph_search" "${PYTHON_BIN}" -m memguard.cli.memctl hierarchical-graph-search systemd --limit 5
 run_capture "generate_answer" "${PYTHON_BIN}" -m memguard.cli.memctl generate-answer "openKylin 服务内存限制" --top-k 5 --token-budget 1200 --provider dry-run
 run_capture "web_dashboard" "${PYTHON_BIN}" scripts/web_dashboard_smoke.py
 run_shell_capture "agent_batch_search" "\"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '任务规划记忆：openKylin systemd cgroup MemoryMax 约束。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '工具调用记忆：Linux 验证优先使用 rg、pytest、journalctl。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '结果生成记忆：运维报告先给结论，再给指标证据和边界。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl batch-search '任务规划 systemd cgroup' '工具调用 pytest journalctl' '结果生成 运维报告 证据' --top-k 3 --workers 3; \"${PYTHON_BIN}\" -m memguard.cli.memctl audit --type batch_search --limit 3; \"${PYTHON_BIN}\" -m memguard.cli.memctl verify-audit"

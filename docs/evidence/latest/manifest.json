@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-06-06T16:31:18.975629+00:00",
+  "generated_at": "2026-06-06T16:39:47.989324+00:00",
   "root": "docs/evidence/latest",
-  "file_count": 65,
-  "total_bytes": 405770,
+  "file_count": 67,
+  "total_bytes": 416352,
   "files": [
     {
       "path": "agent_batch_search.txt",
@@ -43,6 +43,11 @@
       "path": "bpf_lsm_policy.txt",
       "bytes": 458,
       "sha256": "4f18c3fc89ef9c9b36f88d01c3b0358668ec495c5c6b02431e80b39b0df18861"
+    },
+    {
+      "path": "build_context_explainability.txt",
+      "bytes": 4710,
+      "sha256": "43754c3fa8925e6d25a647d677a0bfb8b7536a8163635a01e48798b32dd78247"
     },
     {
       "path": "build_prompt.txt",
@@ -113,6 +118,11 @@
       "path": "generate_answer.txt",
       "bytes": 1084,
       "sha256": "7bb894f5fb73a5233575ae338751390a3f320ece002c7c612671eb17753e5327"
+    },
+    {
+      "path": "hierarchical_graph_search.txt",
+      "bytes": 5872,
+      "sha256": "740ad062f1c17702aa1e807e80fdecb93afa3c412bf21816c7f657dfb266dee9"
     },
     {
       "path": "journald.txt",

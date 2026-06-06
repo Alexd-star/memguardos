@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 85,
-    "passed": 85,
+    "total": 102,
+    "passed": 102,
     "failed": 0,
     "warnings": 0
   },
@@ -11,7 +11,7 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 2405",
+      "detail": "中文字符数 2589",
       "severity": "P0"
     },
     {
@@ -39,7 +39,7 @@
       "category": "中文文档",
       "name": "docs/项目介绍总览.md",
       "ok": true,
-      "detail": "中文字符数 5773",
+      "detail": "中文字符数 5875",
       "severity": "P0"
     },
     {
@@ -53,7 +53,7 @@
       "category": "中文文档",
       "name": "docs/详细设计说明书.md",
       "ok": true,
-      "detail": "中文字符数 2457",
+      "detail": "中文字符数 2799",
       "severity": "P0"
     },
     {
@@ -88,7 +88,7 @@
       "category": "中文文档",
       "name": "docs/openKylin验证记录.md",
       "ok": true,
-      "detail": "中文字符数 1430",
+      "detail": "中文字符数 1438",
       "severity": "P0"
     },
     {
@@ -102,14 +102,14 @@
       "category": "中文文档",
       "name": "docs/用户手册.md",
       "ok": true,
-      "detail": "中文字符数 1477",
+      "detail": "中文字符数 1642",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 2113",
+      "detail": "中文字符数 2200",
       "severity": "P0"
     },
     {
@@ -347,7 +347,7 @@
       "category": "量化评测",
       "name": "负载 P95 延迟小于 500ms",
       "ok": true,
-      "detail": "当前 0.6110，要求 <= 500.0000",
+      "detail": "当前 0.5180，要求 <= 500.0000",
       "severity": "P0"
     },
     {
@@ -380,9 +380,37 @@
     },
     {
       "category": "量化评测",
+      "name": "程序性记忆 Recall@5",
+      "ok": true,
+      "detail": "当前 1.0000，要求 >= 0.9000",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "程序性记忆子类型命中率",
+      "ok": true,
+      "detail": "当前 1.0000，要求 >= 0.9000",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "层次图谱检索三层检查",
+      "ok": true,
+      "detail": "当前 True",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
+      "name": "RAG 上下文解释性检查",
+      "ok": true,
+      "detail": "当前 True",
+      "severity": "P0"
+    },
+    {
+      "category": "量化评测",
       "name": "benchmark 用例规模",
       "ok": true,
-      "detail": "总用例/种子数 159",
+      "detail": "总用例/种子数 162",
       "severity": "P1"
     },
     {
@@ -444,6 +472,20 @@
     {
       "category": "openKylin证据",
       "name": "kylin_retrieval.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "build_context_explainability.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "hierarchical_graph_search.txt",
       "ok": true,
       "detail": "存在且非空",
       "severity": "P0"
@@ -568,17 +610,94 @@
       "severity": "P1"
     },
     {
+      "category": "openKylin指标",
+      "name": "10k 负载 P95 < 500ms",
+      "ok": true,
+      "detail": "当前 19.1150，要求 <= 500.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin指标",
+      "name": "10k 负载 P99 < 500ms",
+      "ok": true,
+      "detail": "当前 118.8750，要求 <= 500.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin指标",
+      "name": "10k 进程 RSS < 256MB",
+      "ok": true,
+      "detail": "当前 129176.0000，要求 <= 262144.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin指标",
+      "name": "10k 程序性记忆 Recall@5",
+      "ok": true,
+      "detail": "当前 1.0000，要求 >= 0.9000",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin指标",
+      "name": "10k 层次图谱检索检查",
+      "ok": true,
+      "detail": "当前 True",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin指标",
+      "name": "10k 上下文解释性检查",
+      "ok": true,
+      "detail": "当前 True",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin指标",
+      "name": "10k Agent 批量检索 P95 < 100ms",
+      "ok": true,
+      "detail": "当前 17.2040，要求 <= 100.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin指标",
+      "name": "Kylin embedding 真实推理",
+      "ok": true,
+      "detail": "inference_ready=True",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin指标",
+      "name": "Kylin embedding 维度 768",
+      "ok": true,
+      "detail": "dim=768",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin指标",
+      "name": "build-context 解释性证据",
+      "ok": true,
+      "detail": "包含 explainability 与 selection_trace",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin指标",
+      "name": "层次图谱三层证据",
+      "ok": true,
+      "detail": "包含 summary/entity_relation/chunk/retrieval_path",
+      "severity": "P0"
+    },
+    {
       "category": "openKylin证据",
       "name": "manifest 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 65 个证据文件",
+      "detail": "覆盖 67 个证据文件",
       "severity": "P0"
     },
     {
       "category": "openKylin证据",
       "name": "SHA256SUMS 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 65 个证据文件",
+      "detail": "覆盖 67 个证据文件",
       "severity": "P0"
     },
     {

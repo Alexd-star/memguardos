@@ -1,0 +1,204 @@
+$ .venv/bin/python -m memguard.cli.memctl hierarchical-graph-search systemd --limit 5
+
+{
+  "query": "systemd",
+  "layers": {
+    "summary": [
+      {
+        "layer": "summary",
+        "rank": 1,
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "summary": "知识记忆：任务规划记忆:openKylin systemd cgroup MemoryMax 约束。",
+        "type": "knowledge",
+        "subtype": "fact",
+        "tier": "long_term",
+        "source_kind": "manual",
+        "matched_entity": "systemd"
+      },
+      {
+        "layer": "summary",
+        "rank": 2,
+        "memory_id": "mem_fa8b7d5bc7a3421b",
+        "summary": "知识记忆：知识:openKylin 本机 Agent 服务可以通过 systemd、cgroup、journald 和 auditd 进行运行约束与审计。",
+        "type": "knowledge",
+        "subtype": "workflow",
+        "tier": "long_term",
+        "source_kind": "manual",
+        "matched_entity": "systemd"
+      }
+    ],
+    "entity_relation": [
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source": "MemoryMax",
+        "relation": "mentions",
+        "target": "mem_34cf3f1789ee48c6"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source": "agent_memory",
+        "relation": "mentions",
+        "target": "mem_34cf3f1789ee48c6"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source": "cgroup",
+        "relation": "mentions",
+        "target": "mem_34cf3f1789ee48c6"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source": "openKylin",
+        "relation": "mentions",
+        "target": "mem_34cf3f1789ee48c6"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source": "systemd",
+        "relation": "mentions",
+        "target": "mem_34cf3f1789ee48c6"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source": "openKylin",
+        "relation": "co_occurs",
+        "target": "systemd"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source": "openKylin",
+        "relation": "co_occurs",
+        "target": "cgroup"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source": "openKylin",
+        "relation": "co_occurs",
+        "target": "agent_memory"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source": "openKylin",
+        "relation": "co_occurs",
+        "target": "MemoryMax"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source": "systemd",
+        "relation": "co_occurs",
+        "target": "cgroup"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source": "systemd",
+        "relation": "co_occurs",
+        "target": "agent_memory"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source": "systemd",
+        "relation": "co_occurs",
+        "target": "MemoryMax"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source": "cgroup",
+        "relation": "co_occurs",
+        "target": "agent_memory"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source": "cgroup",
+        "relation": "co_occurs",
+        "target": "MemoryMax"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source": "agent_memory",
+        "relation": "co_occurs",
+        "target": "MemoryMax"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_fa8b7d5bc7a3421b",
+        "source": "Agent",
+        "relation": "mentions",
+        "target": "mem_fa8b7d5bc7a3421b"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_fa8b7d5bc7a3421b",
+        "source": "agent_memory",
+        "relation": "mentions",
+        "target": "mem_fa8b7d5bc7a3421b"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_fa8b7d5bc7a3421b",
+        "source": "auditd",
+        "relation": "mentions",
+        "target": "mem_fa8b7d5bc7a3421b"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_fa8b7d5bc7a3421b",
+        "source": "cgroup",
+        "relation": "mentions",
+        "target": "mem_fa8b7d5bc7a3421b"
+      },
+      {
+        "layer": "entity_relation",
+        "memory_id": "mem_fa8b7d5bc7a3421b",
+        "source": "journald",
+        "relation": "mentions",
+        "target": "mem_fa8b7d5bc7a3421b"
+      }
+    ],
+    "chunk": [
+      {
+        "layer": "chunk",
+        "rank": 1,
+        "memory_id": "mem_34cf3f1789ee48c6",
+        "source_uri": "inline",
+        "content_preview": "任务规划记忆:openKylin systemd cgroup MemoryMax 约束。",
+        "valid_from": "",
+        "valid_to": null
+      },
+      {
+        "layer": "chunk",
+        "rank": 2,
+        "memory_id": "mem_fa8b7d5bc7a3421b",
+        "source_uri": "inline",
+        "content_preview": "知识:openKylin 本机 Agent 服务可以通过 systemd、cgroup、journald 和 auditd 进行运行约束与审计。",
+        "valid_from": "",
+        "valid_to": null
+      }
+    ]
+  },
+  "explainability": {
+    "retrieval_path": [
+      "summary",
+      "entity_relation",
+      "chunk"
+    ],
+    "summary_count": 2,
+    "entity_relation_count": 20,
+    "chunk_count": 2,
+    "purpose": "先用摘要层定位相关记忆，再用实体关系层解释关联，最后回到原文 chunk 层提供可追溯证据。"
+  }
+}
