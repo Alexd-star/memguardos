@@ -17,6 +17,7 @@ ALLOWED_SUBTYPES = {
     "general",
     "os_event",
     "output_style",
+    "procedural_trace",
     "security_policy",
     "template",
     "tool_failure_case",
@@ -100,7 +101,10 @@ class HybridMemoryExtractor:
 
         subtype = "fact"
         if source_kind == "tool_result" or "tool result:" in lowered:
-            subtype = "tool_failure_case" if ("status=failure" in lowered or "exit_code=1" in lowered) else "tool_trace"
+            if "procedural_memory=state_action_result" in lowered:
+                subtype = "tool_failure_case" if ("status=failure" in lowered or "exit_code=1" in lowered) else "procedural_trace"
+            else:
+                subtype = "tool_failure_case" if ("status=failure" in lowered or "exit_code=1" in lowered) else "tool_trace"
         elif source_kind == "os_event":
             subtype = "os_event"
         elif source_kind == "user_behavior":
@@ -199,6 +203,8 @@ class HybridMemoryExtractor:
             signals.append("source_%s" % source_kind)
         if "tool result:" in lowered:
             signals.append("source_tool_result")
+        if "procedural_memory=state_action_result" in lowered or ("state_before=" in lowered and "state_after=" in lowered):
+            signals.append("procedural_state_action_result")
         if any(marker in text for marker in ["以后", "偏好", "请先", "请优先", "请总是", "必须", "不要"]):
             signals.append("preference_intent")
         if any(marker in lowered for marker in ["prefer", "always", "never", "style"]):

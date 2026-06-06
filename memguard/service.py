@@ -739,6 +739,11 @@ class MemGuardService:
         hits = self.search(query, limit=limit)
         memories = []
         lines = []
+        selection_trace = []
+        source_distribution: Dict[str, int] = {}
+        type_distribution: Dict[str, int] = {}
+        tier_distribution: Dict[str, int] = {}
+        sensitivity_distribution: Dict[str, int] = {}
         used = 0
         truncated = False
         for idx, hit in enumerate(hits, start=1):
@@ -749,6 +754,13 @@ class MemGuardService:
             if not source_kind and isinstance(source, dict):
                 source_kind = source.get("kind", "")
             sensitivity = self._row_sensitivity(hit)
+            source_distribution[source_kind or "unknown"] = source_distribution.get(source_kind or "unknown", 0) + 1
+            type_name = str(hit.get("type") or "unknown")
+            tier_name = str(hit.get("tier") or "unknown")
+            sensitivity_name = str(sensitivity.get("level") or "none")
+            type_distribution[type_name] = type_distribution.get(type_name, 0) + 1
+            tier_distribution[tier_name] = tier_distribution.get(tier_name, 0) + 1
+            sensitivity_distribution[sensitivity_name] = sensitivity_distribution.get(sensitivity_name, 0) + 1
             line = (
                 "[%d] type=%s subtype=%s tier=%s score=%s source=%s\n"
                 "summary: %s\n"
@@ -767,12 +779,43 @@ class MemGuardService:
             remaining = effective_max_chars - used
             if remaining <= 0:
                 truncated = True
+                selection_trace.append(
+                    {
+                        "memory_id": hit.get("memory_id"),
+                        "rank": idx,
+                        "included": False,
+                        "reason": "character_budget_exhausted",
+                        "type": hit.get("type"),
+                        "subtype": hit.get("subtype"),
+                        "tier": hit.get("tier"),
+                        "source_kind": source_kind,
+                        "sensitivity_level": sensitivity.get("level"),
+                    }
+                )
                 break
+            original_line_length = len(line)
             if len(line) > remaining:
                 line = line[: max(0, remaining - 16)] + "\n[truncated]"
                 truncated = True
             used += len(line)
             lines.append(line)
+            selection_trace.append(
+                {
+                    "memory_id": hit.get("memory_id"),
+                    "rank": idx,
+                    "included": True,
+                    "reason": "selected_by_hybrid_graph_or_text_search",
+                    "truncated": len(line) < original_line_length,
+                    "score": hit.get("score"),
+                    "match_source": hit.get("match_source"),
+                    "type": hit.get("type"),
+                    "subtype": hit.get("subtype"),
+                    "tier": hit.get("tier"),
+                    "source_kind": source_kind,
+                    "sensitivity_level": sensitivity.get("level"),
+                    "vector_backend": hit.get("vector_backend"),
+                }
+            )
             memories.append(
                 {
                     "memory_id": hit.get("memory_id"),
@@ -793,6 +836,18 @@ class MemGuardService:
             "effective_max_chars": effective_max_chars,
             "context": context,
             "memories": memories,
+            "explainability": {
+                "source_distribution": source_distribution,
+                "type_distribution": type_distribution,
+                "tier_distribution": tier_distribution,
+                "sensitivity_distribution": sensitivity_distribution,
+                "selection_trace": selection_trace,
+                "filtering_policy": [
+                    "仅使用 live 且未被精准遗忘的记忆",
+                    "高风险敏感内容在写入阶段阻断，中低风险内容进入上下文前保持脱敏占位符",
+                    "按 token_budget/max_chars 控制上下文长度，超出预算时截断并记录 selection_trace",
+                ],
+            },
             "generation_policy": "仅使用已返回且已脱敏的记忆作为 OS Agent 生成上下文；不得输出被精准遗忘或被敏感策略阻断的明文。",
         }
         context_tokens = self.estimate_tokens(context)
@@ -817,6 +872,9 @@ class MemGuardService:
                 "estimated_context_tokens": context_tokens,
                 "token_budget": token_budget,
                 "truncated": truncated,
+                "source_distribution": source_distribution,
+                "type_distribution": type_distribution,
+                "tier_distribution": tier_distribution,
             },
         )
         return result
@@ -862,6 +920,103 @@ class MemGuardService:
         results = self.meta.graph_search(entity_query, limit=limit)
         self._audit("graph_search", None, {"entity_query": entity_query, "count": len(results)})
         return results
+
+    def hierarchical_graph_search(self, entity_query: str, limit: int = 10) -> Dict[str, object]:
+        summary_rows = self.meta.graph_search(entity_query, limit=limit)
+        if not summary_rows:
+            summary_rows = self.search(entity_query, limit=limit, audit=False)
+
+        summary_layer = []
+        entity_relation_layer = []
+        chunk_layer = []
+        seen_relations = set()
+        for rank, row in enumerate(summary_rows[:limit], start=1):
+            memory_id = str(row.get("memory_id", ""))
+            summary_layer.append(
+                {
+                    "layer": "summary",
+                    "rank": rank,
+                    "memory_id": memory_id,
+                    "summary": row.get("summary", ""),
+                    "type": row.get("type", ""),
+                    "subtype": row.get("subtype", ""),
+                    "tier": row.get("tier", ""),
+                    "source_kind": row.get("source_kind", ""),
+                    "matched_entity": row.get("matched_entity", entity_query),
+                }
+            )
+            graph = self.meta.memory_graph(memory_id)
+            for entity in graph.get("entities", []):
+                key = (memory_id, entity, "entity", "")
+                if key in seen_relations:
+                    continue
+                seen_relations.add(key)
+                entity_relation_layer.append(
+                    {
+                        "layer": "entity_relation",
+                        "memory_id": memory_id,
+                        "source": entity,
+                        "relation": "mentions",
+                        "target": memory_id,
+                    }
+                )
+            for relation in graph.get("relations", []):
+                key = (
+                    memory_id,
+                    relation.get("source", ""),
+                    relation.get("relation", ""),
+                    relation.get("target", ""),
+                )
+                if key in seen_relations:
+                    continue
+                seen_relations.add(key)
+                entity_relation_layer.append(
+                    {
+                        "layer": "entity_relation",
+                        "memory_id": memory_id,
+                        "source": relation.get("source", ""),
+                        "relation": relation.get("relation", ""),
+                        "target": relation.get("target", ""),
+                    }
+                )
+            chunk_layer.append(
+                {
+                    "layer": "chunk",
+                    "rank": rank,
+                    "memory_id": memory_id,
+                    "source_uri": row.get("source_uri", ""),
+                    "content_preview": " ".join(str(row.get("content", "")).split())[:360],
+                    "valid_from": row.get("valid_from", ""),
+                    "valid_to": row.get("valid_to", ""),
+                }
+            )
+
+        result = {
+            "query": entity_query,
+            "layers": {
+                "summary": summary_layer,
+                "entity_relation": entity_relation_layer[: max(limit * 4, 12)],
+                "chunk": chunk_layer,
+            },
+            "explainability": {
+                "retrieval_path": ["summary", "entity_relation", "chunk"],
+                "summary_count": len(summary_layer),
+                "entity_relation_count": len(entity_relation_layer[: max(limit * 4, 12)]),
+                "chunk_count": len(chunk_layer),
+                "purpose": "先用摘要层定位相关记忆，再用实体关系层解释关联，最后回到原文 chunk 层提供可追溯证据。",
+            },
+        }
+        self._audit(
+            "hierarchical_graph_search",
+            None,
+            {
+                "entity_query": entity_query,
+                "summary_count": len(summary_layer),
+                "entity_relation_count": len(result["layers"]["entity_relation"]),
+                "chunk_count": len(chunk_layer),
+            },
+        )
+        return result
 
     def related(self, memory_id: str, limit: int = 10) -> Dict[str, object]:
         graph = self.meta.memory_graph(memory_id)
@@ -1081,6 +1236,8 @@ class MemGuardService:
     def _classify_subtype(text: str, memory_type: str, source_kind: str) -> str:
         lowered = text.lower()
         if source_kind == "tool_result" or "tool result:" in lowered:
+            if "procedural_memory=state_action_result" in lowered:
+                return "procedural_trace"
             if "status=failure" in lowered or "exit_code=1" in lowered:
                 return "tool_failure_case"
             return "tool_trace"

@@ -767,6 +767,37 @@ def test_structured_tool_result_ingestion(tmp_path):
         service.close()
 
 
+def test_tool_result_is_indexed_as_state_action_result_procedural_memory(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        result = service.ingest_tool_result(
+            ToolResult(
+                command="systemctl restart memguardd && systemctl is-active memguardd",
+                cwd="/repo",
+                exit_code=0,
+                stdout="active",
+                stderr="",
+                duration_ms=420,
+                tool_name="shell",
+                state_before="memguardd inactive after unit change",
+                state_after="memguardd active",
+                lesson="after editing memguardd.service, reload and restart then verify active state",
+            ),
+            source_uri="real_tool_trace.json",
+        )
+        assert result["stored"] is True
+        record = result["record"]
+        assert record.subtype == "procedural_trace"
+        assert "procedural_memory=state_action_result" in record.content
+        assert "state_before=memguardd inactive after unit change" in record.content
+        assert "state_after=memguardd active" in record.content
+        assert "lesson=after editing memguardd.service" in record.content
+        hits = service.search("unit change restart verify active procedural", limit=5)
+        assert any(hit["memory_id"] == record.memory_id for hit in hits)
+    finally:
+        service.close()
+
+
 def test_manual_config_ingestion_builds_preference_policy_and_knowledge(tmp_path):
     config_path = tmp_path / "user_config.json"
     config_path.write_text(
@@ -836,9 +867,23 @@ def test_build_context_returns_redacted_generation_package(tmp_path):
     try:
         service.ingest_text("以后回答 Linux 命令时直接给命令和风险提示。")
         service.ingest_text("我的联系电话是 13800138000，用于测试。")
+        service.ingest_tool_result(
+            ToolResult(
+                command="pytest -q",
+                cwd="/repo",
+                exit_code=0,
+                stdout="57 passed",
+                lesson="run pytest before packaging evidence",
+            )
+        )
         context = service.build_context("Linux 命令 联系电话", limit=5, max_chars=1200, token_budget=700)
         assert context["memory_count"] >= 1
         assert "generation_policy" in context
+        assert "explainability" in context
+        assert context["explainability"]["source_distribution"]
+        assert context["explainability"]["tier_distribution"]
+        assert context["explainability"]["selection_trace"]
+        assert any(item["included"] for item in context["explainability"]["selection_trace"])
         assert context["budget"]["estimated_context_tokens"] > 0
         assert context["budget"]["token_budget"] == 700
         assert context["budget"]["over_token_budget"] is False
@@ -903,6 +948,35 @@ def test_graph_search_and_related_memories(tmp_path):
         service.close()
 
 
+def test_hierarchical_graph_search_returns_summary_relation_and_chunk_layers(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        first = service.ingest_text("systemd MemoryMax 可以限制 Linux 服务内存，适合 openKylin daemon。")["record"]
+        service.ingest_text("journalctl -u memguardd 用于查看 systemd 服务日志和失败原因。")
+        result = service.hierarchical_graph_search("systemd", limit=5)
+        assert result["query"] == "systemd"
+        assert result["layers"]["summary"]
+        assert result["layers"]["entity_relation"]
+        assert result["layers"]["chunk"]
+        assert any(item["memory_id"] == first.memory_id for item in result["layers"]["summary"])
+        assert all("layer" in item for layer in result["layers"].values() for item in layer)
+        assert result["explainability"]["retrieval_path"] == ["summary", "entity_relation", "chunk"]
+    finally:
+        service.close()
+
+
+def test_api_exposes_hierarchical_graph_search_for_local_agent(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        service.ingest_text("openKylin systemd cgroup MemoryMax 是 OS Agent 的服务资源治理知识。")
+        response = handle_request(service, {"command": "hierarchical_graph_search", "entity": "systemd", "limit": 3})
+        assert response["ok"] is True
+        assert response["result"]["layers"]["summary"]
+        assert response["result"]["layers"]["chunk"]
+    finally:
+        service.close()
+
+
 def test_batch_search_reports_ordered_agent_queries_and_audit(tmp_path):
     service = make_service(tmp_path)
     try:
@@ -938,6 +1012,8 @@ def test_eval_latency_load_smoke():
     assert result["agent_batch_search"]["ok"] is True
     assert result["agent_batch_search"]["query_count"] == 4
     assert result["agent_batch_search"]["audit_chain_ok"] is True
+    assert result["procedural_memory"]["recall_at_5"] >= 1.0
+    assert result["procedural_memory"]["state_action_result_cases"] >= 3
     assert result["rag_context_budget"]["over_token_budget"] is False
     assert result["rag_context_budget"]["redaction_enforced"] is True
     assert result["memory_tiers"]["policy_report_ok"] is True

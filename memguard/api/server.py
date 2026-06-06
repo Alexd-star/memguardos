@@ -47,6 +47,10 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         token_budget = request.get("token_budget")
         token_budget = _int_param(request, "token_budget", 0, minimum=64, maximum=32000) if token_budget else None
         return {"ok": True, "result": service.build_context(query, limit=limit, max_chars=max_chars, token_budget=token_budget)}
+    if command == "hierarchical_graph_search":
+        entity = str(request.get("entity", request.get("query", "")))
+        limit = _int_param(request, "limit", 10, minimum=1, maximum=50)
+        return {"ok": True, "result": service.hierarchical_graph_search(entity, limit=limit)}
     if command == "explain_extraction":
         text = str(request.get("text", ""))
         source_kind = str(request.get("source_kind", "manual"))

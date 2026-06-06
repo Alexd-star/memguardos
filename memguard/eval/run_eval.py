@@ -9,6 +9,7 @@ import tracemalloc
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from memguard.eval.metrics import f1, mean, percentile, precision, recall_at_k
+from memguard.ingestion.tool_result import ToolResult
 from memguard.service import MemGuardService
 
 
@@ -193,6 +194,7 @@ def run(latency_size: int = 200, latency_queries: int = 100) -> dict:
             load_result = run_latency_load(root, latency_size, latency_queries)
             concurrent_result = run_concurrent_search_load(root, max(200, min(latency_size, 1000)), max(100, latency_queries), workers=6)
             agent_batch_result = run_agent_batch_search_eval(root)
+            procedural_result = run_procedural_memory_eval(root)
             rag_budget_result = run_rag_budget_eval(root)
             current_bytes, peak_bytes = tracemalloc.get_traced_memory()
             final_rss_kb = current_rss_kb()
@@ -215,6 +217,7 @@ def run(latency_size: int = 200, latency_queries: int = 100) -> dict:
                     "conflict_cases": len(load_jsonl(BENCHMARK_DIR / "conflict_resolution.jsonl")),
                     "graph_cases": len(load_jsonl(BENCHMARK_DIR / "graph_retrieval.jsonl")),
                     "quality_cases": len(quality_cases),
+                    "procedural_cases": len(load_jsonl(BENCHMARK_DIR / "procedural_memory.jsonl")),
                 },
                 "preference_and_knowledge_extraction": {
                     "type_accuracy": round(type_correct / float(len(seeds) or 1), 4),
@@ -270,6 +273,7 @@ def run(latency_size: int = 200, latency_queries: int = 100) -> dict:
                 "latency_load": load_result,
                 "concurrent_search": concurrent_result,
                 "agent_batch_search": agent_batch_result,
+                "procedural_memory": procedural_result,
                 "rag_context_budget": rag_budget_result,
                 "resource_usage": {
                     "eval_wall_time_ms": round((time.perf_counter() - wall_start) * 1000, 3),
@@ -451,6 +455,57 @@ def run_agent_batch_search_eval(root: Path) -> dict:
         service.close()
 
 
+def run_procedural_memory_eval(root: Path) -> dict:
+    service = MemGuardService(store_path=root / "procedural.segment", db_path=root / "procedural.sqlite3")
+    try:
+        cases = load_jsonl(BENCHMARK_DIR / "procedural_memory.jsonl")
+        label_to_id = {}
+        id_to_label = {}
+        for row in cases:
+            result = service.ingest_tool_result(
+                ToolResult(
+                    command=row["command"],
+                    cwd=row.get("cwd", ""),
+                    exit_code=int(row.get("exit_code", 0)),
+                    stdout=row.get("stdout", ""),
+                    stderr=row.get("stderr", ""),
+                    duration_ms=float(row.get("duration_ms", 0.0)),
+                    tool_name=row.get("tool_name", ""),
+                    state_before=row.get("state_before", ""),
+                    state_after=row.get("state_after", ""),
+                    lesson=row.get("lesson", ""),
+                ),
+                source_uri=row.get("source_uri", row["label"]),
+            )
+            if result.get("stored"):
+                record = result["record"]
+                label_to_id[row["label"]] = record.memory_id
+                id_to_label[record.memory_id] = row["label"]
+
+        recalls = []
+        subtype_hits = []
+        for row in cases:
+            hits = service.search(row["query"], limit=5)
+            actual_labels = [id_to_label.get(hit["memory_id"], hit["memory_id"]) for hit in hits]
+            recalls.append(recall_at_k([row["label"]], actual_labels, 5))
+            subtype_hits.append(1.0 if any(hit.get("subtype") == "procedural_trace" for hit in hits) else 0.0)
+
+        graph = service.hierarchical_graph_search("systemd", limit=5)
+        context = service.build_context("pytest systemd 修复经验", limit=5, token_budget=600)
+        return {
+            "state_action_result_cases": len(cases),
+            "stored_cases": len(label_to_id),
+            "recall_at_5": round(mean(recalls), 4),
+            "procedural_subtype_hit_rate": round(mean(subtype_hits), 4),
+            "hierarchical_graph_layers_ok": bool(
+                graph["layers"]["summary"] and graph["layers"]["entity_relation"] and graph["layers"]["chunk"]
+            ),
+            "context_explainability_ok": bool(context.get("explainability", {}).get("selection_trace")),
+        }
+    finally:
+        service.close()
+
+
 def run_rag_budget_eval(root: Path) -> dict:
     service = MemGuardService(store_path=root / "rag_budget.segment", db_path=root / "rag_budget.sqlite3")
     try:
@@ -583,6 +638,7 @@ def to_markdown(result: dict) -> str:
     tiers = result["memory_tiers"]
     concurrent = result["concurrent_search"]
     agent_batch = result["agent_batch_search"]
+    procedural = result["procedural_memory"]
     rag_budget = result["rag_context_budget"]
     quality = result["data_quality"]
     latency_load = result["latency_load"]
@@ -607,6 +663,7 @@ def to_markdown(result: dict) -> str:
         "conflict_cases": "冲突解决用例",
         "graph_cases": "图谱检索用例",
         "quality_cases": "数据质量用例",
+        "procedural_cases": "程序性记忆用例",
     }
     for key, value in result["dataset"].items():
         lines.append("| %s | %s |" % (dataset_labels.get(key, key), value))
@@ -658,6 +715,11 @@ def to_markdown(result: dict) -> str:
             "| Agent 批量检索线程数 | %s |" % agent_batch["workers"],
             "| Agent 批量检索 P95 延迟 ms | %.3f |" % agent_batch["p95_latency_ms"],
             "| Agent 批量检索审计链是否通过 | %s |" % agent_batch["audit_chain_ok"],
+            "| 程序性记忆 Recall@5 | %.4f |" % procedural["recall_at_5"],
+            "| 程序性记忆用例数 | %s |" % procedural["state_action_result_cases"],
+            "| 程序性子类型命中率 | %.4f |" % procedural["procedural_subtype_hit_rate"],
+            "| 程序性层次图谱是否通过 | %s |" % procedural["hierarchical_graph_layers_ok"],
+            "| 程序性上下文解释是否通过 | %s |" % procedural["context_explainability_ok"],
             "| RAG token 预算 | %s |" % rag_budget["token_budget"],
             "| RAG 上下文估算 tokens | %s |" % rag_budget["estimated_context_tokens"],
             "| RAG 上下文是否超预算 | %s |" % rag_budget["over_token_budget"],

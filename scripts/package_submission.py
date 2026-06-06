@@ -169,6 +169,8 @@ def classify_file(path: Path) -> str:
 
 def should_skip(path: Path) -> bool:
     rel = path.relative_to(ROOT).as_posix()
+    if rel.startswith("docs/research/"):
+        return True
     if rel.startswith("docs/evidence/openkylin_") or rel.startswith("docs/evidence/kylin_embedding_diag_"):
         return True
     rel_parts = path.relative_to(ROOT).parts

@@ -33,7 +33,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地单元测试 | 57 passed |
+| 本地单元测试 | 60 passed |
 | openKylin 单元测试证据 | 57 passed |
 | 本地 1k 负载 P95 | 0.611 ms |
 | openKylin 1k 负载 P95 | 18.368 ms |
@@ -52,12 +52,12 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | 能力域 | 已实现内容 | 主要入口 |
 |---|---|---|
 | 多源记忆接入 | 文本、文件、结构化配置、shell 行为、工具执行结果、OS 事件、auditd 日志 | `memctl ingest`、`ingest-config`、`ingest-history`、`ingest-tool-result`、`ingest-os-event` |
-| 记忆建模 | 偏好记忆、知识记忆、敏感策略记忆；可解释混合语义抽取；`working`、`session`、`long_term` 三层记忆 | `memguard/extraction/semantic.py`、`memguard/models.py`、`memguard/service.py` |
+| 记忆建模 | 偏好记忆、知识记忆、敏感策略记忆；可解释混合语义抽取；`working`、`session`、`long_term` 三层记忆；工具轨迹可建模为状态-动作-结果程序性记忆 | `memguard/extraction/semantic.py`、`memguard/models.py`、`memguard/service.py` |
 | 数据质量治理 | Unicode 标准化、空输入拒绝、低质量提示、结构化字段校验、质量分入审计 | `memguard/ingestion/quality.py` |
 | 轻量化存储 | mmap 追加式段文件、SQLite 元数据、FTS、图谱边、审计哈希链 | `memguard/store/` |
 | 时间有效性 | `valid_from/valid_to/superseded_by` 描述事实生效窗口，更新、提升、回滚和遗忘都会关闭旧版本窗口 | `memctl temporal-status`、`memctl versions` |
-| 混合检索 | SQLite FTS、稳定 hash-vector、图谱关联、跨语言技术词扩展、冲突处理 | `memguard/retrieval/` |
-| RAG 上下文 | 检索、脱敏、排序、token 预算估算、上下文包和 provider-neutral prompt | `memctl build-context`、`memctl build-prompt` |
+| 混合检索 | SQLite FTS、稳定 hash-vector、图谱关联、跨语言技术词扩展、冲突处理；摘要层、实体关系层、原文 chunk 层的层次图谱检索 | `memguard/retrieval/`、`memctl hierarchical-graph-search` |
+| RAG 上下文 | 检索、脱敏、排序、token 预算估算、上下文包、来源分布、选择轨迹、过滤策略和 provider-neutral prompt | `memctl build-context`、`memctl build-prompt` |
 | 精准遗忘 | 自然语言候选、dry-run、确认删除、tombstone、FTS/图谱清理、compact、明文探针验证 | `memctl forget`、`memctl verify-forget` |
 | 敏感治理 | PII、凭据、私钥、银行卡、中文地址、OS 高风险路径、自定义正则、自然语言敏感规则 | `memguard/sensitivity/` |
 | 多会话隔离 | namespace 独立段文件、SQLite、敏感规则、审计链；systemd 模板服务配合 cgroup | `memctl --namespace`、`memguardd@.service` |
@@ -138,13 +138,18 @@ python -m memguard.cli.memctl ingest-tool-result --file data/demo/tool_result_su
 python -m memguard.cli.memctl search "Linux 命令回答偏好"
 ```
 
+工具结果 JSON 可选带上 `state_before`、`state_after` 和 `lesson` 字段。存在这些字段时，MemGuardOS 会将工具轨迹写成状态-动作-结果程序性记忆，供 OS Agent 在后续自动调试、服务恢复、测试复跑和证据生成时复用。
+
 ### 3. 为 Agent 构建 RAG 上下文
 
 ```powershell
 python -m memguard.cli.memctl batch-search "任务规划 systemd cgroup" "工具调用 pytest journalctl" "结果生成 运维证据"
 python -m memguard.cli.memctl build-context "openKylin 服务内存限制" --top-k 5 --token-budget 1200
 python -m memguard.cli.memctl build-prompt "openKylin 服务内存限制" --top-k 5 --token-budget 1200
+python -m memguard.cli.memctl hierarchical-graph-search systemd --limit 5
 ```
+
+`build-context` 返回 `explainability` 字段，说明来源分布、类型分布、层级分布、敏感等级分布和每条候选的选择轨迹。上游 Agent 可以据此判断“为什么这些记忆被交给 LLM”，评委也能复核上下文构建、敏感过滤和预算裁剪过程。
 
 ### 4. 查看抽取解释和 Web 控制台
 

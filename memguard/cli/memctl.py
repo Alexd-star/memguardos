@@ -124,6 +124,10 @@ def build_parser() -> argparse.ArgumentParser:
     graph_search.add_argument("entity")
     graph_search.add_argument("--limit", type=int, default=10)
 
+    hierarchical_graph = sub.add_parser("hierarchical-graph-search", help="Search graph memory as summary/entity-relation/chunk layers")
+    hierarchical_graph.add_argument("entity")
+    hierarchical_graph.add_argument("--limit", type=int, default=10)
+
     related = sub.add_parser("related", help="Show graph entities and related memories")
     related.add_argument("memory_id")
     related.add_argument("--limit", type=int, default=10)
@@ -391,6 +395,10 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "graph-search":
             print(json.dumps(service.graph_search(args.entity, limit=args.limit), ensure_ascii=False, indent=2))
+            return 0
+
+        if args.command == "hierarchical-graph-search":
+            print(json.dumps(service.hierarchical_graph_search(args.entity, limit=args.limit), ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "related":

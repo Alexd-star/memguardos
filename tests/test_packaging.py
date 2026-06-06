@@ -2,7 +2,7 @@ from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from scripts.inspect_submission_package import REQUIRED_PATHS, inspect_package
-from scripts.package_submission import COMPETITION_ROLES, classify_file
+from scripts.package_submission import COMPETITION_ROLES, ROOT, classify_file, should_skip
 from scripts.smoke_submission_archive import command_name
 
 
@@ -27,6 +27,7 @@ def test_competition_package_keeps_formal_and_process_materials_separate():
         "scripts/check_docs_links.py",
         "docs/赛题要求逐句符合性核查.md",
         "docs/竞赛就绪自检报告.md",
+        "docs/research/智能体记忆论文深度调研与MemGuardOS改进建议.md",
         "CHANGELOG.md",
         ".github/workflows/ci.yml",
         "Dockerfile",
@@ -37,6 +38,7 @@ def test_competition_package_keeps_formal_and_process_materials_separate():
         assert classify_file(Path(rel)) in COMPETITION_ROLES, rel
     for rel in process_paths:
         assert classify_file(Path(rel)) not in COMPETITION_ROLES, rel
+    assert should_skip(ROOT / "docs/research/sources/arxiv_2512.13564.pdf") is True
 
 
 def test_submission_package_inspector_rejects_process_materials(tmp_path):
