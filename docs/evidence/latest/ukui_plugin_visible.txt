@@ -1,50 +1,50 @@
 $ bash scripts/verify_ukui_plugins.sh
 
 # MemGuardOS UKUI visible-plugin verification
-2026-06-06T17:56:52+08:00
+2026-06-07T00:18:03+08:00
 XDG_CURRENT_DESKTOP=
 DISPLAY=
 
 ## native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so
--rwxrwxr-x 1 luo luo 48112  6月 6日 17:56 native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so
+-rwxrwxr-x 1 luo luo 48112  6月 7日 00:17 native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so
 native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, BuildID[sha1]=cb14eab00490a6a7c8ae501c5f443edd5955a596, not stripped
-	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007f72291a7000)
-	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007f7228ad4000)
-	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007f7228580000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f72280e3000)
+	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007f76deb84000)
+	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007f76de4b1000)
+	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007f76ddf5d000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f76ddac0000)
 kDescriptionx<Send selected files to MemGuardOS as OS-agent memory events.dKeys
 memguardos-peony-menu-plugindNamex
 MemGuardOS Peony Menu Plugingversione3.2.2
 
 ## native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so
--rwxrwxr-x 1 luo luo 78032  6月 6日 17:56 native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so
+-rwxrwxr-x 1 luo luo 78032  6月 7日 00:18 native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so
 native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so: ELF 64-bit LSB shared object, x86-64, version 1 (GNU/Linux), dynamically linked, BuildID[sha1]=184a475d78c81fae550fcba5e1a515f61f5ed3bf, not stripped
-	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007f950c6da000)
-	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007f950c007000)
-	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007f950bab3000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f950b616000)
+	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007f155a60a000)
+	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007f1559f37000)
+	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007f15599e3000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f1559546000)
 kDescriptionxEUKUI Control Center entry for MemGuardOS local agent memory security.dKeys
 memguardos-memory-securitydNamex
 MemGuardOS Memory Securitygversione3.2.2
 
 ## /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
--rwxr-xr-x 1 root root 48112  6月 6日 17:56 /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
+-rwxr-xr-x 1 root root 48112  6月 7日 00:18 /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
 /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, BuildID[sha1]=cb14eab00490a6a7c8ae501c5f443edd5955a596, not stripped
-	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007ff8dd41d000)
-	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007ff8dcd4a000)
-	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007ff8dc7f6000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007ff8dc359000)
+	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007fdf5e013000)
+	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007fdf5d940000)
+	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007fdf5d3ec000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fdf5cf4f000)
 kDescriptionx<Send selected files to MemGuardOS as OS-agent memory events.dKeys
 memguardos-peony-menu-plugindNamex
 MemGuardOS Peony Menu Plugingversione3.2.2
 
 ## /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
--rwxr-xr-x 1 root root 78032  6月 6日 17:56 /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
+-rwxr-xr-x 1 root root 78032  6月 7日 00:18 /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
 /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so: ELF 64-bit LSB shared object, x86-64, version 1 (GNU/Linux), dynamically linked, BuildID[sha1]=184a475d78c81fae550fcba5e1a515f61f5ed3bf, not stripped
-	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007f9882901000)
-	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007f988222e000)
-	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007f9881cda000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f988183d000)
+	libQt5Widgets.so.5 => /lib/x86_64-linux-gnu/libQt5Widgets.so.5 (0x00007f6feb4a2000)
+	libQt5Gui.so.5 => /lib/x86_64-linux-gnu/libQt5Gui.so.5 (0x00007f6feadcf000)
+	libQt5Core.so.5 => /lib/x86_64-linux-gnu/libQt5Core.so.5 (0x00007f6fea87b000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f6fea3de000)
 kDescriptionxEUKUI Control Center entry for MemGuardOS local agent memory security.dKeys
 memguardos-memory-securitydNamex
 MemGuardOS Memory Securitygversione3.2.2

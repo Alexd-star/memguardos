@@ -38,24 +38,24 @@ $ ".venv/bin/python" -m memguard.cli.memctl explain-extraction --text '真实案
     "enhancer_error": ""
   }
 }
-{"stored": true, "memory_id": "mem_8eacc898b3d14d5c", "type": "knowledge", "subtype": "workflow", "tier": "long_term", "confidence": 0.8500000000000001, "quality": {"accepted": true, "score": 0.95, "issues": [], "warnings": ["normalized_whitespace_or_control_chars"], "original_chars": 103, "normalized_chars": 103, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "knowledge", "subtype": "workflow", "summary": "知识记忆：语义抽取增强流程:默认 deterministic semantic rules;设置 MEMGUARD_EXTRACTOR_COMMAND 后可调用本地 NER 或 LLM 返回 JSON schema。", "confidence": 0.85, "method": "deterministic_semantic_rules", "signals": ["source_manual", "workflow_signal"], "enhancer_used": false, "enhancer_error": ""}}
+{"stored": true, "memory_id": "mem_df275c9257554af0", "type": "knowledge", "subtype": "workflow", "tier": "long_term", "confidence": 0.8500000000000001, "quality": {"accepted": true, "score": 0.95, "issues": [], "warnings": ["normalized_whitespace_or_control_chars"], "original_chars": 103, "normalized_chars": 103, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "knowledge", "subtype": "workflow", "summary": "知识记忆：语义抽取增强流程:默认 deterministic semantic rules;设置 MEMGUARD_EXTRACTOR_COMMAND 后可调用本地 NER 或 LLM 返回 JSON schema。", "confidence": 0.85, "method": "deterministic_semantic_rules", "signals": ["source_manual", "workflow_signal"], "enhancer_used": false, "enhancer_error": ""}}
 [
   {
     "audit_id": 8,
     "event_type": "ingest",
-    "memory_id": "mem_8eacc898b3d14d5c",
+    "memory_id": "mem_df275c9257554af0",
     "detail": "{\"extraction\": {\"confidence\": 0.85, \"enhancer_error\": \"\", \"enhancer_used\": false, \"memory_type\": \"knowledge\", \"method\": \"deterministic_semantic_rules\", \"signals\": [\"source_manual\", \"workflow_signal\"], \"subtype\": \"workflow\", \"summary\": \"知识记忆：语义抽取增强流程:默认 deterministic semantic rules;设置 MEMGUARD_EXTRACTOR_COMMAND 后可调用本地 NER 或 LLM 返回 JSON schema。\"}, \"labels\": [], \"namespace\": \"default\", \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 103, \"original_chars\": 103, \"score\": 0.95, \"source_kind\": \"manual\", \"warnings\": [\"normalized_whitespace_or_control_chars\"]}, \"sensitivity\": \"none\", \"source_kind\": \"manual\", \"source_uri\": \"inline\", \"subtype\": \"workflow\", \"tier\": \"long_term\", \"type\": \"knowledge\"}",
-    "created_at": "2026-06-06T09:56:37.575550+00:00",
-    "prev_hash": "c8a493e62c76034354013ce495e1417fb86556cd6a3b2bdaf97e6ea8dc279a04",
-    "event_hash": "c203b5bb4b88ef062a22a27429a540fc8080735f82bb0f2c21039bfe13d65e8d"
+    "created_at": "2026-06-06T16:17:37.350487+00:00",
+    "prev_hash": "c04d10a806c25d9df6536ef85d58f8cc65a14db82ddd624bc0145e50cb179f6f",
+    "event_hash": "846faa2fc4cfc055506d4bce1be8963a3059cc406ceb6d3c19be3ea5b2048c7e"
   },
   {
     "audit_id": 6,
     "event_type": "ingest",
-    "memory_id": "mem_4c476383f4ed451e",
+    "memory_id": "mem_465adffcf7c549e1",
     "detail": "{\"extraction\": {\"confidence\": 0.85, \"enhancer_error\": \"\", \"enhancer_used\": false, \"memory_type\": \"sensitive_policy\", \"method\": \"deterministic_semantic_rules\", \"signals\": [\"source_manual\", \"security_policy_intent\"], \"subtype\": \"security_policy\", \"summary\": \"安全策略：员工工号 [REDACTED:employee_id] 需要脱敏保存。\"}, \"labels\": [\"employee_id\"], \"namespace\": \"default\", \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 22, \"original_chars\": 22, \"score\": 1.0, \"source_kind\": \"manual\", \"warnings\": []}, \"sensitivity\": \"low\", \"source_kind\": \"manual\", \"source_uri\": \"inline\", \"subtype\": \"security_policy\", \"tier\": \"long_term\", \"type\": \"sensitive_policy\"}",
-    "created_at": "2026-06-06T09:56:36.753152+00:00",
-    "prev_hash": "cd2f64947a36123cd55cb84d7331a559e7a073f14414ae8268be839e68f064e6",
-    "event_hash": "c3632e71dc2af2b01f7a022ef2c68bdc75328c23ffa0a31198df879c4c8a9bb7"
+    "created_at": "2026-06-06T16:17:35.823509+00:00",
+    "prev_hash": "fe8e81fc9673a53d1e5acff89ae5bd55ca7f2acb34c1e459bfee992e6672821d",
+    "event_hash": "ba091ca04daae01a5aea4e3ff9dc8ee27b1bba988279b8c37d4e8a2c575372b7"
   }
 ]

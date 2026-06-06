@@ -1,7 +1,7 @@
-$ bash scripts/probe_ukui_deep_plugins.sh docs/evidence/openkylin_20260606_175537
+$ bash scripts/probe_ukui_deep_plugins.sh docs/evidence/openkylin_20260607_001553
 
 # MemGuardOS UKUI deep plugin probe
-2026-06-06T17:56:44+08:00
+2026-06-07T00:17:49+08:00
 XDG_CURRENT_DESKTOP=
 
 ## runtime packages
@@ -30,7 +30,7 @@ ii  ukui-touch-settings-plugin                           4.0.1.0-ok3.14         
 
 ## plugin directories
 总计 2168
-drwxr-xr-x 2 root root   4096  6月 6日 17:44 .
+drwxr-xr-x 2 root root   4096  6月 6日 17:56 .
 drwxr-xr-x 1 root root  16384  5月22日 23:31 ..
 -rw-r--r-- 1 root root  55456  4月 7日 19:56 libpeony-bluetooth-plugin.so
 -rw-r--r-- 1 root root 620712  4月 7日 19:56 libpeony-computer-view-plugin.so
@@ -39,7 +39,7 @@ drwxr-xr-x 1 root root  16384  5月22日 23:31 ..
 -rw-r--r-- 1 root root 366760  4月 7日 19:56 libpeony-intelligent-search-view.so
 -rw-r--r-- 1 root root  56056  4月 7日 19:56 libpeony-menu-plugin-kylin-aiassistant.so
 -rw-r--r-- 1 root root  67752  4月 7日 19:56 libpeony-menu-plugin-mate-terminal.so
--rwxr-xr-x 1 root root  48112  6月 6日 17:44 libpeony-menu-plugin-memguardos.so
+-rwxr-xr-x 1 root root  48112  6月 6日 17:56 libpeony-menu-plugin-memguardos.so
 -rw-r--r-- 1 root root  51528  4月 7日 19:56 libpeony-print-pictures.so
 -rw-r--r-- 1 root root 168424  4月 7日 19:56 libpeony-rotate-menu-plugin.so
 -rw-r--r-- 1 root root  80032  4月 7日 19:56 libpeony-send-to-device.so
@@ -58,7 +58,7 @@ drwxr-xr-x 1 root root  16384  5月22日 23:31 ..
 -rw-r--r-- 1 root root    233  4月 7日 19:56 peony-menu-plugin-kylin-aiassistant_zh_CN.qm
 -rw-r--r-- 1 root root    233  4月 7日 19:56 peony-menu-plugin-kylin-aiassistant_zh_HK.qm
 总计 58324
-drwxr-xr-x 2 root root     4096  6月 6日 17:44 .
+drwxr-xr-x 2 root root     4096  6月 6日 17:56 .
 drwxr-xr-x 1 root root    16384  5月22日 23:31 ..
 -rw-r--r-- 1 root root  2612392  4月 7日 19:56 libabout.so
 -rw-r--r-- 1 root root   755864  4月 7日 19:56 libaccessibility.so
@@ -75,7 +75,7 @@ drwxr-xr-x 1 root root    16384  5月22日 23:31 ..
 -rw-r--r-- 1 root root  2115736  4月 7日 19:56 libkeyboard.so
 -rw-r--r-- 1 root root   156080  4月 7日 19:56 libkylinaisubsystemplugin.so
 -rw-r--r-- 1 root root   127232  4月 7日 19:56 libmaintainmode.so
--rwxr-xr-x 1 root root    78032  6月 6日 17:44 libmemguardos-ukcc-plugin.so
+-rwxr-xr-x 1 root root    78032  6月 6日 17:56 libmemguardos-ukcc-plugin.so
 -rw-r--r-- 1 root root   227488  4月 7日 19:56 libmobilehotspot.so
 -rw-r--r-- 1 root root   673944  4月 7日 19:56 libmouse.so
 -rw-r--r-- 1 root root   256160  4月 7日 19:56 libnetconnect.so
@@ -106,20 +106,6 @@ ukcc_headers=yes
 3.2.2
 
 ## source prototype files
-native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so
-native/ukui/build/peony-memguard/Makefile
-native/ukui/build/peony-memguard/memguard_peony_plugin.o
-native/ukui/build/peony-memguard/moc_memguard_peony_plugin.cpp
-native/ukui/build/peony-memguard/moc_memguard_peony_plugin.o
-native/ukui/build/peony-memguard/moc_predefs.h
-native/ukui/build/peony-memguard/.qmake.stash
-native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so
-native/ukui/build/ukcc-memguard/Makefile
-native/ukui/build/ukcc-memguard/memguard_ukcc_plugin.o
-native/ukui/build/ukcc-memguard/moc_memguard_ukcc_plugin.cpp
-native/ukui/build/ukcc-memguard/moc_memguard_ukcc_plugin.o
-native/ukui/build/ukcc-memguard/moc_predefs.h
-native/ukui/build/ukcc-memguard/.qmake.stash
 native/ukui/peony-memguard/common.json
 native/ukui/peony-memguard/memguard_peony_plugin.cpp
 native/ukui/peony-memguard/memguard_peony_plugin.h

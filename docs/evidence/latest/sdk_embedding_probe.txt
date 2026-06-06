@@ -1,6 +1,6 @@
 $ .venv/bin/python -m memguard.cli.memctl sdk-status --probe-embedding --probe-timeout 90
 
-[1780739740408] [32minfo [0m Proxy init engine sessionId:2025571840.
+[1780762555785] [32minfo [0m Proxy init engine sessionId:36851935.
 {
   "embedding": {
     "backend": "kylin_coreai_embedding",
@@ -207,7 +207,7 @@ $ .venv/bin/python -m memguard.cli.memctl sdk-status --probe-embedding --probe-t
         0.011692
       ],
       "subprocess_returncode": 0,
-      "stderr_tail": "[1780739740546] \u001b[32minfo \u001b[0m Proxy init engine sessionId:316795931."
+      "stderr_tail": "[1780762555999] \u001b[32minfo \u001b[0m Proxy init engine sessionId:1361882147."
     },
     "available": true,
     "inference_ready": true,

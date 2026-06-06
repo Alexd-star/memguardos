@@ -13,23 +13,23 @@ RestartSec=5
 WantedBy=default.target
 ● kytensor.service - Kylin triton inference server
      Loaded: loaded (/usr/lib/systemd/system/kytensor.service; enabled; preset: enabled)
-     Active: active (running) since Sat 2026-06-06 17:04:00 CST; 51min ago
+     Active: active (running) since Sat 2026-06-06 17:04:00 CST; 7h ago
    Main PID: 1099 (kytensor)
       Tasks: 124 (limit: 6991)
-     Memory: 1.6G (peak: 1.9G swap: 964.0K swap peak: 964.0K)
-        CPU: 32.464s
+     Memory: 1.5G (peak: 1.9G swap: 964.0K swap peak: 964.0K)
+        CPU: 55.691s
      CGroup: /system.slice/kytensor.service
              ├─ 1099 /usr/bin/kytensor --model-repository=/opt/appdata/kylin-ai/model-repository --model-control-mode=explicit --http-address=127.0.0.1 --grpc-address=127.0.0.1
              └─10071 /opt/tritonserver/backends/python/triton_python_backend_stub /opt/appdata/kylin-ai/model-repository/tokenizer_gte-base_uint8-text/1/model.py triton_python_backend_shm_region_0293b539-f131-4697-b2f0-11e9830238ce 1048576 1048576 1099 /opt/tritonserver/backends/python 336 tokenizer_gte-base_uint8-text_0 DEFAULT
 
-6月 06 17:21:52 luo-pc bash[1099]: I0606 09:21:52.248591 1099 onnxruntime.cc:3051] "TRITONBACKEND_ModelInstanceInitialize: embd_gte-base_uint8-text_1 (CPU device 0)"
-6月 06 17:21:52 luo-pc bash[1099]: I0606 09:21:52.249276 1099 onnxruntime.cc:3051] "TRITONBACKEND_ModelInstanceInitialize: embd_gte-base_uint8-text_0 (CPU device 0)"
-6月 06 17:21:55 luo-pc bash[10044]: None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
-6月 06 17:21:57 luo-pc bash[1099]: I0606 09:21:57.328705 1099 python_be.cc:2249] "TRITONBACKEND_ModelInstanceInitialize: tokenizer_gte-base_uint8-text_0 (CPU device 0)"
-6月 06 17:21:58 luo-pc bash[10071]: None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
-6月 06 17:22:00 luo-pc bash[1099]: I0606 09:22:00.021826 1099 model_lifecycle.cc:839] "successfully loaded 'embd_gte-base_uint8-text'"
-6月 06 17:22:02 luo-pc bash[1099]: I0606 09:22:02.106631 1099 model_lifecycle.cc:839] "successfully loaded 'tokenizer_gte-base_uint8-text'"
-6月 06 17:22:02 luo-pc bash[1099]: I0606 09:22:02.109015 1099 model_lifecycle.cc:472] "loading: ensemble-embd_gte-base_uint8-text:1"
-6月 06 17:22:02 luo-pc bash[1099]: I0606 09:22:02.122436 1099 model_lifecycle.cc:839] "successfully loaded 'ensemble-embd_gte-base_uint8-text'"
-6月 06 17:22:56 luo-pc bash[1099]: W0606 09:22:56.176931 1099 pinned_memory_manager.cc:170] "failed to allocate pinned system memory: no pinned memory pool, falling back to non-pinned system memory"
+6月 06 17:55:45 luo-pc bash[10071]: tokenize string  openKylin agent memory
+6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
+6月 06 17:55:45 luo-pc bash[10071]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
+6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1]
+6月 06 17:55:45 luo-pc bash[10071]: tokenize string  openKylin 服务内存限制
+6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 6, 3367, 3182, 11189, 28353, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+6月 06 17:55:45 luo-pc bash[10071]: input_ids  [    0  9803   605    53  2397     6  3367  3182 11189 28353     2]
+6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1]
+6月 06 17:55:45 luo-pc bash[10071]: tokenize string  knowledge 知识记忆：openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。 openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。
+6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 59636, 605, 53, 2397, 6, 3367, 1173, 5426, 71, 172681, 71346, 6, 264, 86039, 2737, 45688, 6, 2213, 12752, 71835, 14641, 28353, 30, 9803, 605, 53, 2397, 6, 3367, 1173, 5426, 71, 172681, 71346, 6, 264, 86039, 2737, 45688, 6, 2213, 12752, 71835, 14641, 28353, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
 [{"name":"embd_cn-clip_512-uint8-image"},{"name":"embd_cn-clip_512-uint8-text"},{"name":"embd_gte-base_uint8-text","version":"1","state":"READY"},{"name":"ensemble-embd_cn-clip_512-uint8-text"},{"name":"ensemble-embd_gte-base_uint8-text","version":"1","state":"READY"},{"name":"matting_portrait","version":"1","state":"READY"},{"name":"model_bank","version":"1","state":"READY"},{"name":"ocr_ppocr","version":"1","state":"READY"},{"name":"tokenizer_cn-clip_512-uint8-text"},{"name":"tokenizer_gte-base_uint8-text","version":"1","state":"READY"}]

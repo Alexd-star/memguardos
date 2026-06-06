@@ -8,28 +8,28 @@ $ .venv/bin/python -m memguard.cli.memctl ingest-history --file /home/luo/.bash_
   "records": [
     {
       "command": "sudo apt updata",
-      "memory_id": "mem_4f42912f8dc042c2",
+      "memory_id": "mem_d31006cd951e4119",
       "type": "knowledge",
       "subtype": "behavior_risk",
       "tier": "session"
     },
     {
       "command": "sudo apt update",
-      "memory_id": "mem_f31299b45b024e7d",
+      "memory_id": "mem_7b29ee306bd74898",
       "type": "knowledge",
       "subtype": "behavior_risk",
       "tier": "session"
     },
     {
       "command": "sudo apt install -y openssh-server git python3 python3-venv python3-pip sqlite3",
-      "memory_id": "mem_06185db975f147f4",
+      "memory_id": "mem_1c865928b24540ce",
       "type": "knowledge",
       "subtype": "behavior_risk",
       "tier": "session"
     },
     {
       "command": "sudo systemctl enable --now ssh",
-      "memory_id": "mem_097785354d2042b8",
+      "memory_id": "mem_0c732a7d75544182",
       "type": "knowledge",
       "subtype": "behavior_risk",
       "tier": "session"

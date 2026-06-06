@@ -1,7 +1,7 @@
-$ bash scripts/run_bpf_lsm_enforcer.sh docs/evidence/openkylin_20260606_175537
+$ bash scripts/run_bpf_lsm_enforcer.sh docs/evidence/openkylin_20260607_001553
 
 # MemGuardOS BPF LSM enforcer probe
-2026-06-06T17:56:58+08:00
+2026-06-07T00:18:33+08:00
 kernel=6.6.0-19-generic
 lsm=lockdown,capability,yama,selinux,bpf,ima,evm
 btf=yes
@@ -16,7 +16,7 @@ clang -O2 -g -Wall -Werror -target bpf -I/usr/include/x86_64-linux-gnu  -c memgu
 cc -O2 -g -Wall -Wextra memguard_lsm_loader.c -o build/memguard_lsm_loader $(pkg-config --cflags --libs libbpf)
 make: 离开目录“/home/luo/memguardos/native/bpf_lsm”
 MemGuardOS BPF LSM enforcer attached. Press Ctrl+C to detach.
-loader_pid=94780
+loader_pid=193569
 trying cat /tmp/memguardos_lsm_secret; expected Permission denied when enforcement works
 cat: /tmp/memguardos_lsm_secret: 权限不够
 enforcement_result=denied
