@@ -26,8 +26,8 @@
   "retrieval": {
     "mean_recall_at_5": 1.0,
     "cross_language_recall_at_5": 1.0,
-    "p50_latency_ms": 12.999,
-    "p95_latency_ms": 14.353
+    "p50_latency_ms": 11.947,
+    "p95_latency_ms": 14.234
   },
   "baseline_comparison": {
     "text_only_recall_at_5": 0.8375,
@@ -55,17 +55,17 @@
     "working_session_long_term_supported": true,
     "policy_report_ok": true,
     "eviction_candidates_before": 1,
-    "stale_or_deleted_after": 3
+    "stale_or_deleted_after": 5
   },
   "latency_load": {
     "memory_count": 1000,
     "query_count": 120,
-    "p50_latency_ms": 18.936,
-    "p95_latency_ms": 22.448,
-    "p99_latency_ms": 34.33,
-    "segment_kb": 2820.6,
-    "sqlite_kb": 4392.0,
-    "total_store_kb": 11352.561
+    "p50_latency_ms": 8.972,
+    "p95_latency_ms": 18.368,
+    "p99_latency_ms": 35.946,
+    "segment_kb": 2923.146,
+    "sqlite_kb": 5100.0,
+    "total_store_kb": 12259.669
   },
   "concurrent_search": {
     "memory_count": 1000,
@@ -74,9 +74,9 @@
     "read_path_audit": "disabled_for_latency_measurement",
     "errors": [],
     "ok": true,
-    "p50_latency_ms": 310.826,
-    "p95_latency_ms": 350.735,
-    "p99_latency_ms": 437.932,
+    "p50_latency_ms": 0.999,
+    "p95_latency_ms": 267.445,
+    "p99_latency_ms": 313.83,
     "audit_chain_ok": true,
     "audit_events_checked": 1000,
     "policy_eviction_candidates": 5
@@ -91,8 +91,8 @@
       2,
       3
     ],
-    "total_latency_ms": 17.841,
-    "p95_latency_ms": 3.219,
+    "total_latency_ms": 61.044,
+    "p95_latency_ms": 10.461,
     "audit_chain_ok": true,
     "read_path_audit": "single_batch_audit_event"
   },
@@ -108,20 +108,20 @@
     "policy": "仅使用已返回且已脱敏的记忆作为 OS Agent 生成上下文；不得输出被精准遗忘或被敏感策略阻断的明文。"
   },
   "resource_usage": {
-    "eval_wall_time_ms": 33453.056,
-    "eval_cpu_time_ms": 17523.021,
-    "tracemalloc_current_kb": 9490.518,
-    "tracemalloc_peak_kb": 23439.707,
-    "process_rss_kb": 112284.0,
-    "baseline_rss_kb": 28332.0,
-    "rss_delta_kb": 83952.0,
+    "eval_wall_time_ms": 33711.031,
+    "eval_cpu_time_ms": 13432.208,
+    "tracemalloc_current_kb": 7038.685,
+    "tracemalloc_peak_kb": 21297.781,
+    "process_rss_kb": 99672.0,
+    "baseline_rss_kb": 28284.0,
+    "rss_delta_kb": 71388.0,
     "baseline_method": "current process RSS sampled before MemGuardService initialization"
   },
   "storage_footprint": {
-    "main_segment_kb": 118.227,
-    "main_sqlite_kb": 260.0,
-    "total_eval_store_kb": 4561.435,
-    "bytes_per_live_memory": 76572.279
+    "main_segment_kb": 124.481,
+    "main_sqlite_kb": 264.0,
+    "total_eval_store_kb": 4565.982,
+    "bytes_per_live_memory": 76648.623
   },
   "memory_count": 61
 }

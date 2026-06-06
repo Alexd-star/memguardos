@@ -523,6 +523,31 @@ def test_default_retrieval_backend_is_hash(tmp_path):
         service.close()
 
 
+def test_search_cache_uses_store_revision_and_invalidates_after_write(tmp_path, monkeypatch):
+    service = make_service(tmp_path)
+    try:
+        service.ingest_text("openKylin systemd MemoryMax 基线方案。")
+        calls = {"count": 0}
+        original_rank = service.retriever.rank
+
+        def counting_rank(*args, **kwargs):
+            calls["count"] += 1
+            return original_rank(*args, **kwargs)
+
+        monkeypatch.setattr(service.retriever, "rank", counting_rank)
+        first = service.search("systemd MemoryMax", limit=3, audit=False)
+        second = service.search("systemd MemoryMax", limit=3, audit=False)
+        assert first == second
+        assert calls["count"] == 1
+
+        service.ingest_text("openKylin systemd MemoryMax 新增缓存失效验证。")
+        third = service.search("systemd MemoryMax", limit=3, audit=False)
+        assert calls["count"] == 2
+        assert any("缓存失效验证" in str(item.get("content", "")) for item in third)
+    finally:
+        service.close()
+
+
 def test_auto_retrieval_falls_back_when_kylin_embedding_fails(monkeypatch):
     def fake_embed(_text, _timeout_seconds, include_vector=True):
         return {"ok": False, "error": "sdk unavailable in test", "include_vector": include_vector}

@@ -23,7 +23,7 @@ architecture=amd64
 multiarch=x86_64-linux-gnu
 ukui_plugins_included=1
  新格式的 Debian 软件包，格式版本 2.0。
- 大小 253036 字节：主控包=5716 字节。
+ 大小 254736 字节：主控包=5700 字节。
      788 bytes,    15 lines      control
    12817 bytes,   164 lines      md5sums
      174 字节，    9 行   *  postinst             #!/bin/sh
@@ -36,7 +36,7 @@ ukui_plugins_included=1
  Architecture: amd64
  Maintainer: MemGuardOS Project Team <memguardos@example.com>
  Depends: python3 (>= 3.9), systemd, libqt5core5a, libqt5widgets5, peony, ukui-control-center, libpeony3, libukcc3
- Installed-Size: 2224
+ Installed-Size: 2248
  Homepage: https://github.com/Alexd-star/memguardos
  Description: Linux-oriented OS Agent memory extraction and precise forgetting
   MemGuardOS provides a local memory substrate for Linux/openKylin OS Agents.
@@ -45,9 +45,9 @@ ukui_plugins_included=1
   sensitive information filtering, auditable precise forgetting, systemd/cgroup
   deployment, auditd/journald integration and optional UKUI desktop plugins.
 DEB_PATH=dist/memguardos_0.1.0_amd64.deb
-c4915a978844577782bc3c6276661dea003fde32cac3c24d58197cd186a6a816  dist/memguardos_0.1.0_amd64.deb
+a31f722285625b49f7d43790c79e0f48895a2615997df3630c293d0952ec4386  dist/memguardos_0.1.0_amd64.deb
  新格式的 Debian 软件包，格式版本 2.0。
- 大小 253036 字节：主控包=5716 字节。
+ 大小 254736 字节：主控包=5700 字节。
      788 bytes,    15 lines      control
    12817 bytes,   164 lines      md5sums
      174 字节，    9 行   *  postinst             #!/bin/sh
@@ -60,7 +60,7 @@ c4915a978844577782bc3c6276661dea003fde32cac3c24d58197cd186a6a816  dist/memguardo
  Architecture: amd64
  Maintainer: MemGuardOS Project Team <memguardos@example.com>
  Depends: python3 (>= 3.9), systemd, libqt5core5a, libqt5widgets5, peony, ukui-control-center, libpeony3, libukcc3
- Installed-Size: 2224
+ Installed-Size: 2248
  Homepage: https://github.com/Alexd-star/memguardos
  Description: Linux-oriented OS Agent memory extraction and precise forgetting
   MemGuardOS provides a local memory substrate for Linux/openKylin OS Agents.
@@ -69,15 +69,15 @@ c4915a978844577782bc3c6276661dea003fde32cac3c24d58197cd186a6a816  dist/memguardo
   sensitive information filtering, auditable precise forgetting, systemd/cgroup
   deployment, auditd/journald integration and optional UKUI desktop plugins.
 --- required contents ---
--rw-r--r-- root/root       406 2026-05-25 22:12 ./lib/systemd/system/memguardd.service
--rw-rw-r-- root/root     48427 2026-05-25 01:49 ./opt/memguardos/memguard/service.py
--rw-rw-r-- root/root       406 2026-05-25 01:30 ./opt/memguardos/scripts/memguardd.service
--rwxr-xr-x root/root       123 2026-05-25 22:12 ./usr/bin/memctl
-drwxrwxr-x root/root         0 2026-05-25 22:12 ./usr/lib/x86_64-linux-gnu/peony-extensions/
--rwxr-xr-x root/root     48112 2026-05-25 22:12 ./usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
-drwxrwxr-x root/root         0 2026-05-25 22:12 ./usr/lib/x86_64-linux-gnu/ukui-control-center/
--rwxr-xr-x root/root     78032 2026-05-25 22:12 ./usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
-[1779718333792] [32minfo [0m Proxy init engine sessionId:25309967.
+-rw-r--r-- root/root       406 2026-06-06 17:56 ./lib/systemd/system/memguardd.service
+-rw-rw-r-- root/root     53702 2026-06-06 17:53 ./opt/memguardos/memguard/service.py
+-rw-rw-r-- root/root       406 2026-06-06 17:01 ./opt/memguardos/scripts/memguardd.service
+-rwxr-xr-x root/root       123 2026-06-06 17:56 ./usr/bin/memctl
+drwxrwxr-x root/root         0 2026-06-06 17:56 ./usr/lib/x86_64-linux-gnu/peony-extensions/
+-rwxr-xr-x root/root     48112 2026-06-06 17:56 ./usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
+drwxrwxr-x root/root         0 2026-06-06 17:56 ./usr/lib/x86_64-linux-gnu/ukui-control-center/
+-rwxr-xr-x root/root     78032 2026-06-06 17:56 ./usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
+[1780739818041] [32minfo [0m Proxy init engine sessionId:1240099251.
 offline_extract_doctor=ok
 plugin_ldd_missing=0
 apt_install_state=not_installed_or_blocked_by_current_ostree_mode

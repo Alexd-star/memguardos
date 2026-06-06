@@ -13,8 +13,12 @@ class SQLiteMetaStore:
         self.conn = sqlite3.connect(str(self.path), timeout=30.0)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA busy_timeout = 30000")
+        self.conn.execute("PRAGMA temp_store = MEMORY")
+        self.conn.execute("PRAGMA cache_size = -32768")
+        self.conn.execute("PRAGMA mmap_size = 268435456")
         try:
             self.conn.execute("PRAGMA journal_mode = WAL")
+            self.conn.execute("PRAGMA synchronous = NORMAL")
         except sqlite3.OperationalError:
             pass
         self._fts_enabled = False
@@ -104,6 +108,9 @@ class SQLiteMetaStore:
             self._fts_enabled = True
         except sqlite3.OperationalError:
             self._fts_enabled = False
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_live_updated ON memory(deleted, updated_at DESC)")
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_tier_live ON memory(tier, deleted, updated_at DESC)")
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_entity_entity ON memory_entity(entity, memory_id)")
         self.conn.commit()
 
     def close(self) -> None:
@@ -253,6 +260,20 @@ class SQLiteMetaStore:
             (pattern, pattern, pattern, limit),
         ).fetchall()
         return [dict(row) for row in rows]
+
+    def memory_revision(self) -> str:
+        row = self.conn.execute(
+            """
+            SELECT
+                COUNT(*) AS total_count,
+                SUM(CASE WHEN deleted = 0 THEN 1 ELSE 0 END) AS live_count,
+                COALESCE(MAX(updated_at), '') AS max_updated_at
+            FROM memory
+            """
+        ).fetchone()
+        if not row:
+            return "0:0:"
+        return "%s:%s:%s" % (row["total_count"] or 0, row["live_count"] or 0, row["max_updated_at"] or "")
 
     def graph_search(self, entity_query: str, limit: int = 10) -> List[Dict[str, Any]]:
         pattern = "%" + entity_query + "%"

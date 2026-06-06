@@ -1,7 +1,8 @@
 from pathlib import Path
+from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import perf_counter
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from memguard.config import (
     DEFAULT_NAMESPACE,
@@ -46,6 +47,8 @@ class MemGuardService:
         self.conflicts = ConflictResolver()
         self.forget_planner = ForgetPlanner()
         self.journald = JournaldLogger()
+        self._search_cache: OrderedDict[Tuple[str, int, str], List[Dict[str, object]]] = OrderedDict()
+        self._search_cache_limit = 128
 
     def close(self) -> None:
         self.meta.close()
@@ -615,7 +618,19 @@ class MemGuardService:
         return {"rolled_back": True, "record": record}
 
     def search(self, query: str, limit: int = 5, audit: bool = True) -> List[Dict[str, object]]:
-        candidates = self._search_candidates(query, limit=max(limit * 8, 80))
+        clean_query = query.strip()
+        if not clean_query:
+            return []
+        cache_key = (clean_query, max(1, int(limit)), self.meta.memory_revision())
+        cached = self._search_cache.get(cache_key)
+        if cached is not None:
+            self._search_cache.move_to_end(cache_key)
+            results = [dict(item) for item in cached]
+            if audit:
+                self._audit("search", None, {"query": clean_query, "count": len(results), "cache": "hit"})
+            return results
+
+        candidates = self._search_candidates(query, limit=max(limit * 8, 48))
         ranked = self.retriever.rank(query, candidates, limit=limit)
         results = []
         seen = set()
@@ -639,8 +654,10 @@ class MemGuardService:
                 record["match_source"] = "text"
                 results.append(record)
         if audit:
-            self._audit("search", None, {"query": query, "count": len(results)})
-        return results[:limit]
+            self._audit("search", None, {"query": clean_query, "count": len(results), "cache": "miss"})
+        results = results[:limit]
+        self._remember_search(cache_key, results)
+        return [dict(item) for item in results]
 
     def batch_search(self, queries: List[str], limit: int = 5, workers: int = 4) -> Dict[str, object]:
         clean_queries = [query.strip() for query in queries if query and query.strip()]
@@ -1035,6 +1052,12 @@ class MemGuardService:
         detail.setdefault("namespace", self.namespace)
         self.meta.add_audit(event_type, memory_id, detail)
         self.journald.log(event_type, memory_id, detail)
+
+    def _remember_search(self, cache_key: Tuple[str, int, str], results: List[Dict[str, object]]) -> None:
+        self._search_cache[cache_key] = [dict(item) for item in results]
+        self._search_cache.move_to_end(cache_key)
+        while len(self._search_cache) > self._search_cache_limit:
+            self._search_cache.popitem(last=False)
 
     @staticmethod
     def _enrich_graph(record: MemoryRecord) -> None:

@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 84,
-    "passed": 84,
+    "total": 85,
+    "passed": 85,
     "failed": 0,
     "warnings": 0
   },
@@ -88,7 +88,7 @@
       "category": "中文文档",
       "name": "docs/openKylin验证记录.md",
       "ok": true,
-      "detail": "中文字符数 1393",
+      "detail": "中文字符数 1430",
       "severity": "P0"
     },
     {
@@ -109,7 +109,7 @@
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 2083",
+      "detail": "中文字符数 2119",
       "severity": "P0"
     },
     {
@@ -347,7 +347,7 @@
       "category": "量化评测",
       "name": "负载 P95 延迟小于 500ms",
       "ok": true,
-      "detail": "当前 17.9910，要求 <= 500.0000",
+      "detail": "当前 0.6110，要求 <= 500.0000",
       "severity": "P0"
     },
     {
@@ -444,6 +444,13 @@
     {
       "category": "openKylin证据",
       "name": "kylin_retrieval.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "temporal_status.txt",
       "ok": true,
       "detail": "存在且非空",
       "severity": "P0"
@@ -564,14 +571,14 @@
       "category": "openKylin证据",
       "name": "manifest 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 64 个证据文件",
+      "detail": "覆盖 65 个证据文件",
       "severity": "P0"
     },
     {
       "category": "openKylin证据",
       "name": "SHA256SUMS 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 64 个证据文件",
+      "detail": "覆盖 65 个证据文件",
       "severity": "P0"
     },
     {

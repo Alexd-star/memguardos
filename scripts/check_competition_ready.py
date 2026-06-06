@@ -75,6 +75,7 @@ REQUIRED_EVIDENCE = [
     "embedding_cpp_probe.txt",
     "vector_probe.txt",
     "kylin_retrieval.txt",
+    "temporal_status.txt",
     "namespace_isolation.txt",
     "systemd_cgroup.txt",
     "systemd_namespace.txt",

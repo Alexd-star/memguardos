@@ -4,9 +4,9 @@
 
 ## 0. 已验证 VM 快照
 
-日期：2026-05-18 至 2026-05-23
+日期：2026-05-18 至 2026-06-06
 
-说明：本页记录已经完成的 openKylin 证据。基础证据包采集时间为 `20260525_221101`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、可解释语义抽取、本地 Web 控制台、Kylin embedding 实际检索重排、Kylin 向量数据库探针、BPF JSON 策略生成、BPF LSM 安全测试文件强制拒绝、Peony/UKUI 原生插件构建、UKUI 插件可见性核查和 10k 规模评测。`2026-05-24` 已补充 Peony 右键菜单、UKUI 控制中心桌面可见验证证据、Debian 安装包构建、离线解包 smoke 证据、企业化控制中心面板、默认演示库审计链重建验证和诊断报告证据。
+说明：本页记录已经完成的 openKylin 证据。基础证据包采集时间为 `20260606_175537`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、可解释语义抽取、时间有效性窗口、本地 Web 控制台、Kylin embedding 实际检索重排、Kylin 向量数据库探针、BPF JSON 策略生成、BPF LSM 安全测试文件强制拒绝、Peony/UKUI 原生插件构建、UKUI 插件可见性核查和 10k 规模评测。`2026-05-24` 已补充 Peony 右键菜单、UKUI 控制中心桌面可见验证证据、Debian 安装包构建、离线解包 smoke 证据、企业化控制中心面板、默认演示库审计链重建验证和诊断报告证据。
 
 环境：
 
@@ -42,13 +42,15 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 
 最新结果：
 
-- 单元测试：`55 passed`
+- 单元测试：`57 passed`
 - 负载评测：1000 条记忆，120 次检索请求
-- 最新 1k 负载 P95：22.448 ms
+- 最新 1k 负载 P95：18.368 ms
 - 最新证据包未单独采集 5k 负载；10k 规模评测覆盖更大数据量
-- 10k 负载 P95：72.936 ms
-- 最新 openKylin RSS：112284.0 KB
-- 10k 评测 RSS：112624.0 KB
+- 10k 负载 P95：23.112 ms
+- 10k 负载 P99：119.567 ms
+- 并发检索 P95：233.232 ms；P99：325.842 ms
+- 最新 openKylin 1k RSS：99672.0 KB
+- 10k 评测 RSS：128764.0 KB
 - 纯文本基线 Recall@5：0.8375
 - 完整 MemGuardOS Recall@5：1.0000
 - 该证据包采集时的 benchmark：45 条种子记忆、40 条检索用例、25 条敏感检测用例、20 条精准遗忘用例、10 条冲突解决用例、13 条图谱检索用例、6 条数据质量用例。当前证据包已同步为 45/40/25/20/10/13/6。
@@ -62,6 +64,7 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 - Peony/UKUI 原生插件已构建：Peony 右键菜单插件和 UKUI 控制中心插件均构建出 `.so`；只读 `/usr` 场景已通过 bind mount 演示安装处理，Peony 右键菜单项和 UKUI 控制中心入口均已在桌面可见验证
 - 默认用户演示库已归档旧历史数据并重建：`default_audit_after_reset.txt` 显示当前默认库 `verify-audit` 为 `ok=true`，避免最终 UI 演示时被旧审计链分叉数据干扰
 - 可解释语义抽取已验证：`semantic_extraction.txt` 记录 `explain-extraction`、抽取信号、类型/子类型和写入审计
+- 时间有效性窗口已验证：`temporal_status.txt` 记录 `valid_from`、`valid_to`、`superseded_by`、版本更新、遗忘 tombstone 和审计链验证
 - 本地 Web 控制台已验证：`web_dashboard.txt` 记录页面加载、写入、检索、抽取解释、审计链、检索后端和记忆策略 smoke 通过
 - SDK 状态：embedding 模型信息显示 768 维端侧文本模型，Python/C++ 探针均可返回 768 维向量；实际检索可使用 `kylin_sdk` 作为可选重排后端；vector SDK 库和服务可用
 - 自然语言敏感规则：`patterns suggest` 和 `patterns add-natural` 可从“工号格式”指令生成受限正则，并在写入记忆时完成脱敏

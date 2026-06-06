@@ -35,8 +35,8 @@ $ .venv/bin/python -m memguard.cli.memctl memory-policy --eviction-limit 10
       "sources": {
         "user_behavior": 4
       },
-      "oldest_updated_at": "2026-05-25T14:12:01.638667+00:00",
-      "newest_updated_at": "2026-05-25T14:12:01.671820+00:00"
+      "oldest_updated_at": "2026-06-06T09:56:37.985547+00:00",
+      "newest_updated_at": "2026-06-06T09:56:38.024183+00:00"
     },
     "long_term": {
       "count": 6,
@@ -50,74 +50,75 @@ $ .venv/bin/python -m memguard.cli.memctl memory-policy --eviction-limit 10
       "sources": {
         "manual": 6
       },
-      "oldest_updated_at": "2026-05-25T14:12:00.094910+00:00",
-      "newest_updated_at": "2026-05-25T14:12:02.737428+00:00"
+      "oldest_updated_at": "2026-06-06T09:56:35.606242+00:00",
+      "newest_updated_at": "2026-06-06T09:56:39.470025+00:00"
     }
   },
   "counts": {
     "live": 10,
-    "metadata_records": 10,
-    "segment_records": 10,
-    "stale_or_deleted": 0,
+    "metadata_records": 11,
+    "segment_records": 15,
+    "stale_or_deleted": 5,
     "eviction_candidates": 4
   },
   "storage": {
-    "segment_path": "/var/tmp/memguardos_evidence_20260525_221101/memory.segment",
-    "segment_bytes": 21906,
-    "sqlite_path": "/var/tmp/memguardos_evidence_20260525_221101/memguard.sqlite3",
-    "sqlite_total_bytes": 122880,
-    "approx_total_bytes": 144786,
-    "bytes_per_live_memory": 14478.6
+    "segment_path": "/var/tmp/memguardos_evidence_20260606_175537/memory.segment",
+    "segment_bytes": 27861,
+    "sqlite_path": "/var/tmp/memguardos_evidence_20260606_175537/memguard.sqlite3",
+    "sqlite_total_bytes": 147456,
+    "approx_total_bytes": 175317,
+    "bytes_per_live_memory": 17531.7
   },
   "eviction_candidates": [
     {
-      "memory_id": "mem_6d66ca8cbc534b5d",
+      "memory_id": "mem_4f42912f8dc042c2",
       "tier": "session",
       "type": "knowledge",
       "subtype": "behavior_risk",
       "source_kind": "user_behavior",
-      "updated_at": "2026-05-25T14:12:01.638667+00:00",
+      "updated_at": "2026-06-06T09:56:37.985547+00:00",
       "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=1 command=sudo apt updata"
     },
     {
-      "memory_id": "mem_f95cde6340c94e0a",
+      "memory_id": "mem_f31299b45b024e7d",
       "tier": "session",
       "type": "knowledge",
       "subtype": "behavior_risk",
       "source_kind": "user_behavior",
-      "updated_at": "2026-05-25T14:12:01.649602+00:00",
+      "updated_at": "2026-06-06T09:56:37.996412+00:00",
       "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=2 command=sudo apt update"
     },
     {
-      "memory_id": "mem_0a9105982f1f4875",
+      "memory_id": "mem_06185db975f147f4",
       "tier": "session",
       "type": "knowledge",
       "subtype": "behavior_risk",
       "source_kind": "user_behavior",
-      "updated_at": "2026-05-25T14:12:01.660559+00:00",
+      "updated_at": "2026-06-06T09:56:38.005854+00:00",
       "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=3 command=sudo apt install -y openssh-server "
     },
     {
-      "memory_id": "mem_9365e9b21f404293",
+      "memory_id": "mem_097785354d2042b8",
       "tier": "session",
       "type": "knowledge",
       "subtype": "behavior_risk",
       "source_kind": "user_behavior",
-      "updated_at": "2026-05-25T14:12:01.671820+00:00",
+      "updated_at": "2026-06-06T09:56:38.024183+00:00",
       "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=4 command=sudo systemctl enable --now ssh"
     }
   ],
   "recommendations": [
-    "session 层存在阶段性记忆，建议在任务结束后按项目、会话或时间窗口进行淘汰或沉淀。"
+    "session 层存在阶段性记忆，建议在任务结束后按项目、会话或时间窗口进行淘汰或沉淀。",
+    "存在已删除或旧版本记录，建议执行 compact 以压缩 mmap 段文件并清理旧明文。"
   ],
   "cgroup": {
     "platform": "Linux",
     "is_linux": true,
     "cgroup_v2_mounted": true,
-    "proc_cgroup": "0::/user.slice/user-1000.slice/session-73.scope",
+    "proc_cgroup": "0::/user.slice/user-1000.slice/session-28.scope",
     "memory_current": null,
     "memory_max": null,
     "cpu_max": null,
-    "pid": 235954
+    "pid": 94247
   }
 }

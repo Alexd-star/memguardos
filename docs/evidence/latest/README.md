@@ -1,6 +1,6 @@
 # openKylin 证据采集包
 
-采集时间：20260525_221101
+采集时间：20260606_175537
 
 ## 文件说明
 
@@ -26,6 +26,7 @@
 | `generate_answer.txt` | 默认关闭的可选 LLM adapter dry-run 证据 |
 | `web_dashboard.txt` | 本地 Web 控制台 smoke 证据 |
 | `agent_batch_search.txt` | OS Agent 任务规划、工具调用、结果生成多查询并发检索证据 |
+| `temporal_status.txt` | 时间有效性窗口、旧版本失效和 tombstone 时间线证据 |
 | `api_auth.txt` | 本地 Agent API token 鉴权证据 |
 | `namespace_isolation.txt` | namespace 多会话记忆隔离证据 |
 | `systemd_namespace.txt` | systemd 模板实例与独立 cgroup 证据 |
@@ -35,6 +36,10 @@
 | `ukui_plugin_build.txt` | Peony 右键插件与 UKUI 控制中心插件真实构建证据 |
 | `ukui_plugin_install.txt` | UKUI 插件系统目录安装尝试与只读根文件系统边界 |
 | `ukui_plugin_visible.txt` | UKUI 插件安装产物、依赖和人工可见性检查步骤 |
+| `ukui_plugin_visible_final.txt` | 保留自上次人工复核的 UKUI 插件最终可见性证据 |
+| `ukui_peony_visible_manual_confirmation.txt` | 保留自上次人工复核的 Peony 右键菜单可见性确认 |
+| `ukui_control_center_visible_manual_confirmation.txt` | 保留自上次人工复核的 UKUI 控制中心入口可见性确认 |
+| `ukui_enterprise_panel.txt` | 保留自上次人工复核的控制中心企业化面板证据 |
 | `deb_package.txt` | MemGuardOS Debian 安装包构建、包内容和离线解包 smoke 证据 |
 | `bpf_lsm_policy.txt` | BPF LSM JSON denylist 策略生成证据 |
 | `bpf_lsm_enforcer.txt` | BPF LSM 强制拦截增强环境、构建和 attach 探针 |

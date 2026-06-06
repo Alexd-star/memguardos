@@ -8,4 +8,4 @@ print(handle_request(service, {'command': 'health', 'token': 'local-secret'}, au
 PY
 
 {'ok': False, 'error': 'unauthorized'}
-{'ok': True, 'result': {'status': 'ready', 'namespace': 'default', 'store_path': '/var/tmp/memguardos_evidence_20260525_221101/memory.segment', 'db_path': '/var/tmp/memguardos_evidence_20260525_221101/memguard.sqlite3'}}
+{'ok': True, 'result': {'status': 'ready', 'namespace': 'default', 'store_path': '/var/tmp/memguardos_evidence_20260606_175537/memory.segment', 'db_path': '/var/tmp/memguardos_evidence_20260606_175537/memguard.sqlite3'}}
