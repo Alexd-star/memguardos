@@ -77,6 +77,8 @@ def build_parser() -> argparse.ArgumentParser:
     evict.add_argument("--yes", action="store_true")
     memory_policy = sub.add_parser("memory-policy", help="Show tiered memory policy, storage footprint, cgroup status, and eviction candidates")
     memory_policy.add_argument("--eviction-limit", type=int, default=10)
+    temporal = sub.add_parser("temporal-status", help="Show temporal validity windows for active and superseded memories")
+    temporal.add_argument("--limit", type=int, default=20)
 
     versions = sub.add_parser("versions", help="List all versions of a memory")
     versions.add_argument("memory_id")
@@ -315,6 +317,10 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(service.memory_policy_status(eviction_limit=args.eviction_limit), ensure_ascii=False, indent=2))
             return 0
 
+        if args.command == "temporal-status":
+            print(json.dumps(service.temporal_status(limit=args.limit), ensure_ascii=False, indent=2))
+            return 0
+
         if args.command == "update":
             result = service.update_memory(args.memory_id, args.text, reason=args.reason)
             printable = dict(result)
@@ -426,6 +432,7 @@ def main(argv: list[str] | None = None) -> int:
             namespace = service.namespace_status()
             retrieval = service.retrieval_status()
             memory_policy = service.memory_policy_status()
+            temporal_status = service.temporal_status(limit=10)
             sdk = kylin_sdk_status(probe_embedding=args.probe_sdk, probe_timeout=args.probe_timeout)
             audit_chain = service.verify_audit()
             payload = {
@@ -436,6 +443,7 @@ def main(argv: list[str] | None = None) -> int:
                 "namespace_status": namespace,
                 "retrieval_status": retrieval,
                 "memory_policy": memory_policy,
+                "temporal_status": temporal_status,
                 "kylin_sdk": sdk,
                 "audit_chain": audit_chain,
                 "recent_audit": service.audit(limit=args.audit_limit),

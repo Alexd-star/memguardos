@@ -60,6 +60,7 @@ class AppendOnlyMemoryStore:
         return [record for record in self.scan() if record.memory_id == memory_id]
 
     def tombstone(self, record: MemoryRecord, reason: str) -> MemoryRecord:
+        tombstone_version_id = new_id("ver")
         tomb = MemoryRecord(
             memory_id=record.memory_id,
             type=record.type,
@@ -77,7 +78,7 @@ class AppendOnlyMemoryStore:
             relations=[],
             sensitivity=Sensitivity(level="none", labels=[]),
             version=VersionInfo(
-                version_id=new_id("ver"),
+                version_id=tombstone_version_id,
                 parent_version_id=record.version.version_id,
                 op="forget",
             ),
@@ -88,6 +89,8 @@ class AppendOnlyMemoryStore:
             ),
             deleted=True,
         )
+        record.invalidate(valid_to=tomb.temporal.valid_from, superseded_by=tombstone_version_id)
+        self.append(record)
         return self.append(tomb)
 
     def compact(self) -> int:

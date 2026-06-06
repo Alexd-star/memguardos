@@ -33,7 +33,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地单元测试 | 55 passed |
+| 本地单元测试 | 56 passed |
 | openKylin 单元测试证据 | 55 passed |
 | 本地 1k 负载 P95 | 17.991 ms |
 | openKylin 1k 负载 P95 | 22.448 ms |
@@ -55,6 +55,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | 记忆建模 | 偏好记忆、知识记忆、敏感策略记忆；可解释混合语义抽取；`working`、`session`、`long_term` 三层记忆 | `memguard/extraction/semantic.py`、`memguard/models.py`、`memguard/service.py` |
 | 数据质量治理 | Unicode 标准化、空输入拒绝、低质量提示、结构化字段校验、质量分入审计 | `memguard/ingestion/quality.py` |
 | 轻量化存储 | mmap 追加式段文件、SQLite 元数据、FTS、图谱边、审计哈希链 | `memguard/store/` |
+| 时间有效性 | `valid_from/valid_to/superseded_by` 描述事实生效窗口，更新、提升、回滚和遗忘都会关闭旧版本窗口 | `memctl temporal-status`、`memctl versions` |
 | 混合检索 | SQLite FTS、稳定 hash-vector、图谱关联、跨语言技术词扩展、冲突处理 | `memguard/retrieval/` |
 | RAG 上下文 | 检索、脱敏、排序、token 预算估算、上下文包和 provider-neutral prompt | `memctl build-context`、`memctl build-prompt` |
 | 精准遗忘 | 自然语言候选、dry-run、确认删除、tombstone、FTS/图谱清理、compact、明文探针验证 | `memctl forget`、`memctl verify-forget` |
@@ -115,7 +116,7 @@ flowchart LR
     O --> D
 ```
 
-整体设计选择是“端侧稳定优先”：默认主链路不依赖云端 API、GPU 或重量级向量数据库；在 openKylin 环境存在 Kylin SDK 时启用探测和可选增强，在 SDK 不可用或超时时自动回退到稳定检索路径。
+整体设计选择是“端侧稳定优先”：默认主链路不依赖云端 API、GPU 或重量级向量数据库；在 openKylin 环境存在 Kylin SDK 时启用探测和可选增强，在 SDK 不可用或超时时自动回退到稳定检索路径。参考新式 Agent Memory 中 temporal knowledge graph 的做法，MemGuardOS 为每条记忆维护时间有效性窗口。旧偏好或知识被更新、提升、回滚或遗忘时，系统会写入 `valid_to` 与 `superseded_by`，普通检索只读取当前有效记忆，历史版本仍可通过版本列表和审计链追溯。
 
 ## 快速开始
 
@@ -158,6 +159,7 @@ python -m memguard.cli.memctl web --host 127.0.0.1 --port 8765
 python -m memguard.cli.memctl forget "忘掉 temporary project codename"
 python -m memguard.cli.memctl forget "忘掉 temporary project codename" --yes --compact
 python -m memguard.cli.memctl verify-forget "temporary project codename"
+python -m memguard.cli.memctl temporal-status --limit 10
 python -m memguard.cli.memctl verify-audit
 ```
 

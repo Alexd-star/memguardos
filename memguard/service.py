@@ -265,6 +265,11 @@ class MemGuardService:
 
         extraction = self.extractor.extract(stored_text, "update")
         memory_type = extraction.memory_type
+        new_version_id = new_id("ver")
+        previous.invalidate(superseded_by=new_version_id)
+        self.store.append(previous)
+        self.meta.invalidate_memory(memory_id, superseded_by=new_version_id, valid_to=previous.temporal.valid_to)
+
         record = MemoryRecord(
             memory_id=previous.memory_id,
             type=memory_type,
@@ -281,7 +286,7 @@ class MemGuardService:
             entities=previous.entities,
             relations=previous.relations,
             sensitivity=sensitivity,
-            version=VersionInfo(version_id=new_id("ver"), parent_version_id=previous.version.version_id, op="update"),
+            version=VersionInfo(version_id=new_version_id, parent_version_id=previous.version.version_id, op="update"),
             audit=AuditInfo(created_by="memguard", created_at=utc_now()),
         ).finalize_hash()
         self._enrich_graph(record)
@@ -292,7 +297,10 @@ class MemGuardService:
             memory_id,
             {
                 "reason": reason,
+                "superseded_version_id": previous.version.version_id,
                 "version_id": record.version.version_id,
+                "valid_from": record.temporal.valid_from,
+                "previous_valid_to": previous.temporal.valid_to,
                 "quality": quality.to_dict(),
                 "extraction": extraction.to_dict(),
             },
@@ -308,6 +316,11 @@ class MemGuardService:
         record = self.store.get_latest(memory_id)
         if record is None:
             return {"promoted": False, "reason": "memory_not_found", "memory_id": memory_id}
+        new_version_id = new_id("ver")
+        record.invalidate(superseded_by=new_version_id)
+        self.store.append(record)
+        self.meta.invalidate_memory(memory_id, superseded_by=new_version_id, valid_to=record.temporal.valid_to)
+
         promoted = MemoryRecord(
             memory_id=record.memory_id,
             type=record.type,
@@ -324,12 +337,21 @@ class MemGuardService:
             entities=record.entities,
             relations=record.relations,
             sensitivity=record.sensitivity,
-            version=VersionInfo(version_id=new_id("ver"), parent_version_id=record.version.version_id, op="promote"),
+            version=VersionInfo(version_id=new_version_id, parent_version_id=record.version.version_id, op="promote"),
             audit=AuditInfo(created_by="memguard", created_at=utc_now()),
         ).finalize_hash()
         self.store.append(promoted)
         self.meta.upsert_memory(promoted)
-        self._audit("promote", memory_id, {"tier": tier, "version_id": promoted.version.version_id})
+        self._audit(
+            "promote",
+            memory_id,
+            {
+                "tier": tier,
+                "superseded_version_id": record.version.version_id,
+                "version_id": promoted.version.version_id,
+                "previous_valid_to": record.temporal.valid_to,
+            },
+        )
         return {"promoted": True, "record": promoted}
 
     def evict_tier(self, tier: str, confirm: bool = False) -> Dict[str, object]:
@@ -343,8 +365,8 @@ class MemGuardService:
             record = self.store.get_latest(row["memory_id"])
             if record is None:
                 continue
-            self.store.tombstone(record, "tier eviction: " + tier)
-            self.meta.mark_deleted(record.memory_id)
+            tombstone = self.store.tombstone(record, "tier eviction: " + tier)
+            self.meta.mark_deleted(record.memory_id, superseded_by=tombstone.version.version_id)
             evicted.append(record.memory_id)
         self._audit("tier_evict", None, {"tier": tier, "evicted": evicted})
         return {"evicted": True, "tier": tier, "memory_ids": evicted}
@@ -471,22 +493,74 @@ class MemGuardService:
         return result
 
     def versions(self, memory_id: str) -> List[Dict[str, object]]:
-        versions = []
+        by_version_id: Dict[str, Dict[str, object]] = {}
         for record in self.store.get_versions(memory_id):
-            versions.append(
+            by_version_id[record.version.version_id] = {
+                "memory_id": record.memory_id,
+                "version_id": record.version.version_id,
+                "parent_version_id": record.version.parent_version_id,
+                "op": record.version.op,
+                "summary": record.summary,
+                "deleted": record.deleted,
+                "created_at": record.audit.created_at,
+                "valid_from": record.temporal.valid_from,
+                "valid_to": record.temporal.valid_to,
+                "superseded_by": record.temporal.superseded_by,
+                "active": not record.deleted and record.temporal.valid_to is None,
+                "hash": record.audit.hash,
+            }
+        versions = list(by_version_id.values())
+        self._audit("versions", memory_id, {"count": len(versions)})
+        return versions
+
+    def temporal_status(self, limit: int = 20) -> Dict[str, object]:
+        live = self.meta.list_memories(include_deleted=False, limit=limit)
+        segment_records = self.store.scan()
+        inactive = [record for record in segment_records if record.deleted or record.temporal.valid_to]
+        status = {
+            "active_count": len(self.meta.list_memories(include_deleted=False)),
+            "sample_active": [
+                {
+                    "memory_id": row["memory_id"],
+                    "type": row["type"],
+                    "subtype": row["subtype"],
+                    "tier": row["tier"],
+                    "version_id": row["version_id"],
+                    "valid_from": row.get("valid_from") or row.get("updated_at"),
+                    "valid_to": row.get("valid_to"),
+                    "superseded_by": row.get("superseded_by"),
+                    "summary": row["summary"],
+                }
+                for row in live[:limit]
+            ],
+            "inactive_sample": [
                 {
                     "memory_id": record.memory_id,
                     "version_id": record.version.version_id,
-                    "parent_version_id": record.version.parent_version_id,
                     "op": record.version.op,
-                    "summary": record.summary,
+                    "valid_from": record.temporal.valid_from,
+                    "valid_to": record.temporal.valid_to,
+                    "superseded_by": record.temporal.superseded_by,
                     "deleted": record.deleted,
-                    "created_at": record.audit.created_at,
-                    "hash": record.audit.hash,
+                    "summary": record.summary,
                 }
-            )
-        self._audit("versions", memory_id, {"count": len(versions)})
-        return versions
+                for record in inactive[-limit:]
+            ],
+            "policy": {
+                "meaning": "valid_from/valid_to describe when a memory fact is active for retrieval and generation.",
+                "update_behavior": "updates, promotions, rollbacks and forgetting close the previous fact window before writing the new state or tombstone.",
+                "retrieval_behavior": "normal search only reads non-deleted active metadata rows; historical versions remain available through versions/audit.",
+            },
+        }
+        self._audit(
+            "temporal_status",
+            None,
+            {
+                "active_count": status["active_count"],
+                "inactive_sample_count": len(status["inactive_sample"]),
+            },
+        )
+        return status
 
     def rollback(self, memory_id: str, version_id: str) -> Dict[str, object]:
         versions = self.store.get_versions(memory_id)
@@ -500,6 +574,11 @@ class MemGuardService:
             return {"rolled_back": False, "reason": "version_not_found", "memory_id": memory_id}
         if target.deleted:
             return {"rolled_back": False, "reason": "cannot_rollback_to_tombstone", "memory_id": memory_id}
+
+        new_version_id = new_id("ver")
+        latest.invalidate(superseded_by=new_version_id)
+        self.store.append(latest)
+        self.meta.invalidate_memory(memory_id, superseded_by=new_version_id, valid_to=latest.temporal.valid_to)
 
         record = MemoryRecord(
             memory_id=target.memory_id,
@@ -517,13 +596,22 @@ class MemGuardService:
             entities=target.entities,
             relations=target.relations,
             sensitivity=target.sensitivity,
-            version=VersionInfo(version_id=new_id("ver"), parent_version_id=latest.version.version_id, op="rollback"),
+            version=VersionInfo(version_id=new_version_id, parent_version_id=latest.version.version_id, op="rollback"),
             audit=AuditInfo(created_by="memguard", created_at=utc_now(), hash=stable_hash(target.memory_id + version_id + utc_now())),
             deleted=False,
         )
         self.store.append(record)
         self.meta.upsert_memory(record)
-        self._audit("rollback", memory_id, {"target_version_id": version_id, "new_version_id": record.version.version_id})
+        self._audit(
+            "rollback",
+            memory_id,
+            {
+                "target_version_id": version_id,
+                "superseded_version_id": latest.version.version_id,
+                "new_version_id": record.version.version_id,
+                "previous_valid_to": latest.temporal.valid_to,
+            },
+        )
         return {"rolled_back": True, "record": record}
 
     def search(self, query: str, limit: int = 5, audit: bool = True) -> List[Dict[str, object]]:
@@ -778,8 +866,8 @@ class MemGuardService:
             record = self.store.get_latest(memory_id)
             if record is None:
                 continue
-            self.store.tombstone(record, request)
-            self.meta.mark_deleted(memory_id)
+            tombstone = self.store.tombstone(record, request)
+            self.meta.mark_deleted(memory_id, superseded_by=tombstone.version.version_id)
             forgotten.append(memory_id)
         if compact:
             self.store.compact()

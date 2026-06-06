@@ -291,6 +291,36 @@ def test_versions_update_and_rollback(tmp_path):
         service.close()
 
 
+def test_temporal_validity_tracks_updates_and_forgetting(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        created = service.ingest_text("以后回答命令时使用中文。")["record"]
+        updated = service.update_memory(created.memory_id, "以后回答命令时使用英文。")
+        assert updated["updated"] is True
+
+        versions = service.versions(created.memory_id)
+        first, second = versions[0], versions[1]
+        assert first["valid_from"]
+        assert first["valid_to"]
+        assert first["superseded_by"] == second["version_id"]
+        assert second["active"] is True
+        assert second["valid_to"] is None
+
+        status = service.temporal_status(limit=10)
+        assert status["active_count"] == 1
+        assert status["inactive_sample"]
+        assert status["sample_active"][0]["memory_id"] == created.memory_id
+
+        done = service.forget("忘掉回答命令语言偏好", confirm=True)
+        assert created.memory_id in done["forgotten"]
+        after_forget = service.versions(created.memory_id)
+        assert after_forget[-1]["op"] == "forget"
+        assert after_forget[-1]["deleted"] is True
+        assert after_forget[-2]["valid_to"] == after_forget[-1]["valid_from"]
+    finally:
+        service.close()
+
+
 def test_update_memory_uses_same_quality_gate_as_ingest(tmp_path):
     service = make_service(tmp_path)
     try:
@@ -977,6 +1007,9 @@ def test_local_api_handler_and_unix_socket(tmp_path):
         assert policy["ok"] is True
         assert policy["result"]["counts"]["live"] >= 1
         assert "cgroup" in policy["result"]
+        temporal = handle_request(service, {"command": "temporal_status", "limit": 3})
+        assert temporal["ok"] is True
+        assert temporal["result"]["active_count"] >= 1
         listed = handle_request(service, {"command": "list"})
         assert listed["ok"] is True
         memory_id = listed["result"][0]["memory_id"]

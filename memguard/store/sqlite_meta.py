@@ -37,6 +37,9 @@ class SQLiteMetaStore:
                 sensitivity_labels TEXT NOT NULL,
                 sensitivity_redacted INTEGER NOT NULL DEFAULT 0,
                 version_id TEXT NOT NULL,
+                valid_from TEXT NOT NULL DEFAULT '',
+                valid_to TEXT,
+                superseded_by TEXT,
                 deleted INTEGER NOT NULL DEFAULT 0,
                 updated_at TEXT NOT NULL
             )
@@ -45,6 +48,9 @@ class SQLiteMetaStore:
         self._ensure_column("memory", "subtype", "TEXT NOT NULL DEFAULT 'general'")
         self._ensure_column("memory", "tier", "TEXT NOT NULL DEFAULT 'long_term'")
         self._ensure_column("memory", "sensitivity_redacted", "INTEGER NOT NULL DEFAULT 0")
+        self._ensure_column("memory", "valid_from", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory", "valid_to", "TEXT")
+        self._ensure_column("memory", "superseded_by", "TEXT")
         self.conn.execute(
             """
             CREATE TABLE IF NOT EXISTS audit (
@@ -108,9 +114,10 @@ class SQLiteMetaStore:
             """
             INSERT INTO memory (
                 memory_id, type, scope, tier, summary, content, source_kind, source_uri,
-                sensitivity_level, sensitivity_labels, sensitivity_redacted, version_id, deleted, updated_at, subtype
+                sensitivity_level, sensitivity_labels, sensitivity_redacted, version_id,
+                valid_from, valid_to, superseded_by, deleted, updated_at, subtype
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(memory_id) DO UPDATE SET
                 type=excluded.type,
                 subtype=excluded.subtype,
@@ -124,6 +131,9 @@ class SQLiteMetaStore:
                 sensitivity_labels=excluded.sensitivity_labels,
                 sensitivity_redacted=excluded.sensitivity_redacted,
                 version_id=excluded.version_id,
+                valid_from=excluded.valid_from,
+                valid_to=excluded.valid_to,
+                superseded_by=excluded.superseded_by,
                 deleted=excluded.deleted,
                 updated_at=excluded.updated_at
             """,
@@ -140,6 +150,9 @@ class SQLiteMetaStore:
                 json.dumps(record.sensitivity.labels, ensure_ascii=False),
                 1 if record.sensitivity.redacted else 0,
                 record.version.version_id,
+                record.temporal.valid_from,
+                record.temporal.valid_to,
+                record.temporal.superseded_by,
                 1 if record.deleted else 0,
                 utc_now(),
                 record.subtype,
@@ -162,10 +175,23 @@ class SQLiteMetaStore:
         )
         self.conn.commit()
 
-    def mark_deleted(self, memory_id: str) -> None:
+    def invalidate_memory(self, memory_id: str, superseded_by: Optional[str] = None, valid_to: Optional[str] = None) -> None:
         self.conn.execute(
-            "UPDATE memory SET deleted = 1, content = '', summary = 'FORGOTTEN', updated_at = ? WHERE memory_id = ?",
-            (utc_now(), memory_id),
+            "UPDATE memory SET valid_to = ?, superseded_by = ?, updated_at = ? WHERE memory_id = ? AND deleted = 0",
+            (valid_to or utc_now(), superseded_by, utc_now(), memory_id),
+        )
+        self.conn.commit()
+
+    def mark_deleted(self, memory_id: str, superseded_by: Optional[str] = None) -> None:
+        now = utc_now()
+        self.conn.execute(
+            """
+            UPDATE memory
+            SET deleted = 1, content = '', summary = 'FORGOTTEN',
+                valid_to = ?, superseded_by = ?, updated_at = ?
+            WHERE memory_id = ?
+            """,
+            (now, superseded_by, now, memory_id),
         )
         if self._fts_enabled:
             self.conn.execute("DELETE FROM memory_fts WHERE memory_id = ?", (memory_id,))

@@ -49,6 +49,13 @@ class AuditInfo:
 
 
 @dataclass
+class TemporalInfo:
+    valid_from: str = field(default_factory=utc_now)
+    valid_to: Optional[str] = None
+    superseded_by: Optional[str] = None
+
+
+@dataclass
 class MemoryRecord:
     memory_id: str
     type: str
@@ -67,11 +74,17 @@ class MemoryRecord:
     sensitivity: Sensitivity = field(default_factory=Sensitivity)
     version: VersionInfo = field(default_factory=VersionInfo)
     audit: AuditInfo = field(default_factory=AuditInfo)
+    temporal: TemporalInfo = field(default_factory=TemporalInfo)
     deleted: bool = False
 
     def finalize_hash(self) -> "MemoryRecord":
-        payload = self.content + self.summary + self.memory_id + self.version.version_id
+        payload = self.content + self.summary + self.memory_id + self.version.version_id + self.temporal.valid_from
         self.audit.hash = stable_hash(payload)
+        return self
+
+    def invalidate(self, valid_to: Optional[str] = None, superseded_by: Optional[str] = None) -> "MemoryRecord":
+        self.temporal.valid_to = valid_to or utc_now()
+        self.temporal.superseded_by = superseded_by
         return self
 
     def to_dict(self) -> Dict[str, Any]:
@@ -86,6 +99,7 @@ class MemoryRecord:
         sensitivity = Sensitivity(**data.get("sensitivity", {}))
         version = VersionInfo(**data.get("version", {}))
         audit = AuditInfo(**data.get("audit", {}))
+        temporal = TemporalInfo(**data.get("temporal", {}))
         return cls(
             memory_id=data["memory_id"],
             type=data["type"],
@@ -104,6 +118,7 @@ class MemoryRecord:
             sensitivity=sensitivity,
             version=version,
             audit=audit,
+            temporal=temporal,
             deleted=bool(data.get("deleted", False)),
         )
 

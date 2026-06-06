@@ -11,7 +11,7 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 2298",
+      "detail": "中文字符数 2405",
       "severity": "P0"
     },
     {
@@ -32,14 +32,14 @@
       "category": "中文文档",
       "name": "docs/平台摘要.md",
       "ok": true,
-      "detail": "中文字符数 2703",
+      "detail": "中文字符数 2706",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/项目介绍总览.md",
       "ok": true,
-      "detail": "中文字符数 5455",
+      "detail": "中文字符数 5773",
       "severity": "P0"
     },
     {
@@ -53,7 +53,7 @@
       "category": "中文文档",
       "name": "docs/详细设计说明书.md",
       "ok": true,
-      "detail": "中文字符数 2241",
+      "detail": "中文字符数 2457",
       "severity": "P0"
     },
     {
@@ -109,21 +109,21 @@
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 2045",
+      "detail": "中文字符数 2083",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/赛题符合性说明.md",
       "ok": true,
-      "detail": "中文字符数 1058",
+      "detail": "中文字符数 1074",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/评委证据包索引.md",
       "ok": true,
-      "detail": "中文字符数 1663",
+      "detail": "中文字符数 1668",
       "severity": "P0"
     },
     {
@@ -137,7 +137,7 @@
       "category": "中文文档",
       "name": "docs/答辩稿.md",
       "ok": true,
-      "detail": "中文字符数 5838",
+      "detail": "中文字符数 5841",
       "severity": "P0"
     },
     {

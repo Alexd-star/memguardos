@@ -56,6 +56,9 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
     if command == "memory_policy":
         eviction_limit = _int_param(request, "eviction_limit", 10, minimum=1, maximum=100)
         return {"ok": True, "result": service.memory_policy_status(eviction_limit=eviction_limit)}
+    if command == "temporal_status":
+        limit = _int_param(request, "limit", 20, minimum=1, maximum=100)
+        return {"ok": True, "result": service.temporal_status(limit=limit)}
     if command == "list":
         return {
             "ok": True,
