@@ -43,7 +43,7 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 
 最新结果：
 
-- 单元测试：`60 passed`
+- 单元测试：`68 passed`
 - 负载评测：1000 条记忆，120 次检索请求
 - 最新 1k 负载 P95：8.904 ms
 - 最新证据包未单独采集 5k 负载；10k 规模评测覆盖更大数据量

@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 113,
-    "passed": 113,
+    "total": 131,
+    "passed": 131,
     "failed": 0,
     "warnings": 0
   },
@@ -11,14 +11,140 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 2711",
+      "detail": "中文字符数 3045",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "PROJECT_INDEX.md",
+      "ok": true,
+      "detail": "中文字符数 2251",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/01_项目简介.md",
+      "ok": true,
+      "detail": "中文字符数 1276",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/02_用户手册.md",
+      "ok": true,
+      "detail": "中文字符数 848",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/03_操作手册.md",
+      "ok": true,
+      "detail": "中文字符数 585",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/04_开发者文档.md",
+      "ok": true,
+      "detail": "中文字符数 837",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/05_项目架构说明.md",
+      "ok": true,
+      "detail": "中文字符数 877",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/06_代码结构说明.md",
+      "ok": true,
+      "detail": "中文字符数 866",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/07_核心模块说明.md",
+      "ok": true,
+      "detail": "中文字符数 978",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/08_算法说明.md",
+      "ok": true,
+      "detail": "中文字符数 1068",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/09_接口文档.md",
+      "ok": true,
+      "detail": "中文字符数 590",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/10_数据说明.md",
+      "ok": true,
+      "detail": "中文字符数 620",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/11_配置说明.md",
+      "ok": true,
+      "detail": "中文字符数 514",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/12_环境依赖与部署.md",
+      "ok": true,
+      "detail": "中文字符数 395",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/13_测试说明.md",
+      "ok": true,
+      "detail": "中文字符数 418",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/14_常见问题FAQ.md",
+      "ok": true,
+      "detail": "中文字符数 698",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/15_更新日志.md",
+      "ok": true,
+      "detail": "中文字符数 403",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/16_历史文件说明.md",
+      "ok": true,
+      "detail": "中文字符数 511",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/17_项目交付说明.md",
+      "ok": true,
+      "detail": "中文字符数 603",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/正式提交材料说明.md",
       "ok": true,
-      "detail": "中文字符数 629",
+      "detail": "中文字符数 644",
       "severity": "P0"
     },
     {
@@ -39,7 +165,7 @@
       "category": "中文文档",
       "name": "docs/项目介绍总览.md",
       "ok": true,
-      "detail": "中文字符数 5932",
+      "detail": "中文字符数 5928",
       "severity": "P0"
     },
     {
@@ -95,7 +221,7 @@
       "category": "中文文档",
       "name": "docs/部署手册.md",
       "ok": true,
-      "detail": "中文字符数 1352",
+      "detail": "中文字符数 1387",
       "severity": "P0"
     },
     {
@@ -109,7 +235,7 @@
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 2487",
+      "detail": "中文字符数 2489",
       "severity": "P0"
     },
     {

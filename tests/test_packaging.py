@@ -4,7 +4,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from scripts.inspect_submission_package import REQUIRED_PATHS, inspect_package
 from scripts.package_submission import COMPETITION_ROLES, ROOT, classify_file, should_skip
 from scripts.smoke_submission_archive import command_name
-from scripts.check_competition_ready import check_eval, check_openkylin_metrics
+from scripts.check_competition_ready import check_deb_install_evidence, check_eval, check_openkylin_metrics
 
 
 def test_competition_package_keeps_formal_and_process_materials_separate():
@@ -237,5 +237,35 @@ def test_competition_ready_checks_openkylin_metric_evidence(tmp_path):
     )
 
     checks = check_openkylin_metrics(evidence, severity="P0")
+    assert checks
+    assert all(item.ok for item in checks)
+
+
+def test_competition_ready_accepts_current_deb_install_evidence_format(tmp_path):
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    (evidence / "deb_apt_install_maintenance.txt").write_text("正在设置 memguardos (0.1.0) ...\n", encoding="utf-8")
+    (evidence / "deb_apt_install_verify.txt").write_text(
+        """
+Status: install ok installed
+Active: active (running)
+--- verify audit ---
+{"ok": true, "checked": 96}
+--- plugin dependency check ---
+plugin_ldd_missing=0
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (evidence / "deb_apt_install_sdk_after_fix.txt").write_text(
+        """
+$ memctl sdk-status --probe-embedding
+{"embedding":{"inference_ready":true,"embedding_probe":{"ok":true,"dim":768}}}
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    checks = check_deb_install_evidence(evidence, severity="P0")
     assert checks
     assert all(item.ok for item in checks)

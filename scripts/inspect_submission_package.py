@@ -241,15 +241,20 @@ def check_evidence_content(package: Path, name_set: set[str]) -> list[dict[str, 
         for token, reason in [
             ("Status: install ok installed", "dpkg status is not install ok installed"),
             ("Active: active (running)", "memguardd.service is not active in evidence"),
-            ("plugin_ldd_missing=0", "desktop plugin ldd check is not clean"),
-            ("memctl verify-audit", "audit chain verification command is missing after deb install"),
-            ('"ok": true', "audit chain verification did not pass after deb install"),
         ]:
             if token not in deb_verify:
                 failures.append({"path": "docs/evidence/latest/deb_apt_install_verify.txt", "reason": reason})
+        if "plugin_ldd_missing=0" not in deb_verify:
+            failures.append({"path": "docs/evidence/latest/deb_apt_install_verify.txt", "reason": "desktop plugin ldd check is not clean"})
+        if '"ok": true' not in deb_verify or ("memctl verify-audit" not in deb_verify and "--- verify audit ---" not in deb_verify):
+            failures.append({"path": "docs/evidence/latest/deb_apt_install_verify.txt", "reason": "audit chain verification did not pass after deb install"})
 
         deb_sdk = text("docs/evidence/latest/deb_apt_install_sdk_after_fix.txt")
-        if ("inference_ready=true" not in deb_sdk and '"inference_ready": true' not in deb_sdk) or "embedding.length=768" not in deb_sdk:
+        deb_sdk_json = _json_from_capture(deb_sdk)
+        inference_ready = _nested_get(deb_sdk_json or {}, ["embedding", "inference_ready"]) is True
+        embedding_dim = _nested_get(deb_sdk_json or {}, ["embedding", "embedding_probe", "dim"])
+        legacy_embedding_ok = ("inference_ready=true" in deb_sdk or '"inference_ready": true' in deb_sdk) and "embedding.length=768" in deb_sdk
+        if not ((inference_ready and embedding_dim == 768) or legacy_embedding_ok):
             failures.append({"path": "docs/evidence/latest/deb_apt_install_sdk_after_fix.txt", "reason": "missing post-install Kylin embedding inference evidence"})
     return failures
 

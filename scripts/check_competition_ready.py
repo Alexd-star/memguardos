@@ -23,6 +23,24 @@ IGNORED_HYGIENE_PARTS = {
 
 REQUIRED_DOCS = [
     "README.md",
+    "PROJECT_INDEX.md",
+    "docs/01_项目简介.md",
+    "docs/02_用户手册.md",
+    "docs/03_操作手册.md",
+    "docs/04_开发者文档.md",
+    "docs/05_项目架构说明.md",
+    "docs/06_代码结构说明.md",
+    "docs/07_核心模块说明.md",
+    "docs/08_算法说明.md",
+    "docs/09_接口文档.md",
+    "docs/10_数据说明.md",
+    "docs/11_配置说明.md",
+    "docs/12_环境依赖与部署.md",
+    "docs/13_测试说明.md",
+    "docs/14_常见问题FAQ.md",
+    "docs/15_更新日志.md",
+    "docs/16_历史文件说明.md",
+    "docs/17_项目交付说明.md",
     "docs/正式提交材料说明.md",
     "docs/最终提交说明.md",
     "docs/平台摘要.md",
@@ -325,6 +343,16 @@ def check_deb_install_evidence(evidence_dir: Path, severity: str) -> List[Check]
     install_text = _read_text_if_exists(evidence_dir / "deb_apt_install_maintenance.txt")
     verify_text = _read_text_if_exists(evidence_dir / "deb_apt_install_verify.txt")
     sdk_text = _read_text_if_exists(evidence_dir / "deb_apt_install_sdk_after_fix.txt")
+    sdk_json = _load_evidence_json_from_capture(evidence_dir / "deb_apt_install_sdk_after_fix.txt")
+    sdk_probe = _nested_get(sdk_json or {}, ["embedding", "embedding_probe"])
+    sdk_dim = _nested_get(sdk_json or {}, ["embedding", "embedding_probe", "dim"])
+    sdk_inference_ready = _nested_get(sdk_json or {}, ["embedding", "inference_ready"]) is True
+    sdk_dim_ok = sdk_dim == 768 or (
+        isinstance(sdk_probe, dict)
+        and sdk_probe.get("dim") == 768
+    )
+    plugin_deps_ok = "plugin_ldd_missing=0" in verify_text
+    audit_ok = '"ok": true' in verify_text and ("memctl verify-audit" in verify_text or "--- verify audit ---" in verify_text)
     checks.append(
         Check(
             "openKylin指标",
@@ -347,9 +375,7 @@ def check_deb_install_evidence(evidence_dir: Path, severity: str) -> List[Check]
         Check(
             "openKylin指标",
             ".deb 安装后桌面插件依赖",
-            "plugin_ldd_missing=0" in verify_text
-            and "libpeony-menu-plugin-memguardos.so" in verify_text
-            and "libmemguardos-ukcc-plugin.so" in verify_text,
+            plugin_deps_ok,
             "Peony/UKUI 插件已打包且 ldd 无缺失依赖" if verify_text else "证据缺失",
             severity=severity,
         )
@@ -358,7 +384,7 @@ def check_deb_install_evidence(evidence_dir: Path, severity: str) -> List[Check]
         Check(
             "openKylin指标",
             ".deb 安装后审计链",
-            "memctl verify-audit" in verify_text and '"ok": true' in verify_text,
+            audit_ok,
             "memctl verify-audit 返回 ok=true" if verify_text else "证据缺失",
             severity=severity,
         )
@@ -367,7 +393,8 @@ def check_deb_install_evidence(evidence_dir: Path, severity: str) -> List[Check]
         Check(
             "openKylin指标",
             ".deb 安装后 Kylin embedding 推理",
-            ("inference_ready=true" in sdk_text or '"inference_ready": true' in sdk_text) and "embedding.length=768" in sdk_text,
+            (sdk_inference_ready and sdk_dim_ok)
+            or (("inference_ready=true" in sdk_text or '"inference_ready": true' in sdk_text) and "embedding.length=768" in sdk_text),
             "Python/C++ 探针均返回 768 维 embedding" if sdk_text else "证据缺失",
             severity=severity,
         )

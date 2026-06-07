@@ -1,9 +1,9 @@
-+ dpkg -s memguardos
+$ dpkg -s memguardos
 Package: memguardos
 Status: install ok installed
 Priority: optional
 Section: utils
-Installed-Size: 43816
+Installed-Size: 43928
 Maintainer: MemGuardOS Project Team <memguardos@example.com>
 Architecture: amd64
 Version: 0.1.0
@@ -15,12 +15,57 @@ Description: Linux-oriented OS Agent memory extraction and precise forgetting
  sensitive information filtering, auditable precise forgetting, systemd/cgroup
  deployment, auditd/journald integration and optional UKUI desktop plugins.
 Homepage: https://github.com/Alexd-star/memguardos
-+ command -v memctl
-/usr/bin/memctl
-+ command -v memguardd
-/usr/bin/memguardd
-+ memctl doctor
-Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock: Could not connect: Connection refused
+--- systemctl show fragment ---
+FragmentPath=/usr/lib/systemd/system/memguardd.service
+DropInPaths=
+--- systemctl cat memguardd ---
+# /usr/lib/systemd/system/memguardd.service
+[Unit]
+Description=MemGuardOS agent memory service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/memguardos
+Environment=PYTHONPATH=/opt/memguardos
+RuntimeDirectory=memguardos
+ExecStart=/usr/bin/python3 -m memguard.daemon --interval 60 --socket /run/memguardos/memguard.sock --socket-mode 660
+Restart=always
+RestartSec=5
+MemoryMax=512M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target
+--- systemctl status memguardd ---
+● memguardd.service - MemGuardOS agent memory service
+     Loaded: loaded (/usr/lib/systemd/system/memguardd.service; enabled; preset: enabled)
+     Active: active (running) since Sun 2026-06-07 17:23:59 CST; 3s ago
+   Main PID: 1572523 (python3)
+      Tasks: 2 (limit: 6991)
+     Memory: 13.5M (max: 512.0M available: 498.4M peak: 15.5M)
+        CPU: 100ms
+     CGroup: /system.slice/memguardd.service
+             └─1572523 /usr/bin/python3 -m memguard.daemon --interval 60 --socket /run/memguardos/memguard.sock --socket-mode 660
+
+6月 07 17:23:59 luo-pc systemd[1]: Started memguardd.service - MemGuardOS agent memory service.
+6月 07 17:23:59 luo-pc memguardd[1572527]: {"detail": {"cgroup_v2": true, "namespace": "default", "namespace_home": "/root/.memguardos", "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_started", "memory_id": null}
+6月 07 17:23:59 luo-pc python3[1572523]: {"status": "ready", "python": "3.12.2", "namespace": "default", "namespace_home": "/root/.memguardos", "cgroup_v2": true, "proc_cgroup": "0::/system.slice/memguardd.service"}
+6月 07 17:23:59 luo-pc memguardd[1572534]: {"detail": {"auth_enabled": false, "mode": "0o660", "path": "/run/memguardos/memguard.sock"}, "event_type": "api_socket_ready", "memory_id": null}
+6月 07 17:23:59 luo-pc memguardd[1572535]: {"detail": {"cgroup_v2": true, "namespace": "default", "namespace_home": "/root/.memguardos", "proc_cgroup": "0::/system.slice/memguardd.service", "python": "3.12.2", "status": "ready"}, "event_type": "daemon_heartbeat", "memory_id": null}
+--- systemctl show resource controls ---
+ExecMainStatus=0
+CPUQuotaPerSecUSec=500ms
+MemoryMax=536870912
+ActiveState=active
+SubState=running
+--- socket path and mode ---
+srw-rw---- 1 root root 0  6月 7日 17:23 /run/memguardos/memguard.sock
+socket_mode=660 socket_owner=root socket_group=root
+--- legacy backup files ---
+-rw-r--r-- 1 root root 406  5月23日 23:39 /etc/systemd/system/memguardd.service.memguardos-legacy.bak
+--- memctl doctor ---
+[1780824242858] [32minfo [0m Proxy init engine sessionId:283584270.
 {
   "python": "3.12.2",
   "platform": "Linux-6.6.0-19-generic-x86_64-with-glibc2.38",
@@ -40,10 +85,10 @@ Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/cor
     "db_exists": true,
     "custom_patterns_exists": false,
     "store_bytes": 13976,
-    "db_bytes": 106496,
+    "db_bytes": 118784,
     "record_count": 7,
     "live_record_count": 7,
-    "audit_event_count": 94
+    "audit_event_count": 96
   },
   "store_path": "/home/luo/.memguardos/memory.segment",
   "db_path": "/home/luo/.memguardos/memguard.sqlite3",
@@ -63,11 +108,11 @@ Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/cor
     "platform": "Linux",
     "is_linux": true,
     "cgroup_v2_mounted": true,
-    "proc_cgroup": "0::/user.slice/user-1000.slice/session-130.scope",
+    "proc_cgroup": "0::/user.slice/user-1000.slice/session-164.scope",
     "memory_current": null,
     "memory_max": null,
     "cpu_max": null,
-    "pid": 397465
+    "pid": 1572978
   },
   "kylin_ai_sdk": {
     "embedding": {
@@ -254,13 +299,18 @@ Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/cor
       },
       "session": {
         "created": true,
-        "init_code": 3,
-        "init_ok": false,
-        "init_code_hint": "runtime connection error; recreate session after checking kylin-ai-runtime"
+        "init_code": 0,
+        "init_ok": true,
+        "init_code_hint": "success",
+        "model_info_ok": true
       },
-      "model_info": null,
+      "model_info": {
+        "dim": 768,
+        "name": "ensemble-embd_gte-base_uint8-text",
+        "ondevice": true
+      },
       "embedding_probe": null,
-      "available": false,
+      "available": true,
       "inference_ready": null,
       "ready_for_default_retrieval": null,
       "fallback": "hash_embedding",
@@ -292,60 +342,11 @@ Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/cor
     }
   }
 }
-+ sudo systemctl daemon-reload
-+ sudo systemctl enable memguardd
-Created symlink /etc/systemd/system/multi-user.target.wants/memguardd.service → /etc/systemd/system/memguardd.service.
-+ sudo systemctl restart memguardd
-+ systemctl status memguardd --no-pager
-● memguardd.service - MemGuardOS agent memory service
-     Loaded: loaded (/etc/systemd/system/memguardd.service; enabled; preset: enabled)
-     Active: active (running) since Sun 2026-06-07 13:58:15 CST; 21ms ago
-   Main PID: 398048 (python3)
-      Tasks: 1 (limit: 6991)
-     Memory: 2.9M (max: 512.0M available: 509.0M peak: 2.9M)
-        CPU: 11ms
-     CGroup: /system.slice/memguardd.service
-             └─398048 /usr/bin/python3 -m memguard.daemon --interval 60 --socket /run/memguardos/memguard.sock --socket-mode 666
-
-6月 07 13:58:15 luo-pc systemd[1]: Started memguardd.service - MemGuardOS agent memory service.
-+ systemctl show memguardd -p MemoryMax -p CPUQuotaPerSecUSec -p ControlGroup --no-pager
-ControlGroup=/system.slice/memguardd.service
-CPUQuotaPerSecUSec=500ms
-MemoryMax=536870912
-+ dpkg -L memguardos
-+ egrep 'usr/bin/memctl|memguardd.service|peony-extensions|ukui-control-center|opt/memguardos/memguard/service.py'
-/lib/systemd/system/memguardd.service
-/opt/memguardos/memguard/service.py
-/opt/memguardos/scripts/memguardd.service
-/usr/bin/memctl
-/usr/lib/x86_64-linux-gnu/peony-extensions
-/usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
-/usr/lib/x86_64-linux-gnu/ukui-control-center
-/usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
-++ dpkg-architecture -qDEB_HOST_MULTIARCH
-+ grep 'not found'
-+ ldd /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
-+ true
-+ grep 'not found'
-++ dpkg-architecture -qDEB_HOST_MULTIARCH
-+ ldd /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
-+ true
-+ echo plugin_ldd_missing=0
-plugin_ldd_missing=0
-+ memctl status
-{
-  "platform": "Linux",
-  "is_linux": true,
-  "cgroup_v2_mounted": true,
-  "proc_cgroup": "0::/user.slice/user-1000.slice/session-130.scope",
-  "memory_current": null,
-  "memory_max": null,
-  "cpu_max": null,
-  "pid": 398128
-}
-+ memctl verify-audit
+--- verify audit ---
 {
   "ok": true,
-  "checked": 94,
-  "head_hash": "6f73cc32eff1448077cd9b76d118e5d540267f6ea63e72df5c11faa1d476ca26"
+  "checked": 96,
+  "head_hash": "47e65f612a34b58c2ccc316cfe2ede649abc8d48d096935c2037b29a70182e80"
 }
+--- plugin dependency check ---
+plugin_ldd_missing=0

@@ -1,4 +1,3 @@
-$ .venv/bin/python -m pytest -q
-
+$ cd ~/memguardos && .venv/bin/python -m pytest -q
 ....................................................................     [100%]
-68 passed in 15.16s
+68 passed in 16.88s

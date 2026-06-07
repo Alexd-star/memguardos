@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-06-07T06:07:11.563435+00:00",
+  "generated_at": "2026-06-07T09:27:09.019895+00:00",
   "root": "docs/evidence/latest",
   "file_count": 71,
-  "total_bytes": 479635,
+  "total_bytes": 434014,
   "files": [
     {
       "path": "agent_batch_search.txt",
@@ -56,23 +56,23 @@
     },
     {
       "path": "deb_apt_install_maintenance.txt",
-      "bytes": 1917,
-      "sha256": "5e76f4b1958ec6bb1c835fd15a8888f136609142b973682a164e298d0031ed9b"
+      "bytes": 1868,
+      "sha256": "8488b2d3c35cf30850c11d80817ba7619a0228dc61d906bec8233d8614d80942"
     },
     {
       "path": "deb_apt_install_sdk_after_fix.txt",
-      "bytes": 51082,
-      "sha256": "c07c2b7e5bad61f4a2efe30a5d3809833174b8f471696c3d2d9cfc6d8a219e84"
+      "bytes": 8127,
+      "sha256": "05c302c633295aa2dd5489a33a4cc72cf529130f9ed67f3f75ea7d6262263d83"
     },
     {
       "path": "deb_apt_install_verify.txt",
-      "bytes": 12940,
-      "sha256": "81517eb29f4349782c0ca6bf24f9893a4b141f8be1ee86d4019f35b4997f72fd"
+      "bytes": 13394,
+      "sha256": "d786466dcf82d44627b89dbdd8ab4b1858fd0a452b86e42a103c27f8bce4bcc5"
     },
     {
       "path": "deb_package.txt",
-      "bytes": 11457,
-      "sha256": "d003c46446611a9baf2613778de1e94e300d34e54e62b9a5bf10bb10a2640bb6"
+      "bytes": 8368,
+      "sha256": "9ede54bd2d01163288e4d6c1195e34ec6a1ef638743ac71144e1ba7dede6055d"
     },
     {
       "path": "default_audit_after_reset.txt",
@@ -251,8 +251,8 @@
     },
     {
       "path": "pytest.txt",
-      "bytes": 133,
-      "sha256": "c3c76724dc2f30ba1870527451df84968bc0542e4afab3d13352d98e4ab79335"
+      "bytes": 151,
+      "sha256": "296df1369453fcd6cc6e759dc8befce425e05bc40b0b19afd469906bc7b3f112"
     },
     {
       "path": "quality_report.txt",

@@ -97,6 +97,15 @@ fi
 cat >"${STAGING}/DEBIAN/postinst" <<'SH'
 #!/bin/sh
 set -e
+for unit in memguardd.service memguardd@.service; do
+  legacy="/etc/systemd/system/${unit}"
+  packaged="/lib/systemd/system/${unit}"
+  if [ -f "${legacy}" ] && [ -f "${packaged}" ] && grep -q "MemGuardOS" "${legacy}"; then
+    if ! cmp -s "${legacy}" "${packaged}"; then
+      mv "${legacy}" "${legacy}.memguardos-legacy.bak"
+    fi
+  fi
+done
 if command -v ldconfig >/dev/null 2>&1; then
   ldconfig || true
 fi

@@ -7,7 +7,7 @@ Type=simple
 WorkingDirectory=/opt/memguardos
 Environment=PYTHONPATH=/opt/memguardos
 RuntimeDirectory=memguardos
-ExecStart=/usr/bin/python3 -m memguard.daemon --interval 60 --socket /run/memguardos/memguard.sock --socket-mode 666
+ExecStart=/usr/bin/python3 -m memguard.daemon --interval 60 --socket /run/memguardos/memguard.sock --socket-mode 660
 Restart=always
 RestartSec=5
 MemoryMax=512M

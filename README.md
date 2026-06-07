@@ -16,6 +16,7 @@ MemGuardOS 是面向 **研究生操作系统开源创新大赛赛题 3：面向 
 - [openKylin 复验](#openkylin-复验)
 - [评测与证据](#评测与证据)
 - [项目结构](#项目结构)
+- [文档导航](#文档导航)
 - [正式提交材料](#正式提交材料)
 - [准确边界](#准确边界)
 
@@ -33,8 +34,8 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地单元测试 | 68 passed |
-| openKylin 单元测试证据 | 60 passed |
+| 本地单元测试 | 69 passed |
+| openKylin 单元测试证据 | 68 passed |
 | 本地 1k 负载 P95 | 0.429 ms |
 | openKylin 1k 负载 P95 | 8.904 ms |
 | openKylin 10k 负载 P95 | 10.844 ms |
@@ -55,7 +56,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | 多源记忆接入 | 文本、文件、结构化配置、shell 行为、工具执行结果、OS 事件、auditd 日志 | `memctl ingest`、`ingest-config`、`ingest-history`、`ingest-tool-result`、`ingest-os-event` |
 | 记忆建模 | 偏好记忆、知识记忆、敏感策略记忆；可解释混合语义抽取；`working`、`session`、`long_term` 三层记忆；工具轨迹可建模为状态-动作-结果程序性记忆 | `memguard/extraction/semantic.py`、`memguard/models.py`、`memguard/service.py` |
 | 数据质量治理 | Unicode 标准化、空输入拒绝、低质量提示、结构化字段校验、质量分入审计 | `memguard/ingestion/quality.py` |
-| 轻量化存储 | mmap 追加式段文件、SQLite 元数据、FTS、图谱边、审计哈希链 | `memguard/store/` |
+| 轻量化存储 | mmap 追加式段文件、SQLite 元数据与脱敏检索副本、FTS、图谱边、审计哈希链 | `memguard/store/` |
 | 时间有效性 | `valid_from/valid_to/superseded_by` 描述事实生效窗口，更新、提升、回滚和遗忘都会关闭旧版本窗口 | `memctl temporal-status`、`memctl versions` |
 | 混合检索 | SQLite FTS、稳定 hash-vector、图谱关联、跨语言技术词扩展、冲突处理；摘要层、实体关系层、原文 chunk 层的层次图谱检索 | `memguard/retrieval/`、`memctl hierarchical-graph-search` |
 | RAG 上下文 | 检索、脱敏、排序、token 预算估算、上下文包、来源分布、选择轨迹、过滤策略和 provider-neutral prompt | `memctl build-context`、`memctl build-prompt` |
@@ -83,7 +84,7 @@ flowchart LR
         F["敏感检测与脱敏"]
         G["偏好/知识/策略建模"]
         H["mmap 段文件"]
-        I["SQLite 元数据/FTS/图谱/审计"]
+        I["SQLite 元数据/脱敏检索副本/FTS/图谱/审计"]
     end
 
     subgraph Use["Agent 使用路径"]
@@ -252,6 +253,23 @@ memguardos/
 ```
 
 完整工程仓库还包含 `.github/`、`.devcontainer/`、`Makefile`、贡献指南、变更日志、打包脚本和自检脚本。这些材料用于协作、CI、备份和工程维护，不作为正式竞赛作品主体。
+
+## 文档导航
+
+项目新增统一中文文档索引 [PROJECT_INDEX.md](PROJECT_INDEX.md)，用于说明每个文件和文件夹的作用、历史文件整理建议、运行入口、构建测试流程和后续维护建议。
+
+编号文档体系用于快速定位不同读者需要的资料：
+
+| 阅读目标 | 推荐文档 |
+|---|---|
+| 了解项目是什么 | [docs/01_项目简介.md](docs/01_项目简介.md) |
+| 学会使用命令和控制台 | [docs/02_用户手册.md](docs/02_用户手册.md) |
+| 部署、启动、证据采集 | [docs/03_操作手册.md](docs/03_操作手册.md)、[docs/12_环境依赖与部署.md](docs/12_环境依赖与部署.md) |
+| 继续开发和理解源码 | [docs/04_开发者文档.md](docs/04_开发者文档.md)、[docs/06_代码结构说明.md](docs/06_代码结构说明.md) |
+| 理解架构、模块和算法 | [docs/05_项目架构说明.md](docs/05_项目架构说明.md)、[docs/07_核心模块说明.md](docs/07_核心模块说明.md)、[docs/08_算法说明.md](docs/08_算法说明.md) |
+| 对接 Agent 或 API | [docs/09_接口文档.md](docs/09_接口文档.md) |
+| 查看数据、配置、测试和 FAQ | [docs/10_数据说明.md](docs/10_数据说明.md)、[docs/11_配置说明.md](docs/11_配置说明.md)、[docs/13_测试说明.md](docs/13_测试说明.md)、[docs/14_常见问题FAQ.md](docs/14_常见问题FAQ.md) |
+| 了解版本、历史和交付 | [docs/15_更新日志.md](docs/15_更新日志.md)、[docs/16_历史文件说明.md](docs/16_历史文件说明.md)、[docs/17_项目交付说明.md](docs/17_项目交付说明.md) |
 
 ## 正式提交材料
 
