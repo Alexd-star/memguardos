@@ -50,4 +50,10 @@
 {"label":"knowledge_real_video_smoke_order","text":"演示视频流程：先展示 doctor 和 verify-audit，再展示 ingest、build-context、forget --yes --compact、systemd/cgroup 和 SDK 证据。","expected_type":"knowledge","expected_subtype":"workflow"}
 {"label":"knowledge_real_submission_package_audit","text":"正式提交包审计流程：生成 memguardos_competition_submission zip 后，运行 inspect_submission_package 检查正式文档、证据内容、本机路径和弱 SDK 证据。","expected_type":"knowledge","expected_subtype":"workflow"}
 {"label":"pref_real_answer_evidence_first","text":"答辩回答请先给证据结论，再说明边界，不要把可选 SDK、BPF LSM 或 UKUI 插件能力夸大。","expected_type":"preference","expected_subtype":"output_style"}
-{"label":"pref_real_openkylin_video_short_path","text":"录制 openKylin 演示视频时，请优先展示核心闭环，不要把大量长日志逐行念完。","expected_type":"preference","expected_subtype":"output_style"}
+{"label":"pref_real_openkylin_video_short_path","text":"录制 openKylin 演示视频时，请优先展示核心闭环，不要把大量长日志逐行念完。","expected_type":"preference","expected_subtype":"user_habit"}
+{"label":"knowledge_real_auditd_shadow_log","text":"真实风格 auditd 原始日志：type=PATH msg=audit(1717000000.123:420): item=0 name=\"/etc/shadow\" nametype=NORMAL；该事件应转为 OS event 并触发 sensitive_os_source 阻断。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_real_systemd_exit_code_runbook","text":"真实 systemd 故障流程：memguardd.service 显示 Result=exit-code 时，先运行 systemctl status，再看 journalctl -u memguardd，随后检查 PYTHONPATH、工作目录和 ExecStart 包装脚本。","expected_type":"knowledge","expected_subtype":"workflow"}
+{"label":"pref_real_shell_danger_confirm","text":"用户行为偏好：shell history 出现 rm -rf、dd、mkfs 或密钥导出命令时，后续 Agent 必须先二次确认，再执行高风险操作。","source_kind":"user_behavior","expected_type":"sensitive_policy","expected_subtype":"behavior_risk"}
+{"label":"knowledge_real_config_conflict_resolution","text":"真实配置冲突案例：旧配置 answer.style=verbose，新手动配置 answer.style=concise_with_risk；冲突解决应选择更新时间更近且来源为 manual 的偏好。","source_kind":"manual_config","expected_type":"preference","expected_subtype":"user_habit"}
+{"label":"knowledge_real_failed_test_repair_trace","text":"失败修复轨迹：pytest 报告 web dashboard smoke 缺少诊断导出按钮后，先补页面按钮，再补 smoke 断言，最后复跑 pytest 和 inspect_submission_package。","expected_type":"knowledge","expected_subtype":"case"}
+{"label":"pref_real_rag_source_explain_first","text":"答辩演示 RAG 上下文时，请先展示来源分布、selection trace 和脱敏状态，再展示完整 JSON。","expected_type":"sensitive_policy","expected_subtype":"security_policy"}

@@ -52,6 +52,7 @@ FORMAL_DOCS = {
     "docs/最终提交说明.md",
     "docs/平台摘要.md",
     "docs/赛题符合性说明.md",
+    "docs/可解释抽取答辩说明.md",
     "docs/项目介绍总览.md",
     "docs/概要设计说明书.md",
     "docs/详细设计说明书.md",

@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 112,
-    "passed": 112,
+    "total": 113,
+    "passed": 113,
     "failed": 0,
     "warnings": 0
   },
@@ -25,14 +25,14 @@
       "category": "中文文档",
       "name": "docs/最终提交说明.md",
       "ok": true,
-      "detail": "中文字符数 2760",
+      "detail": "中文字符数 2793",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/平台摘要.md",
       "ok": true,
-      "detail": "中文字符数 2712",
+      "detail": "中文字符数 2711",
       "severity": "P0"
     },
     {
@@ -109,7 +109,7 @@
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 2390",
+      "detail": "中文字符数 2414",
       "severity": "P0"
     },
     {
@@ -121,9 +121,16 @@
     },
     {
       "category": "中文文档",
+      "name": "docs/可解释抽取答辩说明.md",
+      "ok": true,
+      "detail": "中文字符数 1278",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
       "name": "docs/评委证据包索引.md",
       "ok": true,
-      "detail": "中文字符数 1797",
+      "detail": "中文字符数 1826",
       "severity": "P0"
     },
     {
@@ -137,7 +144,7 @@
       "category": "中文文档",
       "name": "docs/答辩稿.md",
       "ok": true,
-      "detail": "中文字符数 5935",
+      "detail": "中文字符数 5940",
       "severity": "P0"
     },
     {
@@ -347,7 +354,7 @@
       "category": "量化评测",
       "name": "负载 P95 延迟小于 500ms",
       "ok": true,
-      "detail": "当前 1.9630，要求 <= 500.0000",
+      "detail": "当前 0.4290，要求 <= 500.0000",
       "severity": "P0"
     },
     {
@@ -410,7 +417,7 @@
       "category": "量化评测",
       "name": "benchmark 用例规模",
       "ok": true,
-      "detail": "总用例/种子数 197",
+      "detail": "总用例/种子数 217",
       "severity": "P1"
     },
     {

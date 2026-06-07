@@ -355,6 +355,26 @@ def _dashboard_html() -> str:
           <div class="panel health"><strong>Kylin SDK</strong><span id="sdkBadge" class="badge">待检查</span></div>
           <div class="panel health"><strong>OS 资源</strong><span id="osBadge" class="badge">待检查</span></div>
         </div>
+        <div class="grid two" style="margin-top:12px">
+          <div class="panel emphasis">
+            <div class="item-title">评审证据总览</div>
+            <p class="muted">这一组卡片用于答辩第一屏快速说明：系统不是普通 RAG demo，而是包含 openKylin SDK、OS 机制、精准遗忘、审计链和产品化安装证据的本机 Agent 记忆组件。</p>
+            <div class="grid two">
+              <div class="item"><div class="item-title">217 条 benchmark 用例/种子</div><div class="muted">覆盖真实日志、失败修复、配置冲突、精准遗忘和程序性轨迹。</div></div>
+              <div class="item"><div class="item-title">10k P95 低于 500ms</div><div class="muted">openKylin 证据包验证端侧轻量检索性能。</div></div>
+              <div class="item"><div class="item-title">Kylin SDK 768 维推理</div><div class="muted">Python/C++ 探针均可复验，默认仍保留稳定 fallback。</div></div>
+              <div class="item"><div class="item-title">.deb 完整 apt 安装</div><div class="muted">维护模式安装后服务、cgroup、插件依赖和审计链均通过。</div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="item-title">一键演示流程</div>
+            <div class="list">
+              <div class="item"><div class="item-title">1. 状态与红黄绿状态</div><div class="muted">刷新总览，确认审计链、检索后端、SDK 和 OS 资源状态。</div></div>
+              <div class="item"><div class="item-title">2. 写入与抽取解释</div><div class="muted">写入偏好或真实故障文本，展示抽取类型、质量校验和敏感策略。</div></div>
+              <div class="item"><div class="item-title">3. RAG 与精准遗忘</div><div class="muted">展示来源分布、selection trace、脱敏状态，再进行 dry-run 和确认遗忘。</div></div>
+            </div>
+          </div>
+        </div>
         <div class="toolbar"><button class="primary" onclick="refresh(event)">刷新状态</button><button class="secondary" onclick="diagnostics(event)">运行诊断</button><button class="secondary" onclick="exportDiagnostics(event)">导出诊断包</button></div>
         <div class="grid two">
           <div class="panel"><div class="item-title">状态摘要</div><div id="statusCards" class="list"></div></div>

@@ -38,6 +38,7 @@ REQUIRED_DOCS = [
     "docs/用户手册.md",
     "docs/测试报告.md",
     "docs/赛题符合性说明.md",
+    "docs/可解释抽取答辩说明.md",
     "docs/评委证据包索引.md",
     "docs/答辩提纲.md",
     "docs/答辩稿.md",

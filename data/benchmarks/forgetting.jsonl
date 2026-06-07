@@ -6,7 +6,7 @@
 {"request":"忘记 auditd 监控 shadow 的案例","expected_delete":["knowledge_auditd_shadow_case","knowledge_real_audit_log_shadow"],"expected_keep":["knowledge_journald_en","knowledge_forget_negative_cache"]}
 {"request":"忘掉端侧 embedding SDK 768 维向量模型信息","expected_delete":["knowledge_embedding_sdk_zh"],"expected_keep":["knowledge_vector_sdk_en","knowledge_kylin_auto_retrieval"]}
 {"request":"忘掉中文回答偏好","expected_delete":["pref_output_chinese"],"expected_keep":["pref_linux_brief_zh"]}
-{"request":"删除高风险操作确认策略","expected_delete":["pref_security_confirm_delete","pref_real_shell_destructive_confirm"],"expected_keep":["pref_output_short_risk"]}
+{"request":"删除高风险操作确认策略","expected_delete":["pref_security_confirm_delete","pref_real_shell_destructive_confirm","pref_real_shell_danger_confirm"],"expected_keep":["pref_output_short_risk"]}
 {"request":"忘记普通缓存清理不等于精准遗忘这条知识","expected_delete":["knowledge_forget_negative_cache"],"expected_keep":["knowledge_forget_workflow_zh"]}
 {"request":"忘掉 shell history 中 pytest 行为记忆","expected_delete":["knowledge_behavior_shell_history"],"expected_keep":["knowledge_context_token_budget"]}
 {"request":"删除 UKUI 通知联动知识","expected_delete":["knowledge_ukui_notification"],"expected_keep":["knowledge_socket_local_api"]}
@@ -23,3 +23,7 @@
 {"request":"忘掉 deb 被 ostree-pkgs-guard 拦截案例","expected_delete":["knowledge_real_deb_ostree_guard"],"expected_keep":["knowledge_linux_smoke_portability"]}
 {"request":"忘掉审计链失败恢复流程","expected_delete":["knowledge_real_audit_hash_repair"],"expected_keep":["knowledge_audit_concurrency"]}
 {"request":"删除正式提交包审计流程","expected_delete":["knowledge_real_submission_package_audit"],"expected_keep":["knowledge_benchmark_realism"]}
+{"request":"忘掉 type=PATH name=/etc/shadow 的 auditd 原始日志样例","expected_delete":["knowledge_real_auditd_shadow_log"],"expected_keep":["knowledge_auditd_shadow_case","knowledge_journald_en"]}
+{"request":"删除 rm-rf dd mkfs 二次确认偏好","expected_delete":["pref_real_shell_danger_confirm","pref_real_shell_destructive_confirm"],"expected_keep":["knowledge_shell_history_hard_negative","pref_real_answer_evidence_first"]}
+{"request":"忘掉 PYTHONPATH ExecStart 包装脚本排查流程","expected_delete":["knowledge_real_systemd_exit_code_runbook"],"expected_keep":["knowledge_openkylin_service_zh"]}
+{"request":"删除答辩演示 selection trace 来源分布优先展示偏好","expected_delete":["pref_real_rag_source_explain_first"],"expected_keep":["knowledge_context_token_budget","knowledge_web_console_local"]}

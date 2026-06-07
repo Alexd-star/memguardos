@@ -181,14 +181,14 @@ def test_competition_ready_checks_procedural_memory_metrics(tmp_path):
     "context_explainability_ok": true
   },
   "dataset": {
-    "seed_memories": 53,
-    "retrieval_cases": 48,
+    "seed_memories": 59,
+    "retrieval_cases": 54,
     "sensitive_cases": 31,
-    "forgetting_cases": 25,
+    "forgetting_cases": 29,
     "conflict_cases": 10,
-    "graph_cases": 17,
+    "graph_cases": 19,
     "quality_cases": 6,
-    "procedural_cases": 7
+    "procedural_cases": 9
   }
 }
 """.strip(),
@@ -201,7 +201,7 @@ def test_competition_ready_checks_procedural_memory_metrics(tmp_path):
     assert by_name["程序性记忆子类型命中率"].ok is True
     assert by_name["层次图谱检索三层检查"].ok is True
     assert by_name["RAG 上下文解释性检查"].ok is True
-    assert by_name["benchmark 用例规模"].detail == "总用例/种子数 197"
+    assert by_name["benchmark 用例规模"].detail == "总用例/种子数 217"
 
 
 def test_competition_ready_checks_openkylin_metric_evidence(tmp_path):

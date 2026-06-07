@@ -46,3 +46,9 @@
 {"query":"正式提交包如何检查弱 SDK 证据和本机路径？","expected":["knowledge_real_submission_package_audit"],"k":5,"case":"realistic_package_audit"}
 {"query":"答辩时如何避免夸大 SDK BPF 和 UKUI 能力？","expected":["pref_real_answer_evidence_first"],"k":5,"case":"realistic_answer_boundary"}
 {"query":"openKylin 演示视频不要念什么内容？","expected":["pref_real_openkylin_video_short_path"],"k":5,"case":"realistic_video_style"}
+{"query":"真实 auditd shadow 原始日志应该如何进入记忆安全链路？","expected":["knowledge_real_auditd_shadow_log"],"k":5,"case":"realistic_auditd_shadow_raw_log"}
+{"query":"memguardd.service Result=exit-code 时应该怎么排查？","expected":["knowledge_real_systemd_exit_code_runbook"],"k":5,"case":"realistic_systemd_exit_code"}
+{"query":"shell history 里出现 rm -rf 或 mkfs 时 Agent 应该怎么处理？","expected":["pref_real_shell_danger_confirm"],"k":5,"case":"realistic_shell_danger_confirm"}
+{"query":"answer.style 新旧配置冲突时应该选择哪条？","expected":["knowledge_real_config_conflict_resolution"],"k":5,"case":"realistic_config_conflict"}
+{"query":"Web 控制台 smoke 缺少诊断导出按钮后如何修复？","expected":["knowledge_real_failed_test_repair_trace"],"k":5,"case":"realistic_failed_test_repair"}
+{"query":"RAG 上下文演示时应该先展示哪些解释信息？","expected":["pref_real_rag_source_explain_first"],"k":5,"case":"realistic_rag_explain_demo"}
