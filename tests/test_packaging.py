@@ -134,14 +134,14 @@ def sample_submission_body(name: str) -> str:
     if name == "docs/evidence/latest/eval_result_openkylin_10k.json":
         return """
 {
-  "latency_load": {"p95_latency_ms": 19.115, "p99_latency_ms": 118.875},
-  "resource_usage": {"process_rss_kb": 129176},
+  "latency_load": {"p95_latency_ms": 10.844, "p99_latency_ms": 106.095},
+  "resource_usage": {"process_rss_kb": 149284},
   "procedural_memory": {
     "recall_at_5": 1.0,
     "hierarchical_graph_layers_ok": true,
     "context_explainability_ok": true
   },
-  "agent_batch_search": {"p95_latency_ms": 17.204}
+  "agent_batch_search": {"p95_latency_ms": 15.427}
 }
 """.strip()
     if name == "docs/evidence/latest/build_context_explainability.txt":
@@ -210,14 +210,14 @@ def test_competition_ready_checks_openkylin_metric_evidence(tmp_path):
     (evidence / "eval_result_openkylin_10k.json").write_text(
         """
 {
-  "latency_load": {"p95_latency_ms": 19.115, "p99_latency_ms": 118.875},
-  "resource_usage": {"process_rss_kb": 129176},
+  "latency_load": {"p95_latency_ms": 10.844, "p99_latency_ms": 106.095},
+  "resource_usage": {"process_rss_kb": 149284},
   "procedural_memory": {
     "recall_at_5": 1.0,
     "hierarchical_graph_layers_ok": true,
     "context_explainability_ok": true
   },
-  "agent_batch_search": {"p95_latency_ms": 17.204}
+  "agent_batch_search": {"p95_latency_ms": 15.427}
 }
 """.strip(),
         encoding="utf-8",

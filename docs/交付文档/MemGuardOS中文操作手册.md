@@ -790,7 +790,7 @@ python scripts/web_dashboard_smoke.py
 python -m memguard.eval.run_eval --latency-size 10000 --latency-queries 150 --output docs/eval_result_openkylin_10k.json --markdown docs/eval_report_openkylin_10k.md
 ```
 
-当前正式证据中，openKylin 10k 负载 P95 为 19.115 ms，P99 为 118.875 ms，RSS 为 129176 KB；openKylin 单元测试证据为 60 passed；本地单元测试为 68 passed。提交前如果重新运行评测并得到新结果，应同步更新 README、测试报告、平台摘要和答辩材料中的指标。
+当前正式证据中，openKylin 10k 负载 P95 为 10.844 ms，P99 为 106.095 ms，RSS 为 149284 KB；openKylin 单元测试证据为 60 passed；本地单元测试为 68 passed。提交前如果重新运行评测并得到新结果，应同步更新 README、测试报告、平台摘要和答辩材料中的指标。
 
 ### 10.3 竞赛就绪自检
 
@@ -1332,7 +1332,7 @@ MemGuardOS 当前代码按功能分目录组织，核心服务、存储、检索
 
 证据文件不需要每个都很长。某些证据只要证明状态即可，例如 systemd active、cgroup 参数、SDK 推理维度、UKUI 可见性确认。某些证据则需要更完整，例如评测 JSON、审计链验证、提交包审计。用户应根据证据用途决定保留内容。过短会缺乏说服力，过长会增加阅读负担。正式提交时，最好通过证据索引告诉评委每个文件证明什么。
 
-证据还需要与文档同步。比如文档写 openKylin 10k P95 为 19.115 ms，就应能在对应 JSON 或报告中找到这个值。如果文档和证据不一致，评委可能认为数据过期或不可信。每次重新采集证据后，都应更新指标口径，并运行全文搜索检查旧数字残留。这个步骤虽然细碎，但对正式交付很关键。
+证据还需要与文档同步。比如文档写 openKylin 10k P95 为 10.844 ms，就应能在对应 JSON 或报告中找到这个值。如果文档和证据不一致，评委可能认为数据过期或不可信。每次重新采集证据后，都应更新指标口径，并运行全文搜索检查旧数字残留。这个步骤虽然细碎，但对正式交付很关键。
 
 ## 第22章 教学、课程设计与项目展示说明
 
