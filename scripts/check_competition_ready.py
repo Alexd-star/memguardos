@@ -86,6 +86,9 @@ REQUIRED_EVIDENCE = [
     "verify_audit.txt",
     "bpf_lsm_enforcer.txt",
     "deb_package.txt",
+    "deb_apt_install_maintenance.txt",
+    "deb_apt_install_verify.txt",
+    "deb_apt_install_sdk_after_fix.txt",
     "ukui_plugin_build.txt",
     "ukui_plugin_install.txt",
     "ukui_plugin_visible_final.txt",
@@ -220,6 +223,7 @@ def check_openkylin_evidence(evidence_dir: Path, allow_missing: bool = False) ->
     checks.append(Check("openKylin证据", "manifest.json", manifest.exists(), "证据清单存在" if manifest.exists() else "缺少证据清单", severity="P1"))
     checks.append(Check("openKylin证据", "SHA256SUMS.txt", sha.exists(), "哈希清单存在" if sha.exists() else "缺少哈希清单", severity="P1"))
     checks.extend(check_openkylin_metrics(evidence_dir, severity=severity))
+    checks.extend(check_deb_install_evidence(evidence_dir, severity=severity))
     checks.extend(check_evidence_manifest_freshness(evidence_dir, severity=severity))
     return checks
 
@@ -312,6 +316,61 @@ def check_openkylin_metrics(evidence_dir: Path, severity: str) -> List[Check]:
                 severity=severity,
             )
         )
+    return checks
+
+
+def check_deb_install_evidence(evidence_dir: Path, severity: str) -> List[Check]:
+    checks: List[Check] = []
+    install_text = _read_text_if_exists(evidence_dir / "deb_apt_install_maintenance.txt")
+    verify_text = _read_text_if_exists(evidence_dir / "deb_apt_install_verify.txt")
+    sdk_text = _read_text_if_exists(evidence_dir / "deb_apt_install_sdk_after_fix.txt")
+    checks.append(
+        Check(
+            "openKylin指标",
+            ".deb 维护模式 apt 安装",
+            "正在设置 memguardos" in install_text or "memguardos (0.1.0)" in install_text,
+            "apt install 输出包含 memguardos 安装过程" if install_text else "证据缺失",
+            severity=severity,
+        )
+    )
+    checks.append(
+        Check(
+            "openKylin指标",
+            ".deb 安装后 systemd 服务",
+            "Status: install ok installed" in verify_text and "Active: active (running)" in verify_text,
+            "dpkg 状态正常且 memguardd.service active" if verify_text else "证据缺失",
+            severity=severity,
+        )
+    )
+    checks.append(
+        Check(
+            "openKylin指标",
+            ".deb 安装后桌面插件依赖",
+            "plugin_ldd_missing=0" in verify_text
+            and "libpeony-menu-plugin-memguardos.so" in verify_text
+            and "libmemguardos-ukcc-plugin.so" in verify_text,
+            "Peony/UKUI 插件已打包且 ldd 无缺失依赖" if verify_text else "证据缺失",
+            severity=severity,
+        )
+    )
+    checks.append(
+        Check(
+            "openKylin指标",
+            ".deb 安装后审计链",
+            "memctl verify-audit" in verify_text and '"ok": true' in verify_text,
+            "memctl verify-audit 返回 ok=true" if verify_text else "证据缺失",
+            severity=severity,
+        )
+    )
+    checks.append(
+        Check(
+            "openKylin指标",
+            ".deb 安装后 Kylin embedding 推理",
+            ("inference_ready=true" in sdk_text or '"inference_ready": true' in sdk_text) and "embedding.length=768" in sdk_text,
+            "Python/C++ 探针均返回 768 维 embedding" if sdk_text else "证据缺失",
+            severity=severity,
+        )
+    )
     return checks
 
 

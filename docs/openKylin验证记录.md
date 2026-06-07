@@ -6,7 +6,7 @@
 
 日期：2026-05-18 至 2026-06-07
 
-说明：本页记录已经完成的 openKylin 证据。基础证据包采集时间为 `20260607_001553`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、可解释语义抽取、时间有效性窗口、本地 Web 控制台、Kylin embedding 实际检索重排、Kylin 向量数据库探针、BPF JSON 策略生成、BPF LSM 安全测试文件强制拒绝、Peony/UKUI 原生插件构建、UKUI 插件可见性核查和 10k 规模评测。`2026-05-24` 已补充 Peony 右键菜单、UKUI 控制中心桌面可见验证证据、Debian 安装包构建、离线解包 smoke 证据、企业化控制中心面板、默认演示库审计链重建验证和诊断报告证据。
+说明：本页记录已经完成的 openKylin 证据。最新证据包采集时间为 `20260607_123336`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、可解释语义抽取、时间有效性窗口、本地 Web 控制台、Kylin embedding 实际检索重排、Kylin 向量数据库探针、BPF JSON 策略生成、BPF LSM 安全测试文件强制拒绝、Peony/UKUI 原生插件构建、UKUI 插件可见性核查和 10k 规模评测。当前已补充 Peony 右键菜单、UKUI 控制中心桌面可见验证证据、Debian 安装包构建、openKylin 维护模式完整 apt 安装复验证据、企业化控制中心面板、默认演示库审计链重建验证和诊断报告证据。
 
 环境：
 
@@ -24,6 +24,7 @@
 - Kylin embedding SDK：`libkysdk-coreai-embedding.so.1` 可加载，Python/C++ 探针均返回 768 维向量
 - Kylin embedding 可选检索后端：`MEMGUARD_EMBEDDING_BACKEND=auto` 实际检索返回 `vector_backend: "kylin_sdk"`
 - Kylin vector SDK：`libkysdk-vector-engine-client.so.1` 可加载，C++ 探针完成连接、建表、插入、搜索和清理
+- Debian 安装包：维护模式完整 `apt install` 通过；安装后 `memguardd.service` active、cgroup 限制生效、Peony/UKUI 插件依赖完整、审计链验证通过；安装后 Kylin embedding Python/C++ 探针返回 768 维向量
 - Kylin vector engine 用户服务：active，socket 可用
 
 已验证命令：

@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 104,
-    "passed": 104,
+    "total": 112,
+    "passed": 112,
     "failed": 0,
     "warnings": 0
   },
@@ -11,7 +11,7 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 2650",
+      "detail": "中文字符数 2711",
       "severity": "P0"
     },
     {
@@ -25,7 +25,7 @@
       "category": "中文文档",
       "name": "docs/最终提交说明.md",
       "ok": true,
-      "detail": "中文字符数 2725",
+      "detail": "中文字符数 2760",
       "severity": "P0"
     },
     {
@@ -88,14 +88,14 @@
       "category": "中文文档",
       "name": "docs/openKylin验证记录.md",
       "ok": true,
-      "detail": "中文字符数 1483",
+      "detail": "中文字符数 1532",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/部署手册.md",
       "ok": true,
-      "detail": "中文字符数 1245",
+      "detail": "中文字符数 1352",
       "severity": "P0"
     },
     {
@@ -109,7 +109,7 @@
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 2342",
+      "detail": "中文字符数 2390",
       "severity": "P0"
     },
     {
@@ -123,7 +123,7 @@
       "category": "中文文档",
       "name": "docs/评委证据包索引.md",
       "ok": true,
-      "detail": "中文字符数 1774",
+      "detail": "中文字符数 1797",
       "severity": "P0"
     },
     {
@@ -555,6 +555,27 @@
     },
     {
       "category": "openKylin证据",
+      "name": "deb_apt_install_maintenance.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "deb_apt_install_verify.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "deb_apt_install_sdk_after_fix.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
       "name": "ukui_plugin_build.txt",
       "ok": true,
       "detail": "存在且非空",
@@ -701,17 +722,52 @@
       "severity": "P0"
     },
     {
+      "category": "openKylin指标",
+      "name": ".deb 维护模式 apt 安装",
+      "ok": true,
+      "detail": "apt install 输出包含 memguardos 安装过程",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin指标",
+      "name": ".deb 安装后 systemd 服务",
+      "ok": true,
+      "detail": "dpkg 状态正常且 memguardd.service active",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin指标",
+      "name": ".deb 安装后桌面插件依赖",
+      "ok": true,
+      "detail": "Peony/UKUI 插件已打包且 ldd 无缺失依赖",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin指标",
+      "name": ".deb 安装后审计链",
+      "ok": true,
+      "detail": "memctl verify-audit 返回 ok=true",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin指标",
+      "name": ".deb 安装后 Kylin embedding 推理",
+      "ok": true,
+      "detail": "Python/C++ 探针均返回 768 维 embedding",
+      "severity": "P0"
+    },
+    {
       "category": "openKylin证据",
       "name": "manifest 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 68 个证据文件",
+      "detail": "覆盖 71 个证据文件",
       "severity": "P0"
     },
     {
       "category": "openKylin证据",
       "name": "SHA256SUMS 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 68 个证据文件",
+      "detail": "覆盖 71 个证据文件",
       "severity": "P0"
     },
     {

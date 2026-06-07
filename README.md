@@ -209,7 +209,7 @@ memctl doctor
 sudo systemctl start memguardd
 ```
 
-`build_deb.sh` 会把 MemGuardOS 安装到 `/opt/memguardos`，提供 `/usr/bin/memctl` 和 `/usr/bin/memguardd` 包装命令，安装 `memguardd.service` 与 `memguardd@.service`，并在 Peony/UKUI 构建依赖存在时把两个原生桌面插件 `.so` 一并打入 `.deb`。该包用于产品化安装验证；正式竞赛提交仍以 `memguardos_competition_submission_*.zip` 为主。
+`build_deb.sh` 会把 MemGuardOS 安装到 `/opt/memguardos`，提供 `/usr/bin/memctl` 和 `/usr/bin/memguardd` 包装命令，安装 `memguardd.service` 与 `memguardd@.service`，并在 Peony/UKUI 构建依赖存在时把两个原生桌面插件 `.so` 一并打入 `.deb`。当前 openKylin 维护模式已完成 `sudo apt install ./dist/memguardos_0.1.0_amd64.deb` 完整安装复验，安装后 `dpkg` 状态、systemd 服务、cgroup 限制、Peony/UKUI 插件依赖、审计链和 Kylin embedding SDK 真实推理均有证据。该包用于产品化安装验证；正式竞赛提交仍以 `memguardos_competition_submission_*.zip` 为主。
 
 ## 评测与证据
 
@@ -304,6 +304,7 @@ dist/memguardos_full_repository_<时间戳>_manifest.json
 ## 准确边界
 
 - Kylin embedding SDK：已完成真实向量探针和可选重排检索证据；默认主路径仍保留 FTS/hash/graph fallback。
+- Debian 安装包：已在 openKylin 维护模式完成完整 `apt install` 安装复验，证据位于 `docs/evidence/latest/deb_apt_install_*.txt`。
 - 语义抽取：默认采用可解释、可复现的 deterministic semantic rules；显式配置 `MEMGUARD_EXTRACTOR_COMMAND` 后可接本地 NER/LLM JSON 增强器，增强器失败会自动回退。
 - BPF LSM：已在 openKylin 对安全测试文件完成强制拒绝验证；支持从 JSON 生成可审查静态 denylist；默认不拦截 `/etc/shadow`、SSH、sudo 或 PAM 链路。
 - UKUI/Peony：Peony 右键菜单插件已在 openKylin 桌面右键菜单中可见验证；菜单动作会把选中文件写成 OS event，并对小于 1 MB 的文本类文件执行 `peony_file` 导入，形成“右键扫描 -> 记忆写入 -> 检索 -> 审计链”的闭环。UKUI 控制中心入口“MemGuardOS 记忆安全”已升级为本机运维面板，包含运行环境检查、审计链校验、端侧向量能力检查、诊断报告和本地控制台入口。

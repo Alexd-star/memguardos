@@ -38,6 +38,9 @@ REQUIRED_PATHS = {
     "docs/evidence/latest/peony_file_scan_smoke.txt",
     "docs/evidence/latest/sdk_status.txt",
     "docs/evidence/latest/sdk_embedding_probe.txt",
+    "docs/evidence/latest/deb_apt_install_maintenance.txt",
+    "docs/evidence/latest/deb_apt_install_verify.txt",
+    "docs/evidence/latest/deb_apt_install_sdk_after_fix.txt",
     "docs/evidence/latest/eval_result_openkylin_10k.json",
     "docs/evidence/latest/build_context_explainability.txt",
     "docs/evidence/latest/hierarchical_graph_search.txt",
@@ -229,6 +232,25 @@ def check_evidence_content(package: Path, name_set: set[str]) -> list[dict[str, 
                     failures.append({"path": "docs/evidence/latest/peony_file_scan_smoke.txt", "reason": "%s is not true" % key, "actual": peony_smoke.get(key)})
             if int(peony_smoke.get("search_hits", 0)) < 1:
                 failures.append({"path": "docs/evidence/latest/peony_file_scan_smoke.txt", "reason": "search_hits < 1", "actual": peony_smoke.get("search_hits")})
+
+        deb_install = text("docs/evidence/latest/deb_apt_install_maintenance.txt")
+        if "正在设置 memguardos" not in deb_install and "memguardos (0.1.0)" not in deb_install:
+            failures.append({"path": "docs/evidence/latest/deb_apt_install_maintenance.txt", "reason": "missing apt install setup evidence"})
+
+        deb_verify = text("docs/evidence/latest/deb_apt_install_verify.txt")
+        for token, reason in [
+            ("Status: install ok installed", "dpkg status is not install ok installed"),
+            ("Active: active (running)", "memguardd.service is not active in evidence"),
+            ("plugin_ldd_missing=0", "desktop plugin ldd check is not clean"),
+            ("memctl verify-audit", "audit chain verification command is missing after deb install"),
+            ('"ok": true', "audit chain verification did not pass after deb install"),
+        ]:
+            if token not in deb_verify:
+                failures.append({"path": "docs/evidence/latest/deb_apt_install_verify.txt", "reason": reason})
+
+        deb_sdk = text("docs/evidence/latest/deb_apt_install_sdk_after_fix.txt")
+        if ("inference_ready=true" not in deb_sdk and '"inference_ready": true' not in deb_sdk) or "embedding.length=768" not in deb_sdk:
+            failures.append({"path": "docs/evidence/latest/deb_apt_install_sdk_after_fix.txt", "reason": "missing post-install Kylin embedding inference evidence"})
     return failures
 
 

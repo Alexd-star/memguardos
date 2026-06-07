@@ -1,0 +1,871 @@
+$ bash scripts/fix_kylin_embedding_runtime.sh --probe-timeout 180
+
+
+== MemGuardOS Kylin embedding runtime fix ==
+user=luo uid=1000
+XDG_RUNTIME_DIR=/run/user/1000
+DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+
+== Kytensor model repository ==
+source repository: /usr/share/kylin-ai/model-repository
+kytensor repository: /opt/appdata/kylin-ai/model-repository
+keep existing /opt/appdata/kylin-ai/model-repository/embd_cn-clip_512-uint8-image
+keep existing /opt/appdata/kylin-ai/model-repository/embd_cn-clip_512-uint8-text
+keep existing /opt/appdata/kylin-ai/model-repository/embd_gte-base_uint8-text
+keep existing /opt/appdata/kylin-ai/model-repository/ensemble-embd_cn-clip_512-uint8-text
+keep existing /opt/appdata/kylin-ai/model-repository/ensemble-embd_gte-base_uint8-text
+keep existing /opt/appdata/kylin-ai/model-repository/matting_portrait
+keep existing /opt/appdata/kylin-ai/model-repository/model_bank
+keep existing /opt/appdata/kylin-ai/model-repository/ocr_ppocr
+keep existing /opt/appdata/kylin-ai/model-repository/tokenizer_cn-clip_512-uint8-text
+keep existing /opt/appdata/kylin-ai/model-repository/tokenizer_gte-base_uint8-text
+linked entries: 0
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/embd_cn-clip_512-uint8-image -> /usr/share/kylin-ai/model-repository/embd_cn-clip_512-uint8-image
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/embd_cn-clip_512-uint8-text -> /usr/share/kylin-ai/model-repository/embd_cn-clip_512-uint8-text
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/embd_gte-base_uint8-text -> /usr/share/kylin-ai/model-repository/embd_gte-base_uint8-text
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/ensemble-embd_cn-clip_512-uint8-text -> /usr/share/kylin-ai/model-repository/ensemble-embd_cn-clip_512-uint8-text
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/ensemble-embd_gte-base_uint8-text -> /usr/share/kylin-ai/model-repository/ensemble-embd_gte-base_uint8-text
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/matting_portrait -> /usr/share/kylin-ai/model-repository/matting_portrait
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/model_bank -> /usr/share/kylin-ai/model-repository/model_bank
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/ocr_ppocr -> /usr/share/kylin-ai/model-repository/ocr_ppocr
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/tokenizer_cn-clip_512-uint8-text -> /usr/share/kylin-ai/model-repository/tokenizer_cn-clip_512-uint8-text
+lrwxrwxrwx root:root /opt/appdata/kylin-ai/model-repository/tokenizer_gte-base_uint8-text -> /usr/share/kylin-ai/model-repository/tokenizer_gte-base_uint8-text
+
+== Kytensor service ==
+# /usr/lib/systemd/system/kytensor.service
+[Unit]
+Description=Kylin triton inference server
+
+[Service]
+ExecStart=/bin/bash -c 'source /usr/share/kylin-ai-python-env/python-env/bin/activate && /usr/bin/kytensor --model-repository=/opt/appdata/kylin-ai/model-repository --model-control-mode=explicit --http-address=127.0.0.1 --grpc-address=127.0.0.1'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+● kytensor.service - Kylin triton inference server
+     Loaded: loaded (/usr/lib/systemd/system/kytensor.service; enabled; preset: enabled)
+     Active: active (running) since Sun 2026-06-07 13:58:42 CST; 6s ago
+   Main PID: 401704 (kytensor)
+      Tasks: 57 (limit: 6991)
+     Memory: 3.3M (peak: 4.0M)
+        CPU: 104ms
+     CGroup: /system.slice/kytensor.service
+             └─401704 /usr/bin/kytensor --model-repository=/opt/appdata/kylin-ai/model-repository --model-control-mode=explicit --http-address=127.0.0.1 --grpc-address=127.0.0.1
+
+6月 07 13:58:42 luo-pc bash[401704]: | rate_limit                       | OFF                                                                                                                                                                                                       |
+6月 07 13:58:42 luo-pc bash[401704]: | pinned_memory_pool_byte_size     | 268435456                                                                                                                                                                                                 |
+6月 07 13:58:42 luo-pc bash[401704]: | min_supported_compute_capability | 0.0                                                                                                                                                                                                       |
+6月 07 13:58:42 luo-pc bash[401704]: | strict_readiness                 | 1                                                                                                                                                                                                         |
+6月 07 13:58:42 luo-pc bash[401704]: | exit_timeout                     | 30                                                                                                                                                                                                        |
+6月 07 13:58:42 luo-pc bash[401704]: | cache_enabled                    | 0                                                                                                                                                                                                         |
+6月 07 13:58:42 luo-pc bash[401704]: +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+6月 07 13:58:42 luo-pc bash[401704]: I0607 05:58:42.924269 401704 grpc_server.cc:2463] "Started GRPCInferenceService at 127.0.0.1:8001"
+6月 07 13:58:42 luo-pc bash[401704]: I0607 05:58:42.926324 401704 http_server.cc:4694] "Started HTTPService at 127.0.0.1:8000"
+6月 07 13:58:42 luo-pc bash[401704]: I0607 05:58:42.969547 401704 http_server.cc:362] "Started Metrics Service at 127.0.0.1:8002"
+[{"name":"embd_cn-clip_512-uint8-image"},{"name":"embd_cn-clip_512-uint8-text"},{"name":"embd_gte-base_uint8-text"},{"name":"ensemble-embd_cn-clip_512-uint8-text"},{"name":"ensemble-embd_gte-base_uint8-text"},{"name":"matting_portrait"},{"name":"model_bank"},{"name":"ocr_ppocr"},{"name":"tokenizer_cn-clip_512-uint8-text"},{"name":"tokenizer_gte-base_uint8-text"}]
+
+== Kylin AI runtime ==
+no user kylin-ai-runtime.service; use openKylin desktop autostart style
+start kylin-ai-runtime manually
+403391 kylin-ai-runtime
+u_str LISTEN 0      10                                                         /tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock 2323400            * 0    users:(("kylin-ai-runtim",pid=403391,fd=21))
+
+[2026-06-07 13:58:51.998] info [startuptools.cpp:104] [tid 403391]
+*************扫描*************kaiming
+
+[2026-06-07 13:58:51.998] info [startuptools.cpp:104] [tid 403391]
+*************U盘启动器*************kylin-usb-creator
+
+[2026-06-07 13:58:51.998] info [startuptools.cpp:104] [tid 403391]
+*************影音*************kylin-video
+
+[2026-06-07 13:58:51.998] info [startuptools.cpp:104] [tid 403391]
+*************天气*************kylin-weather
+
+[2026-06-07 13:58:51.998] info [startuptools.cpp:104] [tid 403391]
+*************闹钟*************ukui-clock
+
+[2026-06-07 13:58:52.013] info [aienginepluginmanager.cpp:133] [tid 403391]
+Engine name: freetrial
+
+[2026-06-07 13:58:52.507] info [aienginepluginmanager.cpp:133] [tid 403391]
+Engine name: Embedding
+
+[2026-06-07 13:58:52.515] info [aienginepluginmanager.cpp:133] [tid 403391]
+Engine name: custom
+
+[2026-06-07 13:58:52.542] info [aienginepluginmanager.cpp:133] [tid 403391]
+Engine name: ondevice
+
+[2026-06-07 13:58:52.584] info [aienginepluginmanager.cpp:133] [tid 403391]
+Engine name: baidu
+
+[2026-06-07 13:58:52.603] info [aienginepluginmanager.cpp:133] [tid 403391]
+Engine name: qwen
+
+[2026-06-07 13:58:52.608] info [aienginepluginmanager.cpp:133] [tid 403391]
+Engine name: deepseek
+
+[2026-06-07 13:58:52.623] info [aienginepluginmanager.cpp:133] [tid 403391]
+Engine name: xunfei
+
+[2026-06-07 13:58:52.625] info [servermanager.cpp:40] [tid 403485]
+Starting Config server in thread: 403485
+
+[2026-06-07 13:58:52.625] info [servermanager.cpp:40] [tid 403486]
+Starting Assistant server in thread: 403486
+
+[2026-06-07 13:58:52.625] info [servermanager.cpp:40] [tid 403487]
+Starting GenAiNlp server in thread: 403487
+
+[2026-06-07 13:58:52.625] info [servermanager.cpp:40] [tid 403488]
+Starting GenAiVision server in thread: 403488
+
+[2026-06-07 13:58:52.625] info [servermanager.cpp:82] [tid 403391]
+All servers started, running main event loop
+
+[2026-06-07 13:58:52.625] info [servermanager.cpp:40] [tid 403489]
+Starting CoreAiSpeech server in thread: 403489
+
+[2026-06-07 13:58:52.625] info [modelconfigmanager.cpp:662] [tid 403484]
+Time taken to create engine NLP baidu model infos: 0.051013 ms
+
+[2026-06-07 13:58:52.625] info [servermanager.cpp:40] [tid 403490]
+Starting CoreVision server in thread: 403490
+
+[2026-06-07 13:58:52.625] info [servermanager.cpp:40] [tid 403491]
+Starting CoreTextEmbedding server in thread: 403491
+
+[2026-06-07 13:58:52.625] info [servermanager.cpp:40] [tid 403492]
+Starting CoreImageEmbedding server in thread: 403492
+
+[2026-06-07 13:58:52.628] info [modelconfigmanager.cpp:662] [tid 403484]
+Time taken to create engine NLP custom model infos: 0.042211 ms
+
+[2026-06-07 13:58:52.629] info [modelconfigmanager.cpp:662] [tid 403484]
+Time taken to create engine NLP deepseek model infos: 0.039349 ms
+
+userName + mac is luo000c29c91e9c
+[2026-06-07 13:58:52.631] info [modelconfigmanager.cpp:662] [tid 403484]
+Time taken to create engine NLP freetrial model infos: 1.883184 ms
+
+
+== Runtime sockets ==
+总计 8
+drwxrwxrwx 2 luo luo 4096  6月 7日 13:58 .
+drwxrwxrwx 3 luo luo 4096  6月 7日 13:58 ..
+srwxrwxr-x 1 luo luo    0  6月 7日 13:58 assistant.sock
+srwxrwxr-x 1 luo luo    0  6月 7日 13:58 config.sock
+srwxrwxr-x 1 luo luo    0  6月 7日 13:58 core-imageembedding.sock
+srwxrwxr-x 1 luo luo    0  6月 7日 13:58 core-speech.sock
+srwxrwxr-x 1 luo luo    0  6月 7日 13:58 core-textembedding.sock
+srwxrwxr-x 1 luo luo    0  6月 7日 13:58 core-vision.sock
+srwxrwxr-x 1 luo luo    0  6月 7日 13:58 genai-nlp.sock
+srwxrwxr-x 1 luo luo    0  6月 7日 13:58 genai-vision.sock
+core-textembedding socket: present
+
+== Python SDK embedding probe ==
+[1780811948004] [32minfo [0m Proxy init engine sessionId:1378809570.
+{
+  "embedding": {
+    "backend": "kylin_coreai_embedding",
+    "library": "libkysdk-coreai-embedding.so.1",
+    "library_file": "/lib/x86_64-linux-gnu/libkysdk-coreai-embedding.so.1",
+    "library_loadable": true,
+    "headers": {
+      "/usr/include/kylin-ai/coreai/embedding/embedding.h": true,
+      "/usr/include/kylin-ai/plugins/ai-engines/ondeviceembeddingengine.h": true
+    },
+    "runtime": {
+      "binary": "/usr/bin/kylin-ai-runtime",
+      "user_service": {
+        "available": true,
+        "active": false,
+        "state": "inactive"
+      },
+      "base_dir": "/tmp/.kylin-ai-runtime-unix/1000",
+      "base_dir_exists": true,
+      "sockets": {
+        "core-textembedding.sock": "/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock",
+        "config.sock": "/tmp/.kylin-ai-runtime-unix/1000/config.sock"
+      },
+      "socket_exists": {
+        "core-textembedding.sock": true,
+        "config.sock": true
+      },
+      "session_bus": true,
+      "xdg_runtime_dir": "/run/user/1000"
+    },
+    "kytensor": {
+      "service": {
+        "available": true,
+        "active": true,
+        "state": "active",
+        "enabled": "enabled"
+      },
+      "repository_index": {
+        "available": true,
+        "ok": true,
+        "models": [
+          "embd_cn-clip_512-uint8-image",
+          "embd_cn-clip_512-uint8-text",
+          "embd_gte-base_uint8-text",
+          "ensemble-embd_cn-clip_512-uint8-text",
+          "ensemble-embd_gte-base_uint8-text",
+          "matting_portrait",
+          "model_bank",
+          "ocr_ppocr",
+          "tokenizer_cn-clip_512-uint8-text",
+          "tokenizer_gte-base_uint8-text"
+        ],
+        "has_text_embedding_models": true
+      },
+      "repositories": [
+        {
+          "path": "/opt/appdata/kylin-ai/model-repository",
+          "exists": true,
+          "entries": [
+            "embd_cn-clip_512-uint8-image",
+            "embd_cn-clip_512-uint8-text",
+            "embd_gte-base_uint8-text",
+            "ensemble-embd_cn-clip_512-uint8-text",
+            "ensemble-embd_gte-base_uint8-text",
+            "matting_portrait",
+            "model_bank",
+            "ocr_ppocr",
+            "tokenizer_cn-clip_512-uint8-text",
+            "tokenizer_gte-base_uint8-text"
+          ],
+          "has_text_embedding_models": true
+        },
+        {
+          "path": "/usr/share/kylin-ai/model-repository",
+          "exists": true,
+          "entries": [
+            "embd_cn-clip_512-uint8-image",
+            "embd_cn-clip_512-uint8-text",
+            "embd_gte-base_uint8-text",
+            "ensemble-embd_cn-clip_512-uint8-text",
+            "ensemble-embd_gte-base_uint8-text",
+            "matting_portrait",
+            "model_bank",
+            "ocr_ppocr",
+            "tokenizer_cn-clip_512-uint8-text",
+            "tokenizer_gte-base_uint8-text"
+          ],
+          "has_text_embedding_models": true
+        }
+      ],
+      "expected_text_embedding_models": [
+        "ensemble-embd_gte-base_uint8-text",
+        "embd_gte-base_uint8-text",
+        "tokenizer_gte-base_uint8-text"
+      ],
+      "fix_hint": "If /opt/appdata/kylin-ai/model-repository is empty while /usr/share/kylin-ai/model-repository has models, run scripts/fix_kylin_embedding_runtime.sh to link the repositories and restart kytensor/runtime."
+    },
+    "plugins": {
+      "dirs": [
+        {
+          "path": "/usr/lib/kylin-ai/plugins/ai-engines",
+          "exists": false,
+          "shared_objects": [],
+          "has_ondevice_plugin": false
+        },
+        {
+          "path": "/usr/lib/x86_64-linux-gnu/kylin-ai/plugins/ai-engines",
+          "exists": true,
+          "shared_objects": [
+            "libbaidu-engine-plugin.so",
+            "libcustom-engine-plugin.so",
+            "libdeepseek-engine-plugin.so",
+            "libfreetrial-engine-plugin.so",
+            "libkylin-traditional-engine-plugin.so",
+            "libondevice-engine.so",
+            "libqwen-engine-plugin.so",
+            "libxunfei-engine-plugin.so"
+          ],
+          "has_ondevice_plugin": true
+        },
+        {
+          "path": "/usr/lib/aarch64-linux-gnu/kylin-ai/plugins/ai-engines",
+          "exists": false,
+          "shared_objects": [],
+          "has_ondevice_plugin": false
+        },
+        {
+          "path": "/usr/lib/loongarch64-linux-gnu/kylin-ai/plugins/ai-engines",
+          "exists": false,
+          "shared_objects": [],
+          "has_ondevice_plugin": false
+        }
+      ]
+    },
+    "packages": {
+      "available": true,
+      "packages": {
+        "kylin-ai-runtime": {
+          "installed": true,
+          "raw": "install ok installed 1.1.0.1-ok0.12"
+        },
+        "kylin-ai-engine-plugins": {
+          "installed": true,
+          "raw": "install ok installed 1.1.0.1-ok1.3"
+        },
+        "libkylin-coreai-embedding": {
+          "installed": true,
+          "raw": "install ok installed 1.2.0.0-ok0.2"
+        },
+        "libkylin-coreai-embedding-dev": {
+          "installed": true,
+          "raw": "install ok installed 1.2.0.0-ok0.2"
+        },
+        "libkylin-ondevice-embedding-engine": {
+          "installed": true,
+          "raw": "install ok installed 1.2.0.0-ok0.5"
+        },
+        "libkylin-ondevice-embedding-engine-dev": {
+          "installed": true,
+          "raw": "install ok installed 1.2.0.0-ok0.5"
+        },
+        "libkylin-ondevice-ai-engine-plugin": {
+          "installed": true,
+          "raw": "install ok installed 1.2.0.0-ok0.6"
+        },
+        "libkylin-ondevice-traditional-ai-engine-plugin": {
+          "installed": true,
+          "raw": "install ok installed 1.2.0.0-ok0.2"
+        }
+      }
+    },
+    "symbols": {
+      "available": true,
+      "ok": true,
+      "symbols": {
+        "text_embedding_create_session": true,
+        "text_embedding_init_session": true,
+        "text_embedding_get_model_info": true,
+        "text_embedding": true,
+        "embedding_result_get_vector_length": true,
+        "embedding_result_get_vector_data": true
+      }
+    },
+    "session": {
+      "created": true,
+      "init_code": 0,
+      "init_ok": true,
+      "init_code_hint": "success",
+      "model_info_ok": true
+    },
+    "model_info": {
+      "dim": 768,
+      "name": "ensemble-embd_gte-base_uint8-text",
+      "ondevice": true
+    },
+    "embedding_probe": {
+      "ok": true,
+      "dim": 768,
+      "sample": [
+        -0.086721,
+        -0.023629,
+        -0.007548,
+        0.027401,
+        0.011692
+      ],
+      "subprocess_returncode": 0,
+      "stderr_tail": "[1780811953346] \u001b[32minfo \u001b[0m Proxy init engine sessionId:2140687954."
+    },
+    "available": true,
+    "inference_ready": true,
+    "ready_for_default_retrieval": true,
+    "fallback": "hash_embedding",
+    "diagnosis": {
+      "success_condition": "library_loadable and model_info and embedding_probe.ok",
+      "availability_meaning": "available means SDK metadata is reachable; inference_ready means a real embedding call succeeded.",
+      "probe_meaning": "embedding_probe is null when sdk-status runs without --probe-embedding; use --probe-embedding to verify real inference readiness.",
+      "timeout_hint": "If model_info is present but embedding_probe returns 'Timeout was reached', inspect kylin-ai-runtime sockets, kytensor.service, Triton repository index, ondevice plugin logs, and model repository links."
+    }
+  },
+  "vector_store": {
+    "backend": "kysdk_vector_engine_client",
+    "library": "libkysdk-vector-engine-client.so.1",
+    "library_loadable": true,
+    "headers": {
+      "/usr/include/kysdk-vector-engine-client/Database.h": true
+    },
+    "binary": "/usr/bin/kylin-ai-vector-engine",
+    "default_binary": "/usr/bin/kylin-ai-vector-engine-default",
+    "user_service": {
+      "available": true,
+      "active": true,
+      "state": "active"
+    },
+    "socket": "/tmp/kylin-ai-vector-engine-1000.sock",
+    "socket_exists": true,
+    "available": true,
+    "fallback": "sqlite_fts_hash_vector"
+  }
+}
+
+== C++ SDK embedding probe ==
+build: g++ -std=c++17 scripts/kylin_embedding_probe.cpp  -lkysdk-coreai-embedding
+run: timeout 180 /tmp/memguardos_kylin_embedding_probe
+[1780811954611] [32minfo [0m Proxy init engine sessionId:1956857870.
+session.created=true
+session.init_code=0
+model_info.ok=true
+model_info.raw={"dim":768,"name":"ensemble-embd_gte-base_uint8-text","ondevice":true}
+embedding.call_ok=true
+embedding.present=true
+embedding.error_code=0
+embedding.error_message=Success
+embedding.length=768
+embedding.sample=-0.0867208,-0.0236289,-0.00754809,0.0274006,0.0116921
+session.destroyed=true
+
+== Logs ==
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name QuantizeLinear (domain:  version: 19) from file ./onnx/defs/quantization/old.cc line 22, but it is already registered from file ./onnx/defs/quantization/old.cc line 22
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Reshape (domain:  version: 19) from file ./onnx/defs/tensor/old.cc line 633, but it is already registered from file ./onnx/defs/tensor/old.cc line 633
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Resize (domain:  version: 19) from file ./onnx/defs/tensor/defs.cc line 2221, but it is already registered from file ./onnx/defs/tensor/defs.cc line 2221
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Scan (domain:  version: 19) from file ./onnx/defs/controlflow/old.cc line 494, but it is already registered from file ./onnx/defs/controlflow/old.cc line 494
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Shape (domain:  version: 19) from file ./onnx/defs/tensor/old.cc line 6068, but it is already registered from file ./onnx/defs/tensor/old.cc line 6068
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Size (domain:  version: 19) from file ./onnx/defs/tensor/old.cc line 6196, but it is already registered from file ./onnx/defs/tensor/old.cc line 6196
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name AffineGrid (domain:  version: 20) from file ./onnx/defs/tensor/defs.cc line 2454, but it is already registered from file ./onnx/defs/tensor/defs.cc line 2454
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name ConstantOfShape (domain:  version: 20) from file ./onnx/defs/generator/old.cc line 260, but it is already registered from file ./onnx/defs/generator/old.cc line 260
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name DFT (domain:  version: 20) from file ./onnx/defs/math/defs.cc line 2903, but it is already registered from file ./onnx/defs/math/defs.cc line 2903
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Gelu (domain:  version: 20) from file ./onnx/defs/math/defs.cc line 626, but it is already registered from file ./onnx/defs/math/defs.cc line 626
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name GridSample (domain:  version: 20) from file ./onnx/defs/tensor/defs.cc line 2347, but it is already registered from file ./onnx/defs/tensor/defs.cc line 2347
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name ImageDecoder (domain:  version: 20) from file ./onnx/defs/image/defs.cc line 39, but it is already registered from file ./onnx/defs/image/defs.cc line 39
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name IsInf (domain:  version: 20) from file ./onnx/defs/tensor/defs.cc line 2971, but it is already registered from file ./onnx/defs/tensor/defs.cc line 2971
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name IsNaN (domain:  version: 20) from file ./onnx/defs/tensor/defs.cc line 2955, but it is already registered from file ./onnx/defs/tensor/defs.cc line 2955
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name ReduceMax (domain:  version: 20) from file ./onnx/defs/reduction/defs.cc line 15, but it is already registered from file ./onnx/defs/reduction/defs.cc line 15
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name ReduceMin (domain:  version: 20) from file ./onnx/defs/reduction/defs.cc line 20, but it is already registered from file ./onnx/defs/reduction/defs.cc line 20
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name RegexFullMatch (domain:  version: 20) from file ./onnx/defs/text/defs.cc line 38, but it is already registered from file ./onnx/defs/text/defs.cc line 38
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name StringConcat (domain:  version: 20) from file ./onnx/defs/text/defs.cc line 10, but it is already registered from file ./onnx/defs/text/defs.cc line 10
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name StringSplit (domain:  version: 20) from file ./onnx/defs/text/defs.cc line 71, but it is already registered from file ./onnx/defs/text/defs.cc line 71
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Cast (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 83, but it is already registered from file ./onnx/defs/tensor/defs.cc line 83
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name CastLike (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 144, but it is already registered from file ./onnx/defs/tensor/defs.cc line 144
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Constant (domain:  version: 21) from file ./onnx/defs/generator/defs.cc line 18, but it is already registered from file ./onnx/defs/generator/defs.cc line 18
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name ConstantOfShape (domain:  version: 21) from file ./onnx/defs/generator/defs.cc line 67, but it is already registered from file ./onnx/defs/generator/defs.cc line 67
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name DequantizeLinear (domain:  version: 21) from file ./onnx/defs/quantization/defs.cc line 147, but it is already registered from file ./onnx/defs/quantization/defs.cc line 147
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Flatten (domain:  version: 21) from file ./onnx/defs/nn/defs.cc line 2004, but it is already registered from file ./onnx/defs/nn/defs.cc line 2004
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name GroupNormalization (domain:  version: 21) from file ./onnx/defs/nn/defs.cc line 2737, but it is already registered from file ./onnx/defs/nn/defs.cc line 2737
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Identity (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 2706, but it is already registered from file ./onnx/defs/tensor/defs.cc line 2706
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name If (domain:  version: 21) from file ./onnx/defs/controlflow/defs.cc line 24, but it is already registered from file ./onnx/defs/controlflow/defs.cc line 24
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Loop (domain:  version: 21) from file ./onnx/defs/controlflow/defs.cc line 209, but it is already registered from file ./onnx/defs/controlflow/defs.cc line 209
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Pad (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 3667, but it is already registered from file ./onnx/defs/tensor/defs.cc line 3667
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name QLinearMatMul (domain:  version: 21) from file ./onnx/defs/math/defs.cc line 1935, but it is already registered from file ./onnx/defs/math/defs.cc line 1935
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name QuantizeLinear (domain:  version: 21) from file ./onnx/defs/quantization/defs.cc line 38, but it is already registered from file ./onnx/defs/quantization/defs.cc line 38
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Reshape (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 230, but it is already registered from file ./onnx/defs/tensor/defs.cc line 230
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Scan (domain:  version: 21) from file ./onnx/defs/controlflow/defs.cc line 386, but it is already registered from file ./onnx/defs/controlflow/defs.cc line 386
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Shape (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 419, but it is already registered from file ./onnx/defs/tensor/defs.cc line 419
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Size (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 485, but it is already registered from file ./onnx/defs/tensor/defs.cc line 485
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Squeeze (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 1710, but it is already registered from file ./onnx/defs/tensor/defs.cc line 1710
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Transpose (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 1082, but it is already registered from file ./onnx/defs/tensor/defs.cc line 1082
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Unsqueeze (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 1819, but it is already registered from file ./onnx/defs/tensor/defs.cc line 1819
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name ArrayFeatureExtractor (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 15, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 15
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Binarizer (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 79, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 79
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name CastMap (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 99, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 99
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name CategoryMapper (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 159, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 159
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name DictVectorizer (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 224, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 224
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name FeatureVectorizer (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 269, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 269
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Imputer (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 293, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 293
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name LabelEncoder (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/old.cc line 22, but it is already registered from file ./onnx/defs/traditionalml/old.cc line 22
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name LinearClassifier (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 429, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 429
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name LinearRegressor (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 531, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 531
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Normalizer (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 569, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 569
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name OneHotEncoder (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 593, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 593
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name SVMClassifier (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 669, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 669
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name SVMRegressor (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 746, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 746
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name Scaler (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 641, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 641
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name TreeEnsembleClassifier (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/old.cc line 72, but it is already registered from file ./onnx/defs/traditionalml/old.cc line 72
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name TreeEnsembleRegressor (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/old.cc line 341, but it is already registered from file ./onnx/defs/traditionalml/old.cc line 341
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name ZipMap (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 1209, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 1209
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name LabelEncoder (domain: ai.onnx.ml version: 2) from file ./onnx/defs/traditionalml/old.cc line 561, but it is already registered from file ./onnx/defs/traditionalml/old.cc line 561
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name TreeEnsembleClassifier (domain: ai.onnx.ml version: 3) from file ./onnx/defs/traditionalml/old.cc line 175, but it is already registered from file ./onnx/defs/traditionalml/old.cc line 175
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name TreeEnsembleRegressor (domain: ai.onnx.ml version: 3) from file ./onnx/defs/traditionalml/old.cc line 422, but it is already registered from file ./onnx/defs/traditionalml/old.cc line 422
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name LabelEncoder (domain: ai.onnx.ml version: 4) from file ./onnx/defs/traditionalml/defs.cc line 332, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 332
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name TreeEnsemble (domain: ai.onnx.ml version: 5) from file ./onnx/defs/traditionalml/defs.cc line 1017, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 1017
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name TreeEnsembleRegressor (domain: ai.onnx.ml version: 5) from file ./onnx/defs/traditionalml/defs.cc line 917, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 917
+6月 07 13:59:01 luo-pc bash[401704]: Schema error: Trying to register schema with name TreeEnsembleClassifier (domain: ai.onnx.ml version: 5) from file ./onnx/defs/traditionalml/defs.cc line 800, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 800
+6月 07 13:59:01 luo-pc bash[404093]: None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+6月 07 13:59:03 luo-pc bash[401704]: I0607 05:59:03.656927 401704 python_be.cc:2249] "TRITONBACKEND_ModelInstanceInitialize: tokenizer_gte-base_uint8-text_0 (CPU device 0)"
+6月 07 13:59:04 luo-pc bash[404605]: None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+6月 07 13:59:04 luo-pc bash[401704]: I0607 05:59:04.519536 401704 model_lifecycle.cc:839] "successfully loaded 'embd_gte-base_uint8-text'"
+6月 07 13:59:07 luo-pc bash[401704]: I0607 05:59:07.996508 401704 model_lifecycle.cc:839] "successfully loaded 'tokenizer_gte-base_uint8-text'"
+6月 07 13:59:07 luo-pc bash[401704]: I0607 05:59:07.999143 401704 model_lifecycle.cc:472] "loading: ensemble-embd_gte-base_uint8-text:1"
+6月 07 13:59:07 luo-pc bash[401704]: I0607 05:59:07.999312 401704 model_lifecycle.cc:839] "successfully loaded 'ensemble-embd_gte-base_uint8-text'"
+6月 07 13:59:08 luo-pc bash[401704]: I0607 05:59:08.291091 401704 model_lifecycle.cc:472] "loading: tokenizer_gte-base_uint8-text:1"
+6月 07 13:59:09 luo-pc bash[404969]: None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+6月 07 13:59:10 luo-pc bash[401704]: I0607 05:59:10.879879 401704 python_be.cc:2249] "TRITONBACKEND_ModelInstanceInitialize: tokenizer_gte-base_uint8-text_0 (CPU device 0)"
+6月 07 13:59:11 luo-pc bash[405294]: None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+6月 07 13:59:13 luo-pc bash[401704]: I0607 05:59:13.345253 401704 model_lifecycle.cc:839] "successfully loaded 'tokenizer_gte-base_uint8-text'"
+6月 07 13:59:13 luo-pc bash[401704]: I0607 05:59:13.345482 401704 model_lifecycle.cc:472] "loading: ensemble-embd_gte-base_uint8-text:1"
+6月 07 13:59:13 luo-pc bash[401704]: I0607 05:59:13.345647 401704 model_lifecycle.cc:839] "successfully loaded 'ensemble-embd_gte-base_uint8-text'"
+6月 07 13:59:13 luo-pc bash[401704]: I0607 05:59:13.345829 401704 model_lifecycle.cc:624] "successfully unloaded 'ensemble-embd_gte-base_uint8-text' version 1"
+6月 07 13:59:13 luo-pc bash[401704]: W0607 05:59:13.375199 401704 pinned_memory_manager.cc:170] "failed to allocate pinned system memory: no pinned memory pool, falling back to non-pinned system memory"
+[2026-06-07 13:58:52.625] info [servermanager.cpp:40] [tid 403487]
+Starting GenAiNlp server in thread: 403487
+
+[2026-06-07 13:58:52.625] info [servermanager.cpp:40] [tid 403488]
+Starting GenAiVision server in thread: 403488
+
+[2026-06-07 13:58:52.625] info [servermanager.cpp:82] [tid 403391]
+All servers started, running main event loop
+
+[2026-06-07 13:58:52.625] info [servermanager.cpp:40] [tid 403489]
+Starting CoreAiSpeech server in thread: 403489
+
+[2026-06-07 13:58:52.625] info [modelconfigmanager.cpp:662] [tid 403484]
+Time taken to create engine NLP baidu model infos: 0.051013 ms
+
+[2026-06-07 13:58:52.625] info [servermanager.cpp:40] [tid 403491]
+Starting CoreTextEmbedding server in thread: 403491
+
+[2026-06-07 13:58:52.625] info [servermanager.cpp:40] [tid 403492]
+Starting CoreImageEmbedding server in thread: 403492
+
+[2026-06-07 13:58:52.625] info [servermanager.cpp:40] [tid 403490]
+Starting CoreVision server in thread: 403490
+
+[2026-06-07 13:58:52.628] info [modelconfigmanager.cpp:662] [tid 403484]
+Time taken to create engine NLP custom model infos: 0.042211 ms
+
+[2026-06-07 13:58:52.629] info [modelconfigmanager.cpp:662] [tid 403484]
+Time taken to create engine NLP deepseek model infos: 0.039349 ms
+
+[2026-06-07 13:58:52.631] info [modelconfigmanager.cpp:662] [tid 403484]
+Time taken to create engine NLP freetrial model infos: 1.883184 ms
+
+[2026-06-07 13:58:53.403] info [coretextembeddingserver.cpp:33] [tid 403491]
+Text Embedding new connection
+
+[2026-06-07 13:58:57.655] info [modelconfigmanager.cpp:662] [tid 403484]
+Time taken to create engine NLP ondevice model infos: 19.446635 ms
+
+[2026-06-07 13:58:57.774] info [modelconfigmanager.cpp:687] [tid 403484]
+Time taken to get modelInfo NLP ondevice model infos: 118.777962 ms
+
+[2026-06-07 13:58:57.796] info [modelconfigmanager.cpp:662] [tid 403484]
+Time taken to create engine NLP qwen model infos: 0.468514 ms
+
+[2026-06-07 13:58:57.797] info [modelconfigmanager.cpp:662] [tid 403484]
+Time taken to create engine NLP xunfei model infos: 0.298062 ms
+
+[2026-06-07 13:58:57.800] info [modelconfigmanager.cpp:647] [tid 403484]
+Model 百度-ERNIE-Bot-4 loaded
+
+[2026-06-07 13:58:57.800] info [modelconfigmanager.cpp:647] [tid 403484]
+Model 百度-语音大模型 loaded
+
+[2026-06-07 13:58:57.800] info [modelconfigmanager.cpp:647] [tid 403484]
+Model 百度-文心AI作画高级版 loaded
+
+[2026-06-07 13:58:57.800] info [modelconfigmanager.cpp:647] [tid 403484]
+Model DeepSeek-V3 loaded
+
+[2026-06-07 13:58:57.800] info [modelconfigmanager.cpp:647] [tid 403484]
+Model DeepSeek-R1 loaded
+
+[2026-06-07 13:58:57.800] info [modelconfigmanager.cpp:647] [tid 403484]
+Model 通义千问-qwen-plus loaded
+
+[2026-06-07 13:58:57.800] info [modelconfigmanager.cpp:647] [tid 403484]
+Model 讯飞-Spark Max loaded
+
+[2026-06-07 13:58:57.800] info [modelconfigmanager.cpp:647] [tid 403484]
+Model 讯飞-语音大模型 loaded
+
+[2026-06-07 13:58:57.800] info [modelconfigmanager.cpp:647] [tid 403484]
+Model 讯飞-图片生成 loaded
+
+[2026-06-07 13:58:57.800] info [modelconfigmanager.cpp:650] [tid 403484]
+Trial Model 通义千问（Qwen-Plus） 试用版 loaded
+
+[2026-06-07 13:58:57.800] info [modelconfigmanager.cpp:650] [tid 403484]
+Trial Model 通义千问（QwQ-32B） 试用版 loaded
+
+[2026-06-07 13:58:57.800] info [modelconfigmanager.cpp:650] [tid 403484]
+Trial Model DeepSeek-R1 试用版 loaded
+
+[2026-06-07 13:58:57.800] info [modelconfigmanager.cpp:650] [tid 403484]
+Trial Model DeepSeek-V3 试用版 loaded
+
+[2026-06-07 13:58:57.801] info [coretextembeddingservice.cpp:138] [tid 403491]
+[onHandleInitEngine] service: The sessionId of the engine is 1378809570
+
+[2026-06-07 13:58:57.801] info [coretextembeddingservice.cpp:139] [tid 403491]
+[onHandleInitEngine] start load text embedding model.
+
+[2026-06-07 13:59:08.004] info [coretextembeddingservice.cpp:147] [tid 403491]
+[onHandleInitEngine] load text embedding model success.
+
+[2026-06-07 13:59:08.289] info [coretextembeddingserver.cpp:33] [tid 403491]
+Text Embedding new connection
+
+[2026-06-07 13:59:08.289] info [coretextembeddingservice.cpp:138] [tid 403491]
+[onHandleInitEngine] service: The sessionId of the engine is 2140687954
+
+[2026-06-07 13:59:08.289] info [coretextembeddingservice.cpp:139] [tid 403491]
+[onHandleInitEngine] start load text embedding model.
+
+[2026-06-07 13:59:13.346] info [coretextembeddingservice.cpp:147] [tid 403491]
+[onHandleInitEngine] load text embedding model success.
+
+[2026-06-07 13:59:14.607] info [coretextembeddingserver.cpp:33] [tid 403491]
+Text Embedding new connection
+
+[2026-06-07 13:59:14.608] info [coretextembeddingservice.cpp:138] [tid 403491]
+[onHandleInitEngine] service: The sessionId of the engine is 1956857870
+
+[2026-06-07 13:59:14.608] info [coretextembeddingservice.cpp:139] [tid 403491]
+[onHandleInitEngine] start load text embedding model.
+
+[2026-06-07 13:59:14.611] info [coretextembeddingservice.cpp:147] [tid 403491]
+[onHandleInitEngine] load text embedding model success.
+
+
+done
+
+$ memctl sdk-status --probe-embedding --probe-timeout 180
+
+[1780811955158] [32minfo [0m Proxy init engine sessionId:338556060.
+{
+  "embedding": {
+    "backend": "kylin_coreai_embedding",
+    "library": "libkysdk-coreai-embedding.so.1",
+    "library_file": "/lib/x86_64-linux-gnu/libkysdk-coreai-embedding.so.1",
+    "library_loadable": true,
+    "headers": {
+      "/usr/include/kylin-ai/coreai/embedding/embedding.h": true,
+      "/usr/include/kylin-ai/plugins/ai-engines/ondeviceembeddingengine.h": true
+    },
+    "runtime": {
+      "binary": "/usr/bin/kylin-ai-runtime",
+      "user_service": {
+        "available": true,
+        "active": false,
+        "state": "inactive"
+      },
+      "base_dir": "/tmp/.kylin-ai-runtime-unix/1000",
+      "base_dir_exists": true,
+      "sockets": {
+        "core-textembedding.sock": "/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock",
+        "config.sock": "/tmp/.kylin-ai-runtime-unix/1000/config.sock"
+      },
+      "socket_exists": {
+        "core-textembedding.sock": true,
+        "config.sock": true
+      },
+      "session_bus": true,
+      "xdg_runtime_dir": "/run/user/1000"
+    },
+    "kytensor": {
+      "service": {
+        "available": true,
+        "active": true,
+        "state": "active",
+        "enabled": "enabled"
+      },
+      "repository_index": {
+        "available": true,
+        "ok": true,
+        "models": [
+          "embd_cn-clip_512-uint8-image",
+          "embd_cn-clip_512-uint8-text",
+          "embd_gte-base_uint8-text",
+          "ensemble-embd_cn-clip_512-uint8-text",
+          "ensemble-embd_gte-base_uint8-text",
+          "matting_portrait",
+          "model_bank",
+          "ocr_ppocr",
+          "tokenizer_cn-clip_512-uint8-text",
+          "tokenizer_gte-base_uint8-text"
+        ],
+        "has_text_embedding_models": true
+      },
+      "repositories": [
+        {
+          "path": "/opt/appdata/kylin-ai/model-repository",
+          "exists": true,
+          "entries": [
+            "embd_cn-clip_512-uint8-image",
+            "embd_cn-clip_512-uint8-text",
+            "embd_gte-base_uint8-text",
+            "ensemble-embd_cn-clip_512-uint8-text",
+            "ensemble-embd_gte-base_uint8-text",
+            "matting_portrait",
+            "model_bank",
+            "ocr_ppocr",
+            "tokenizer_cn-clip_512-uint8-text",
+            "tokenizer_gte-base_uint8-text"
+          ],
+          "has_text_embedding_models": true
+        },
+        {
+          "path": "/usr/share/kylin-ai/model-repository",
+          "exists": true,
+          "entries": [
+            "embd_cn-clip_512-uint8-image",
+            "embd_cn-clip_512-uint8-text",
+            "embd_gte-base_uint8-text",
+            "ensemble-embd_cn-clip_512-uint8-text",
+            "ensemble-embd_gte-base_uint8-text",
+            "matting_portrait",
+            "model_bank",
+            "ocr_ppocr",
+            "tokenizer_cn-clip_512-uint8-text",
+            "tokenizer_gte-base_uint8-text"
+          ],
+          "has_text_embedding_models": true
+        }
+      ],
+      "expected_text_embedding_models": [
+        "ensemble-embd_gte-base_uint8-text",
+        "embd_gte-base_uint8-text",
+        "tokenizer_gte-base_uint8-text"
+      ],
+      "fix_hint": "If /opt/appdata/kylin-ai/model-repository is empty while /usr/share/kylin-ai/model-repository has models, run scripts/fix_kylin_embedding_runtime.sh to link the repositories and restart kytensor/runtime."
+    },
+    "plugins": {
+      "dirs": [
+        {
+          "path": "/usr/lib/kylin-ai/plugins/ai-engines",
+          "exists": false,
+          "shared_objects": [],
+          "has_ondevice_plugin": false
+        },
+        {
+          "path": "/usr/lib/x86_64-linux-gnu/kylin-ai/plugins/ai-engines",
+          "exists": true,
+          "shared_objects": [
+            "libbaidu-engine-plugin.so",
+            "libcustom-engine-plugin.so",
+            "libdeepseek-engine-plugin.so",
+            "libfreetrial-engine-plugin.so",
+            "libkylin-traditional-engine-plugin.so",
+            "libondevice-engine.so",
+            "libqwen-engine-plugin.so",
+            "libxunfei-engine-plugin.so"
+          ],
+          "has_ondevice_plugin": true
+        },
+        {
+          "path": "/usr/lib/aarch64-linux-gnu/kylin-ai/plugins/ai-engines",
+          "exists": false,
+          "shared_objects": [],
+          "has_ondevice_plugin": false
+        },
+        {
+          "path": "/usr/lib/loongarch64-linux-gnu/kylin-ai/plugins/ai-engines",
+          "exists": false,
+          "shared_objects": [],
+          "has_ondevice_plugin": false
+        }
+      ]
+    },
+    "packages": {
+      "available": true,
+      "packages": {
+        "kylin-ai-runtime": {
+          "installed": true,
+          "raw": "install ok installed 1.1.0.1-ok0.12"
+        },
+        "kylin-ai-engine-plugins": {
+          "installed": true,
+          "raw": "install ok installed 1.1.0.1-ok1.3"
+        },
+        "libkylin-coreai-embedding": {
+          "installed": true,
+          "raw": "install ok installed 1.2.0.0-ok0.2"
+        },
+        "libkylin-coreai-embedding-dev": {
+          "installed": true,
+          "raw": "install ok installed 1.2.0.0-ok0.2"
+        },
+        "libkylin-ondevice-embedding-engine": {
+          "installed": true,
+          "raw": "install ok installed 1.2.0.0-ok0.5"
+        },
+        "libkylin-ondevice-embedding-engine-dev": {
+          "installed": true,
+          "raw": "install ok installed 1.2.0.0-ok0.5"
+        },
+        "libkylin-ondevice-ai-engine-plugin": {
+          "installed": true,
+          "raw": "install ok installed 1.2.0.0-ok0.6"
+        },
+        "libkylin-ondevice-traditional-ai-engine-plugin": {
+          "installed": true,
+          "raw": "install ok installed 1.2.0.0-ok0.2"
+        }
+      }
+    },
+    "symbols": {
+      "available": true,
+      "ok": true,
+      "symbols": {
+        "text_embedding_create_session": true,
+        "text_embedding_init_session": true,
+        "text_embedding_get_model_info": true,
+        "text_embedding": true,
+        "embedding_result_get_vector_length": true,
+        "embedding_result_get_vector_data": true
+      }
+    },
+    "session": {
+      "created": true,
+      "init_code": 0,
+      "init_ok": true,
+      "init_code_hint": "success",
+      "model_info_ok": true
+    },
+    "model_info": {
+      "dim": 768,
+      "name": "ensemble-embd_gte-base_uint8-text",
+      "ondevice": true
+    },
+    "embedding_probe": {
+      "ok": true,
+      "dim": 768,
+      "sample": [
+        -0.086721,
+        -0.023629,
+        -0.007548,
+        0.027401,
+        0.011692
+      ],
+      "subprocess_returncode": 0,
+      "stderr_tail": "[1780811955229] \u001b[32minfo \u001b[0m Proxy init engine sessionId:1290969527."
+    },
+    "available": true,
+    "inference_ready": true,
+    "ready_for_default_retrieval": true,
+    "fallback": "hash_embedding",
+    "diagnosis": {
+      "success_condition": "library_loadable and model_info and embedding_probe.ok",
+      "availability_meaning": "available means SDK metadata is reachable; inference_ready means a real embedding call succeeded.",
+      "probe_meaning": "embedding_probe is null when sdk-status runs without --probe-embedding; use --probe-embedding to verify real inference readiness.",
+      "timeout_hint": "If model_info is present but embedding_probe returns 'Timeout was reached', inspect kylin-ai-runtime sockets, kytensor.service, Triton repository index, ondevice plugin logs, and model repository links."
+    }
+  },
+  "vector_store": {
+    "backend": "kysdk_vector_engine_client",
+    "library": "libkysdk-vector-engine-client.so.1",
+    "library_loadable": true,
+    "headers": {
+      "/usr/include/kysdk-vector-engine-client/Database.h": true
+    },
+    "binary": "/usr/bin/kylin-ai-vector-engine",
+    "default_binary": "/usr/bin/kylin-ai-vector-engine-default",
+    "user_service": {
+      "available": true,
+      "active": true,
+      "state": "active"
+    },
+    "socket": "/tmp/kylin-ai-vector-engine-1000.sock",
+    "socket_exists": true,
+    "available": true,
+    "fallback": "sqlite_fts_hash_vector"
+  }
+}

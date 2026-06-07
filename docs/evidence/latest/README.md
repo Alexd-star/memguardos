@@ -44,6 +44,9 @@
 | `ukui_control_center_visible_manual_confirmation.txt` | 保留自上次人工复核的 UKUI 控制中心入口可见性确认 |
 | `ukui_enterprise_panel.txt` | 保留自上次人工复核的控制中心企业化面板证据 |
 | `deb_package.txt` | MemGuardOS Debian 安装包构建、包内容和离线解包 smoke 证据 |
+| `deb_apt_install_maintenance.txt` | openKylin 维护模式下通过 `sudo apt install ./dist/memguardos_0.1.0_amd64.deb` 完整安装证据 |
+| `deb_apt_install_verify.txt` | `.deb` 安装后 dpkg、命令入口、systemd/cgroup、Peony/UKUI 插件依赖和审计链验证证据 |
+| `deb_apt_install_sdk_after_fix.txt` | `.deb` 安装后 Kylin runtime 修复、Python/C++ embedding 真实推理和 SDK 状态证据 |
 | `bpf_lsm_policy.txt` | BPF LSM JSON denylist 策略生成证据 |
 | `bpf_lsm_enforcer.txt` | BPF LSM 强制拦截增强环境、构建和 attach 探针 |
 | `systemd_cgroup.txt` | systemd/cgroup 服务限制证据 |

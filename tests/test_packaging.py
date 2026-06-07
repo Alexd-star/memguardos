@@ -150,6 +150,12 @@ def sample_submission_body(name: str) -> str:
         return '{"layers":{"summary":[],"entity_relation":[],"chunk":[]},"explainability":{"retrieval_path":["summary","entity_relation","chunk"]}}\n'
     if name == "docs/evidence/latest/peony_file_scan_smoke.txt":
         return '{"ok":true,"file_ingest_stored":true,"search_hits":2,"audit_ok":true}\n'
+    if name == "docs/evidence/latest/deb_apt_install_maintenance.txt":
+        return "正在设置 memguardos (0.1.0) ...\n"
+    if name == "docs/evidence/latest/deb_apt_install_verify.txt":
+        return "Status: install ok installed\nActive: active (running)\nplugin_ldd_missing=0\n+ memctl verify-audit\n{\"ok\": true}\n"
+    if name == "docs/evidence/latest/deb_apt_install_sdk_after_fix.txt":
+        return "{\"embedding\":{\"inference_ready\": true}}\nembedding.length=768\n"
     return "x"
 
 
