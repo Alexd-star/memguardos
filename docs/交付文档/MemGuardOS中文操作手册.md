@@ -120,7 +120,29 @@ MemGuardOS 的核心价值体现在四个方面。第一，它把多源输入整
 
 MemGuardOS 的典型流程如下：用户或 OS Agent 写入一段文本、配置、工具结果或系统事件；系统先进行输入质量校验和敏感检测，再将有效信息抽取为偏好、知识或安全策略记忆；记忆被追加到 mmap 段文件，并在 SQLite 中建立元数据、FTS、图谱和审计记录；当 Agent 发起查询时，系统通过混合检索返回相关记忆，并构建已脱敏上下文；当用户要求遗忘时，系统先返回候选计划，确认后执行删除、索引清理、compact 和审计校验。
 
-【流程图占位符：MemGuardOS 从多源输入到记忆检索、上下文构建、精准遗忘和审计验证的总体流程】
+```mermaid
+flowchart LR
+    A[多源输入] --> B[质量校验]
+    B --> C[敏感检测与脱敏]
+    C --> D[偏好/知识/安全策略抽取]
+    D --> E[mmap 追加式段文件]
+    D --> F[SQLite 元数据、FTS 与图谱索引]
+    E --> G[混合检索]
+    F --> G
+    G --> H[RAG 上下文包]
+    H --> I[本地或远程 Agent 生成前上下文]
+    G --> J[精准遗忘候选]
+    J --> K[二次确认]
+    K --> L[tombstone、索引清理与 compact]
+    B --> M[审计哈希链]
+    C --> M
+    D --> M
+    G --> M
+    L --> M
+    M --> N[verify-audit 可复验]
+```
+
+图 2-1 展示了 MemGuardOS 的主业务闭环。系统先把多源输入统一进入质量和敏感治理层，再完成记忆抽取、索引、检索、上下文构建和遗忘操作。审计哈希链贯穿写入、检索、遗忘和诊断过程，最终可通过 `verify-audit` 验证关键操作记录是否被篡改。
 
 ### 2.5 用户角色说明
 
@@ -261,7 +283,9 @@ python -m memguard.cli.memctl web --host 127.0.0.1 --port 8765
 http://127.0.0.1:8765
 ```
 
-【截图占位符：MemGuardOS Web 控制台首页与诊断视图】
+![MemGuardOS Web 控制台桌面视图](../evidence/ui_review/dashboard-desktop.png)
+
+图 4-1 为当前版本 Web 控制台桌面截图。控制台包含运行状态、写入、检索、RAG 上下文、精准遗忘、审计和诊断等入口，并提供诊断包导出能力。移动端适配截图见 `docs/evidence/ui_review/dashboard-mobile.png`。
 
 如需令牌保护，可先生成本地令牌文件：
 
@@ -575,7 +599,9 @@ Web 控制台是本地可视化入口，适合展示系统能力和降低操作�
 
 状态区域用于确认系统是否正常运行，写入区域用于提交文本记忆，抽取解释区域用于观察系统如何判断输入类型，检索区域用于查看命中结果，RAG 上下文区域用于展示脱敏和选择轨迹，精准遗忘区域会在执行前要求确认，审计区域用于检查关键操作，诊断区域用于导出运行环境信息。由于控制台用于本地演示和运维，不建议绑定 `0.0.0.0` 或公网地址。
 
-【截图占位符：Web 控制台主界面功能布局】
+![Web 控制台主界面功能布局](../evidence/ui_review/dashboard-desktop.png)
+
+图 6-1 展示了 Web 控制台的主界面布局。左侧为功能导航，右侧为当前功能区。总览页以红黄绿状态展示审计链、检索后端、Kylin SDK 和 OS 资源状态；诊断页支持导出包含 namespace、retrieval、memory-policy、temporal、SDK 和审计链信息的 JSON 诊断包。
 
 ### 6.3 openKylin 桌面入口
 
@@ -583,9 +609,7 @@ Web 控制台是本地可视化入口，适合展示系统能力和降低操作�
 
 这两个入口用于展示 MemGuardOS 与 openKylin 桌面环境的集成方向。它们不是独立账号系统，也不是完整企业控制台。若插件在当前桌面会话中不可见，应先确认插件版本、安装路径、只读 `/usr` 状态和桌面缓存，再重启 Peony 或注销重进桌面会话。
 
-【截图占位符：Peony 文件右键菜单中的 MemGuardOS 操作项】
-
-【截图占位符：UKUI 控制中心中的 MemGuardOS 记忆安全页面】
+Peony 文件右键入口和 UKUI 控制中心入口的构建、安装与可见性证据保存在最新 openKylin 证据包中，重点文件包括 `docs/evidence/latest/ukui_plugin_build.txt`、`docs/evidence/latest/ukui_plugin_install.txt`、`docs/evidence/latest/ukui_plugin_visible_final.txt`、`docs/evidence/latest/ukui_peony_visible_manual_confirmation.txt` 和 `docs/evidence/latest/ukui_control_center_visible_manual_confirmation.txt`。如果需要在现场演示桌面入口，应优先展示 openKylin 当前桌面中的 Peony 右键菜单和控制中心页面，再打开上述证据文件说明构建依赖、插件路径和可见性验证结果。
 
 ## 第7章 Web 控制台操作
 
@@ -619,11 +643,7 @@ python -m memguard.cli.memctl web --host 127.0.0.1 --port 8766
 6. 在精准遗忘页面先执行预览，确认候选后再执行删除。
 7. 回到审计页面，查看写入、检索、遗忘和 compact 相关审计事件。
 
-【截图占位符：写入记忆页面】
-
-【截图占位符：RAG 上下文解释性输出页面】
-
-【截图占位符：精准遗忘二次确认页面】
+写入、RAG 上下文和精准遗忘三个页面均位于同一个 Web 控制台中。当前可交付截图见图 6-1；其中“写入”页面用于提交文本和查看抽取解释，“RAG 上下文”页面展示 token 预算、来源分布、层级分布和 selection trace，“精准遗忘”页面会先进行 dry-run，再通过二次确认执行 tombstone 和 compact。若需要保存单页截图，可在浏览器中分别切换到对应导航项后截图，截图文件建议放入 `docs/evidence/ui_review/` 并在提交前重新运行文档链接检查。
 
 ## 第8章 本地 Agent API
 

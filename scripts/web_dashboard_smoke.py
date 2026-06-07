@@ -18,22 +18,24 @@ def main() -> int:
         root = Path(tmp)
         service = MemGuardService(store_path=root / "memory.segment", db_path=root / "memguard.sqlite3")
         port = _free_port()
-        thread = Thread(target=run_dashboard, args=(service, "127.0.0.1", port, ""), daemon=True)
+        auth_token = "local-secret"
+        thread = Thread(target=run_dashboard, args=(service, "127.0.0.1", port, auth_token), daemon=True)
         thread.start()
         base = "http://127.0.0.1:%s" % port
-        _wait_until_ready(base)
+        _wait_until_ready(base, auth_token=auth_token)
         page = _http_get(base + "/")
-        ingest = _http_post(base + "/api/ingest", {"text": "以后回答 openKylin 服务问题时先给命令。", "source_kind": "dashboard"})
-        search = _http_get_json(base + "/api/search?q=openKylin%20%E6%9C%8D%E5%8A%A1")
-        explain = _http_get_json(base + "/api/explain-extraction?text=%E8%AF%B7%E4%BB%A5%E5%90%8E%E7%94%A8%E4%B8%AD%E6%96%87%E7%AE%80%E6%B4%81%E5%9B%9E%E7%AD%94")
-        status = _http_get_json(base + "/api/status")
-        audit = _http_get_json(base + "/api/verify-audit")
-        retrieval = _http_get_json(base + "/api/retrieval-status")
-        policy = _http_get_json(base + "/api/memory-policy")
-        diagnostics = _http_get_json(base + "/api/diagnostics")
-        exported = _http_get_json(base + "/api/export-diagnostics")
-        invalid_json_status, invalid_json = _http_post_raw(base + "/api/ingest", b"{", "application/json")
-        large_status, large_body = _http_post_raw(base + "/api/ingest", b"x" * 262145, "application/json")
+        unauthorized_status, unauthorized_body = _http_get_json_status(base + "/api/diagnostics")
+        ingest = _http_post(base + "/api/ingest", {"text": "以后回答 openKylin 服务问题时先给命令。", "source_kind": "dashboard"}, auth_token=auth_token)
+        search = _http_get_json(base + "/api/search?q=openKylin%20%E6%9C%8D%E5%8A%A1", auth_token=auth_token)
+        explain = _http_get_json(base + "/api/explain-extraction?text=%E8%AF%B7%E4%BB%A5%E5%90%8E%E7%94%A8%E4%B8%AD%E6%96%87%E7%AE%80%E6%B4%81%E5%9B%9E%E7%AD%94", auth_token=auth_token)
+        status = _http_get_json(base + "/api/status", auth_token=auth_token)
+        audit = _http_get_json(base + "/api/verify-audit", auth_token=auth_token)
+        retrieval = _http_get_json(base + "/api/retrieval-status", auth_token=auth_token)
+        policy = _http_get_json(base + "/api/memory-policy", auth_token=auth_token)
+        diagnostics = _http_get_json(base + "/api/diagnostics", auth_token=auth_token)
+        exported = _http_get_json(base + "/api/export-diagnostics", auth_token=auth_token)
+        invalid_json_status, invalid_json = _http_post_raw(base + "/api/ingest", b"{", "application/json", auth_token=auth_token)
+        large_status, large_body = _http_post_raw(base + "/api/ingest", b"x" * 262145, "application/json", auth_token=auth_token)
         result = {
             "page_ok": "MemGuardOS 控制台" in page,
             "diagnostics_tab_ok": "系统诊断" in page,
@@ -51,6 +53,7 @@ def main() -> int:
             "policy_ok": policy.get("ok") is True,
             "diagnostics_ok": diagnostics.get("ok") is True and "audit_chain" in diagnostics.get("result", {}),
             "export_ok": "doctor" in exported and "audit_chain" in exported,
+            "auth_required_for_diagnostics": unauthorized_status == 401 and unauthorized_body.get("error") == "unauthorized",
             "invalid_json_rejected": invalid_json_status == 400 and invalid_json.get("error") == "invalid_json",
             "large_payload_rejected": large_status == 413 and large_body.get("error") == "payload_too_large",
             "url": base,
@@ -72,6 +75,7 @@ def main() -> int:
             and result["policy_ok"]
             and result["diagnostics_ok"]
             and result["export_ok"]
+            and result["auth_required_for_diagnostics"]
             and result["invalid_json_rejected"]
             and result["large_payload_rejected"]
         )
@@ -84,42 +88,52 @@ def _free_port() -> int:
         return int(sock.getsockname()[1])
 
 
-def _wait_until_ready(base: str) -> None:
+def _wait_until_ready(base: str, auth_token: str = "") -> None:
     deadline = time.time() + 5
     while time.time() < deadline:
         try:
-            _http_get(base + "/api/status")
+            _http_get(base + "/api/status", auth_token=auth_token)
             return
         except OSError:
             time.sleep(0.05)
     raise RuntimeError("dashboard did not start")
 
 
-def _http_get(url: str) -> str:
-    with urlopen(url, timeout=3) as response:
+def _http_get(url: str, auth_token: str = "") -> str:
+    request = Request(url, headers=_auth_headers(auth_token), method="GET")
+    with urlopen(request, timeout=3) as response:
         return response.read().decode("utf-8")
 
 
-def _http_get_json(url: str) -> dict:
-    return json.loads(_http_get(url))
+def _http_get_json(url: str, auth_token: str = "") -> dict:
+    return json.loads(_http_get(url, auth_token=auth_token))
 
 
-def _http_post(url: str, payload: dict) -> dict:
+def _http_get_json_status(url: str, auth_token: str = "") -> tuple[int, dict]:
+    request = Request(url, headers=_auth_headers(auth_token), method="GET")
+    try:
+        with urlopen(request, timeout=3) as response:
+            return int(response.status), json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        return int(exc.code), json.loads(exc.read().decode("utf-8"))
+
+
+def _http_post(url: str, payload: dict, auth_token: str = "") -> dict:
     request = Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=_auth_headers(auth_token, {"Content-Type": "application/json"}),
         method="POST",
     )
     with urlopen(request, timeout=3) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
-def _http_post_raw(url: str, payload: bytes, content_type: str) -> tuple[int, dict]:
+def _http_post_raw(url: str, payload: bytes, content_type: str, auth_token: str = "") -> tuple[int, dict]:
     request = Request(
         url,
         data=payload,
-        headers={"Content-Type": content_type},
+        headers=_auth_headers(auth_token, {"Content-Type": content_type}),
         method="POST",
     )
     try:
@@ -127,6 +141,13 @@ def _http_post_raw(url: str, payload: bytes, content_type: str) -> tuple[int, di
             return int(response.status), json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         return int(exc.code), json.loads(exc.read().decode("utf-8"))
+
+
+def _auth_headers(auth_token: str, headers=None) -> dict:
+    result = dict(headers or {})
+    if auth_token:
+        result["Authorization"] = "Bearer " + auth_token
+    return result
 
 
 if __name__ == "__main__":

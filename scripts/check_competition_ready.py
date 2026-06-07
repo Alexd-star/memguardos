@@ -187,6 +187,46 @@ def check_docs() -> List[Check]:
         text = path.read_text(encoding="utf-8", errors="replace")
         cjk_count = sum(1 for char in text if "\u4e00" <= char <= "\u9fff")
         checks.append(Check("中文文档", rel, cjk_count >= 80, "中文字符数 %s" % cjk_count))
+    checks.extend(check_formal_doc_consistency())
+    return checks
+
+
+def check_formal_doc_consistency() -> List[Check]:
+    checks: List[Check] = []
+    manual = ROOT / "docs/交付文档/MemGuardOS中文操作手册.md"
+    manual_text = _read_text_if_exists(manual)
+    placeholder_tokens = ["占位符", "截图占位", "流程图占位", "架构图占位"]
+    placeholder_hits = [token for token in placeholder_tokens if token in manual_text]
+    checks.append(
+        Check(
+            "中文文档",
+            "交付操作手册无空占位",
+            bool(manual_text) and not placeholder_hits,
+            "已替换流程图/截图占位" if manual_text and not placeholder_hits else "仍包含：%s" % "、".join(placeholder_hits),
+        )
+    )
+    api_doc = ROOT / "docs/09_接口文档.md"
+    api_text = _read_text_if_exists(api_doc)
+    checks.append(
+        Check(
+            "中文文档",
+            "API 文档字段与代码一致",
+            "`command` 字段" in api_text and "`action` 字段" not in api_text,
+            "Unix socket API 使用 command 字段" if api_text else "接口文档缺失",
+        )
+    )
+    dashboard = ROOT / "memguard/web/dashboard.py"
+    dashboard_text = _read_text_if_exists(dashboard)
+    product_terms = ["评委", "答辩", "评审"]
+    product_hits = [token for token in product_terms if token in dashboard_text]
+    checks.append(
+        Check(
+            "中文文档",
+            "Web 控制台产品话术",
+            bool(dashboard_text) and not product_hits,
+            "控制台不含竞赛过程话术" if dashboard_text and not product_hits else "仍包含：%s" % "、".join(product_hits),
+        )
+    )
     return checks
 
 

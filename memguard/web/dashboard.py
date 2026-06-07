@@ -3,6 +3,7 @@ from __future__ import annotations
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlparse
+import hmac
 import json
 
 from memguard.api.server import handle_request
@@ -44,6 +45,9 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/":
             self._send_html(_dashboard_html())
+            return
+        if parsed.path.startswith("/api/") and not self._authorized():
+            self._send_json({"ok": False, "error": "unauthorized"}, status=401)
             return
         if parsed.path == "/api/status":
             self._send_api({"command": "namespace_status"})
@@ -107,6 +111,9 @@ class _DashboardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path.startswith("/api/") and not self._authorized():
+            self._send_json({"ok": False, "error": "unauthorized"}, status=401)
+            return
         payload, payload_error = self._read_json()
         if payload_error:
             self._send_json({"ok": False, "error": payload_error}, status=413 if payload_error == "payload_too_large" else 400)
@@ -136,6 +143,11 @@ class _DashboardHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format: str, *args: Any) -> None:
         return
+
+    def _authorized(self) -> bool:
+        if not self.dashboard_auth_token:
+            return True
+        return hmac.compare_digest(_request_token(self.headers.get("Authorization", "")), self.dashboard_auth_token)
 
     def _read_json(self) -> tuple[dict[str, Any], str]:
         length = _safe_int(self.headers.get("Content-Length", "0"), 0)
@@ -404,7 +416,7 @@ def _dashboard_html() -> str:
       </section>
       <section id="context">
         <h2>RAG 上下文</h2>
-        <p class="lead">这里展示生成前上下文包的来源分布、token 预算、脱敏状态和候选选择轨迹，用来回答评委关于“效果、成本和安全边界”的追问。</p>
+        <p class="lead">这里展示生成前上下文包的来源分布、token 预算、脱敏状态和候选选择轨迹，用来回答关于“效果、成本和安全边界”的追问。</p>
         <div class="panel">
           <label>问题</label><input id="contextQuery" value="openKylin 服务内存限制">
           <label>token 预算</label><input id="tokenBudget" type="number" value="1200">
