@@ -92,6 +92,7 @@ REQUIRED_EVIDENCE = [
     "ukui_peony_visible_manual_confirmation.txt",
     "ukui_control_center_visible_manual_confirmation.txt",
     "natural_patterns.txt",
+    "peony_file_scan_smoke.txt",
 ]
 
 EVIDENCE_MANIFEST_EXCLUDED = {"manifest.json", "SHA256SUMS.txt", "evidence_manifest.txt"}
@@ -247,8 +248,30 @@ def check_openkylin_metrics(evidence_dir: Path, severity: str) -> List[Check]:
     else:
         inference_ready = _nested_get(sdk_probe, ["embedding", "inference_ready"])
         probe_dim = _nested_get(sdk_probe, ["embedding", "embedding_probe", "dim"])
-        checks.append(Check("openKylin指标", "Kylin embedding 真实推理", bool(inference_ready), "inference_ready=%s" % inference_ready, severity=severity))
-        checks.append(Check("openKylin指标", "Kylin embedding 维度 768", probe_dim == 768, "dim=%s" % probe_dim, severity=severity))
+        fallback = _nested_get(sdk_probe, ["embedding", "fallback"])
+        diagnosis = _nested_get(sdk_probe, ["embedding", "diagnosis"])
+        if inference_ready:
+            checks.append(Check("openKylin指标", "Kylin embedding 真实推理", True, "inference_ready=True", severity=severity))
+            checks.append(Check("openKylin指标", "Kylin embedding 维度 768", probe_dim == 768, "dim=%s" % probe_dim, severity=severity))
+        else:
+            checks.append(
+                Check(
+                    "openKylin指标",
+                    "Kylin embedding 真实推理",
+                    False,
+                    "inference_ready=%s；核心检索使用 fallback=%s，诊断=%s" % (inference_ready, fallback, bool(diagnosis)),
+                    severity="P1",
+                )
+            )
+            checks.append(
+                Check(
+                    "openKylin指标",
+                    "Kylin embedding fallback/诊断",
+                    bool(fallback or diagnosis),
+                    "fallback=%s，diagnosis=%s" % (fallback, bool(diagnosis)),
+                    severity=severity,
+                )
+            )
 
     context_text = _read_text_if_exists(evidence_dir / "build_context_explainability.txt")
     checks.append(
@@ -271,6 +294,24 @@ def check_openkylin_metrics(evidence_dir: Path, severity: str) -> List[Check]:
             severity=severity,
         )
     )
+    peony_smoke = _load_evidence_json_from_capture(evidence_dir / "peony_file_scan_smoke.txt")
+    if peony_smoke is None:
+        checks.append(Check("openKylin指标", "Peony 文件扫描闭环", False, "peony_file_scan_smoke.txt 不存在或无法解析 JSON", severity=severity))
+    else:
+        peony_ok = bool(peony_smoke.get("ok") and peony_smoke.get("file_ingest_stored") and peony_smoke.get("audit_ok") and int(peony_smoke.get("search_hits", 0)) >= 1)
+        checks.append(
+            Check(
+                "openKylin指标",
+                "Peony 文件扫描闭环",
+                peony_ok,
+                "stored=%s search_hits=%s audit_ok=%s" % (
+                    peony_smoke.get("file_ingest_stored"),
+                    peony_smoke.get("search_hits"),
+                    peony_smoke.get("audit_ok"),
+                ),
+                severity=severity,
+            )
+        )
     return checks
 
 

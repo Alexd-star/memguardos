@@ -9,9 +9,9 @@ MemoryMax=536870912
   "platform": "Linux",
   "is_linux": true,
   "cgroup_v2_mounted": true,
-  "proc_cgroup": "0::/user.slice/user-1000.slice/session-59.scope",
+  "proc_cgroup": "0::/user.slice/user-1000.slice/session-117.scope",
   "memory_current": null,
   "memory_max": null,
   "cpu_max": null,
-  "pid": 217299
+  "pid": 376707
 }

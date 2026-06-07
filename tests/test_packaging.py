@@ -15,6 +15,9 @@ def test_competition_package_keeps_formal_and_process_materials_separate():
         "scripts/collect_openkylin_evidence.sh",
         "native/bpf_lsm/memguard_lsm.bpf.c",
         "docs/项目介绍总览.md",
+        "docs/交付文档/MemGuardOS中文操作手册.md",
+        "docs/交付文档/MemGuardOS中文操作手册.docx",
+        "docs/交付文档/MemGuardOS中文操作手册.pdf",
         "docs/赛题符合性说明.md",
         "docs/evidence/latest/pytest.txt",
         "pyproject.toml",
@@ -145,6 +148,8 @@ def sample_submission_body(name: str) -> str:
         return '{"explainability":{"selection_trace":[]}}\n'
     if name == "docs/evidence/latest/hierarchical_graph_search.txt":
         return '{"layers":{"summary":[],"entity_relation":[],"chunk":[]},"explainability":{"retrieval_path":["summary","entity_relation","chunk"]}}\n'
+    if name == "docs/evidence/latest/peony_file_scan_smoke.txt":
+        return '{"ok":true,"file_ingest_stored":true,"search_hits":2,"audit_ok":true}\n'
     return "x"
 
 
@@ -170,14 +175,14 @@ def test_competition_ready_checks_procedural_memory_metrics(tmp_path):
     "context_explainability_ok": true
   },
   "dataset": {
-    "seed_memories": 45,
-    "retrieval_cases": 40,
-    "sensitive_cases": 25,
-    "forgetting_cases": 20,
+    "seed_memories": 53,
+    "retrieval_cases": 48,
+    "sensitive_cases": 31,
+    "forgetting_cases": 25,
     "conflict_cases": 10,
-    "graph_cases": 13,
+    "graph_cases": 17,
     "quality_cases": 6,
-    "procedural_cases": 3
+    "procedural_cases": 7
   }
 }
 """.strip(),
@@ -190,7 +195,7 @@ def test_competition_ready_checks_procedural_memory_metrics(tmp_path):
     assert by_name["程序性记忆子类型命中率"].ok is True
     assert by_name["层次图谱检索三层检查"].ok is True
     assert by_name["RAG 上下文解释性检查"].ok is True
-    assert by_name["benchmark 用例规模"].detail == "总用例/种子数 162"
+    assert by_name["benchmark 用例规模"].detail == "总用例/种子数 197"
 
 
 def test_competition_ready_checks_openkylin_metric_evidence(tmp_path):
@@ -218,6 +223,10 @@ def test_competition_ready_checks_openkylin_metric_evidence(tmp_path):
     (evidence / "build_context_explainability.txt").write_text('{"explainability":{"selection_trace":[]}}\n', encoding="utf-8")
     (evidence / "hierarchical_graph_search.txt").write_text(
         '{"layers":{"summary":[],"entity_relation":[],"chunk":[]},"explainability":{"retrieval_path":["summary","entity_relation","chunk"]}}\n',
+        encoding="utf-8",
+    )
+    (evidence / "peony_file_scan_smoke.txt").write_text(
+        '{"ok":true,"file_ingest_stored":true,"search_hits":2,"audit_ok":true}\n',
         encoding="utf-8",
     )
 

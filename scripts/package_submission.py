@@ -67,6 +67,9 @@ FORMAL_DOCS = {
     "docs/答辩提纲.md",
     "docs/答辩稿.md",
     "docs/演示视频脚本.md",
+    "docs/交付文档/MemGuardOS中文操作手册.md",
+    "docs/交付文档/MemGuardOS中文操作手册.docx",
+    "docs/交付文档/MemGuardOS中文操作手册.pdf",
 }
 
 FORMAL_DOC_PATTERNS = [
@@ -92,6 +95,7 @@ FORMAL_SCRIPTS = {
     "scripts/memguardd.service",
     "scripts/memguardd@.service",
     "scripts/openkylin_verify.sh",
+    "scripts/peony_file_scan_smoke.sh",
     "scripts/probe_ukui_deep_plugins.sh",
     "scripts/run_bpf_lsm_enforcer.sh",
     "scripts/run_bpftrace_sensitive_probe.sh",

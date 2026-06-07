@@ -1,0 +1,10 @@
+$ bash scripts/peony_file_scan_smoke.sh /home/luo/memguardos
+
+{
+  "ok": true,
+  "namespace": "peony-smoke",
+  "file_ingest_stored": true,
+  "file_memory_id": "mem_be57ea897d134e6c",
+  "search_hits": 2,
+  "audit_ok": true
+}

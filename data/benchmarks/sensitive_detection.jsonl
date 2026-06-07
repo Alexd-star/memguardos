@@ -23,3 +23,9 @@
 {"text":"password_length=16 是密码策略字段，不是用户真实密码。","source_uri":"inline","expect_stored":true,"expect_redacted":false,"labels":[]}
 {"text":"姓名字段为空时不应触发中文姓名脱敏。","source_uri":"inline","expect_stored":true,"expect_redacted":false,"labels":[]}
 {"text":"普通 kubeconfig 文档说明，不包含具体文件路径或凭据内容。","source_uri":"inline","expect_stored":true,"expect_redacted":false,"labels":[]}
+{"text":"User behavior: shell_command command=cat /home/demo/.config/gcloud/application_default_credentials.json","source_uri":"/home/demo/.config/gcloud/application_default_credentials.json","expect_stored":false,"expect_redacted":false,"labels":["sensitive_os_source"]}
+{"text":"OS event: auditd_access action=open path=/srv/memguardos/secrets/prod.env process=/usr/bin/python3","source_uri":"/srv/memguardos/secrets/prod.env","expect_stored":false,"expect_redacted":false,"labels":["sensitive_os_source"]}
+{"text":"Shell history: export OPENAI_API_KEY=sk-test-example1234567890","source_uri":"shell_history","expect_stored":false,"expect_redacted":false,"labels":["api_key","token_assignment"]}
+{"text":"ssh 命令使用示例 ssh user@example.invalid，不包含私钥文件内容。","source_uri":"inline","expect_stored":true,"expect_redacted":false,"labels":[]}
+{"text":"这里讨论 token 预算和上下文成本，不代表出现真实访问令牌。","source_uri":"inline","expect_stored":true,"expect_redacted":false,"labels":[]}
+{"text":"配置 password_policy.min_length=16 是策略字段，不包含用户真实密码。","source_uri":"inline","expect_stored":true,"expect_redacted":false,"labels":[]}

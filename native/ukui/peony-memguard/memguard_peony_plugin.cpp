@@ -9,6 +9,51 @@
 #include <QTextStream>
 #include <QUrl>
 
+static bool isTextImportCandidate(const QString &path)
+{
+    QFileInfo info(path);
+    if (!info.exists() || !info.isFile() || info.size() <= 0 || info.size() > 1024 * 1024)
+        return false;
+    const QString suffix = info.suffix().toLower();
+    QStringList suffixes;
+    suffixes << QStringLiteral("txt")
+        << QStringLiteral("md")
+        << QStringLiteral("log")
+        << QStringLiteral("json")
+        << QStringLiteral("yaml")
+        << QStringLiteral("yml")
+        << QStringLiteral("conf")
+        << QStringLiteral("ini")
+        << QStringLiteral("service")
+        << QStringLiteral("desktop")
+        << QStringLiteral("sh")
+        << QStringLiteral("py")
+        << QStringLiteral("cpp")
+        << QStringLiteral("h")
+        << QStringLiteral("c")
+        << QStringLiteral("toml")
+        << QStringLiteral("csv")
+        << QStringLiteral("xml")
+        << QStringLiteral("html")
+        << QStringLiteral("css")
+        << QStringLiteral("js")
+        << QStringLiteral("ts")
+        << QStringLiteral("sql")
+        << QStringLiteral("env")
+        << QStringLiteral("example");
+    return suffixes.contains(suffix);
+}
+
+static bool startMemctl(const QStringList &args)
+{
+    if (QFileInfo::exists(QStringLiteral("/usr/bin/memctl"))) {
+        return QProcess::startDetached(QStringLiteral("/usr/bin/memctl"), args);
+    }
+    QStringList pythonArgs;
+    pythonArgs << QStringLiteral("-m") << QStringLiteral("memguard.cli.memctl") << args;
+    return QProcess::startDetached(QStringLiteral("python3"), pythonArgs);
+}
+
 Peony::PluginInterface::PluginType MemGuardPeonyPlugin::pluginType()
 {
     return Peony::PluginInterface::MenuPlugin;
@@ -66,7 +111,7 @@ QList<QAction *> MemGuardPeonyPlugin::menuActions(Peony::MenuPluginInterface::Ty
     lastSelection_ = selectionUris;
     fallbackUri_ = uri;
 
-    auto *action = new QAction(QIcon::fromTheme(QStringLiteral("security-high")), QStringLiteral("发送到 MemGuardOS 记忆安全扫描"));
+    auto *action = new QAction(QIcon::fromTheme(QStringLiteral("security-high")), QStringLiteral("用 MemGuardOS 扫描并导入记忆"));
     action->setObjectName(QStringLiteral("memguardos-peony-memory-scan"));
     QObject::connect(action, &QAction::triggered, this, &MemGuardPeonyPlugin::sendSelectionToMemGuard);
     actions << action;
@@ -87,15 +132,19 @@ void MemGuardPeonyPlugin::sendSelectionToMemGuard() const
     event.insert(QStringLiteral("action"), QStringLiteral("inspect"));
     const QString payload = QString::fromUtf8(QJsonDocument(event).toJson(QJsonDocument::Compact));
 
-    if (QFileInfo::exists(QStringLiteral("/usr/bin/memctl"))) {
-        QProcess::startDetached(QStringLiteral("/usr/bin/memctl"), QStringList()
-            << QStringLiteral("ingest-os-event") << QStringLiteral("--json") << payload);
-    } else {
-        QProcess::startDetached(QStringLiteral("python3"), QStringList()
-            << QStringLiteral("-m") << QStringLiteral("memguard.cli.memctl")
-            << QStringLiteral("ingest-os-event") << QStringLiteral("--json") << payload);
+    startMemctl(QStringList() << QStringLiteral("ingest-os-event") << QStringLiteral("--json") << payload);
+
+    bool imported = false;
+    if (isTextImportCandidate(path)) {
+        imported = startMemctl(QStringList()
+            << QStringLiteral("ingest")
+            << QStringLiteral("--file") << path
+            << QStringLiteral("--source-kind") << QStringLiteral("peony_file"));
     }
+
     QProcess::startDetached(QStringLiteral("notify-send"), QStringList()
         << QStringLiteral("MemGuardOS")
-        << QStringLiteral("已将 Peony 选中文件发送到记忆安全扫描"));
+        << (imported
+            ? QStringLiteral("已发送 Peony 选中文件：OS 事件已审计，文本内容已进入记忆安全导入链路")
+            : QStringLiteral("已发送 Peony 选中项：OS 事件已审计，目录/大文件/非文本文件未直接读取")));
 }

@@ -13,11 +13,11 @@ RestartSec=5
 WantedBy=default.target
 ● kytensor.service - Kylin triton inference server
      Loaded: loaded (/usr/lib/systemd/system/kytensor.service; enabled; preset: enabled)
-     Active: active (running) since Sat 2026-06-06 17:04:00 CST; 7h ago
+     Active: active (running) since Sat 2026-06-06 17:04:00 CST; 19h ago
    Main PID: 1099 (kytensor)
       Tasks: 124 (limit: 6991)
-     Memory: 1.5G (peak: 1.9G swap: 964.0K swap peak: 964.0K)
-        CPU: 55.691s
+     Memory: 1.4G (peak: 1.9G swap: 331.5M swap peak: 331.5M)
+        CPU: 1min 26.276s
      CGroup: /system.slice/kytensor.service
              ├─ 1099 /usr/bin/kytensor --model-repository=/opt/appdata/kylin-ai/model-repository --model-control-mode=explicit --http-address=127.0.0.1 --grpc-address=127.0.0.1
              └─10071 /opt/tritonserver/backends/python/triton_python_backend_stub /opt/appdata/kylin-ai/model-repository/tokenizer_gte-base_uint8-text/1/model.py triton_python_backend_shm_region_0293b539-f131-4697-b2f0-11e9830238ce 1048576 1048576 1099 /opt/tritonserver/backends/python 336 tokenizer_gte-base_uint8-text_0 DEFAULT

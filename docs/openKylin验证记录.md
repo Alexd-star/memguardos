@@ -61,7 +61,7 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 - 真实 auditd 日志接入已验证：访问 `/etc/shadow` 后解析出的事件被 `sensitive_block` 阻断
 - BPF LSM 强制拦截已验证：访问 `/tmp/memguardos_lsm_secret` 返回 `Permission denied`，证据为 `enforcement_result=denied`
 - BPF LSM JSON 策略生成已验证：`bpf_lsm_policy.txt` 记录从 JSON denylist 生成可审查静态 header
-- Peony/UKUI 原生插件已构建：Peony 右键菜单插件和 UKUI 控制中心插件均构建出 `.so`；只读 `/usr` 场景已通过 bind mount 演示安装处理，Peony 右键菜单项和 UKUI 控制中心入口均已在桌面可见验证
+- Peony/UKUI 原生插件已构建：Peony 右键菜单插件和 UKUI 控制中心插件均构建出 `.so`；只读 `/usr` 场景已通过 bind mount 演示安装处理，Peony 右键菜单项和 UKUI 控制中心入口均已在桌面可见验证；Peony 文本类文件扫描导入 smoke 已验证写入、检索和审计链闭环
 - 默认用户演示库已归档旧历史数据并重建：`default_audit_after_reset.txt` 显示当前默认库 `verify-audit` 为 `ok=true`，避免最终 UI 演示时被旧审计链分叉数据干扰
 - 可解释语义抽取已验证：`semantic_extraction.txt` 记录 `explain-extraction`、抽取信号、类型/子类型和写入审计
 - 时间有效性窗口已验证：`temporal_status.txt` 记录 `valid_from`、`valid_to`、`superseded_by`、版本更新、遗忘 tombstone 和审计链验证
@@ -224,7 +224,7 @@ bash scripts/install_ukui_plugins.sh --no-build
 
 - Peony 右键菜单插件构建产物：`native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so`。
 - UKUI 控制中心插件构建产物：`native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so`。
-- openKylin ostree/overlay 只读 `/usr` 场景已通过 bind mount 演示安装处理；Peony 右键菜单项“发送到 MemGuardOS 记忆安全扫描”已在桌面右键菜单中可见验证，UKUI 控制中心入口“MemGuardOS 记忆安全”已在设置界面中可见验证。当前源码已将控制中心升级为本机运维面板，提供运行环境检查、审计链校验、端侧向量能力检查、诊断报告和本地控制台入口。
+- openKylin ostree/overlay 只读 `/usr` 场景已通过 bind mount 演示安装处理；Peony 右键菜单项“用 MemGuardOS 扫描并导入记忆”已在桌面右键菜单中可见验证，UKUI 控制中心入口“MemGuardOS 记忆安全”已在设置界面中可见验证。当前源码已将控制中心升级为本机运维面板，提供运行环境检查、审计链校验、端侧向量能力检查、诊断报告和本地控制台入口；`peony_file_scan_smoke.sh` 会自动复验右键动作对应的文本文件导入、检索和审计链。
 - `ukui_enterprise_panel.txt` 记录新控制中心插件 `.so` 已重新构建并安装到系统插件目录，字符串核查包含【运行环境检查】、【校验审计链】、【检查端侧向量能力】、【导出诊断报告】和【打开本地控制台】。
 - `diagnostics_probe_after_reset.txt` 记录默认用户库重建后的诊断报告：`audit_chain.ok=true`，Kylin embedding 实际探针 `ok=true`、维度为 `768`。
 

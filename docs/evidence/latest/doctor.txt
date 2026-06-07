@@ -1,21 +1,21 @@
 $ .venv/bin/python -m memguard.cli.memctl doctor
 
-[1780762554086] [32minfo [0m Proxy init engine sessionId:1755284731.
+[1780806817406] [32minfo [0m Proxy init engine sessionId:640686000.
 {
   "python": "3.12.2",
   "platform": "Linux-6.6.0-19-generic-x86_64-with-glibc2.38",
-  "home": "/var/tmp/memguardos_evidence_20260607_001553",
+  "home": "/var/tmp/memguardos_evidence_20260607_123336",
   "namespace": "default",
   "namespace_status": {
     "namespace": "default",
     "is_default": true,
-    "home": "/var/tmp/memguardos_evidence_20260607_001553",
+    "home": "/var/tmp/memguardos_evidence_20260607_123336",
     "home_exists": true,
-    "namespace_home": "/var/tmp/memguardos_evidence_20260607_001553",
+    "namespace_home": "/var/tmp/memguardos_evidence_20260607_123336",
     "namespace_home_exists": true,
-    "store_path": "/var/tmp/memguardos_evidence_20260607_001553/memory.segment",
-    "db_path": "/var/tmp/memguardos_evidence_20260607_001553/memguard.sqlite3",
-    "custom_patterns_path": "/var/tmp/memguardos_evidence_20260607_001553/sensitive_patterns.json",
+    "store_path": "/var/tmp/memguardos_evidence_20260607_123336/memory.segment",
+    "db_path": "/var/tmp/memguardos_evidence_20260607_123336/memguard.sqlite3",
+    "custom_patterns_path": "/var/tmp/memguardos_evidence_20260607_123336/sensitive_patterns.json",
     "store_exists": false,
     "db_exists": false,
     "custom_patterns_exists": false,
@@ -25,8 +25,8 @@ $ .venv/bin/python -m memguard.cli.memctl doctor
     "live_record_count": 0,
     "audit_event_count": 0
   },
-  "store_path": "/var/tmp/memguardos_evidence_20260607_001553/memory.segment",
-  "db_path": "/var/tmp/memguardos_evidence_20260607_001553/memguard.sqlite3",
+  "store_path": "/var/tmp/memguardos_evidence_20260607_123336/memory.segment",
+  "db_path": "/var/tmp/memguardos_evidence_20260607_123336/memguard.sqlite3",
   "sqlite_version": "3.42.0",
   "commands": {
     "systemctl": "/usr/bin/systemctl",
@@ -43,11 +43,11 @@ $ .venv/bin/python -m memguard.cli.memctl doctor
     "platform": "Linux",
     "is_linux": true,
     "cgroup_v2_mounted": true,
-    "proc_cgroup": "0::/user.slice/user-1000.slice/session-59.scope",
+    "proc_cgroup": "0::/user.slice/user-1000.slice/session-117.scope",
     "memory_current": null,
     "memory_max": null,
     "cpu_max": null,
-    "pid": 185951
+    "pid": 345731
   },
   "kylin_ai_sdk": {
     "embedding": {

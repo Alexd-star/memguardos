@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 102,
-    "passed": 102,
+    "total": 104,
+    "passed": 104,
     "failed": 0,
     "warnings": 0
   },
@@ -11,35 +11,35 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 2589",
+      "detail": "中文字符数 2650",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/正式提交材料说明.md",
       "ok": true,
-      "detail": "中文字符数 620",
+      "detail": "中文字符数 629",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/最终提交说明.md",
       "ok": true,
-      "detail": "中文字符数 2702",
+      "detail": "中文字符数 2725",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/平台摘要.md",
       "ok": true,
-      "detail": "中文字符数 2706",
+      "detail": "中文字符数 2712",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/项目介绍总览.md",
       "ok": true,
-      "detail": "中文字符数 5875",
+      "detail": "中文字符数 5932",
       "severity": "P0"
     },
     {
@@ -67,14 +67,14 @@
       "category": "中文文档",
       "name": "docs/操作系统机制说明.md",
       "ok": true,
-      "detail": "中文字符数 1572",
+      "detail": "中文字符数 1619",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/Peony与UKUI桌面集成实现说明.md",
       "ok": true,
-      "detail": "中文字符数 2259",
+      "detail": "中文字符数 2600",
       "severity": "P0"
     },
     {
@@ -88,14 +88,14 @@
       "category": "中文文档",
       "name": "docs/openKylin验证记录.md",
       "ok": true,
-      "detail": "中文字符数 1438",
+      "detail": "中文字符数 1483",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/部署手册.md",
       "ok": true,
-      "detail": "中文字符数 1214",
+      "detail": "中文字符数 1245",
       "severity": "P0"
     },
     {
@@ -109,21 +109,21 @@
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 2200",
+      "detail": "中文字符数 2342",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/赛题符合性说明.md",
       "ok": true,
-      "detail": "中文字符数 1074",
+      "detail": "中文字符数 1080",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/评委证据包索引.md",
       "ok": true,
-      "detail": "中文字符数 1668",
+      "detail": "中文字符数 1774",
       "severity": "P0"
     },
     {
@@ -137,7 +137,7 @@
       "category": "中文文档",
       "name": "docs/答辩稿.md",
       "ok": true,
-      "detail": "中文字符数 5841",
+      "detail": "中文字符数 5935",
       "severity": "P0"
     },
     {
@@ -347,7 +347,7 @@
       "category": "量化评测",
       "name": "负载 P95 延迟小于 500ms",
       "ok": true,
-      "detail": "当前 0.5180，要求 <= 500.0000",
+      "detail": "当前 1.9630，要求 <= 500.0000",
       "severity": "P0"
     },
     {
@@ -410,7 +410,7 @@
       "category": "量化评测",
       "name": "benchmark 用例规模",
       "ok": true,
-      "detail": "总用例/种子数 162",
+      "detail": "总用例/种子数 197",
       "severity": "P1"
     },
     {
@@ -597,6 +597,13 @@
     },
     {
       "category": "openKylin证据",
+      "name": "peony_file_scan_smoke.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
       "name": "manifest.json",
       "ok": true,
       "detail": "证据清单存在",
@@ -613,21 +620,21 @@
       "category": "openKylin指标",
       "name": "10k 负载 P95 < 500ms",
       "ok": true,
-      "detail": "当前 19.1150，要求 <= 500.0000",
+      "detail": "当前 10.8440，要求 <= 500.0000",
       "severity": "P0"
     },
     {
       "category": "openKylin指标",
       "name": "10k 负载 P99 < 500ms",
       "ok": true,
-      "detail": "当前 118.8750，要求 <= 500.0000",
+      "detail": "当前 106.0950，要求 <= 500.0000",
       "severity": "P0"
     },
     {
       "category": "openKylin指标",
       "name": "10k 进程 RSS < 256MB",
       "ok": true,
-      "detail": "当前 129176.0000，要求 <= 262144.0000",
+      "detail": "当前 149284.0000，要求 <= 262144.0000",
       "severity": "P0"
     },
     {
@@ -655,7 +662,7 @@
       "category": "openKylin指标",
       "name": "10k Agent 批量检索 P95 < 100ms",
       "ok": true,
-      "detail": "当前 17.2040，要求 <= 100.0000",
+      "detail": "当前 15.4270，要求 <= 100.0000",
       "severity": "P0"
     },
     {
@@ -687,17 +694,24 @@
       "severity": "P0"
     },
     {
+      "category": "openKylin指标",
+      "name": "Peony 文件扫描闭环",
+      "ok": true,
+      "detail": "stored=True search_hits=2 audit_ok=True",
+      "severity": "P0"
+    },
+    {
       "category": "openKylin证据",
       "name": "manifest 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 67 个证据文件",
+      "detail": "覆盖 68 个证据文件",
       "severity": "P0"
     },
     {
       "category": "openKylin证据",
       "name": "SHA256SUMS 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 67 个证据文件",
+      "detail": "覆盖 68 个证据文件",
       "severity": "P0"
     },
     {

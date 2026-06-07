@@ -2,47 +2,19 @@ $ .venv/bin/python -m memguard.cli.memctl build-context openKylin 服务内存�
 
 {
   "query": "openKylin 服务内存限制",
-  "memory_count": 3,
+  "memory_count": 1,
   "max_chars": 2000,
   "effective_max_chars": 1846,
-  "context": "[1] type=knowledge subtype=workflow tier=long_term score=0.3354 source=manual\nsummary: 知识记忆：知识:openKylin 本机 Agent 服务可以通过 systemd、cgroup、journald 和 auditd 进行运行约束与审计。\nevidence: 知识:openKylin 本机 Agent 服务可以通过 systemd、cgroup、journald 和 auditd 进行运行约束与审计。\n\n[2] type=knowledge subtype=fact tier=long_term score=0.3044 source=manual\nsummary: 知识记忆：任务规划记忆:openKylin systemd cgroup MemoryMax 约束。\nevidence: 任务规划记忆:openKylin systemd cgroup MemoryMax 约束。\n\n[3] type=knowledge subtype=workflow tier=long_term score=0.1364 source=manual\nsummary: 知识记忆：工具调用记忆:Linux 验证优先使用 rg、pytest、journalctl。\nevidence: 工具调用记忆:Linux 验证优先使用 rg、pytest、journalctl。",
+  "context": "[1] type=knowledge subtype=fact tier=long_term score=0.6948 source=manual\nsummary: 知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。\nevidence: 普通知识: systemd 可用 MemoryMax 限制服务内存。",
   "memories": [
     {
-      "memory_id": "mem_fa8b7d5bc7a3421b",
-      "type": "knowledge",
-      "subtype": "workflow",
-      "tier": "long_term",
-      "score": 0.3354,
-      "source_kind": "manual",
-      "summary": "知识记忆：知识:openKylin 本机 Agent 服务可以通过 systemd、cgroup、journald 和 auditd 进行运行约束与审计。",
-      "sensitivity": {
-        "level": "none",
-        "labels": [],
-        "redacted": false
-      }
-    },
-    {
-      "memory_id": "mem_34cf3f1789ee48c6",
+      "memory_id": "mem_c889f91bfe34444d",
       "type": "knowledge",
       "subtype": "fact",
       "tier": "long_term",
-      "score": 0.3044,
+      "score": 0.6948,
       "source_kind": "manual",
-      "summary": "知识记忆：任务规划记忆:openKylin systemd cgroup MemoryMax 约束。",
-      "sensitivity": {
-        "level": "none",
-        "labels": [],
-        "redacted": false
-      }
-    },
-    {
-      "memory_id": "mem_be5770d04e5e4fd7",
-      "type": "knowledge",
-      "subtype": "workflow",
-      "tier": "long_term",
-      "score": 0.1364,
-      "source_kind": "manual",
-      "summary": "知识记忆：工具调用记忆:Linux 验证优先使用 rg、pytest、journalctl。",
+      "summary": "知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。",
       "sensitivity": {
         "level": "none",
         "labels": [],
@@ -52,58 +24,28 @@ $ .venv/bin/python -m memguard.cli.memctl build-context openKylin 服务内存�
   ],
   "explainability": {
     "source_distribution": {
-      "manual": 3
+      "manual": 1
     },
     "type_distribution": {
-      "knowledge": 3
+      "knowledge": 1
     },
     "tier_distribution": {
-      "long_term": 3
+      "long_term": 1
     },
     "sensitivity_distribution": {
-      "none": 3
+      "none": 1
     },
     "selection_trace": [
       {
-        "memory_id": "mem_fa8b7d5bc7a3421b",
+        "memory_id": "mem_c889f91bfe34444d",
         "rank": 1,
         "included": true,
         "reason": "selected_by_hybrid_graph_or_text_search",
         "truncated": false,
-        "score": 0.3354,
-        "match_source": "hybrid",
-        "type": "knowledge",
-        "subtype": "workflow",
-        "tier": "long_term",
-        "source_kind": "manual",
-        "sensitivity_level": "none",
-        "vector_backend": "hash"
-      },
-      {
-        "memory_id": "mem_34cf3f1789ee48c6",
-        "rank": 2,
-        "included": true,
-        "reason": "selected_by_hybrid_graph_or_text_search",
-        "truncated": false,
-        "score": 0.3044,
+        "score": 0.6948,
         "match_source": "hybrid",
         "type": "knowledge",
         "subtype": "fact",
-        "tier": "long_term",
-        "source_kind": "manual",
-        "sensitivity_level": "none",
-        "vector_backend": "hash"
-      },
-      {
-        "memory_id": "mem_be5770d04e5e4fd7",
-        "rank": 3,
-        "included": true,
-        "reason": "selected_by_hybrid_graph_or_text_search",
-        "truncated": false,
-        "score": 0.1364,
-        "match_source": "hybrid",
-        "type": "knowledge",
-        "subtype": "workflow",
         "tier": "long_term",
         "source_kind": "manual",
         "sensitivity_level": "none",
@@ -118,9 +60,9 @@ $ .venv/bin/python -m memguard.cli.memctl build-context openKylin 服务内存�
   },
   "generation_policy": "仅使用已返回且已脱敏的记忆作为 OS Agent 生成上下文；不得输出被精准遗忘或被敏感策略阻断的明文。",
   "budget": {
-    "context_chars": 625,
-    "estimated_context_tokens": 221,
-    "estimated_package_tokens": 1004,
+    "context_chars": 167,
+    "estimated_context_tokens": 61,
+    "estimated_package_tokens": 468,
     "token_budget": 1200,
     "over_token_budget": false,
     "truncated": false,

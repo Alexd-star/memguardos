@@ -6,9 +6,9 @@
 
 MemGuardOS 的默认主链路是 CLI、daemon、Unix socket API 和本地 Web 控制台。为了进一步体现 openKylin 桌面生态适配，项目补充了 UKUI 原生插件能力：
 
-1. 在 Peony 文件管理器右键菜单中增加“发送到 MemGuardOS 记忆安全扫描”动作。
+1. 在 Peony 文件管理器右键菜单中增加“用 MemGuardOS 扫描并导入记忆”动作。
 2. 用户右键选中文件后，可以把文件路径转换为统一 OS event，写入 MemGuardOS 记忆系统。
-3. OS event 进入既有敏感检测、审计链和检索链路，复用核心安全能力。
+3. 对小于 1 MB 的文本类文件，插件会进一步调用 `memctl ingest --file ... --source-kind peony_file`，把文件内容纳入同一套清洗、敏感检测、建模、检索和审计链路；目录、大文件和非文本文件只记录 OS event，不直接读取内容。
 4. 提供 UKUI 控制中心插件入口，用于展示本机运行状态、审计完整性、端侧向量能力、诊断报告和本地控制台入口。
 5. 在 openKylin 只读 `/usr` 的 ostree/overlay 环境中，提供可复现的演示安装方法。
 
@@ -72,7 +72,7 @@ QList<QAction *> MemGuardPeonyPlugin::menuActions(
 最终返回的菜单文本为：
 
 ```text
-发送到 MemGuardOS 记忆安全扫描
+用 MemGuardOS 扫描并导入记忆
 ```
 
 该动作的 `objectName` 为：
@@ -102,13 +102,19 @@ memguardos-peony-memory-scan
 }
 ```
 
-插件通过本地命令调用 MemGuardOS：
+插件通过本地命令调用 MemGuardOS。第一步始终写入 OS event：
 
 ```bash
-python3 -m memguard.cli.memctl ingest-os-event --json '<event-json>'
+memctl ingest-os-event --json '<event-json>'
 ```
 
-因此 Peony 插件不是只显示 UI，而是接入项目已有 OS 事件处理链路：
+如果选中项是小于 1 MB 的文本类文件，插件还会执行第二步内容导入：
+
+```bash
+memctl ingest --file '<path>' --source-kind peony_file
+```
+
+因此 Peony 插件不是只显示 UI，而是接入项目已有 OS 事件和文件导入链路：
 
 ```text
 Peony 右键菜单
@@ -118,16 +124,33 @@ Peony 右键菜单
   -> 敏感检测
   -> 记忆写入/阻断
   -> SQLite 审计哈希链
+  -> 文本类文件内容导入 peony_file
+  -> 混合检索命中导入内容
   -> 后续检索、RAG 上下文和精准遗忘
 ```
 
 插件还会调用：
 
 ```bash
-notify-send MemGuardOS 已将 Peony 选中文件发送到记忆安全扫描
+notify-send MemGuardOS ...
 ```
 
-用于桌面提示。
+用于桌面提示。当前提示会区分两类结果：文本内容已进入记忆安全导入链路，或目录、大文件、非文本文件仅完成 OS event 审计。这一边界可以避免右键菜单误读二进制文件或超大文件，也方便答辩时解释为什么桌面入口不是简单按钮，而是与核心记忆系统形成了可验证闭环。
+
+## 4.1 Peony 文件扫描闭环 smoke
+
+为了避免只依赖人工截图，项目提供了 `scripts/peony_file_scan_smoke.sh`。该脚本会创建一个真实 Markdown 样例文件，模拟 Peony 右键事件，执行 `ingest-os-event` 和 `ingest --file --source-kind peony_file`，随后检索样例内容并校验审计链。脚本输出 JSON 结果，关键字段包括：
+
+```json
+{
+  "ok": true,
+  "file_ingest_stored": true,
+  "search_hits": 2,
+  "audit_ok": true
+}
+```
+
+该证据证明桌面集成已经从“菜单可见”推进到“菜单动作对应的导入链路可复验”。真实桌面点击仍需在 openKylin 图形界面中人工确认，因为 Peony 插件由桌面进程加载；但核心动作本身已经可以通过 smoke 脚本自动复跑，并被纳入 `collect_openkylin_evidence.sh` 和提交包检查。
 
 ## 5. 元数据 version 的关键适配
 
@@ -281,7 +304,7 @@ bash scripts/verify_ukui_plugins.sh
 2. 系统安装产物是否存在。
 3. `file` 是否识别为 ELF shared object。
 4. `ldd` 是否存在 `not found`。
-5. `strings` 是否包含 `MemGuardOS`、`memguardos`、`发送到`、`记忆安全` 等关键字符串。
+5. `strings` 是否包含 `MemGuardOS`、`memguardos`、`扫描`、`导入`、`记忆安全` 等关键字符串。
 
 ### 8.2 Qt 插件元数据验证
 
@@ -305,8 +328,8 @@ bash scripts/verify_ukui_plugins.sh
 通过小型 Qt/Peony 探针直接实例化插件并调用 `menuActions(...)`，验证：
 
 ```text
-DirectoryView actions 1 "发送到 MemGuardOS 记忆安全扫描"
-DesktopWindow actions 1 "发送到 MemGuardOS 记忆安全扫描"
+DirectoryView actions 1 "用 MemGuardOS 扫描并导入记忆"
+DesktopWindow actions 1 "用 MemGuardOS 扫描并导入记忆"
 ```
 
 这说明插件逻辑对文件管理器目录视图和桌面文件右键都能返回菜单项。
@@ -321,7 +344,7 @@ DesktopWindow actions 1 "发送到 MemGuardOS 记忆安全扫描"
 4. 确认菜单中出现：
 
 ```text
-发送到 MemGuardOS 记忆安全扫描
+用 MemGuardOS 扫描并导入记忆
 ```
 
 当前已经由人工截图确认该菜单项在 openKylin 桌面中可见，证据记录为：
@@ -334,7 +357,7 @@ docs/evidence/latest/ukui_plugin_visible_final.txt
 其中确认文件记录：
 
 ```text
-menu_text=发送到 MemGuardOS 记忆安全扫描
+menu_text=用 MemGuardOS 扫描并导入记忆
 status=visible_in_user_screenshot
 ```
 

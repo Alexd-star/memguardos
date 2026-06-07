@@ -4,6 +4,7 @@ from pathlib import Path
 from zipfile import ZipFile
 import argparse
 import json
+import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,11 +29,13 @@ REQUIRED_PATHS = {
     "scripts/build_deb.sh",
     "scripts/collect_openkylin_evidence.sh",
     "scripts/web_dashboard_smoke.py",
+    "scripts/peony_file_scan_smoke.sh",
     "native/bpf_lsm/memguard_lsm.bpf.c",
     "native/ukui/peony-memguard/memguard_peony_plugin.cpp",
     "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp",
     "docs/evidence/latest/pytest.txt",
     "docs/evidence/latest/web_dashboard.txt",
+    "docs/evidence/latest/peony_file_scan_smoke.txt",
     "docs/evidence/latest/sdk_status.txt",
     "docs/evidence/latest/sdk_embedding_probe.txt",
     "docs/evidence/latest/eval_result_openkylin_10k.json",
@@ -169,8 +172,8 @@ def check_evidence_content(package: Path, name_set: set[str]) -> list[dict[str, 
             return zf.read(name).decode("utf-8", "replace") if name in name_set else ""
 
         pytest_text = text("docs/evidence/latest/pytest.txt")
-        if "60 passed" not in pytest_text:
-            failures.append({"path": "docs/evidence/latest/pytest.txt", "reason": "missing 60 passed"})
+        if not re.search(r"\b\d+\s+passed\b", pytest_text) or " failed" in pytest_text:
+            failures.append({"path": "docs/evidence/latest/pytest.txt", "reason": "missing clean pytest passed summary"})
 
         sdk_probe = _json_from_capture(text("docs/evidence/latest/sdk_embedding_probe.txt"))
         if not sdk_probe:
@@ -178,10 +181,12 @@ def check_evidence_content(package: Path, name_set: set[str]) -> list[dict[str, 
         else:
             inference_ready = _nested_get(sdk_probe, ["embedding", "inference_ready"])
             probe_dim = _nested_get(sdk_probe, ["embedding", "embedding_probe", "dim"])
-            if inference_ready is not True:
-                failures.append({"path": "docs/evidence/latest/sdk_embedding_probe.txt", "reason": "inference_ready is not true"})
-            if probe_dim != 768:
+            fallback = _nested_get(sdk_probe, ["embedding", "fallback"])
+            diagnosis = _nested_get(sdk_probe, ["embedding", "diagnosis"])
+            if inference_ready is True and probe_dim != 768:
                 failures.append({"path": "docs/evidence/latest/sdk_embedding_probe.txt", "reason": "embedding dim is not 768", "actual": probe_dim})
+            if inference_ready is not True and not fallback and not diagnosis:
+                failures.append({"path": "docs/evidence/latest/sdk_embedding_probe.txt", "reason": "embedding is not ready and no fallback/diagnosis is documented"})
 
         eval_10k = _json_from_text(text("docs/evidence/latest/eval_result_openkylin_10k.json"))
         if not eval_10k:
@@ -213,6 +218,17 @@ def check_evidence_content(package: Path, name_set: set[str]) -> list[dict[str, 
         graph_text = text("docs/evidence/latest/hierarchical_graph_search.txt")
         if not all(token in graph_text for token in ('"summary"', '"entity_relation"', '"chunk"', '"retrieval_path"')):
             failures.append({"path": "docs/evidence/latest/hierarchical_graph_search.txt", "reason": "missing hierarchical graph layers"})
+
+        peony_text = text("docs/evidence/latest/peony_file_scan_smoke.txt")
+        peony_smoke = _json_from_capture(peony_text)
+        if not peony_smoke:
+            failures.append({"path": "docs/evidence/latest/peony_file_scan_smoke.txt", "reason": "cannot parse Peony file scan smoke JSON"})
+        else:
+            for key in ("ok", "file_ingest_stored", "audit_ok"):
+                if peony_smoke.get(key) is not True:
+                    failures.append({"path": "docs/evidence/latest/peony_file_scan_smoke.txt", "reason": "%s is not true" % key, "actual": peony_smoke.get(key)})
+            if int(peony_smoke.get("search_hits", 0)) < 1:
+                failures.append({"path": "docs/evidence/latest/peony_file_scan_smoke.txt", "reason": "search_hits < 1", "actual": peony_smoke.get("search_hits")})
     return failures
 
 

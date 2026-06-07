@@ -931,6 +931,47 @@ def test_entity_relation_extraction():
     assert relations
 
 
+def test_sensitive_detector_handles_realistic_tokens_and_documentation_examples(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        blocked = service.ingest_text(
+            "Shell history: export OPENAI_API_KEY=sk-test-example1234567890",
+            source_kind="shell_history",
+            source_uri="shell_history",
+        )
+        assert blocked["stored"] is False
+        assert {"api_key", "token_assignment"}.issubset(set(blocked["sensitivity"].labels))
+
+        example = service.ingest_text(
+            "ssh 命令使用示例 ssh user@example.invalid，不包含私钥文件内容。",
+            source_kind="documentation",
+            source_uri="inline",
+        )
+        assert example["stored"] is True
+        assert example["record"].sensitivity.labels == []
+        assert example["record"].sensitivity.redacted is False
+    finally:
+        service.close()
+
+
+def test_forgetting_uses_specific_anchors_for_realistic_os_agent_cases(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        target = service.ingest_text(
+            "真实故障修复案例：Kylin embedding SDK 推理超时后，先检查 kytensor.service、kylin-ai-runtime.service、core-textembedding.sock 和模型仓库，再运行 diagnose_kylin_embedding.sh 复验 768 维向量。"
+        )["record"]
+        keep_sdk = service.ingest_text("端侧 embedding SDK 返回 768 维文本向量，可作为检索增强的可选后端。")["record"]
+        keep_vector = service.ingest_text("向量数据库 SDK 用于持久化向量索引，和 embedding 推理运行时不是同一个组件。")["record"]
+
+        plan = service.forget("忘掉 Kylin SDK 超时修复流程")
+        ids = {item["memory_id"] for item in plan["candidates"]}
+        assert target.memory_id in ids
+        assert keep_sdk.memory_id not in ids
+        assert keep_vector.memory_id not in ids
+    finally:
+        service.close()
+
+
 def test_graph_search_and_related_memories(tmp_path):
     service = make_service(tmp_path)
     try:
@@ -944,6 +985,23 @@ def test_graph_search_and_related_memories(tmp_path):
         related_ids = {item["memory_id"] for item in related["related"]}
         assert second.memory_id in related_ids
         assert "systemd" in related["graph"]["entities"]
+    finally:
+        service.close()
+
+
+def test_graph_search_prefers_stable_entity_relevance_over_recent_noise(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        first = service.ingest_text(
+            "On systemd-based Linux distributions, MemoryMax limits service memory usage and CPUQuota limits CPU time."
+        )["record"]
+        second = service.ingest_text("openKylin 上可以通过 systemd service 管理后台进程，并用 systemctl status 查看运行状态。")["record"]
+        for idx in range(8):
+            service.ingest_text("演示视频流程 %d：展示 doctor、verify-audit、systemd/cgroup 和 SDK 证据。" % idx)
+
+        ids = [hit["memory_id"] for hit in service.graph_search("systemd", limit=5)]
+        assert first.memory_id in ids
+        assert second.memory_id in ids
     finally:
         service.close()
 

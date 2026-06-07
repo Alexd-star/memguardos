@@ -19,5 +19,5 @@ PYTHON_BIN=.venv/bin/python
 Python 3.12.2
 platform=Linux-6.6.0-19-generic-x86_64-with-glibc2.38
 sqlite=3.42.0
-MEMGUARD_HOME=/tmp/memguardos_evidence_20260607_001553
-JOURNAL_SINCE=2026-06-07 00:15:53
+MEMGUARD_HOME=/tmp/memguardos_evidence_20260607_123336
+JOURNAL_SINCE=2026-06-07 12:33:36

@@ -277,16 +277,21 @@ class SQLiteMetaStore:
 
     def graph_search(self, entity_query: str, limit: int = 10) -> List[Dict[str, Any]]:
         pattern = "%" + entity_query + "%"
+        exact = entity_query.lower()
         rows = self.conn.execute(
             """
-            SELECT DISTINCT m.*, me.entity AS matched_entity
+            SELECT DISTINCT m.*, me.entity AS matched_entity,
+                CASE WHEN lower(me.entity) = ? THEN 8 ELSE 0 END
+                + CASE WHEN lower(m.summary) LIKE ? THEN 4 ELSE 0 END
+                + CASE WHEN lower(m.content) LIKE ? THEN 3 ELSE 0 END
+                + CASE WHEN m.subtype IN ('fact', 'workflow', 'procedure') THEN 1 ELSE 0 END AS graph_rank
             FROM memory_entity me
             JOIN memory m ON m.memory_id = me.memory_id
             WHERE m.deleted = 0 AND me.entity LIKE ?
-            ORDER BY m.updated_at DESC
+            ORDER BY graph_rank DESC, m.updated_at ASC
             LIMIT ?
             """,
-            (pattern, limit),
+            (exact, pattern.lower(), pattern.lower(), pattern, limit),
         ).fetchall()
         return [dict(row) for row in rows]
 

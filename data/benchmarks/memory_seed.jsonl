@@ -43,3 +43,11 @@
 {"label":"knowledge_bpf_lsm_hook_boundary","text":"BPF LSM hook 边界：程序挂载在 lsm/file_open 上，默认只阻断专用测试文件；生产 denylist 在隔离 VM 审查后加载。","expected_type":"knowledge","expected_subtype":"fact"}
 {"label":"knowledge_benchmark_realism","text":"评测数据集现实性：包含真实风格 auditd PATH、shell history、manual config、systemd OOM、UKUI 和 BPF policy 样例，用于支撑过拟合追问的证据。","expected_type":"knowledge","expected_subtype":"fact"}
 {"label":"knowledge_shell_history_hard_negative","text":"真实 shell history 误删难例：命令 history -d 42 只是清理历史记录，不等同于 sudo rm -rf 破坏性删除。","expected_type":"knowledge","expected_subtype":"fact"}
+{"label":"knowledge_real_sdk_recovery_runbook","text":"真实故障修复案例：Kylin embedding SDK 推理超时后，先检查 kytensor.service、kylin-ai-runtime.service、core-textembedding.sock 和模型仓库，再运行 diagnose_kylin_embedding.sh 复验 768 维向量。","expected_type":"knowledge","expected_subtype":"case"}
+{"label":"knowledge_real_ukui_visible_cache","text":"真实案例：Peony 右键菜单不可见时，安装 .so 后需要重启 peony 或重新登录 UKUI 桌面，再检查 MemGuardOS 记忆安全入口。","expected_type":"knowledge","expected_subtype":"case"}
+{"label":"knowledge_real_deb_ostree_guard","text":"真实案例：openKylin 普通模式 apt install memguardos.deb 被 ostree-pkgs-guard 拦截，应进入维护模式或使用离线解包 smoke 验证包内容。","expected_type":"knowledge","expected_subtype":"case"}
+{"label":"knowledge_real_audit_hash_repair","text":"审计链失败处理流程：先停止 memguardd，确认 namespace，保存 verify-audit 输出，恢复完整备份，再重新运行 verify-audit。","expected_type":"knowledge","expected_subtype":"workflow"}
+{"label":"knowledge_real_video_smoke_order","text":"演示视频流程：先展示 doctor 和 verify-audit，再展示 ingest、build-context、forget --yes --compact、systemd/cgroup 和 SDK 证据。","expected_type":"knowledge","expected_subtype":"workflow"}
+{"label":"knowledge_real_submission_package_audit","text":"正式提交包审计流程：生成 memguardos_competition_submission zip 后，运行 inspect_submission_package 检查正式文档、证据内容、本机路径和弱 SDK 证据。","expected_type":"knowledge","expected_subtype":"workflow"}
+{"label":"pref_real_answer_evidence_first","text":"答辩回答请先给证据结论，再说明边界，不要把可选 SDK、BPF LSM 或 UKUI 插件能力夸大。","expected_type":"preference","expected_subtype":"output_style"}
+{"label":"pref_real_openkylin_video_short_path","text":"录制 openKylin 演示视频时，请优先展示核心闭环，不要把大量长日志逐行念完。","expected_type":"preference","expected_subtype":"output_style"}

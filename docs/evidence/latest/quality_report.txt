@@ -1,6 +1,6 @@
 $ ".venv/bin/python" -m memguard.cli.memctl ingest --text '  普通知识：   systemd   可用 MemoryMax 限制服务内存。'; ".venv/bin/python" -m memguard.cli.memctl ingest --text '!!! --- ***' || true; ".venv/bin/python" -m memguard.cli.memctl quality-report
 
-{"stored": true, "memory_id": "mem_d95e6e6168bd40c4", "type": "knowledge", "subtype": "fact", "tier": "long_term", "confidence": 0.8500000000000001, "quality": {"accepted": true, "score": 0.95, "issues": [], "warnings": ["normalized_whitespace_or_control_chars"], "original_chars": 40, "normalized_chars": 34, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "knowledge", "subtype": "fact", "summary": "知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。", "confidence": 0.85, "method": "deterministic_semantic_rules", "signals": ["source_manual", "os_lifecycle_signal"], "enhancer_used": false, "enhancer_error": ""}}
+{"stored": true, "memory_id": "mem_c889f91bfe34444d", "type": "knowledge", "subtype": "fact", "tier": "long_term", "confidence": 0.8500000000000001, "quality": {"accepted": true, "score": 0.95, "issues": [], "warnings": ["normalized_whitespace_or_control_chars"], "original_chars": 40, "normalized_chars": 34, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "knowledge", "subtype": "fact", "summary": "知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。", "confidence": 0.85, "method": "deterministic_semantic_rules", "signals": ["source_manual", "os_lifecycle_signal"], "enhancer_used": false, "enhancer_error": ""}}
 {"stored": false, "reason": "quality_reject", "quality": {"accepted": false, "score": 0.0, "issues": ["no_alphanumeric_or_cjk_signal"], "warnings": [], "original_chars": 11, "normalized_chars": 11, "line_count": 1, "source_kind": "manual"}}
 {
   "quality_reject": [
@@ -9,20 +9,20 @@ $ ".venv/bin/python" -m memguard.cli.memctl ingest --text '  普通知识：   s
       "event_type": "quality_reject",
       "memory_id": null,
       "detail": "{\"namespace\": \"default\", \"quality\": {\"accepted\": false, \"issues\": [\"no_alphanumeric_or_cjk_signal\"], \"line_count\": 1, \"normalized_chars\": 11, \"original_chars\": 11, \"score\": 0.0, \"source_kind\": \"manual\", \"warnings\": []}, \"reason\": \"input quality check rejected the memory\", \"source_kind\": \"manual\", \"source_uri\": \"inline\"}",
-      "created_at": "2026-06-06T16:17:34.104032+00:00",
-      "prev_hash": "65c432d35c3ba355952934e30d266044d63a2bcc69428fbc28265a57ab577b4e",
-      "event_hash": "2378e19318025fd13332d994a85beaf8a8b8092e52b7c7d778607ddaec659846"
+      "created_at": "2026-06-07T04:34:35.106386+00:00",
+      "prev_hash": "34e838d98f0f445f18ada995c1fd563e3e1777259bba6a7f548a11b5aef67ebd",
+      "event_hash": "0705b696220881f304a92c19d5791c89885802b61c25c89b69325335b960e624"
     }
   ],
   "recent_ingest_quality": [
     {
       "audit_id": 2,
       "event_type": "ingest",
-      "memory_id": "mem_d95e6e6168bd40c4",
+      "memory_id": "mem_c889f91bfe34444d",
       "detail": "{\"extraction\": {\"confidence\": 0.85, \"enhancer_error\": \"\", \"enhancer_used\": false, \"memory_type\": \"knowledge\", \"method\": \"deterministic_semantic_rules\", \"signals\": [\"source_manual\", \"os_lifecycle_signal\"], \"subtype\": \"fact\", \"summary\": \"知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。\"}, \"labels\": [], \"namespace\": \"default\", \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 34, \"original_chars\": 40, \"score\": 0.95, \"source_kind\": \"manual\", \"warnings\": [\"normalized_whitespace_or_control_chars\"]}, \"sensitivity\": \"none\", \"source_kind\": \"manual\", \"source_uri\": \"inline\", \"subtype\": \"fact\", \"tier\": \"long_term\", \"type\": \"knowledge\"}",
-      "created_at": "2026-06-06T16:17:33.746491+00:00",
-      "prev_hash": "69659330c4f5c7725d3ea103598531612594b2deb62318c69d960353082bba69",
-      "event_hash": "65c432d35c3ba355952934e30d266044d63a2bcc69428fbc28265a57ab577b4e"
+      "created_at": "2026-06-07T04:34:34.933327+00:00",
+      "prev_hash": "2ee80be7413cd774b778817009d573d9b9b1d0da2910c4a25f70966d773cfefd",
+      "event_hash": "34e838d98f0f445f18ada995c1fd563e3e1777259bba6a7f548a11b5aef67ebd"
     }
   ]
 }

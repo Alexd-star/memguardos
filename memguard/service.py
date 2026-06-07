@@ -630,7 +630,7 @@ class MemGuardService:
                 self._audit("search", None, {"query": clean_query, "count": len(results), "cache": "hit"})
             return results
 
-        candidates = self._search_candidates(query, limit=max(limit * 8, 48))
+        candidates = self._search_candidates(query, limit=max(limit * 8, 128))
         ranked = self.retriever.rank(query, candidates, limit=limit)
         results = []
         seen = set()

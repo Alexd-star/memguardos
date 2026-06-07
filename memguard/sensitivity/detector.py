@@ -23,9 +23,9 @@ class SensitiveDetector:
             "bank_card": re.compile(r"(?<!\d)(?:\d{4}[- ]?){3,4}\d{3}(?!\d)"),
             "person_name_cn": re.compile(r"(?:姓名|名字|收件人|联系人)\s*(?:是|为|:|：)\s*[\u4e00-\u9fff]{2,4}"),
             "address_cn": re.compile(r"(?:地址|住址|收货地址)\s*(?:是|为|:|：)\s*[\u4e00-\u9fffA-Za-z0-9#_\-号栋单元室路街区县市省]{8,80}"),
-            "api_key": re.compile(r"\b(?:sk|ak|pk|hf|ghp|github_pat)_[A-Za-z0-9_\-]{16,}\b"),
+            "api_key": re.compile(r"\b(?:(?:sk|ak|pk|hf|ghp|github_pat)[_-][A-Za-z0-9_\-]{16,}|sk-[A-Za-z0-9_\-]{16,})\b"),
             "aws_access_key_id": re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
-            "token_assignment": re.compile(r"(?i)\b(?:api[_-]?key|token|secret|password)\s*[:=]\s*['\"]?[^'\"\s]{8,}"),
+            "token_assignment": re.compile(r"(?i)\b(?:[A-Z0-9_]*api[_-]?key|[A-Z0-9_]*token|[A-Z0-9_]*secret|[A-Z0-9_]*password)\s*[:=]\s*['\"]?[^'\"\s]{8,}"),
             "private_key": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
         }
         for name, pattern in (custom_patterns or {}).items():
@@ -35,6 +35,8 @@ class SensitiveDetector:
         findings: List[SensitiveFinding] = []
         for label, pattern in self.patterns.items():
             for match in pattern.finditer(text):
+                if label == "email" and self._documentation_example_email(match.group(0)):
+                    continue
                 findings.append(
                     SensitiveFinding(
                         label=label,
@@ -114,3 +116,9 @@ class SensitiveDetector:
             "/root/.ssh/",
         ]
         return any(marker in lowered for marker in markers)
+
+    @staticmethod
+    def _documentation_example_email(value: str) -> bool:
+        lowered = value.lower()
+        example_domains = ("@example.invalid",)
+        return lowered.endswith(example_domains)

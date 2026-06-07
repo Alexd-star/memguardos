@@ -18,3 +18,8 @@
 {"request":"删除默认不依赖外部 LLM API 的答辩口径","expected_delete":["pref_llm_default_boundary"],"expected_keep":["knowledge_real_semantic_extractor"]}
 {"request":"忘掉本地 Web 控制台功能说明","expected_delete":["knowledge_web_console_local"],"expected_keep":["knowledge_socket_local_api"]}
 {"request":"删除 BPF LSM hook 默认阻断边界","expected_delete":["knowledge_bpf_lsm_hook_boundary"],"expected_keep":["knowledge_real_bpf_policy_workflow"]}
+{"request":"忘掉 Kylin SDK 超时修复流程","expected_delete":["knowledge_real_sdk_recovery_runbook"],"expected_keep":["knowledge_embedding_sdk_zh","knowledge_vector_sdk_en"]}
+{"request":"删除 Peony 右键菜单不可见处理案例","expected_delete":["knowledge_real_ukui_visible_cache"],"expected_keep":["knowledge_real_ukui_plugin_verify","knowledge_ukui_visible_restart"]}
+{"request":"忘掉 deb 被 ostree-pkgs-guard 拦截案例","expected_delete":["knowledge_real_deb_ostree_guard"],"expected_keep":["knowledge_linux_smoke_portability"]}
+{"request":"忘掉审计链失败恢复流程","expected_delete":["knowledge_real_audit_hash_repair"],"expected_keep":["knowledge_audit_concurrency"]}
+{"request":"删除正式提交包审计流程","expected_delete":["knowledge_real_submission_package_audit"],"expected_keep":["knowledge_benchmark_realism"]}

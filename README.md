@@ -33,9 +33,9 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地单元测试 | 63 passed |
+| 本地单元测试 | 68 passed |
 | openKylin 单元测试证据 | 60 passed |
-| 本地 1k 负载 P95 | 0.518 ms |
+| 本地 1k 负载 P95 | 1.963 ms |
 | openKylin 1k 负载 P95 | 22.860 ms |
 | openKylin 10k 负载 P95 | 19.115 ms |
 | openKylin 10k 负载 P99 | 118.875 ms |
@@ -44,6 +44,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | 敏感阻断 F1 / 脱敏 F1 / 标签 F1 | 1.0000 / 1.0000 / 1.0000 |
 | 精准遗忘候选精确率 / 召回率 | 1.0000 / 1.0000 |
 | 冲突处理正确率 | 1.0000 |
+| benchmark 用例/种子总数 | 197 |
 
 最新 openKylin 证据包位于 [docs/evidence/latest/](docs/evidence/latest/)。评测汇总见 [docs/测试报告.md](docs/测试报告.md) 和 [docs/评委证据包索引.md](docs/评委证据包索引.md)。
 
@@ -61,7 +62,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | 精准遗忘 | 自然语言候选、dry-run、确认删除、tombstone、FTS/图谱清理、compact、明文探针验证 | `memctl forget`、`memctl verify-forget` |
 | 敏感治理 | PII、凭据、私钥、银行卡、中文地址、OS 高风险路径、自定义正则、自然语言敏感规则 | `memguard/sensitivity/` |
 | 多会话隔离 | namespace 独立段文件、SQLite、敏感规则、审计链；systemd 模板服务配合 cgroup | `memctl --namespace`、`memguardd@.service` |
-| OS 集成 | systemd、cgroup、journald、auditd、BPF LSM 可选强制拦截、JSON denylist 策略生成、Peony 右键菜单可见验证、UKUI 控制中心可见验证 | `scripts/`、`native/` |
+| OS 集成 | systemd、cgroup、journald、auditd、BPF LSM 可选强制拦截、JSON denylist 策略生成、Peony 右键菜单可见验证、Peony 文本文件扫描导入闭环、UKUI 控制中心可见验证 | `scripts/`、`native/` |
 | Agent API | 本地 Unix socket JSON API，支持 health、ingest、search、batch_search、build_context、forget、audit 等 | `memguard/api/server.py` |
 | Kylin SDK 适配 | Kylin embedding/vector SDK 探测，embedding 可选重排后端，默认保留稳定 fallback | `memctl sdk-status`、`memguard/retrieval/kylin_sdk.py` |
 | 本地控制台 | 无外部依赖的 localhost Web 控制台，覆盖状态、写入、抽取解释、检索、RAG 上下文、精准遗忘、审计和系统诊断 | `memctl web`、`memguard/web/dashboard.py` |
@@ -232,7 +233,7 @@ python -m memguard.eval.run_eval --latency-size 10000 --latency-queries 150 --ou
 | 功能、指标和 openKylin 结果 | [docs/测试报告.md](docs/测试报告.md) |
 | 评委现场证据文件 | [docs/评委证据包索引.md](docs/评委证据包索引.md) |
 | OS 机制实现 | [docs/操作系统机制说明.md](docs/操作系统机制说明.md) |
-| Peony/UKUI 桌面集成 | [docs/Peony与UKUI桌面集成实现说明.md](docs/Peony与UKUI桌面集成实现说明.md) |
+| Peony/UKUI 桌面集成 | [docs/Peony与UKUI桌面集成实现说明.md](docs/Peony与UKUI桌面集成实现说明.md)，Peony smoke 见 `scripts/peony_file_scan_smoke.sh` |
 | Kylin SDK 适配 | [docs/麒麟SDK集成证据.md](docs/麒麟SDK集成证据.md) |
 | 安全与精准遗忘 | [docs/安全设计说明书.md](docs/安全设计说明书.md) |
 
@@ -305,7 +306,7 @@ dist/memguardos_full_repository_<时间戳>_manifest.json
 - Kylin embedding SDK：已完成真实向量探针和可选重排检索证据；默认主路径仍保留 FTS/hash/graph fallback。
 - 语义抽取：默认采用可解释、可复现的 deterministic semantic rules；显式配置 `MEMGUARD_EXTRACTOR_COMMAND` 后可接本地 NER/LLM JSON 增强器，增强器失败会自动回退。
 - BPF LSM：已在 openKylin 对安全测试文件完成强制拒绝验证；支持从 JSON 生成可审查静态 denylist；默认不拦截 `/etc/shadow`、SSH、sudo 或 PAM 链路。
-- UKUI/Peony：Peony 右键菜单插件已在 openKylin 桌面右键菜单中可见验证；UKUI 控制中心入口“MemGuardOS 记忆安全”已升级为本机运维面板，包含运行环境检查、审计链校验、端侧向量能力检查、诊断报告和本地控制台入口。
+- UKUI/Peony：Peony 右键菜单插件已在 openKylin 桌面右键菜单中可见验证；菜单动作会把选中文件写成 OS event，并对小于 1 MB 的文本类文件执行 `peony_file` 导入，形成“右键扫描 -> 记忆写入 -> 检索 -> 审计链”的闭环。UKUI 控制中心入口“MemGuardOS 记忆安全”已升级为本机运维面板，包含运行环境检查、审计链校验、端侧向量能力检查、诊断报告和本地控制台入口。
 - Web 控制台：用于本地运维、调试和评审操作，默认绑定 `127.0.0.1`，不作为公网 SaaS 管理台。
 - 用户行为：支持 shell 行为、工具结果、OS 事件和 auditd 事件；不宣称全量桌面行为捕获。
 - 外部 LLM：默认不依赖外部 API；只有显式选择 provider 时才调用本地命令或兼容远程端点。

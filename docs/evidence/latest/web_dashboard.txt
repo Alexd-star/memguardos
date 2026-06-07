@@ -1,9 +1,12 @@
 $ .venv/bin/python scripts/web_dashboard_smoke.py
 
-MemGuardOS dashboard listening on http://127.0.0.1:44937
+MemGuardOS dashboard listening on http://127.0.0.1:53051
 {
   "page_ok": true,
   "diagnostics_tab_ok": true,
+  "diagnostics_export_button_ok": true,
+  "rag_visual_ok": true,
+  "forget_candidate_visual_ok": true,
   "ingest_ok": true,
   "search_hits": 1,
   "extraction_type": "preference",
@@ -11,7 +14,9 @@ MemGuardOS dashboard listening on http://127.0.0.1:44937
   "audit_ok": true,
   "retrieval_ok": true,
   "policy_ok": true,
+  "diagnostics_ok": true,
+  "export_ok": true,
   "invalid_json_rejected": true,
   "large_payload_rejected": true,
-  "url": "http://127.0.0.1:44937"
+  "url": "http://127.0.0.1:53051"
 }

@@ -1,6 +1,6 @@
 $ python3 -m memguard.cli.memctl sdk-status
 
-[1780762560948] [32minfo [0m Proxy init engine sessionId:24816595.
+[1780806821970] [32minfo [0m Proxy init engine sessionId:1159537475.
 {
   "embedding": {
     "backend": "kylin_coreai_embedding",

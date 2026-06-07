@@ -11,3 +11,7 @@
 {"entity":"BEGIN","expected":["knowledge_audit_concurrency"],"case":"audit_transaction"}
 {"entity":"sensitive_patterns","expected":["knowledge_natural_sensitive_pattern"],"case":"natural_pattern_store"}
 {"entity":"kubeconfig","expected":["knowledge_kube_aws_sensitive_paths"],"case":"os_sensitive_config"}
+{"entity":"kytensor","expected":["knowledge_real_sdk_recovery_runbook"],"case":"realistic_kylin_runtime"}
+{"entity":"peony","expected":["knowledge_real_ukui_visible_cache"],"case":"realistic_peony_visibility"}
+{"entity":"ostree-pkgs-guard","expected":["knowledge_real_deb_ostree_guard"],"case":"realistic_deb_guard"}
+{"entity":"verify-audit","expected":["knowledge_real_audit_hash_repair"],"case":"realistic_audit_repair"}

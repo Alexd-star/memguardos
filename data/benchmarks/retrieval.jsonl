@@ -38,3 +38,11 @@
 {"query":"BPF LSM file_open hook 的默认阻断边界是什么？","expected":["knowledge_bpf_lsm_hook_boundary"],"k":5,"case":"bpf_hook_boundary"}
 {"query":"benchmark 如何证明不是只用 toy demo 过拟合？","expected":["knowledge_benchmark_realism"],"k":5,"case":"benchmark_realism"}
 {"query":"shell history 里 history -d 和 sudo rm -rf 应该如何区分？","expected":["knowledge_shell_history_hard_negative"],"k":5,"case":"shell_history_hard_negative"}
+{"query":"SDK 推理超时后应该检查哪些运行时组件？","expected":["knowledge_real_sdk_recovery_runbook"],"k":5,"case":"realistic_sdk_recovery"}
+{"query":"Peony 右键菜单不可见怎么处理？","expected":["knowledge_real_ukui_visible_cache"],"k":5,"case":"realistic_ukui_visibility"}
+{"query":"deb 被 ostree-pkgs-guard 拦截怎么办？","expected":["knowledge_real_deb_ostree_guard"],"k":5,"case":"realistic_deb_guard"}
+{"query":"审计链 verify-audit 失败后如何恢复？","expected":["knowledge_real_audit_hash_repair"],"k":5,"case":"realistic_audit_repair"}
+{"query":"演示视频最好按什么顺序展示？","expected":["knowledge_real_video_smoke_order"],"k":5,"case":"realistic_video_order"}
+{"query":"正式提交包如何检查弱 SDK 证据和本机路径？","expected":["knowledge_real_submission_package_audit"],"k":5,"case":"realistic_package_audit"}
+{"query":"答辩时如何避免夸大 SDK BPF 和 UKUI 能力？","expected":["pref_real_answer_evidence_first"],"k":5,"case":"realistic_answer_boundary"}
+{"query":"openKylin 演示视频不要念什么内容？","expected":["pref_real_openkylin_video_short_path"],"k":5,"case":"realistic_video_style"}

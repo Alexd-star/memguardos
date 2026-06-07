@@ -6,7 +6,7 @@ $ sudo cat /etc/shadow >/dev/null 2>/dev/null || true; bash scripts/auditd_to_me
   "blocked_count": 3,
   "blocked_samples": [
     {
-      "audit_id": "19204",
+      "audit_id": "40654",
       "path": "/etc/shadow",
       "process": "/usr/bin/sudo",
       "action": "open",
@@ -14,7 +14,7 @@ $ sudo cat /etc/shadow >/dev/null 2>/dev/null || true; bash scripts/auditd_to_me
       "reason": "sensitive_block"
     },
     {
-      "audit_id": "19221",
+      "audit_id": "40671",
       "path": "/etc/shadow",
       "process": "/usr/bin/sudo",
       "action": "open",
@@ -22,7 +22,7 @@ $ sudo cat /etc/shadow >/dev/null 2>/dev/null || true; bash scripts/auditd_to_me
       "reason": "sensitive_block"
     },
     {
-      "audit_id": "19232",
+      "audit_id": "40682",
       "path": "/etc/shadow",
       "process": "/usr/bin/cat",
       "action": "open",

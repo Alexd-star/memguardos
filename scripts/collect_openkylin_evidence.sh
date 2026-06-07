@@ -137,6 +137,7 @@ EOF
 | `hierarchical_graph_search.txt` | 摘要层、实体关系层和原文层的层次图谱检索证据 |
 | `generate_answer.txt` | 默认关闭的可选 LLM adapter dry-run 证据 |
 | `web_dashboard.txt` | 本地 Web 控制台 smoke 证据 |
+| `peony_file_scan_smoke.txt` | Peony 右键文件扫描、文本导入、检索和审计链闭环证据 |
 | `agent_batch_search.txt` | OS Agent 任务规划、工具调用、结果生成多查询并发检索证据 |
 | `temporal_status.txt` | 时间有效性窗口、旧版本失效和 tombstone 时间线证据 |
 | `api_auth.txt` | 本地 Agent API token 鉴权证据 |
@@ -232,6 +233,7 @@ run_capture "build_context_explainability" "${PYTHON_BIN}" -m memguard.cli.memct
 run_capture "hierarchical_graph_search" "${PYTHON_BIN}" -m memguard.cli.memctl hierarchical-graph-search systemd --limit 5
 run_capture "generate_answer" "${PYTHON_BIN}" -m memguard.cli.memctl generate-answer "openKylin 服务内存限制" --top-k 5 --token-budget 1200 --provider dry-run
 run_capture "web_dashboard" "${PYTHON_BIN}" scripts/web_dashboard_smoke.py
+run_capture "peony_file_scan_smoke" bash scripts/peony_file_scan_smoke.sh "$(pwd)"
 run_shell_capture "agent_batch_search" "\"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '任务规划记忆：openKylin systemd cgroup MemoryMax 约束。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '工具调用记忆：Linux 验证优先使用 rg、pytest、journalctl。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '结果生成记忆：运维报告先给结论，再给指标证据和边界。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl batch-search '任务规划 systemd cgroup' '工具调用 pytest journalctl' '结果生成 运维报告 证据' --top-k 3 --workers 3; \"${PYTHON_BIN}\" -m memguard.cli.memctl audit --type batch_search --limit 3; \"${PYTHON_BIN}\" -m memguard.cli.memctl verify-audit"
 run_shell_capture "temporal_status" "\"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '以后回答 Linux 命令时使用中文。'; MEMORY_ID=\$(\"${PYTHON_BIN}\" -m memguard.cli.memctl list | \"${PYTHON_BIN}\" -c 'import json,sys; print(json.load(sys.stdin)[0][\"memory_id\"])'); \"${PYTHON_BIN}\" -m memguard.cli.memctl update \"\${MEMORY_ID}\" --text '以后回答 Linux 命令时使用英文。' --reason 'temporal validity smoke'; echo '--- versions after update ---'; \"${PYTHON_BIN}\" -m memguard.cli.memctl versions \"\${MEMORY_ID}\"; echo '--- temporal status ---'; \"${PYTHON_BIN}\" -m memguard.cli.memctl temporal-status --limit 10; echo '--- versions after forget ---'; \"${PYTHON_BIN}\" -m memguard.cli.memctl forget '忘掉 Linux 命令语言偏好' --yes; \"${PYTHON_BIN}\" -m memguard.cli.memctl versions \"\${MEMORY_ID}\"; \"${PYTHON_BIN}\" -m memguard.cli.memctl verify-audit"
 run_capture "memory_policy" "${PYTHON_BIN}" -m memguard.cli.memctl memory-policy --eviction-limit 10

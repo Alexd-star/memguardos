@@ -1,6 +1,6 @@
 # openKylin 证据采集包
 
-采集时间：20260607_001553
+采集时间：20260607_123336
 
 ## 文件说明
 
@@ -23,8 +23,11 @@
 | `semantic_extraction.txt` | 可解释混合抽取与可选语义增强入口证据 |
 | `behavior_history.txt` | shell 用户行为轨迹接入证据 |
 | `build_prompt.txt` | RAG 上下文与 LLM prompt 渲染证据 |
+| `build_context_explainability.txt` | RAG 上下文来源分布、过滤策略和 selection trace 证据 |
+| `hierarchical_graph_search.txt` | 摘要层、实体关系层和原文层的层次图谱检索证据 |
 | `generate_answer.txt` | 默认关闭的可选 LLM adapter dry-run 证据 |
 | `web_dashboard.txt` | 本地 Web 控制台 smoke 证据 |
+| `peony_file_scan_smoke.txt` | Peony 右键文件扫描、文本导入、检索和审计链闭环证据 |
 | `agent_batch_search.txt` | OS Agent 任务规划、工具调用、结果生成多查询并发检索证据 |
 | `temporal_status.txt` | 时间有效性窗口、旧版本失效和 tombstone 时间线证据 |
 | `api_auth.txt` | 本地 Agent API token 鉴权证据 |

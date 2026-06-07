@@ -30,11 +30,16 @@ def main() -> int:
         audit = _http_get_json(base + "/api/verify-audit")
         retrieval = _http_get_json(base + "/api/retrieval-status")
         policy = _http_get_json(base + "/api/memory-policy")
+        diagnostics = _http_get_json(base + "/api/diagnostics")
+        exported = _http_get_json(base + "/api/export-diagnostics")
         invalid_json_status, invalid_json = _http_post_raw(base + "/api/ingest", b"{", "application/json")
         large_status, large_body = _http_post_raw(base + "/api/ingest", b"x" * 262145, "application/json")
         result = {
             "page_ok": "MemGuardOS 控制台" in page,
             "diagnostics_tab_ok": "系统诊断" in page,
+            "diagnostics_export_button_ok": "导出诊断包" in page,
+            "rag_visual_ok": "候选选择轨迹" in page,
+            "forget_candidate_visual_ok": "候选会以卡片形式列出" in page,
             "ingest_ok": bool(ingest.get("ok") and ingest.get("result", {}).get("stored")),
             "search_hits": len(search.get("result", [])),
             "extraction_type": explain.get("result", {}).get("extraction", {}).get("memory_type"),
@@ -42,6 +47,8 @@ def main() -> int:
             "audit_ok": audit.get("ok") is True,
             "retrieval_ok": retrieval.get("ok") is True,
             "policy_ok": policy.get("ok") is True,
+            "diagnostics_ok": diagnostics.get("ok") is True and "audit_chain" in diagnostics.get("result", {}),
+            "export_ok": "doctor" in exported and "audit_chain" in exported,
             "invalid_json_rejected": invalid_json_status == 400 and invalid_json.get("error") == "invalid_json",
             "large_payload_rejected": large_status == 413 and large_body.get("error") == "payload_too_large",
             "url": base,
@@ -51,11 +58,16 @@ def main() -> int:
         ok = (
             result["page_ok"]
             and result["diagnostics_tab_ok"]
+            and result["diagnostics_export_button_ok"]
+            and result["rag_visual_ok"]
+            and result["forget_candidate_visual_ok"]
             and result["ingest_ok"]
             and result["search_hits"] >= 1
             and result["audit_ok"]
             and result["retrieval_ok"]
             and result["policy_ok"]
+            and result["diagnostics_ok"]
+            and result["export_ok"]
             and result["invalid_json_rejected"]
             and result["large_payload_rejected"]
         )

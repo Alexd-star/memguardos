@@ -1,4 +1,4 @@
-$ KYLIN_RETRIEVAL_HOME='docs/evidence/openkylin_20260607_001553/kylin_retrieval_home'; rm -rf "${KYLIN_RETRIEVAL_HOME}"; mkdir -p "${KYLIN_RETRIEVAL_HOME}"; MEMGUARD_HOME="${KYLIN_RETRIEVAL_HOME}" MEMGUARD_EMBEDDING_BACKEND=auto MEMGUARD_KYLIN_EMBEDDING_TIMEOUT=90 ".venv/bin/python" - <<'PY'
+$ KYLIN_RETRIEVAL_HOME='docs/evidence/openkylin_20260607_123336/kylin_retrieval_home'; rm -rf "${KYLIN_RETRIEVAL_HOME}"; mkdir -p "${KYLIN_RETRIEVAL_HOME}"; MEMGUARD_HOME="${KYLIN_RETRIEVAL_HOME}" MEMGUARD_EMBEDDING_BACKEND=auto MEMGUARD_KYLIN_EMBEDDING_TIMEOUT=90 ".venv/bin/python" - <<'PY'
 import json
 
 from memguard.service import MemGuardService
@@ -14,7 +14,7 @@ PY
 {
   "hits": [
     {
-      "memory_id": "mem_140690f0c4ec4a43",
+      "memory_id": "mem_792ba7ce93e440c2",
       "type": "knowledge",
       "subtype": "fact",
       "scope": "default",
@@ -26,19 +26,19 @@ PY
       "sensitivity_level": "none",
       "sensitivity_labels": "[]",
       "sensitivity_redacted": 0,
-      "version_id": "ver_ebfb821245804607",
-      "valid_from": "2026-06-06T16:16:02.975679+00:00",
+      "version_id": "ver_2e86b9ec45974483",
+      "valid_from": "2026-06-07T04:33:43.308302+00:00",
       "valid_to": null,
       "superseded_by": null,
       "deleted": 0,
-      "updated_at": "2026-06-06T16:16:02.976263+00:00",
+      "updated_at": "2026-06-07T04:33:43.309109+00:00",
       "rank": -1.3512476007677544e-06,
       "score": 0.7351,
       "match_source": "hybrid",
       "vector_backend": "kylin_sdk"
     },
     {
-      "memory_id": "mem_3a5a500fd1214a4a",
+      "memory_id": "mem_239727ce5fb7495d",
       "type": "knowledge",
       "subtype": "fact",
       "scope": "default",
@@ -50,12 +50,12 @@ PY
       "sensitivity_level": "none",
       "sensitivity_labels": "[]",
       "sensitivity_redacted": 0,
-      "version_id": "ver_b9bdab7c82b34813",
-      "valid_from": "2026-06-06T16:16:02.994487+00:00",
+      "version_id": "ver_248e06b60841494b",
+      "valid_from": "2026-06-07T04:33:43.329971+00:00",
       "valid_to": null,
       "superseded_by": null,
       "deleted": 0,
-      "updated_at": "2026-06-06T16:16:02.994923+00:00",
+      "updated_at": "2026-06-07T04:33:43.330354+00:00",
       "score": 0.3505,
       "match_source": "hybrid",
       "vector_backend": "kylin_sdk"

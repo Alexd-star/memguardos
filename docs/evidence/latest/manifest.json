@@ -1,28 +1,28 @@
 {
-  "generated_at": "2026-06-06T16:39:47.989324+00:00",
+  "generated_at": "2026-06-07T04:39:09.695851+00:00",
   "root": "docs/evidence/latest",
-  "file_count": 67,
-  "total_bytes": 416352,
+  "file_count": 68,
+  "total_bytes": 413277,
   "files": [
     {
       "path": "agent_batch_search.txt",
       "bytes": 11788,
-      "sha256": "ae2216e88ff128b2d7d1f08dd041eb6a9c370991c570fc3ffbac9dd9b0308f07"
+      "sha256": "b5fb5602a9cdd7231207e8b3116e49cafd9402745820cd396494ef71fcb991be"
     },
     {
       "path": "api_auth.txt",
       "bytes": 602,
-      "sha256": "c17549af325a21549c600c6356035cc1575069bfaf756db8101377bf188e260f"
+      "sha256": "03f9b171c6724d76b616f5d11167f8f041738c1762b0e9453dd29292978c1924"
     },
     {
       "path": "audit_concurrency.txt",
       "bytes": 1608,
-      "sha256": "4ef7019a9695db43b9ff2ffbc76fb569c7fa31396eb9097004a0f6953ff563ff"
+      "sha256": "0c9cd1f29fc3417454da0ce5d4fc918fa8a0e816c858b959221007dcc829b44e"
     },
     {
       "path": "auditd_ingest.txt",
       "bytes": 798,
-      "sha256": "ba3d1a244b40b21f912875b8f209eedfaab3eb71b7ab6a2d9bd1c3b72bfdd191"
+      "sha256": "77b3e09d438526afc37e9a6daa9603caf1d36499ffbeb953b46fa205df859c40"
     },
     {
       "path": "auditd_rules.txt",
@@ -32,22 +32,22 @@
     {
       "path": "behavior_history.txt",
       "bytes": 1028,
-      "sha256": "28f5803292e0db3d3414a5320044b676aa030a157d100a04ad3ebe34af55435c"
+      "sha256": "8a869472dbead1de27f26ee560b9e4c45a110956d4733b3f62c93ef961aef870"
     },
     {
       "path": "bpf_lsm_enforcer.txt",
       "bytes": 897,
-      "sha256": "e894fcbb606edc72a95db146157b732ea40f728ca9f3d0301f8ef4701e4031d6"
+      "sha256": "dfeaff9a10fd7212db9251a61f43587f830358f667b219bfdc8f564b6eafee47"
     },
     {
       "path": "bpf_lsm_policy.txt",
       "bytes": 458,
-      "sha256": "4f18c3fc89ef9c9b36f88d01c3b0358668ec495c5c6b02431e80b39b0df18861"
+      "sha256": "ba4badd2d9979c1ef4737f17c0dc50bf4297ec0ca6dd30bb336a631f4590cc4a"
     },
     {
       "path": "build_context_explainability.txt",
-      "bytes": 4710,
-      "sha256": "43754c3fa8925e6d25a647d677a0bfb8b7536a8163635a01e48798b32dd78247"
+      "bytes": 2334,
+      "sha256": "00fa83cbb829c277301fcf0a9991eb82ddb4cd24927909043df6a9d63111bbf3"
     },
     {
       "path": "build_prompt.txt",
@@ -56,8 +56,8 @@
     },
     {
       "path": "deb_package.txt",
-      "bytes": 11540,
-      "sha256": "f1bf6075ea77819ae8d3b85f808f93e72c9e2f821b7a0decb3e68b56baa2b0fd"
+      "bytes": 11457,
+      "sha256": "d003c46446611a9baf2613778de1e94e300d34e54e62b9a5bf10bb10a2640bb6"
     },
     {
       "path": "default_audit_after_reset.txt",
@@ -72,47 +72,47 @@
     {
       "path": "doctor.txt",
       "bytes": 9915,
-      "sha256": "08081e267f8a8761cb7a7e3680dcb133ec94f97cfcb4d9d8c743e1938c166dd8"
+      "sha256": "fc64871a7b7283c8858ef742638548bb31cab1ab67290f7556040f33ef8bcaaf"
     },
     {
       "path": "embedding_cpp_probe.txt",
       "bytes": 635,
-      "sha256": "a0cfcfd5b7fa8b136cc08de39aaa3da9c84e0748081eadf0dfdba2d1fde5dc52"
+      "sha256": "9c699243d9fb2088aa271653a37578ba85f1f3b546d1f1aca909138bbc01d9f5"
     },
     {
       "path": "environment.txt",
       "bytes": 813,
-      "sha256": "b9643843464bbe4a2e3c57c9eaefcb3470e4dd969c12459316583fda72212ba8"
+      "sha256": "9db01a254de94ee3180bd9744ddd5d47aa3ba8863cf8e1322f4e1b40fbdcee03"
     },
     {
       "path": "eval_10k.txt",
-      "bytes": 3856,
-      "sha256": "46dafd6e91470d4ed33beadad586a6326f11cb184e3f7057efba538873261446"
+      "bytes": 3855,
+      "sha256": "f64718d2efbd775fe9de1d93375e2a5ad54b1c7f05ab5f81b7a56b79be81173f"
     },
     {
       "path": "eval_1k.txt",
-      "bytes": 3835,
-      "sha256": "9cc45fb951e77af670797ff003087e0465b82e63716b06ae22ab612667c3f3d3"
+      "bytes": 3838,
+      "sha256": "d2009c130580604151a0a518a24b76a3b13c0e9a99d78425f492ccdb4ca8245d"
     },
     {
       "path": "eval_report_openkylin.md",
       "bytes": 2848,
-      "sha256": "d2c7cfb607fe99a8634726c66eeba7424a45295d2ffe86010257395b3101cfe1"
+      "sha256": "354762942626cce5fe28b30b91a779906da320c65ff4fadf85f0d2db9e1727c4"
     },
     {
       "path": "eval_report_openkylin_10k.md",
-      "bytes": 2855,
-      "sha256": "42e2ee35feaa64f5ac226a20d2acb275458fb209642866f0fb2c623e3c7db59b"
+      "bytes": 2854,
+      "sha256": "f90b0a68c233e3b338d5d41aea7e867ef5be1f3c0aa1a74b15adc47fb5e4f956"
     },
     {
       "path": "eval_result_openkylin.json",
-      "bytes": 3595,
-      "sha256": "915c031616f761c1994fb61d6b37a2f7669085e0dac60794e971064dce99079d"
+      "bytes": 3598,
+      "sha256": "3e532648eca5012e1cd11e76de4be74c4379fed9d3c5eb3dc55918236aee53cf"
     },
     {
       "path": "eval_result_openkylin_10k.json",
-      "bytes": 3607,
-      "sha256": "13c89ba0684a7dfcf635139ff20c480fe6b49c311b7e659f7c75f021cffe2ef4"
+      "bytes": 3606,
+      "sha256": "1932f1631e6c1c4db06378e72b80684ba97d496adf964abbc5b032e4eb004e2e"
     },
     {
       "path": "generate_answer.txt",
@@ -121,13 +121,13 @@
     },
     {
       "path": "hierarchical_graph_search.txt",
-      "bytes": 5872,
-      "sha256": "740ad062f1c17702aa1e807e80fdecb93afa3c412bf21816c7f657dfb266dee9"
+      "bytes": 6027,
+      "sha256": "711d62128ad1ee62a688c2b8c057502dd7bbddc3e3c6bba96206fc0628583a07"
     },
     {
       "path": "journald.txt",
-      "bytes": 100445,
-      "sha256": "91eadeaa5df298ee45efb679e7bfc92f6c0dd458542eafe6954c1d7bc0e11cf1"
+      "bytes": 98208,
+      "sha256": "dc33e06e387218393254d9a699544b09b6ab238c8403a1db01f5c3bbb12a1500"
     },
     {
       "path": "kylin_embedding_diag/environment.txt",
@@ -146,8 +146,8 @@
     },
     {
       "path": "kylin_embedding_diag/kytensor_service.txt",
-      "bytes": 3704,
-      "sha256": "0de55ab07a2c8bb0f87f577392f0ba9c736e83b0e5cbb32282815d0f84faca87"
+      "bytes": 3710,
+      "sha256": "88b9ddb491994e0a0751da90d823bd70a7b52f7b5d246338f3c637bfa535a09b"
     },
     {
       "path": "kylin_embedding_diag/model_repositories.txt",
@@ -162,7 +162,7 @@
     {
       "path": "kylin_embedding_diag/plugin_dependencies.txt",
       "bytes": 2462,
-      "sha256": "71d4f07ef35fddd8c30431b22157408450493aca27c554a32e283589a84c6d67"
+      "sha256": "e93fc14e19046d8a1440edbb732860bb709c176123051396b8a800a577cbaf5b"
     },
     {
       "path": "kylin_embedding_diag/plugin_dirs.txt",
@@ -172,12 +172,12 @@
     {
       "path": "kylin_embedding_diag/README.md",
       "bytes": 1825,
-      "sha256": "60dc18372d5230f98855b42659356c0a0fabbb6bb438b9d9afad78902e6e5e0e"
+      "sha256": "37572943a2f07ab3211500673f2896b91787f19752bcfbd308d094171c1501b2"
     },
     {
       "path": "kylin_embedding_diag/runtime_file_log.txt",
-      "bytes": 13157,
-      "sha256": "3a133e4792b0191eaff0eb0d78c17e251e5d9458f6d4f04abaeb61ee2a6f3060"
+      "bytes": 13160,
+      "sha256": "8d1ad031d02229f05c4247faf318bc2601191fc6380b5cc39cdef5f38d16c966"
     },
     {
       "path": "kylin_embedding_diag/runtime_journal.txt",
@@ -196,18 +196,18 @@
     },
     {
       "path": "kylin_embedding_diag/sdk_status.txt",
-      "bytes": 7817,
-      "sha256": "871ad08bc19a4ea0110090f5c8d905b3da229e9a3e7f266db2b12de5ee039521"
+      "bytes": 7819,
+      "sha256": "71cf931f745c9092bfe67ba9726150cd9c2ce8ab18f9de613743eef3a3621085"
     },
     {
       "path": "kylin_embedding_diag.txt",
       "bytes": 222,
-      "sha256": "ce165394b6b438592bb8be2cc97e4df1c586e36c6cc30d2c9219164baed65ab8"
+      "sha256": "e54d5eff439d6d3047f9ab5c8935e2a011165960762f5602526425cc42b0b12f"
     },
     {
       "path": "kylin_retrieval.txt",
       "bytes": 3521,
-      "sha256": "dd97190bd06be68874852752644c8e369a1a17a5afcb251e6dc9e3f668a9828e"
+      "sha256": "ddc834e7619a9dd0d9be2583c12d90884776d06d6d5ace5cdb4a4735bfed9419"
     },
     {
       "path": "memguard_lsm_policy.generated.h",
@@ -216,63 +216,68 @@
     },
     {
       "path": "memory_policy.txt",
-      "bytes": 4256,
-      "sha256": "9dabc2a87c1b55896ae18465fa1c0a5c8fef3d36d766f4f74086d2986d7a7a2e"
+      "bytes": 4257,
+      "sha256": "f7a615e491eebfacca0a22c1a005b1d3234ab40dc4206147b0bd0326f39b71ff"
     },
     {
       "path": "namespace_isolation.txt",
       "bytes": 8913,
-      "sha256": "bfb7b9d92f567b9ec474f5303f8e3b41ee3f9951813cfe8c3be415c159ede89e"
+      "sha256": "350074b5e095cbe2187552fd866741ce60ec08014e1274fbfd705d09ba40d4c2"
     },
     {
       "path": "natural_patterns.txt",
       "bytes": 3783,
-      "sha256": "b0109a869f24bf1c4f4906c498873aedcc052dc4504de7a57146f374347865cc"
+      "sha256": "15836f763286bb005541f15577bf447dabfe6dedd5ae8db7c8176cd462d20689"
+    },
+    {
+      "path": "peony_file_scan_smoke.txt",
+      "bytes": 223,
+      "sha256": "68d8c84c27cb9761c2cde24ed8a2b2ba03420f412204f45b233aa210af02ef2d"
     },
     {
       "path": "pytest.txt",
       "bytes": 133,
-      "sha256": "ea21e4b9f7722318014f070bcce93ef6ac6afc75105d4a10c4f224f8f0fd74d2"
+      "sha256": "c3c76724dc2f30ba1870527451df84968bc0542e4afab3d13352d98e4ab79335"
     },
     {
       "path": "quality_report.txt",
       "bytes": 3073,
-      "sha256": "ce631f75f52856241991459f32aed0a4e1feb120e9930c839674fa73374ff584"
+      "sha256": "d73851bbf0bc72a8b613178ddc0074773344f984b216515dc1ee8b323f3c9f98"
     },
     {
       "path": "README.md",
-      "bytes": 3676,
-      "sha256": "56597a70bdcfcfda28732b1975cdddd162374f96ae72232c37b748236aed605b"
+      "bytes": 3996,
+      "sha256": "976ae12ad7102c79f9429eada55e926254cab8235d6d8f5735fff558d4d734ff"
     },
     {
       "path": "sdk_embedding_probe.txt",
-      "bytes": 8159,
-      "sha256": "34f749959319566fd4cfbe3060915e1df65df6395a499fd15b8dab58a9a3220a"
+      "bytes": 8161,
+      "sha256": "c819ec8088bfa8e28b17e4962d0d7845b7504a8a7c0c01394aeaf70a00b2349e"
     },
     {
       "path": "sdk_status.txt",
-      "bytes": 7828,
-      "sha256": "eafff65cc630d9ca5bca013e47263aae39a2d215345bb302f17d01d8e3993c23"
+      "bytes": 7827,
+      "sha256": "e240b789c071100a312bdf7dcc62f0651ac2b848231404fff09ef30316549554"
     },
     {
       "path": "semantic_extraction.txt",
       "bytes": 4418,
-      "sha256": "11dc1503b8440becf20b892ea6cba6577d4da1b8d77f5128a7f4619429805ea2"
+      "sha256": "f3e42c04e6f9849612b8b668f6d2f6bc8b801b576bd978fb3937f37be9e94fbe"
     },
     {
       "path": "systemd_cgroup.txt",
-      "bytes": 781,
-      "sha256": "89c7b9c69f17f1e941fa376ed710211d1c91f1c4bb70b629f3955a3db7e8bfc4"
+      "bytes": 782,
+      "sha256": "d64b92f2c84196952b016c2dbc016a9a065cba3bab1bd10b6d0e848565e03f66"
     },
     {
       "path": "systemd_namespace.txt",
-      "bytes": 11443,
-      "sha256": "ecfa18d66930225d5b92de50fa167cdb66eca2bfe84fa12bd3bb53d4091bf919"
+      "bytes": 11447,
+      "sha256": "4ffbfdeef698440be97d43f16f365d66aff372dd3ad40ca9f0b4249e6df2685f"
     },
     {
       "path": "temporal_status.txt",
       "bytes": 10468,
-      "sha256": "62021b6e44a531dd8bf3106f7d0b591e7f3b89f64b7d485186f0649e74060acb"
+      "sha256": "7077133fe7944c0bdc11655710e7371aed968d5053e727848a19b72466a4ffbc"
     },
     {
       "path": "ukui_control_center_visible_manual_confirmation.txt",
@@ -281,8 +286,8 @@
     },
     {
       "path": "ukui_deep_plugins.txt",
-      "bytes": 9012,
-      "sha256": "1e65f1f453ddf0bf8fd201a93d3cb189fa408ceaa80b5f7f830aa83532eae0a3"
+      "bytes": 9764,
+      "sha256": "c849d447ff9f46acc3a9a99a3ba5d7d304c7a586e387843d0366936610de0d4a"
     },
     {
       "path": "ukui_enterprise_panel.txt",
@@ -312,7 +317,7 @@
     {
       "path": "ukui_plugin_visible.txt",
       "bytes": 4464,
-      "sha256": "aed95a09986a72bb5569a789a8e61eac985ad4faf815b0c326949b293b98c936"
+      "sha256": "8b6e414baa4ec06554df1d165107a4a6216c12852d296539c2bef173f1b2a5c5"
     },
     {
       "path": "ukui_plugin_visible_after_version_metadata.txt",
@@ -332,12 +337,12 @@
     {
       "path": "verify_audit.txt",
       "bytes": 173,
-      "sha256": "a0e28dcc59f840ca2f32a33ec66f2a22e2c459b1ac52251bea4995d826b51ad1"
+      "sha256": "8bf9c10988c6674f4c4f5d00314f3ca0f28846c8a7e1124df42546976a8a99e9"
     },
     {
       "path": "web_dashboard.txt",
-      "bytes": 429,
-      "sha256": "1c5872c25e3db806ac9f23058ed6d5a0f2b431e0e2657a1ebe1daf1e989df441"
+      "bytes": 579,
+      "sha256": "6b3390b47aaf7497549ba8864452cd25201a7ef05f77782294af322ca8769519"
     }
   ]
 }
