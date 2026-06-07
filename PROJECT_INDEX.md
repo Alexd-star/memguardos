@@ -35,6 +35,7 @@ MemGuardOS 是面向 Linux/openKylin 的智能体记忆提取与精准遗忘系�
 | `tests/` | 测试代码 | 单元测试、回归测试、打包边界测试、benchmark 样例构建测试。 | 正式说明文档 |
 | `data/` | 数据样例 | demo 输入、benchmark JSONL、示例配置和工具结果。 | 真实隐私数据 |
 | `docs/` | 中文文档和证据 | 设计、部署、测试、答辩、交付、证据索引、研究资料和编号文档体系。 | 运行时数据库、缓存 |
+| `项目全流程导师资料包/` | 从零学习和答辩训练资料 | 赛题讲解、术语词典、项目结构、运行流程、算法解释、赛题要求映射、测试解释、人工核验、截图清单、功能核验、风险审查和答辩稿。 | 运行时数据、临时截图原图、未核验指标 |
 | `dist/` | 生成产物 | 打包脚本生成的竞赛提交包和完整仓库包。 | 不应手工编辑；可重新生成 |
 | `.github/` | GitHub 工程化 | CI、Issue/PR 模板。 | 正式竞赛主体内容 |
 | `.devcontainer/` | 开发容器 | VS Code/Codespaces 类开发环境配置。 | 正式提交材料 |
@@ -68,7 +69,7 @@ MemGuardOS 是面向 Linux/openKylin 的智能体记忆提取与精准遗忘系�
 
 ## 7. 文档文件说明
 
-正式中文文档集中在 `docs/` 根目录和 `docs/交付文档/`。其中 `docs/项目介绍总览.md`、`docs/概要设计说明书.md`、`docs/详细设计说明书.md`、`docs/部署手册.md`、`docs/用户手册.md`、`docs/测试报告.md`、`docs/赛题符合性说明.md`、`docs/评委证据包索引.md` 面向正式评审；`docs/research/` 是研究资料和论文分析；`docs/evidence/latest/` 是最新 openKylin 证据包；`docs/evidence/openkylin_*` 若存在，应视为历史证据。
+正式中文文档集中在 `docs/` 根目录、`docs/交付文档/` 和 `项目全流程导师资料包/`。其中 `docs/项目介绍总览.md`、`docs/概要设计说明书.md`、`docs/详细设计说明书.md`、`docs/部署手册.md`、`docs/用户手册.md`、`docs/测试报告.md`、`docs/赛题符合性说明.md`、`docs/评委证据包索引.md` 面向正式评审；`项目全流程导师资料包/` 面向参赛者本人从零理解、人工验收、截图取证和答辩训练；`docs/research/` 是研究资料和论文分析；`docs/evidence/latest/` 是最新 openKylin 证据包；`docs/evidence/openkylin_*` 若存在，应视为历史证据。
 
 编号文档 `docs/01_项目简介.md` 到 `docs/17_项目交付说明.md` 是本次补齐的维护型中文文档体系，用于把项目介绍、用户操作、部署运维、开发者说明、架构、代码结构、算法、接口、数据、配置、测试、FAQ、更新日志、历史文件和交付边界统一串起来。
 
@@ -84,7 +85,7 @@ MemGuardOS 是面向 Linux/openKylin 的智能体记忆提取与精准遗忘系�
 
 ## 9. 最新版本文件说明
 
-最新代码以当前 Git 分支为准。最新正式证据入口是 `docs/evidence/latest/`。最新项目说明优先阅读 `README.md`、`PROJECT_INDEX.md` 和 `docs/01_项目简介.md`。正式竞赛提交说明优先阅读 `docs/最终提交说明.md`、`docs/平台摘要.md` 和 `docs/正式提交材料说明.md`。
+最新代码以当前 Git 分支为准。最新正式证据入口是 `docs/evidence/latest/`。最新项目说明优先阅读 `README.md`、`PROJECT_INDEX.md`、`docs/01_项目简介.md` 和 `项目全流程导师资料包/README.md`。正式竞赛提交说明优先阅读 `docs/最终提交说明.md`、`docs/平台摘要.md` 和 `docs/正式提交材料说明.md`。
 
 ## 10. 不建议删除的文件
 
