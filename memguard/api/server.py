@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, is_dataclass
 import hmac
+import hashlib
 import json
 import os
 import socket
@@ -21,18 +22,27 @@ class RequestTooLarge(ValueError):
 def handle_request(service: MemGuardService, request: Dict[str, object], auth_token: Optional[str] = None) -> Dict[str, object]:
     if auth_token and not hmac.compare_digest(str(request.get("token", "")), auth_token):
         return {"ok": False, "error": "unauthorized"}
+    command = str(request.get("command", ""))
     try:
         return _handle_authorized_request(service, request)
     except (TypeError, ValueError) as exc:
         return {"ok": False, "error": "invalid_request", "detail": str(exc)}
-    except Exception:
-        return {"ok": False, "error": "internal_error", "detail": "unexpected failure while processing command"}
+    except Exception as exc:
+        error_id = _internal_error_id(command, exc)
+        _audit_internal_error(service, command, exc, error_id)
+        return {
+            "ok": False,
+            "error": "internal_error",
+            "command": command,
+            "error_id": error_id,
+            "detail": "unexpected failure while processing command",
+        }
 
 
 def _handle_authorized_request(service: MemGuardService, request: Dict[str, object]) -> Dict[str, object]:
     command = str(request.get("command", ""))
     if command == "search":
-        query = str(request.get("query", ""))
+        query = _string_param(request, "query", "", max_chars=2048)
         limit = _int_param(request, "limit", 5, minimum=1, maximum=50)
         return {"ok": True, "result": service.search(query, limit=limit)}
     if command == "batch_search":
@@ -41,19 +51,19 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         workers = _int_param(request, "workers", 4, minimum=1, maximum=16)
         return {"ok": True, "result": service.batch_search(queries, limit=limit, workers=workers)}
     if command == "build_context":
-        query = str(request.get("query", ""))
+        query = _string_param(request, "query", "", max_chars=2048)
         limit = _int_param(request, "limit", 5, minimum=1, maximum=50)
         max_chars = _int_param(request, "max_chars", 2000, minimum=128, maximum=20000)
         token_budget = request.get("token_budget")
         token_budget = _int_param(request, "token_budget", 0, minimum=64, maximum=32000) if token_budget else None
         return {"ok": True, "result": service.build_context(query, limit=limit, max_chars=max_chars, token_budget=token_budget)}
     if command == "hierarchical_graph_search":
-        entity = str(request.get("entity", request.get("query", "")))
+        entity = _string_param(request, "entity", request.get("query", ""), max_chars=1024)
         limit = _int_param(request, "limit", 10, minimum=1, maximum=50)
         return {"ok": True, "result": service.hierarchical_graph_search(entity, limit=limit)}
     if command == "explain_extraction":
-        text = str(request.get("text", ""))
-        source_kind = str(request.get("source_kind", "manual"))
+        text = _string_param(request, "text", "", max_chars=200000)
+        source_kind = _string_param(request, "source_kind", "manual", max_chars=64)
         return {"ok": True, "result": _jsonable(service.explain_extraction(text, source_kind=source_kind))}
     if command == "namespace_status":
         return {"ok": True, "result": service.namespace_status()}
@@ -72,35 +82,35 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
             )),
         }
     if command == "update":
-        memory_id = str(request.get("memory_id", ""))
-        text = str(request.get("text", ""))
-        reason = str(request.get("reason", "api update"))
+        memory_id = _string_param(request, "memory_id", "", max_chars=128)
+        text = _string_param(request, "text", "", max_chars=200000)
+        reason = _string_param(request, "reason", "api update", max_chars=512)
         return {"ok": True, "result": _jsonable(service.update_memory(memory_id, text, reason=reason))}
     if command == "versions":
-        return {"ok": True, "result": _jsonable(service.versions(str(request.get("memory_id", ""))))}
+        return {"ok": True, "result": _jsonable(service.versions(_string_param(request, "memory_id", "", max_chars=128)))}
     if command == "promote":
-        memory_id = str(request.get("memory_id", ""))
-        tier = str(request.get("tier", ""))
+        memory_id = _string_param(request, "memory_id", "", max_chars=128)
+        tier = _string_param(request, "tier", "", max_chars=32)
         return {"ok": True, "result": _jsonable(service.promote_memory(memory_id, tier))}
     if command == "evict_tier":
-        tier = str(request.get("tier", ""))
+        tier = _string_param(request, "tier", "", max_chars=32)
         confirm = bool(request.get("confirm", False))
         return {"ok": True, "result": _jsonable(service.evict_tier(tier, confirm=confirm))}
     if command == "forget":
-        forget_request = str(request.get("request", request.get("text", "")))
+        forget_request = _string_param(request, "request", request.get("text", ""), max_chars=2048)
         confirm = bool(request.get("confirm", False))
         compact = bool(request.get("compact", False))
         return {"ok": True, "result": _jsonable(service.forget(forget_request, confirm=confirm, compact=compact))}
     if command == "verify_forget":
-        memory_id = str(request.get("memory_id", ""))
-        probe = str(request.get("probe", ""))
+        memory_id = _string_param(request, "memory_id", "", max_chars=128)
+        probe = _string_param(request, "probe", "", max_chars=4096)
         return {"ok": True, "result": _jsonable(service.verify_forget_probe(memory_id, probe))}
     if command == "audit":
         return {
             "ok": True,
             "result": _jsonable(service.audit(
                 limit=_int_param(request, "limit", 20, minimum=1, maximum=500),
-                event_type=str(request["event_type"]) if request.get("event_type") else None,
+                event_type=_string_param(request, "event_type", "", max_chars=64) if request.get("event_type") else None,
             )),
         }
     if command == "verify_audit":
@@ -109,11 +119,11 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
     if command == "retrieval_status":
         return {"ok": True, "result": _jsonable(service.retrieval_status())}
     if command == "ingest":
-        text = str(request.get("text", ""))
-        source_kind = str(request.get("source_kind", "api"))
-        source_uri = str(request.get("source_uri", "local_socket"))
+        text = _string_param(request, "text", "", max_chars=200000)
+        source_kind = _string_param(request, "source_kind", "api", max_chars=64)
+        source_uri = _string_param(request, "source_uri", "local_socket", max_chars=1024)
         tier = request.get("tier")
-        result = service.ingest_text(text, source_kind=source_kind, source_uri=source_uri, tier=str(tier) if tier else None)
+        result = service.ingest_text(text, source_kind=source_kind, source_uri=source_uri, tier=_string_param(request, "tier", "", max_chars=32) if tier else None)
         if result.get("stored"):
             record = result["record"]
             return {
@@ -162,6 +172,13 @@ def _int_param(request: Dict[str, object], name: str, default: int, *, minimum: 
     return value
 
 
+def _string_param(request: Dict[str, object], name: str, default: object, *, max_chars: int) -> str:
+    value = str(request.get(name, default))
+    if len(value) > max_chars:
+        raise ValueError("%s must contain at most %s characters" % (name, max_chars))
+    return value
+
+
 def _string_list_param(request: Dict[str, object], name: str, *, max_items: int, max_chars: int) -> List[str]:
     raw = request.get(name, [])
     if not isinstance(raw, list):
@@ -176,6 +193,29 @@ def _string_list_param(request: Dict[str, object], name: str, *, max_items: int,
         if value:
             values.append(value)
     return values
+
+
+def _internal_error_id(command: str, exc: Exception) -> str:
+    material = "%s|%s" % (command, exc.__class__.__name__)
+    return hashlib.sha256(material.encode("utf-8")).hexdigest()[:16]
+
+
+def _audit_internal_error(service: MemGuardService, command: str, exc: Exception, error_id: str) -> None:
+    audit = getattr(service, "_audit", None)
+    if not callable(audit):
+        return
+    try:
+        audit(
+            "api_internal_error",
+            None,
+            {
+                "command": command,
+                "error_id": error_id,
+                "error_type": exc.__class__.__name__,
+            },
+        )
+    except Exception:
+        return
 
 
 def serve_unix_socket(

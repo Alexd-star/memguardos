@@ -1162,6 +1162,10 @@ def test_local_api_handler_and_unix_socket(tmp_path):
         too_many_queries = handle_request(service, {"command": "batch_search", "queries": ["Linux"] * 101})
         assert too_many_queries["ok"] is False
         assert too_many_queries["error"] == "invalid_request"
+        oversized_query = handle_request(service, {"command": "search", "query": "x" * 2049})
+        assert oversized_query["ok"] is False
+        assert oversized_query["error"] == "invalid_request"
+        assert "at most 2048" in oversized_query["detail"]
         policy = handle_request(service, {"command": "memory_policy", "eviction_limit": 3})
         assert policy["ok"] is True
         assert policy["result"]["counts"]["live"] >= 1
@@ -1217,5 +1221,33 @@ def test_local_api_handler_and_unix_socket(tmp_path):
         oversized = json.loads(oversized_response)
         assert oversized["ok"] is False
         assert oversized["error"] == "payload_too_large"
+    finally:
+        service.close()
+
+
+def test_local_api_internal_errors_are_auditable_without_leaking_details(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        original_search = service.search
+
+        def broken_search(_query: str, limit: int = 5, audit: bool = True):
+            raise RuntimeError("database password=secret leaked implementation detail")
+
+        service.search = broken_search
+        response = handle_request(service, {"command": "search", "query": "Linux"})
+        assert response["ok"] is False
+        assert response["error"] == "internal_error"
+        assert response["command"] == "search"
+        assert response["error_id"]
+        assert "secret" not in json.dumps(response, ensure_ascii=False)
+        service.search = original_search
+
+        events = service.audit(limit=5, event_type="api_internal_error")
+        assert events
+        detail = json.loads(events[0]["detail"])
+        assert detail["command"] == "search"
+        assert detail["error_id"] == response["error_id"]
+        assert detail["error_type"] == "RuntimeError"
+        assert "secret" not in json.dumps(detail, ensure_ascii=False)
     finally:
         service.close()

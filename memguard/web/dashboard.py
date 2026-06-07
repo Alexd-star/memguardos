@@ -341,7 +341,7 @@ def _dashboard_html() -> str:
       <div id="errorBox" class="error"></div>
       <section id="overview" class="active">
         <h2>运行状态</h2>
-        <p class="lead">总览页聚合本机命名空间、记忆数量、审计链、检索后端、端侧 SDK 和 OS 运行状态，适合演示时第一屏展示系统是否处于可交付状态。</p>
+        <p class="lead">总览页聚合本机命名空间、记忆数量、审计链、检索后端、端侧 SDK 和 OS 运行状态，用于管理员快速判断系统是否处于可交付、可运行、可审计状态。</p>
         <div class="statusline"><span id="healthBadge" class="badge">连接中</span><span id="lastUpdated">等待刷新</span></div>
         <div class="grid four">
           <div class="panel emphasis"><div class="muted">实时记忆</div><div class="metric" id="liveCount">-</div></div>
@@ -357,8 +357,8 @@ def _dashboard_html() -> str:
         </div>
         <div class="grid two" style="margin-top:12px">
           <div class="panel emphasis">
-            <div class="item-title">评审证据总览</div>
-            <p class="muted">这一组卡片用于答辩第一屏快速说明：系统不是普通 RAG demo，而是包含 openKylin SDK、OS 机制、精准遗忘、审计链和产品化安装证据的本机 Agent 记忆组件。</p>
+            <div class="item-title">能力证据总览</div>
+            <p class="muted">这一组卡片用于快速确认系统能力边界：MemGuardOS 不是普通 RAG 演示，而是包含 openKylin SDK、OS 机制、精准遗忘、审计链和产品化安装证据的本机 Agent 记忆组件。</p>
             <div class="grid two">
               <div class="item"><div class="item-title">217 条 benchmark 用例/种子</div><div class="muted">覆盖真实日志、失败修复、配置冲突、精准遗忘和程序性轨迹。</div></div>
               <div class="item"><div class="item-title">10k P95 低于 500ms</div><div class="muted">openKylin 证据包验证端侧轻量检索性能。</div></div>
@@ -431,7 +431,7 @@ def _dashboard_html() -> str:
       </section>
       <section id="diagnostics">
         <h2>系统诊断</h2>
-        <p class="lead">诊断页用于答辩和运维现场排查，聚合审计链、检索后端、记忆策略、端侧 SDK、cgroup 和 doctor 信息，并支持一键导出。</p>
+        <p class="lead">诊断页用于本机运维和现场排查，聚合审计链、检索后端、记忆策略、端侧 SDK、cgroup 和 doctor 信息，并支持一键导出。</p>
         <div class="panel">
           <div class="actions">
             <button class="primary" onclick="verifyAudit(event)">校验审计链</button>

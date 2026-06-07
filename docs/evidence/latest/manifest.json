@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-06-07T09:27:09.019895+00:00",
+  "generated_at": "2026-06-07T09:45:51.141748+00:00",
   "root": "docs/evidence/latest",
   "file_count": 71,
-  "total_bytes": 434014,
+  "total_bytes": 434085,
   "files": [
     {
       "path": "agent_batch_search.txt",
@@ -356,8 +356,8 @@
     },
     {
       "path": "web_dashboard.txt",
-      "bytes": 579,
-      "sha256": "6b3390b47aaf7497549ba8864452cd25201a7ef05f77782294af322ca8769519"
+      "bytes": 650,
+      "sha256": "6602a34804907a433a754a851737a185a2281fa6d182410f46584014ff14c83c"
     }
   ]
 }

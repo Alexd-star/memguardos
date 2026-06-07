@@ -38,7 +38,7 @@ def main() -> int:
             "page_ok": "MemGuardOS 控制台" in page,
             "diagnostics_tab_ok": "系统诊断" in page,
             "diagnostics_export_button_ok": "导出诊断包" in page,
-            "reviewer_scoreboard_ok": "评审证据总览" in page and "一键演示流程" in page,
+            "capability_scoreboard_ok": "能力证据总览" in page and "一键演示流程" in page,
             "traffic_light_status_ok": "红黄绿状态" in page,
             "rag_visual_ok": "候选选择轨迹" in page,
             "forget_candidate_visual_ok": "候选会以卡片形式列出" in page,
@@ -61,7 +61,7 @@ def main() -> int:
             result["page_ok"]
             and result["diagnostics_tab_ok"]
             and result["diagnostics_export_button_ok"]
-            and result["reviewer_scoreboard_ok"]
+            and result["capability_scoreboard_ok"]
             and result["traffic_light_status_ok"]
             and result["rag_visual_ok"]
             and result["forget_candidate_visual_ok"]
