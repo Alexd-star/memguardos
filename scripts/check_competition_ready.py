@@ -227,6 +227,29 @@ def check_formal_doc_consistency() -> List[Check]:
             "控制台不含竞赛过程话术" if dashboard_text and not product_hits else "仍包含：%s" % "、".join(product_hits),
         )
     )
+    checks.append(
+        Check(
+            "中文文档",
+            "Web 控制台 token 存储策略",
+            "sessionStorage" in dashboard_text and "localStorage" not in dashboard_text,
+            "token 仅保存在浏览器会话存储" if dashboard_text else "控制台源码缺失",
+        )
+    )
+    required_headers = [
+        "X-Frame-Options",
+        "Cross-Origin-Opener-Policy",
+        "Permissions-Policy",
+        "Content-Security-Policy",
+    ]
+    missing_headers = [header for header in required_headers if header not in dashboard_text]
+    checks.append(
+        Check(
+            "中文文档",
+            "Web 控制台安全响应头",
+            bool(dashboard_text) and not missing_headers,
+            "包含 CSP、frame、opener 和权限策略响应头" if dashboard_text and not missing_headers else "缺少：%s" % "、".join(missing_headers),
+        )
+    )
     return checks
 
 

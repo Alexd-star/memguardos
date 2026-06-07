@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 134,
-    "passed": 134,
+    "total": 136,
+    "passed": 136,
     "failed": 0,
     "warnings": 0
   },
@@ -81,7 +81,7 @@
       "category": "中文文档",
       "name": "docs/09_接口文档.md",
       "ok": true,
-      "detail": "中文字符数 727",
+      "detail": "中文字符数 805",
       "severity": "P0"
     },
     {
@@ -186,7 +186,7 @@
       "category": "中文文档",
       "name": "docs/安全设计说明书.md",
       "ok": true,
-      "detail": "中文字符数 1013",
+      "detail": "中文字符数 1218",
       "severity": "P0"
     },
     {
@@ -299,6 +299,20 @@
       "name": "Web 控制台产品话术",
       "ok": true,
       "detail": "控制台不含竞赛过程话术",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "Web 控制台 token 存储策略",
+      "ok": true,
+      "detail": "token 仅保存在浏览器会话存储",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "Web 控制台安全响应头",
+      "ok": true,
+      "detail": "包含 CSP、frame、opener 和权限策略响应头",
       "severity": "P0"
     },
     {

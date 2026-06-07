@@ -182,9 +182,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         raw = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Referrer-Policy", "no-referrer")
+        self._send_security_headers()
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
         self.wfile.write(raw)
@@ -194,9 +192,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Disposition", 'attachment; filename="%s"' % filename)
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Referrer-Policy", "no-referrer")
+        self._send_security_headers()
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
         self.wfile.write(raw)
@@ -205,13 +201,19 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         raw = html.encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Cache-Control", "no-store")
+        self._send_security_headers()
         self.send_header("Content-Security-Policy", "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; base-uri 'none'")
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
         self.wfile.write(raw)
+
+    def _send_security_headers(self) -> None:
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+        self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), usb=(), payment=()")
 
     def _diagnostics_payload(self, probe_sdk: bool = False) -> dict[str, Any]:
         service = self._service()
@@ -336,7 +338,7 @@ def _dashboard_html() -> str:
     <div><h1>MemGuardOS 控制台</h1><div class="subtitle">面向本机 OS Agent 的记忆、安全、审计和诊断工作台</div></div>
     <div class="meta">
       <span id="namespaceMeta">namespace: loading</span>
-      <input id="apiToken" type="password" placeholder="API Token" style="width:150px; min-height:28px; margin-left:10px; padding:4px 7px; font-size:12px;">
+      <input id="apiToken" type="password" placeholder="API Token" autocomplete="off" spellcheck="false" style="width:150px; min-height:28px; margin-left:10px; padding:4px 7px; font-size:12px;">
     </div>
   </header>
   <main>
@@ -468,8 +470,8 @@ def _dashboard_html() -> str:
       document.getElementById(btn.dataset.tab).classList.add('active');
     }));
     const tokenInput = document.getElementById('apiToken');
-    tokenInput.value = localStorage.getItem('memguardos_api_token') || '';
-    tokenInput.addEventListener('change', () => localStorage.setItem('memguardos_api_token', tokenInput.value));
+    tokenInput.value = sessionStorage.getItem('memguardos_api_token') || '';
+    tokenInput.addEventListener('change', () => sessionStorage.setItem('memguardos_api_token', tokenInput.value));
     function authHeaders(extra) {
       const headers = Object.assign({}, extra || {});
       const token = tokenInput.value.trim();
