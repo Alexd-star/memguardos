@@ -266,3 +266,106 @@ def test_explicit_confirmation_promotes_existing_implicit_evidence(tmp_path):
         }
     finally:
         service.close()
+
+
+def test_project_preference_overrides_global_only_in_matching_project(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        service.ingest_interaction(
+            event("以后默认使用 rg 搜索代码。", event_id="evt-global")
+        )
+        service.ingest_interaction(
+            event(
+                "在当前项目中默认使用 grep 搜索代码。",
+                event_id="evt-project",
+                session_id="session-project",
+                project_root="/work/legacy",
+            )
+        )
+
+        legacy = service.select_preferences(
+            agent_name="openhands",
+            session_id="new-session",
+            project_root="/work/legacy",
+            task_type="code_search",
+        )
+        modern = service.select_preferences(
+            agent_name="openhands",
+            session_id="new-session",
+            project_root="/work/modern",
+            task_type="code_search",
+        )
+
+        assert legacy["selected"][0]["value"] == "grep"
+        assert legacy["selected"][0]["preference_scope"] == "project"
+        assert any(item["reason"] == "lower_scope_priority" for item in legacy["excluded"])
+        assert modern["selected"][0]["value"] == "rg"
+        assert modern["selected"][0]["preference_scope"] == "global"
+        assert any(item["reason"] == "scope_not_applicable" for item in modern["excluded"])
+    finally:
+        service.close()
+
+
+def test_session_preference_overrides_project_and_global_preferences(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        service.ingest_interaction(event("以后默认使用 rg 搜索代码。", event_id="evt-scope-global"))
+        service.ingest_interaction(
+            event(
+                "在当前项目中默认使用 grep 搜索代码。",
+                event_id="evt-scope-project",
+                project_root="/work/legacy",
+            )
+        )
+        session_result = service.ingest_interaction(
+            event(
+                "本轮使用 rg 搜索代码。",
+                event_id="evt-scope-session",
+                session_id="session-special",
+                project_root="/work/legacy",
+            )
+        )
+
+        selected = service.select_preferences(
+            agent_name="openhands",
+            session_id="session-special",
+            project_root="/work/legacy",
+            task_type="code_search",
+        )
+
+        assert len(session_result["memory_ids"]) == 1
+        assert selected["selected"][0]["value"] == "rg"
+        assert selected["selected"][0]["preference_scope"] == "session"
+    finally:
+        service.close()
+
+
+def test_explicit_preference_wins_over_promoted_implicit_preference_at_same_scope(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        service.ingest_interaction(event("请用 rg 搜索第一处。", event_id="evt-explicit-1"))
+        service.ingest_interaction(
+            event("用 rg 查找第二处。", event_id="evt-explicit-2", turn_id="turn-2", sequence=2)
+        )
+        service.ingest_interaction(
+            event("请使用 rg 搜索第三处。", event_id="evt-explicit-3", session_id="session-b")
+        )
+        service.ingest_interaction(
+            event("以后默认使用 grep 搜索代码。", event_id="evt-explicit-4", session_id="session-c")
+        )
+
+        selected = service.select_preferences(
+            agent_name="openhands",
+            session_id="session-new",
+            project_root="/work/demo",
+            task_type="code_search",
+        )
+
+        assert selected["selected"][0]["value"] == "grep"
+        assert selected["selected"][0]["preference_explicit"] is True
+        assert any(
+            item["value"] == "rg" and item["reason"] == "lower_evidence_priority"
+            for item in selected["excluded"]
+        )
+    finally:
+        service.close()

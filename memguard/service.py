@@ -159,13 +159,13 @@ class MemGuardService:
         if result["stored"] and extraction.remember_allowed and sensitivity.level != "high":
             for observation in extraction.observations:
                 self.meta.add_preference_observation(observation, safe_event)
-                aggregate_row = self._preference_aggregate(observation.topic, observation.value, observation.scope)
+                aggregate_row = self._preference_aggregate(observation, safe_event)
                 if aggregate_row and aggregate_row["stable"] and not aggregate_row.get("promoted_memory_id"):
                     memory = self._store_preference_observation(observation, safe_event)
-                    for event_id in self.meta.preference_observation_event_ids(observation.topic, observation.value):
+                    for event_id in self.meta.preference_observation_event_ids(aggregate_row):
                         relation = "confirmed_by" if event_id == safe_event.event_id and observation.explicit else "extracted_from"
                         self.link_memory_event(memory.memory_id, event_id, relation)
-                    self.meta.mark_preference_promoted(observation.topic, observation.value, memory.memory_id)
+                    self.meta.mark_preference_promoted(aggregate_row, memory.memory_id)
                     memory_ids.append(memory.memory_id)
         return {
             **result,
@@ -209,9 +209,22 @@ class MemGuardService:
         )
         return result
 
-    def _preference_aggregate(self, topic: str, value: str, scope: str) -> Optional[Dict[str, object]]:
+    def _preference_aggregate(
+        self,
+        observation: PreferenceObservation,
+        event: AgentInteractionEvent,
+    ) -> Optional[Dict[str, object]]:
+        expected = {
+            "topic": observation.topic,
+            "value": observation.value,
+            "preference_scope": observation.scope,
+            "project_root": event.project_root if observation.scope == "project" else "",
+            "task_type": event.task_type if observation.scope == "task_type" else "",
+            "scope_agent_name": event.agent_name if observation.scope == "agent" else "",
+            "scope_session_id": event.session_id if observation.scope == "session" else "",
+        }
         for row in self.meta.list_preference_aggregates():
-            if row["topic"] != topic or row["value"] != value or row["preference_scope"] != scope:
+            if any(row.get(key) != value for key, value in expected.items()):
                 continue
             aggregate = PreferenceAggregate(
                 evidence_count=int(row["evidence_count"]),
@@ -224,6 +237,98 @@ class MemGuardService:
             result["stable"] = aggregate.stable
             return result
         return None
+
+    def select_preferences(
+        self,
+        agent_name: str,
+        session_id: str,
+        project_root: str = "",
+        task_type: str = "",
+    ) -> Dict[str, object]:
+        scope_rank = {
+            "session": 5,
+            "project": 4,
+            "task_type": 3,
+            "agent": 2,
+            "global": 1,
+        }
+        candidates = [
+            row
+            for row in self.meta.list_memories(include_deleted=False)
+            if row.get("type") in {"preference", "sensitive_policy"} and row.get("preference_topic")
+        ]
+        applicable = []
+        excluded = []
+        for row in candidates:
+            scope = str(row.get("preference_scope") or "global")
+            matches = {
+                "global": True,
+                "agent": str(row.get("agent_name") or "") == agent_name,
+                "project": bool(project_root) and str(row.get("project_root") or "") == project_root,
+                "task_type": bool(task_type) and str(row.get("task_type") or "") == task_type,
+                "session": str(row.get("preference_session_id") or "") == session_id,
+            }.get(scope, False)
+            item = dict(row)
+            item["preference_explicit"] = bool(item.get("preference_explicit"))
+            item["topic"] = item.get("preference_topic")
+            item["value"] = item.get("preference_value")
+            if not matches:
+                item["reason"] = "scope_not_applicable"
+                excluded.append(item)
+                continue
+            item["_scope_rank"] = scope_rank.get(scope, 0)
+            applicable.append(item)
+
+        selected = []
+        by_topic: Dict[str, List[Dict[str, object]]] = {}
+        for row in applicable:
+            by_topic.setdefault(str(row["preference_topic"]), []).append(row)
+        for topic, rows in sorted(by_topic.items()):
+            ordered = sorted(
+                rows,
+                key=lambda row: (
+                    int(row["_scope_rank"]),
+                    1 if row["preference_explicit"] else 0,
+                    str(row.get("updated_at") or ""),
+                ),
+                reverse=True,
+            )
+            chosen = ordered[0]
+            chosen.pop("_scope_rank", None)
+            chosen["selection_reason"] = "highest applicable scope, then explicit evidence, then latest version"
+            selected.append(chosen)
+            for row in ordered[1:]:
+                if int(row["_scope_rank"]) < scope_rank.get(str(chosen.get("preference_scope")), 0):
+                    reason = "lower_scope_priority"
+                elif bool(row["preference_explicit"]) != bool(chosen["preference_explicit"]):
+                    reason = "lower_evidence_priority"
+                else:
+                    reason = "older_version"
+                row.pop("_scope_rank", None)
+                row["reason"] = reason
+                excluded.append(row)
+
+        result = {
+            "agent_name": agent_name,
+            "session_id": session_id,
+            "project_root": project_root,
+            "task_type": task_type,
+            "selected": selected,
+            "excluded": excluded,
+        }
+        self._audit(
+            "preference_select",
+            None,
+            {
+                "agent_name": agent_name,
+                "session_id": session_id,
+                "project_root": project_root,
+                "task_type": task_type,
+                "selected_memory_ids": [row["memory_id"] for row in selected],
+                "excluded_count": len(excluded),
+            },
+        )
+        return result
 
     def link_memory_event(self, memory_id: str, event_id: str, relation: str = "extracted_from") -> Dict[str, object]:
         allowed_relations = {"extracted_from", "confirmed_by", "contradicted_by", "derived_from", "used_by"}
@@ -348,6 +453,14 @@ class MemGuardService:
             subtype=subtype,
             scope=self.namespace,
             tier="long_term" if observation.scope != "session" else "session",
+            preference_topic=observation.topic,
+            preference_value=observation.value,
+            preference_scope=observation.scope,
+            preference_explicit=observation.explicit,
+            agent_name=event.agent_name if observation.scope == "agent" else "",
+            preference_session_id=event.session_id if observation.scope == "session" else "",
+            project_root=event.project_root if observation.scope == "project" else "",
+            task_type=event.task_type if observation.scope == "task_type" else "",
         )
         record.confidence = observation.confidence
         record.evidence = ["agent_event:%s" % event.event_id]
@@ -537,6 +650,14 @@ class MemGuardService:
             sensitivity=sensitivity,
             version=VersionInfo(version_id=new_version_id, parent_version_id=previous.version.version_id, op="update"),
             audit=AuditInfo(created_by="memguard", created_at=utc_now()),
+            preference_topic=previous.preference_topic,
+            preference_value=previous.preference_value,
+            preference_scope=previous.preference_scope,
+            preference_explicit=previous.preference_explicit,
+            agent_name=previous.agent_name,
+            preference_session_id=previous.preference_session_id,
+            project_root=previous.project_root,
+            task_type=previous.task_type,
         ).finalize_hash()
         self._enrich_graph(record)
         self.store.append(record)
@@ -588,6 +709,14 @@ class MemGuardService:
             sensitivity=record.sensitivity,
             version=VersionInfo(version_id=new_version_id, parent_version_id=record.version.version_id, op="promote"),
             audit=AuditInfo(created_by="memguard", created_at=utc_now()),
+            preference_topic=record.preference_topic,
+            preference_value=record.preference_value,
+            preference_scope=record.preference_scope,
+            preference_explicit=record.preference_explicit,
+            agent_name=record.agent_name,
+            preference_session_id=record.preference_session_id,
+            project_root=record.project_root,
+            task_type=record.task_type,
         ).finalize_hash()
         self.store.append(promoted)
         self.meta.upsert_memory(promoted)
@@ -847,6 +976,14 @@ class MemGuardService:
             sensitivity=target.sensitivity,
             version=VersionInfo(version_id=new_version_id, parent_version_id=latest.version.version_id, op="rollback"),
             audit=AuditInfo(created_by="memguard", created_at=utc_now(), hash=stable_hash(target.memory_id + version_id + utc_now())),
+            preference_topic=target.preference_topic,
+            preference_value=target.preference_value,
+            preference_scope=target.preference_scope,
+            preference_explicit=target.preference_explicit,
+            agent_name=target.agent_name,
+            preference_session_id=target.preference_session_id,
+            project_root=target.project_root,
+            task_type=target.task_type,
             deleted=False,
         )
         self.store.append(record)

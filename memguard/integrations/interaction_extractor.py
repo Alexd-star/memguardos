@@ -47,6 +47,7 @@ def extract_interaction_preferences(event: AgentInteractionEvent) -> Interaction
                 event,
                 "code_search_tool",
                 "rg",
+                scope=_scope_for_text(text, lowered),
                 explicit=_explicit_tool_preference(text, lowered),
             )
         )
@@ -56,6 +57,7 @@ def extract_interaction_preferences(event: AgentInteractionEvent) -> Interaction
                 event,
                 "code_search_tool",
                 "grep",
+                scope=_scope_for_text(text, lowered),
                 explicit=_explicit_tool_preference(text, lowered),
             )
         )
@@ -132,9 +134,21 @@ def _prefers_grep(text: str, lowered: str) -> bool:
 
 
 def _explicit_tool_preference(text: str, lowered: str) -> bool:
-    return any(marker in text for marker in ("以后", "默认", "优先", "首选", "每次", "总是")) or any(
+    return any(marker in text for marker in ("以后", "默认", "优先", "首选", "每次", "总是", "本轮", "本次会话")) or any(
         marker in lowered for marker in ("prefer", "always", "by default")
     )
+
+
+def _scope_for_text(text: str, lowered: str) -> str:
+    if any(marker in text for marker in ("本轮", "本次会话", "这个会话")):
+        return "session"
+    if any(marker in text for marker in ("当前项目", "这个项目", "本项目")):
+        return "project"
+    if any(marker in text for marker in ("这类任务", "此类任务", "这种任务")):
+        return "task_type"
+    if any(marker in text for marker in ("这个 Agent", "当前 Agent", "该 Agent")) or "this agent" in lowered:
+        return "agent"
+    return "global"
 
 
 def _command_before_explanation(text: str, lowered: str) -> bool:

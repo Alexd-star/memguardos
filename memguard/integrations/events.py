@@ -38,6 +38,8 @@ class AgentInteractionEvent:
     state_before: str = ""
     state_after: str = ""
     user_feedback: str = ""
+    project_root: str = ""
+    task_type: str = ""
     timestamp: str = field(default_factory=utc_now)
     source_uri: str = ""
     schema_version: str = "1.0"
@@ -59,6 +61,8 @@ class AgentInteractionEvent:
             "state_before",
             "state_after",
             "user_feedback",
+            "project_root",
+            "task_type",
             "source_uri",
         ):
             object.__setattr__(self, name, _normalize_text(str(getattr(self, name))))
@@ -104,6 +108,8 @@ class AgentInteractionEvent:
             "state_before": self.state_before,
             "state_after": self.state_after,
             "user_feedback": self.user_feedback,
+            "project_root": self.project_root,
+            "task_type": self.task_type,
             "source_uri": self.source_uri,
         }
 

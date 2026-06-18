@@ -44,6 +44,14 @@ class SQLiteMetaStore:
                 valid_from TEXT NOT NULL DEFAULT '',
                 valid_to TEXT,
                 superseded_by TEXT,
+                preference_topic TEXT NOT NULL DEFAULT '',
+                preference_value TEXT NOT NULL DEFAULT '',
+                preference_scope TEXT NOT NULL DEFAULT 'global',
+                preference_explicit INTEGER NOT NULL DEFAULT 1,
+                agent_name TEXT NOT NULL DEFAULT '',
+                preference_session_id TEXT NOT NULL DEFAULT '',
+                project_root TEXT NOT NULL DEFAULT '',
+                task_type TEXT NOT NULL DEFAULT '',
                 deleted INTEGER NOT NULL DEFAULT 0,
                 updated_at TEXT NOT NULL
             )
@@ -55,6 +63,14 @@ class SQLiteMetaStore:
         self._ensure_column("memory", "valid_from", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("memory", "valid_to", "TEXT")
         self._ensure_column("memory", "superseded_by", "TEXT")
+        self._ensure_column("memory", "preference_topic", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory", "preference_value", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory", "preference_scope", "TEXT NOT NULL DEFAULT 'global'")
+        self._ensure_column("memory", "preference_explicit", "INTEGER NOT NULL DEFAULT 1")
+        self._ensure_column("memory", "agent_name", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory", "preference_session_id", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory", "project_root", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory", "task_type", "TEXT NOT NULL DEFAULT ''")
         self.conn.execute(
             """
             CREATE TABLE IF NOT EXISTS audit (
@@ -119,12 +135,16 @@ class SQLiteMetaStore:
                 state_before TEXT NOT NULL DEFAULT '',
                 state_after TEXT NOT NULL DEFAULT '',
                 user_feedback TEXT NOT NULL DEFAULT '',
+                project_root TEXT NOT NULL DEFAULT '',
+                task_type TEXT NOT NULL DEFAULT '',
                 timestamp TEXT NOT NULL,
                 source_uri TEXT NOT NULL,
                 created_at TEXT NOT NULL
             )
             """
         )
+        self._ensure_column("agent_events", "project_root", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("agent_events", "task_type", "TEXT NOT NULL DEFAULT ''")
         self.conn.execute(
             """
             CREATE TABLE IF NOT EXISTS memory_event_links (
@@ -149,12 +169,20 @@ class SQLiteMetaStore:
                 preference_scope TEXT NOT NULL,
                 explicit INTEGER NOT NULL,
                 confidence REAL NOT NULL,
+                project_root TEXT NOT NULL DEFAULT '',
+                task_type TEXT NOT NULL DEFAULT '',
+                scope_agent_name TEXT NOT NULL DEFAULT '',
+                scope_session_id TEXT NOT NULL DEFAULT '',
                 promoted_memory_id TEXT,
                 created_at TEXT NOT NULL,
                 UNIQUE(event_id, topic, value, polarity, preference_scope)
             )
             """
         )
+        self._ensure_column("preference_observations", "project_root", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("preference_observations", "task_type", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("preference_observations", "scope_agent_name", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("preference_observations", "scope_session_id", "TEXT NOT NULL DEFAULT ''")
         try:
             self.conn.execute(
                 """
@@ -192,9 +220,11 @@ class SQLiteMetaStore:
             INSERT INTO memory (
                 memory_id, type, scope, tier, summary, content, source_kind, source_uri,
                 sensitivity_level, sensitivity_labels, sensitivity_redacted, version_id,
-                valid_from, valid_to, superseded_by, deleted, updated_at, subtype
+                valid_from, valid_to, superseded_by, preference_topic, preference_value,
+                preference_scope, preference_explicit, agent_name, preference_session_id,
+                project_root, task_type, deleted, updated_at, subtype
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(memory_id) DO UPDATE SET
                 type=excluded.type,
                 subtype=excluded.subtype,
@@ -211,6 +241,14 @@ class SQLiteMetaStore:
                 valid_from=excluded.valid_from,
                 valid_to=excluded.valid_to,
                 superseded_by=excluded.superseded_by,
+                preference_topic=excluded.preference_topic,
+                preference_value=excluded.preference_value,
+                preference_scope=excluded.preference_scope,
+                preference_explicit=excluded.preference_explicit,
+                agent_name=excluded.agent_name,
+                preference_session_id=excluded.preference_session_id,
+                project_root=excluded.project_root,
+                task_type=excluded.task_type,
                 deleted=excluded.deleted,
                 updated_at=excluded.updated_at
             """,
@@ -230,6 +268,14 @@ class SQLiteMetaStore:
                 record.temporal.valid_from,
                 record.temporal.valid_to,
                 record.temporal.superseded_by,
+                record.preference_topic,
+                record.preference_value,
+                record.preference_scope,
+                1 if record.preference_explicit else 0,
+                record.agent_name,
+                record.preference_session_id,
+                record.project_root,
+                record.task_type,
                 1 if record.deleted else 0,
                 utc_now(),
                 record.subtype,
@@ -304,9 +350,9 @@ class SQLiteMetaStore:
                 event_id, provenance_hash, schema_version, agent_name, agent_version,
                 session_id, turn_id, sequence, event_type, role, content, tool_name,
                 tool_args_json, tool_result, exit_code, state_before, state_after,
-                user_feedback, timestamp, source_uri, created_at
+                user_feedback, project_root, task_type, timestamp, source_uri, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 event.event_id,
@@ -327,6 +373,8 @@ class SQLiteMetaStore:
                 event.state_before,
                 event.state_after,
                 event.user_feedback,
+                event.project_root,
+                event.task_type,
                 event.timestamp,
                 event.source_uri,
                 utc_now(),
@@ -424,9 +472,10 @@ class SQLiteMetaStore:
             """
             INSERT OR IGNORE INTO preference_observations (
                 event_id, agent_name, session_id, topic, value, polarity,
-                preference_scope, explicit, confidence, created_at
+                preference_scope, explicit, confidence, project_root, task_type,
+                scope_agent_name, scope_session_id, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 event.event_id,
@@ -438,6 +487,10 @@ class SQLiteMetaStore:
                 observation.scope,
                 1 if observation.explicit else 0,
                 observation.confidence,
+                event.project_root if observation.scope == "project" else "",
+                event.task_type if observation.scope == "task_type" else "",
+                event.agent_name if observation.scope == "agent" else "",
+                event.session_id if observation.scope == "session" else "",
                 utc_now(),
             ),
         )
@@ -456,6 +509,10 @@ class SQLiteMetaStore:
                 topic,
                 value,
                 preference_scope,
+                project_root,
+                task_type,
+                scope_agent_name,
+                scope_session_id,
                 COUNT(*) AS evidence_count,
                 COUNT(DISTINCT session_id) AS distinct_sessions,
                 SUM(CASE WHEN polarity = 'positive' THEN 1 ELSE 0 END) AS positive_count,
@@ -464,8 +521,8 @@ class SQLiteMetaStore:
                 MIN(created_at) AS first_seen_at,
                 MAX(created_at) AS last_seen_at
             FROM preference_observations
-            GROUP BY topic, value, preference_scope
-            ORDER BY topic, value, preference_scope
+            GROUP BY topic, value, preference_scope, project_root, task_type, scope_agent_name, scope_session_id
+            ORDER BY topic, value, preference_scope, project_root, task_type, scope_agent_name, scope_session_id
             """
         ).fetchall()
         result = []
@@ -476,8 +533,21 @@ class SQLiteMetaStore:
                 SELECT COUNT(*) AS count
                 FROM preference_observations
                 WHERE topic = ? AND value != ?
+                  AND preference_scope = ?
+                  AND project_root = ?
+                  AND task_type = ?
+                  AND scope_agent_name = ?
+                  AND scope_session_id = ?
                 """,
-                (item["topic"], item["value"]),
+                (
+                    item["topic"],
+                    item["value"],
+                    item["preference_scope"],
+                    item["project_root"],
+                    item["task_type"],
+                    item["scope_agent_name"],
+                    item["scope_session_id"],
+                ),
             ).fetchone()
             item["contradiction_count"] = int(contradiction["count"] if contradiction else 0)
             evidence_count = max(1, int(item["evidence_count"]))
@@ -486,26 +556,47 @@ class SQLiteMetaStore:
             result.append(item)
         return result
 
-    def preference_observation_event_ids(self, topic: str, value: str) -> List[str]:
+    def preference_observation_event_ids(self, aggregate: Dict[str, Any]) -> List[str]:
         rows = self.conn.execute(
             """
             SELECT event_id
             FROM preference_observations
-            WHERE topic = ? AND value = ?
+            WHERE topic = ? AND value = ? AND preference_scope = ?
+              AND project_root = ? AND task_type = ?
+              AND scope_agent_name = ? AND scope_session_id = ?
             ORDER BY created_at ASC, event_id ASC
             """,
-            (topic, value),
+            (
+                aggregate["topic"],
+                aggregate["value"],
+                aggregate["preference_scope"],
+                aggregate["project_root"],
+                aggregate["task_type"],
+                aggregate["scope_agent_name"],
+                aggregate["scope_session_id"],
+            ),
         ).fetchall()
         return [str(row["event_id"]) for row in rows]
 
-    def mark_preference_promoted(self, topic: str, value: str, memory_id: str) -> None:
+    def mark_preference_promoted(self, aggregate: Dict[str, Any], memory_id: str) -> None:
         self.conn.execute(
             """
             UPDATE preference_observations
             SET promoted_memory_id = ?
-            WHERE topic = ? AND value = ?
+            WHERE topic = ? AND value = ? AND preference_scope = ?
+              AND project_root = ? AND task_type = ?
+              AND scope_agent_name = ? AND scope_session_id = ?
             """,
-            (memory_id, topic, value),
+            (
+                memory_id,
+                aggregate["topic"],
+                aggregate["value"],
+                aggregate["preference_scope"],
+                aggregate["project_root"],
+                aggregate["task_type"],
+                aggregate["scope_agent_name"],
+                aggregate["scope_session_id"],
+            ),
         )
         self.conn.commit()
 
