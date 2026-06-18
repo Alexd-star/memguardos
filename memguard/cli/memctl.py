@@ -209,6 +209,16 @@ def build_parser() -> argparse.ArgumentParser:
     agent_sub.add_parser("status", help="Show Agent event and preference aggregation status")
     agent_evidence = agent_sub.add_parser("evidence", help="Show interaction evidence for one memory")
     agent_evidence.add_argument("memory_id")
+    agent_forget = agent_sub.add_parser("forget", help="Preview or execute scoped Agent interaction forgetting")
+    agent_forget.add_argument("--agent-name", default="")
+    agent_forget.add_argument("--session-id", default="")
+    agent_forget.add_argument("--turn-id", default="")
+    agent_forget.add_argument("--preference-topic", default="")
+    agent_forget.add_argument("--start-time", default="")
+    agent_forget.add_argument("--end-time", default="")
+    agent_forget.add_argument("--confirm", action="store_true")
+    agent_forget.add_argument("--no-compact", action="store_true")
+    agent_forget.add_argument("--no-external-persistence", action="store_true")
 
     return parser
 
@@ -249,6 +259,23 @@ def main(argv: list[str] | None = None) -> int:
                 result = service.preference_evidence(args.memory_id)
                 print(json.dumps(result, ensure_ascii=False, indent=2))
                 return 0 if result.get("found") else 2
+            if args.agent_command == "forget":
+                filters = {
+                    "agent_name": args.agent_name,
+                    "session_id": args.session_id,
+                    "turn_id": args.turn_id,
+                    "preference_topic": args.preference_topic,
+                    "start_time": args.start_time,
+                    "end_time": args.end_time,
+                }
+                result = service.forget_agent_interactions(
+                    filters,
+                    confirm=args.confirm,
+                    compact=not args.no_compact,
+                    external_persistence=not args.no_external_persistence,
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0
 
         if args.command == "ingest":
             text, source_uri = _read_ingest(args)

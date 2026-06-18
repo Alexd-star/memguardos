@@ -134,6 +134,35 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         return {"ok": True, "result": _jsonable(service.ingest_interactions(events))}
     if command == "interaction_status":
         return {"ok": True, "result": _jsonable(service.interaction_status())}
+    if command == "forget_agent_interactions":
+        raw_filters = request.get("filters")
+        if not isinstance(raw_filters, dict):
+            raise ValueError("filters must be an object")
+        filters = {}
+        for key, max_chars in {
+            "agent_name": 128,
+            "session_id": 256,
+            "turn_id": 256,
+            "preference_topic": 128,
+            "start_time": 64,
+            "end_time": 64,
+        }.items():
+            if raw_filters.get(key):
+                value = str(raw_filters[key]).strip()
+                if len(value) > max_chars:
+                    raise ValueError("%s exceeds maximum length" % key)
+                filters[key] = value
+        return {
+            "ok": True,
+            "result": _jsonable(
+                service.forget_agent_interactions(
+                    filters,
+                    confirm=bool(request.get("confirm", False)),
+                    compact=bool(request.get("compact", True)),
+                    external_persistence=bool(request.get("external_persistence", True)),
+                )
+            ),
+        }
     if command == "build_agent_context":
         task = _string_param(request, "task", "", max_chars=4096)
         stage = _string_param(request, "stage", "", max_chars=64)

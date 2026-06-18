@@ -3,6 +3,7 @@ from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import perf_counter
 from typing import Dict, List, Optional, Tuple, Union
+import json
 
 from memguard.config import (
     DEFAULT_NAMESPACE,
@@ -1681,6 +1682,146 @@ class MemGuardService:
             {"request": request, "forgotten": forgotten, "compact": compact},
         )
         return {"confirmed": True, "request": request, "forgotten": forgotten}
+
+    def forget_agent_interactions(
+        self,
+        filters: Dict[str, object],
+        confirm: bool = False,
+        compact: bool = True,
+        external_persistence: bool = True,
+    ) -> Dict[str, object]:
+        allowed = {
+            "agent_name",
+            "session_id",
+            "turn_id",
+            "preference_topic",
+            "start_time",
+            "end_time",
+        }
+        clean_filters = {
+            key: str(value).strip()
+            for key, value in filters.items()
+            if key in allowed and str(value).strip()
+        }
+        if not clean_filters:
+            raise ValueError("at least one Agent forgetting scope filter is required")
+        impact = self.meta.agent_forget_impact(clean_filters)
+        residue = {
+            "risk": "external_agent_persistence" if external_persistence else "none_declared",
+            "requires_separate_cleanup": bool(external_persistence),
+            "explanation": (
+                "OpenHands conversation persistence is outside the MemGuardOS managed store "
+                "and must be deleted separately when enabled."
+                if external_persistence
+                else "The caller declared that no external Agent persistence copy is retained."
+            ),
+        }
+        plan = {
+            "confirmed": False,
+            "filters": clean_filters,
+            "affected": impact,
+            "external_residue": residue,
+        }
+        if not confirm:
+            self._audit(
+                "agent_forget_dry_run",
+                None,
+                {
+                    "filters": clean_filters,
+                    "event_count": len(impact["event_ids"]),
+                    "memory_count": len(impact["memory_ids"]),
+                    "observation_count": impact["observation_count"],
+                    "context_usage_count": impact["context_usage_count"],
+                    "external_persistence": external_persistence,
+                },
+            )
+            return plan
+
+        probes = []
+        forgotten_memory_ids = []
+        for memory_id in impact["memory_ids"]:
+            record = self.store.get_latest(memory_id)
+            if record is None:
+                continue
+            probes.append(record.content)
+            tombstone = self.store.tombstone(
+                record,
+                "agent interaction forget: %s" % json.dumps(clean_filters, ensure_ascii=False),
+            )
+            self.meta.mark_deleted(memory_id, superseded_by=tombstone.version.version_id)
+            forgotten_memory_ids.append(memory_id)
+        deleted_observations = self.meta.delete_preference_observations(
+            impact["event_ids"],
+            str(clean_filters.get("preference_topic") or ""),
+        )
+        scrubbed_events = self.meta.forget_agent_event_payloads(impact["event_ids"])
+        if compact:
+            self.store.compact()
+
+        verification_session = "forget-verify-%s" % new_id("session")
+        contexts = {
+            stage: self.build_agent_context(
+                task="验证精准遗忘结果 %s" % str(clean_filters.get("preference_topic") or ""),
+                stage=stage,
+                agent_name=str(clean_filters.get("agent_name") or "openhands"),
+                session_id=verification_session,
+            )
+            for stage in ("planning", "tool_selection", "response_generation")
+        }
+        selected_after = {
+            stage: [str(item["memory_id"]) for item in result["memories"]]
+            for stage, result in contexts.items()
+        }
+        all_stages_absent = all(
+            memory_id not in selected
+            for memory_id in forgotten_memory_ids
+            for selected in selected_after.values()
+        )
+        remaining_events = {
+            str(item["event_id"]): item
+            for item in self.meta.list_agent_events(limit=1000000)
+            if str(item["event_id"]) in impact["event_ids"]
+        }
+        event_payload_scrubbed = all(
+            item.get("forgotten")
+            and not item.get("content")
+            and not item.get("tool_result")
+            and not item.get("tool_args")
+            for item in remaining_events.values()
+        ) and len(remaining_events) == len(impact["event_ids"])
+        segment_plaintext_absent = all(
+            not probe or not self.store.raw_contains(probe)
+            for probe in probes
+        )
+        verification = {
+            "verification_session_id": verification_session,
+            "selected_memory_ids_by_stage": selected_after,
+            "all_stages_absent": all_stages_absent,
+            "event_payload_scrubbed": event_payload_scrubbed,
+            "segment_plaintext_absent": segment_plaintext_absent,
+        }
+        self._audit(
+            "agent_forget",
+            None,
+            {
+                "filters": clean_filters,
+                "forgotten_memory_ids": forgotten_memory_ids,
+                "scrubbed_event_count": scrubbed_events,
+                "deleted_observation_count": deleted_observations,
+                "compact": compact,
+                "verification": verification,
+                "external_persistence": external_persistence,
+            },
+        )
+        return {
+            **plan,
+            "confirmed": True,
+            "forgotten_memory_ids": forgotten_memory_ids,
+            "scrubbed_event_count": scrubbed_events,
+            "deleted_observation_count": deleted_observations,
+            "compact": compact,
+            "verification": verification,
+        }
 
     def verify_forget(self, memory_id: str) -> Dict[str, object]:
         return self.verify_forget_probe(memory_id)

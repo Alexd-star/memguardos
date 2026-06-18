@@ -5,6 +5,8 @@ import sys
 from types import SimpleNamespace
 
 from memguard.integrations.openhands_runner import OpenHandsMemoryRunner
+from memguard.api.server import handle_request
+from memguard.cli.memctl import main as memctl_main
 from memguard.service import MemGuardService
 
 
@@ -201,3 +203,148 @@ def test_openhands_hook_injects_context_and_blocks_high_risk_commands(tmp_path):
     assert json.loads(inject.stdout)["additionalContext"] == "只使用已筛选记忆。"
     assert guard.returncode == 2
     assert json.loads(guard.stdout)["decision"] == "deny"
+
+
+def interaction_event(content, event_id, sequence, session_id="session-forget-a"):
+    from memguard.integrations.events import AgentInteractionEvent
+
+    return AgentInteractionEvent(
+        agent_name="openhands",
+        agent_version="1.28.1",
+        session_id=session_id,
+        turn_id="turn-%s" % sequence,
+        sequence=sequence,
+        event_type="user_message",
+        role="user",
+        content=content,
+        source_uri="openhands://%s/%s" % (session_id, event_id),
+        event_id=event_id,
+    )
+
+
+def test_agent_forget_dry_run_reports_precise_impact_and_external_residue(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        response = service.ingest_interaction(
+            interaction_event("以后回答先给命令，再解释原因。", "evt-forget-response", 1)
+        )
+        service.ingest_interaction(
+            interaction_event("以后搜索代码优先使用 rg。", "evt-forget-tool", 2)
+        )
+
+        plan = service.forget_agent_interactions(
+            {"agent_name": "openhands", "preference_topic": "response_order"},
+            confirm=False,
+            external_persistence=True,
+        )
+
+        assert plan["confirmed"] is False
+        assert plan["affected"]["event_ids"] == ["evt-forget-response"]
+        assert plan["affected"]["memory_ids"] == response["memory_ids"]
+        assert plan["external_residue"]["risk"] == "external_agent_persistence"
+        assert plan["external_residue"]["requires_separate_cleanup"] is True
+    finally:
+        service.close()
+
+
+def test_agent_forget_removes_only_target_preference_from_all_context_stages(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        response = service.ingest_interaction(
+            interaction_event("以后回答先给命令，再解释原因。", "evt-forget-response-2", 1)
+        )
+        tool = service.ingest_interaction(
+            interaction_event("以后搜索代码优先使用 rg。", "evt-forget-tool-2", 2)
+        )
+        before = service.build_agent_context(
+            "查找代码并回答",
+            stage="response_generation",
+            agent_name="openhands",
+            session_id="session-new-before",
+        )
+        assert response["memory_ids"][0] in [item["memory_id"] for item in before["memories"]]
+
+        result = service.forget_agent_interactions(
+            {"agent_name": "openhands", "preference_topic": "response_order"},
+            confirm=True,
+            compact=True,
+            external_persistence=False,
+        )
+
+        assert result["forgotten_memory_ids"] == response["memory_ids"]
+        assert result["verification"]["all_stages_absent"] is True
+        assert result["verification"]["event_payload_scrubbed"] is True
+        assert result["verification"]["segment_plaintext_absent"] is True
+        stored_event = service.meta.list_agent_events(session_id="session-forget-a")[0]
+        assert stored_event["forgotten"] is True
+        assert stored_event["content"] == ""
+        tool_context = service.build_agent_context(
+            "查找代码",
+            stage="tool_selection",
+            agent_name="openhands",
+            session_id="session-new-after",
+        )
+        assert tool["memory_ids"][0] in [item["memory_id"] for item in tool_context["memories"]]
+    finally:
+        service.close()
+
+
+def test_agent_forget_requires_at_least_one_scope_filter(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        try:
+            service.forget_agent_interactions({}, confirm=False)
+        except ValueError as exc:
+            assert "at least one" in str(exc)
+        else:
+            raise AssertionError("unscoped Agent forgetting was accepted")
+    finally:
+        service.close()
+
+
+def test_agent_forget_is_exposed_by_api_and_cli(tmp_path, monkeypatch, capsys):
+    service = make_service(tmp_path)
+    try:
+        service.ingest_interaction(
+            interaction_event("以后回答先给命令，再解释原因。", "evt-forget-api", 1)
+        )
+        response = handle_request(
+            service,
+            {
+                "command": "forget_agent_interactions",
+                "filters": {
+                    "agent_name": "openhands",
+                    "preference_topic": "response_order",
+                },
+                "confirm": False,
+            },
+        )
+        assert response["ok"] is True
+        assert response["result"]["affected"]["event_ids"] == ["evt-forget-api"]
+    finally:
+        service.close()
+
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "cli-home"))
+    cli_service = MemGuardService()
+    try:
+        cli_service.ingest_interaction(
+            interaction_event("以后搜索代码优先使用 rg。", "evt-forget-cli", 1)
+        )
+    finally:
+        cli_service.close()
+    assert (
+        memctl_main(
+            [
+                "agent",
+                "forget",
+                "--agent-name",
+                "openhands",
+                "--preference-topic",
+                "code_search_tool",
+            ]
+        )
+        == 0
+    )
+    output = json.loads(capsys.readouterr().out)
+    assert output["confirmed"] is False
+    assert output["affected"]["event_ids"] == ["evt-forget-cli"]

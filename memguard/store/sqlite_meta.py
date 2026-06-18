@@ -139,12 +139,16 @@ class SQLiteMetaStore:
                 task_type TEXT NOT NULL DEFAULT '',
                 timestamp TEXT NOT NULL,
                 source_uri TEXT NOT NULL,
+                forgotten INTEGER NOT NULL DEFAULT 0,
+                forgotten_at TEXT,
                 created_at TEXT NOT NULL
             )
             """
         )
         self._ensure_column("agent_events", "project_root", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("agent_events", "task_type", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("agent_events", "forgotten", "INTEGER NOT NULL DEFAULT 0")
+        self._ensure_column("agent_events", "forgotten_at", "TEXT")
         self.conn.execute(
             """
             CREATE TABLE IF NOT EXISTS memory_event_links (
@@ -417,8 +421,139 @@ class SQLiteMetaStore:
         for row in rows:
             item = dict(row)
             item["tool_args"] = json.loads(item.pop("tool_args_json"))
+            item["forgotten"] = bool(item.get("forgotten"))
             result.append(item)
         return result
+
+    def agent_forget_impact(self, filters: Dict[str, str]) -> Dict[str, Any]:
+        event_clauses = []
+        event_params: List[Any] = []
+        for key in ("agent_name", "session_id", "turn_id"):
+            value = str(filters.get(key) or "").strip()
+            if value:
+                event_clauses.append("e.%s = ?" % key)
+                event_params.append(value)
+        start_time = str(filters.get("start_time") or "").strip()
+        end_time = str(filters.get("end_time") or "").strip()
+        if start_time:
+            event_clauses.append("e.timestamp >= ?")
+            event_params.append(start_time)
+        if end_time:
+            event_clauses.append("e.timestamp <= ?")
+            event_params.append(end_time)
+        topic = str(filters.get("preference_topic") or "").strip()
+
+        if topic:
+            sql = (
+                "SELECT DISTINCT e.event_id FROM preference_observations p "
+                "JOIN agent_events e ON e.event_id = p.event_id "
+                "WHERE p.topic = ?"
+            )
+            params: List[Any] = [topic]
+            if event_clauses:
+                sql += " AND " + " AND ".join(event_clauses)
+                params.extend(event_params)
+        else:
+            sql = "SELECT DISTINCT e.event_id FROM agent_events e"
+            params = list(event_params)
+            if event_clauses:
+                sql += " WHERE " + " AND ".join(event_clauses)
+        sql += " ORDER BY e.event_id"
+        event_ids = [str(row["event_id"]) for row in self.conn.execute(sql, params)]
+        if not event_ids:
+            return {
+                "event_ids": [],
+                "memory_ids": [],
+                "observation_count": 0,
+                "context_usage_count": 0,
+            }
+
+        placeholders = ",".join("?" for _ in event_ids)
+        memory_params: List[Any] = list(event_ids)
+        if topic:
+            memory_rows = self.conn.execute(
+                """
+                SELECT DISTINCT promoted_memory_id AS memory_id
+                FROM preference_observations
+                WHERE event_id IN (%s) AND topic = ? AND promoted_memory_id IS NOT NULL
+                ORDER BY promoted_memory_id
+                """
+                % placeholders,
+                memory_params + [topic],
+            ).fetchall()
+            observation_count = int(
+                self.conn.execute(
+                    "SELECT COUNT(*) AS count FROM preference_observations "
+                    "WHERE event_id IN (%s) AND topic = ?" % placeholders,
+                    memory_params + [topic],
+                ).fetchone()["count"]
+            )
+        else:
+            memory_rows = self.conn.execute(
+                "SELECT DISTINCT memory_id FROM memory_event_links "
+                "WHERE event_id IN (%s) ORDER BY memory_id" % placeholders,
+                memory_params,
+            ).fetchall()
+            observation_count = int(
+                self.conn.execute(
+                    "SELECT COUNT(*) AS count FROM preference_observations "
+                    "WHERE event_id IN (%s)" % placeholders,
+                    memory_params,
+                ).fetchone()["count"]
+            )
+        memory_ids = [str(row["memory_id"]) for row in memory_rows if row["memory_id"]]
+        context_usage_count = 0
+        if memory_ids:
+            for row in self.conn.execute(
+                "SELECT detail FROM audit WHERE event_type = 'agent_context_build'"
+            ):
+                try:
+                    used = json.loads(row["detail"]).get("memory_ids", [])
+                except (json.JSONDecodeError, TypeError, AttributeError):
+                    used = []
+                if any(memory_id in used for memory_id in memory_ids):
+                    context_usage_count += 1
+        return {
+            "event_ids": event_ids,
+            "memory_ids": memory_ids,
+            "observation_count": observation_count,
+            "context_usage_count": context_usage_count,
+        }
+
+    def forget_agent_event_payloads(self, event_ids: List[str]) -> int:
+        if not event_ids:
+            return 0
+        placeholders = ",".join("?" for _ in event_ids)
+        cursor = self.conn.execute(
+            """
+            UPDATE agent_events
+            SET content = '', tool_args_json = '{}', tool_result = '',
+                state_before = '', state_after = '', user_feedback = '',
+                forgotten = 1, forgotten_at = ?
+            WHERE event_id IN (%s)
+            """
+            % placeholders,
+            [utc_now()] + list(event_ids),
+        )
+        self.conn.commit()
+        return int(cursor.rowcount)
+
+    def delete_preference_observations(
+        self,
+        event_ids: List[str],
+        preference_topic: str = "",
+    ) -> int:
+        if not event_ids:
+            return 0
+        placeholders = ",".join("?" for _ in event_ids)
+        sql = "DELETE FROM preference_observations WHERE event_id IN (%s)" % placeholders
+        params: List[Any] = list(event_ids)
+        if preference_topic:
+            sql += " AND topic = ?"
+            params.append(preference_topic)
+        cursor = self.conn.execute(sql, params)
+        self.conn.commit()
+        return int(cursor.rowcount)
 
     def link_memory_event(self, memory_id: str, event_id: str, relation: str) -> Dict[str, Any]:
         memory = self.conn.execute(
