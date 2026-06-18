@@ -7,9 +7,15 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 import json
 import socket
+import sys
 import time
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from memguard.service import MemGuardService
+from memguard.integrations.events import AgentInteractionEvent
 from memguard.web.dashboard import run_dashboard
 
 
@@ -17,6 +23,19 @@ def main() -> int:
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         service = MemGuardService(store_path=root / "memory.segment", db_path=root / "memguard.sqlite3")
+        service.ingest_interaction(
+            AgentInteractionEvent(
+                agent_name="openhands",
+                agent_version="1.28.1",
+                session_id="web-smoke-session",
+                turn_id="turn-1",
+                sequence=1,
+                event_type="user_message",
+                role="user",
+                content="以后搜索代码优先使用 rg。",
+                event_id="evt-web-smoke-agent",
+            )
+        )
         port = _free_port()
         auth_token = "local-secret"
         thread = Thread(target=run_dashboard, args=(service, "127.0.0.1", port, auth_token), daemon=True)
@@ -35,16 +54,30 @@ def main() -> int:
         policy = _http_get_json(base + "/api/memory-policy", auth_token=auth_token)
         diagnostics = _http_get_json(base + "/api/diagnostics", auth_token=auth_token)
         exported = _http_get_json(base + "/api/export-diagnostics", auth_token=auth_token)
+        agent_overview = _http_get_json(
+            base + "/api/agent-overview?session_id=web-smoke-session&task=%E6%9F%A5%E6%89%BE%E4%BB%A3%E7%A0%81",
+            auth_token=auth_token,
+        )
+        agent_forget = _http_post(
+            base + "/api/agent-forget",
+            {
+                "filters": {"agent_name": "openhands", "preference_topic": "code_search_tool"},
+                "confirm": False,
+            },
+            auth_token=auth_token,
+        )
         invalid_json_status, invalid_json = _http_post_raw(base + "/api/ingest", b"{", "application/json", auth_token=auth_token)
         large_status, large_body = _http_post_raw(base + "/api/ingest", b"x" * 262145, "application/json", auth_token=auth_token)
         result = {
             "page_ok": page_status == 200 and "MemGuardOS 控制台" in page,
             "diagnostics_tab_ok": "系统诊断" in page,
             "diagnostics_export_button_ok": "导出诊断包" in page,
-            "capability_scoreboard_ok": "能力证据总览" in page and "一键演示流程" in page,
+            "enterprise_overview_ok": "系统能力概览" in page and "常用工作流" in page,
+            "competition_copy_absent": "benchmark 用例/种子" not in page and "能力证据总览" not in page,
             "traffic_light_status_ok": "红黄绿状态" in page,
             "rag_visual_ok": "候选选择轨迹" in page,
             "forget_candidate_visual_ok": "候选会以卡片形式列出" in page,
+            "agent_workspace_ok": "Agent 交互治理" in page and "三阶段上下文对比" in page,
             "token_session_storage_ok": "sessionStorage" in page and "localStorage" not in page,
             "html_security_headers_ok": _security_headers_ok(page_headers, expect_csp=True),
             "json_security_headers_ok": json_status == 200 and _security_headers_ok(json_headers, expect_csp=False),
@@ -57,6 +90,10 @@ def main() -> int:
             "policy_ok": policy.get("ok") is True,
             "diagnostics_ok": diagnostics.get("ok") is True and "audit_chain" in diagnostics.get("result", {}),
             "export_ok": "doctor" in exported and "audit_chain" in exported,
+            "agent_overview_ok": agent_overview.get("ok") is True
+            and agent_overview.get("result", {}).get("summary", {}).get("event_count") == 1,
+            "agent_forget_preview_ok": agent_forget.get("ok") is True
+            and agent_forget.get("result", {}).get("affected", {}).get("event_ids") == ["evt-web-smoke-agent"],
             "auth_required_for_diagnostics": unauthorized_status == 401 and unauthorized_body.get("error") == "unauthorized",
             "invalid_json_rejected": invalid_json_status == 400 and invalid_json.get("error") == "invalid_json",
             "large_payload_rejected": large_status == 413 and large_body.get("error") == "payload_too_large",
@@ -68,10 +105,12 @@ def main() -> int:
             result["page_ok"]
             and result["diagnostics_tab_ok"]
             and result["diagnostics_export_button_ok"]
-            and result["capability_scoreboard_ok"]
+            and result["enterprise_overview_ok"]
+            and result["competition_copy_absent"]
             and result["traffic_light_status_ok"]
             and result["rag_visual_ok"]
             and result["forget_candidate_visual_ok"]
+            and result["agent_workspace_ok"]
             and result["token_session_storage_ok"]
             and result["html_security_headers_ok"]
             and result["json_security_headers_ok"]
@@ -82,6 +121,8 @@ def main() -> int:
             and result["policy_ok"]
             and result["diagnostics_ok"]
             and result["export_ok"]
+            and result["agent_overview_ok"]
+            and result["agent_forget_preview_ok"]
             and result["auth_required_for_diagnostics"]
             and result["invalid_json_rejected"]
             and result["large_payload_rejected"]

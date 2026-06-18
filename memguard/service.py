@@ -242,6 +242,70 @@ class MemGuardService:
         )
         return result
 
+    def agent_dashboard_snapshot(
+        self,
+        session_id: str = "",
+        task: str = "查看当前 Agent 记忆状态",
+        agent_name: str = "openhands",
+        project_root: str = "",
+        task_type: str = "",
+        limit: int = 100,
+    ) -> Dict[str, object]:
+        events = self.meta.list_agent_events(
+            session_id=str(session_id).strip() or None,
+            limit=max(1, min(int(limit), 500)),
+        )
+        timeline = []
+        for event in events:
+            timeline.append(
+                {
+                    "event_id": event["event_id"],
+                    "agent_name": event["agent_name"],
+                    "session_id": event["session_id"],
+                    "turn_id": event["turn_id"],
+                    "sequence": event["sequence"],
+                    "event_type": event["event_type"],
+                    "role": event["role"],
+                    "content": event["content"],
+                    "tool_name": event["tool_name"],
+                    "tool_args": event["tool_args"],
+                    "tool_result": event["tool_result"],
+                    "exit_code": event["exit_code"],
+                    "timestamp": event["timestamp"],
+                    "forgotten": bool(event.get("forgotten")),
+                    "provenance_hash": event["provenance_hash"],
+                }
+            )
+        status = self.interaction_status()
+        clean_task = str(task).strip() or "查看当前 Agent 记忆状态"
+        effective_session = str(session_id).strip() or "dashboard-preview"
+        contexts = {
+            stage: self.build_agent_context(
+                task=clean_task,
+                stage=stage,
+                agent_name=agent_name,
+                session_id=effective_session,
+                project_root=project_root,
+                task_type=task_type,
+            )
+            for stage in ("planning", "tool_selection", "response_generation")
+        }
+        return {
+            "summary": {
+                "event_count": len(timeline),
+                "session_count": len({event["session_id"] for event in timeline}),
+                "tool_call_count": sum(1 for event in timeline if event["event_type"] == "tool_call"),
+                "tool_result_count": sum(1 for event in timeline if event["event_type"] == "tool_result"),
+                "forgotten_event_count": sum(1 for event in timeline if event["forgotten"]),
+                "stable_preference_count": sum(
+                    1 for item in status["preference_aggregates"] if item["stable"]
+                ),
+            },
+            "timeline": timeline,
+            "preference_aggregates": status["preference_aggregates"],
+            "contexts": contexts,
+        }
+
     def _preference_aggregate(
         self,
         observation: PreferenceObservation,

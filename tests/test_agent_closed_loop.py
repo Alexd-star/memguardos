@@ -348,3 +348,28 @@ def test_agent_forget_is_exposed_by_api_and_cli(tmp_path, monkeypatch, capsys):
     output = json.loads(capsys.readouterr().out)
     assert output["confirmed"] is False
     assert output["affected"]["event_ids"] == ["evt-forget-cli"]
+
+
+def test_agent_dashboard_snapshot_exposes_timeline_preferences_and_stage_contexts(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        service.ingest_interaction(
+            interaction_event("以后搜索代码优先使用 rg。", "evt-dashboard-agent", 1)
+        )
+        snapshot = service.agent_dashboard_snapshot(
+            session_id="session-forget-a",
+            task="查找精准遗忘实现",
+        )
+
+        assert snapshot["summary"]["event_count"] == 1
+        assert snapshot["timeline"][0]["event_id"] == "evt-dashboard-agent"
+        assert snapshot["timeline"][0]["content"] == "以后搜索代码优先使用 rg。"
+        assert snapshot["preference_aggregates"][0]["topic"] == "code_search_tool"
+        assert set(snapshot["contexts"]) == {
+            "planning",
+            "tool_selection",
+            "response_generation",
+        }
+        assert snapshot["contexts"]["tool_selection"]["memory_count"] == 1
+    finally:
+        service.close()

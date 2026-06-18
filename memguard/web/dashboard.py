@@ -64,6 +64,30 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/diagnostics":
             self._send_json({"ok": True, "result": self._diagnostics_payload(probe_sdk=False)})
             return
+        if parsed.path == "/api/agent-overview":
+            params = parse_qs(parsed.query)
+            session_id = params.get("session_id", [""])[0]
+            task = params.get("task", ["查看当前 Agent 记忆状态"])[0]
+            service = self._service()
+            try:
+                result = service.agent_dashboard_snapshot(
+                    session_id=session_id,
+                    task=task,
+                    limit=_safe_int(params.get("limit", ["100"])[0], 100),
+                )
+            finally:
+                service.close()
+            self._send_json({"ok": True, "result": result})
+            return
+        if parsed.path == "/api/agent-evidence":
+            params = parse_qs(parsed.query)
+            self._send_api(
+                {
+                    "command": "preference_evidence",
+                    "memory_id": params.get("memory_id", [""])[0],
+                }
+            )
+            return
         if parsed.path == "/api/export-diagnostics":
             self._send_json_attachment(
                 self._diagnostics_payload(probe_sdk=False),
@@ -136,6 +160,17 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                     "request": str(payload.get("request", "")),
                     "confirm": bool(payload.get("confirm", False)),
                     "compact": bool(payload.get("compact", False)),
+                }
+            )
+            return
+        if parsed.path == "/api/agent-forget":
+            self._send_api(
+                {
+                    "command": "forget_agent_interactions",
+                    "filters": payload.get("filters") if isinstance(payload.get("filters"), dict) else {},
+                    "confirm": bool(payload.get("confirm", False)),
+                    "compact": bool(payload.get("compact", True)),
+                    "external_persistence": bool(payload.get("external_persistence", True)),
                 }
             )
             return
@@ -233,6 +268,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                 "retrieval_status": retrieval,
                 "memory_policy": service.memory_policy_status(),
                 "temporal_status": service.temporal_status(limit=10),
+                "agent_interactions": service.agent_dashboard_snapshot(limit=20),
                 "kylin_sdk": {
                     "mode": "quick_dashboard",
                     "probe_embedding": bool(probe_sdk),
@@ -323,13 +359,24 @@ def _dashboard_html() -> str:
     .trace { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
     .trace .step { border:1px solid var(--line); background:#fff; border-radius:8px; padding:10px; }
     .step b { display:block; color:#115e59; margin-bottom:4px; }
+    .timeline { position:relative; display:grid; gap:0; }
+    .timeline::before { content:""; position:absolute; left:11px; top:8px; bottom:8px; width:1px; background:var(--line); }
+    .timeline-row { position:relative; padding:0 0 14px 34px; min-width:0; }
+    .timeline-dot { position:absolute; left:4px; top:4px; width:15px; height:15px; border:3px solid #fff; border-radius:50%; background:var(--accent-2); box-shadow:0 0 0 1px var(--line); }
+    .timeline-row.tool .timeline-dot { background:var(--warn); }
+    .timeline-row.forgotten .timeline-dot { background:var(--muted); }
+    .timeline-meta { color:var(--muted); font-size:12px; margin-bottom:4px; }
+    .timeline-body { border-bottom:1px solid #eaecf0; padding-bottom:10px; line-height:1.55; word-break:break-word; }
+    .stage-columns { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+    .stage-column { border-top:3px solid var(--accent); background:#fff; padding:12px; min-width:0; }
+    .stage-column h3 { margin:0 0 8px; font-size:15px; }
     .error { display:none; margin:0 0 12px; padding:10px 12px; border:1px solid #fecaca; background:#fff1f2; color:#991b1b; border-radius:8px; }
     #storageRoot { word-break:break-all; overflow-wrap:anywhere; }
     @media (max-width: 900px) {
       main { grid-template-columns: 1fr; }
       nav { border-right:0; border-bottom:1px solid var(--line); display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:8px; }
       nav button { margin:0; }
-      .grid, .grid.two, .grid.three, .grid.four, .trace { grid-template-columns: 1fr; }
+      .grid, .grid.two, .grid.three, .grid.four, .trace, .stage-columns { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -347,6 +394,7 @@ def _dashboard_html() -> str:
       <button data-tab="ingest">写入</button>
       <button data-tab="search">检索</button>
       <button data-tab="context">RAG 上下文</button>
+      <button data-tab="agent">Agent 交互</button>
       <button data-tab="forget">精准遗忘</button>
       <button data-tab="audit">审计</button>
       <button data-tab="diagnostics">诊断</button>
@@ -371,17 +419,17 @@ def _dashboard_html() -> str:
         </div>
         <div class="grid two" style="margin-top:12px">
           <div class="panel emphasis">
-            <div class="item-title">能力证据总览</div>
-            <p class="muted">这一组卡片用于快速确认系统能力边界：MemGuardOS 不是普通 RAG 演示，而是包含 openKylin SDK、OS 机制、精准遗忘、审计链和产品化安装证据的本机 Agent 记忆组件。</p>
+            <div class="item-title">系统能力概览</div>
+            <p class="muted">用于管理员快速了解当前部署提供的记忆治理、系统集成和安全审计能力。运行状态和数量以页面实时接口为准。</p>
             <div class="grid two">
-              <div class="item"><div class="item-title">217 条 benchmark 用例/种子</div><div class="muted">覆盖真实日志、失败修复、配置冲突、精准遗忘和程序性轨迹。</div></div>
-              <div class="item"><div class="item-title">10k P95 低于 500ms</div><div class="muted">openKylin 证据包验证端侧轻量检索性能。</div></div>
-              <div class="item"><div class="item-title">Kylin SDK 768 维推理</div><div class="muted">Python/C++ 探针均可复验，默认仍保留稳定 fallback。</div></div>
-              <div class="item"><div class="item-title">.deb 完整 apt 安装</div><div class="muted">维护模式安装后服务、cgroup、插件依赖和审计链均通过。</div></div>
+              <div class="item"><div class="item-title">交互记忆治理</div><div class="muted">自动接收用户、Agent 和工具事件，形成可追溯的偏好与程序性记忆。</div></div>
+              <div class="item"><div class="item-title">分阶段上下文</div><div class="muted">为规划、工具选择和回答生成提供不同的受控记忆集合。</div></div>
+              <div class="item"><div class="item-title">精准遗忘</div><div class="muted">支持影响预览、二次确认、事件擦除、索引清理和遗忘后复检。</div></div>
+              <div class="item"><div class="item-title">本机审计</div><div class="muted">记录关键操作、上下文选择和完整性校验，不依赖公网服务。</div></div>
             </div>
           </div>
           <div class="panel">
-            <div class="item-title">一键演示流程</div>
+            <div class="item-title">常用工作流</div>
             <div class="list">
               <div class="item"><div class="item-title">1. 状态与红黄绿状态</div><div class="muted">刷新总览，确认审计链、检索后端、SDK 和 OS 资源状态。</div></div>
               <div class="item"><div class="item-title">2. 写入与抽取解释</div><div class="muted">写入偏好或真实故障文本，展示抽取类型、质量校验和敏感策略。</div></div>
@@ -426,6 +474,33 @@ def _dashboard_html() -> str:
         </div>
         <div id="contextVisual" style="margin-top:12px"></div>
         <pre id="contextOut"></pre>
+      </section>
+      <section id="agent">
+        <h2>Agent 交互治理</h2>
+        <p class="lead">查看用户与现有 Agent 的真实交互事件、自动形成的偏好依据，以及规划、工具选择、回答生成三个阶段实际获得的记忆。已遗忘事件只保留哈希和删除事实。</p>
+        <div class="panel">
+          <div class="grid two">
+            <div><label>会话 ID（可选）</label><input id="agentSession" placeholder="留空查看最近事件"></div>
+            <div><label>上下文预览任务</label><input id="agentTask" value="查找精准遗忘的实现位置"></div>
+          </div>
+          <div class="actions"><button class="primary" onclick="loadAgentOverview(event)">刷新 Agent 状态</button><button class="secondary" onclick="exportDiagnostics(event)">导出诊断包</button></div>
+        </div>
+        <div id="agentMetrics" class="grid four" style="margin-top:12px"></div>
+        <div class="grid two" style="margin-top:12px">
+          <div class="panel"><div class="item-title">交互事件时间线</div><div id="agentTimeline" class="timeline" style="margin-top:12px"></div></div>
+          <div class="panel"><div class="item-title">偏好与证据</div><div id="agentPreferences" class="list" style="margin-top:12px"></div></div>
+        </div>
+        <div class="panel" style="margin-top:12px"><div class="item-title">三阶段上下文对比</div><div id="agentContexts" class="stage-columns" style="margin-top:12px"></div></div>
+        <div class="panel" style="margin-top:12px">
+          <div class="item-title">按交互主题精准遗忘</div>
+          <div class="grid two">
+            <div><label>Agent</label><input id="agentForgetName" value="openhands"></div>
+            <div><label>偏好主题</label><select id="agentForgetTopic"><option value="response_order">回答顺序</option><option value="code_search_tool">代码搜索工具</option><option value="response_language">回答语言</option><option value="response_verbosity">回答详细度</option><option value="high_risk_confirmation">高风险确认</option></select></div>
+          </div>
+          <div class="actions"><button class="secondary" onclick="agentForget(event, false)">预览影响</button><button class="danger" onclick="agentForget(event, true)">确认遗忘</button></div>
+          <div id="agentForgetImpact" class="list" style="margin-top:12px"></div>
+        </div>
+        <pre id="agentOut"></pre>
       </section>
       <section id="forget">
         <h2>精准遗忘</h2>
@@ -581,6 +656,79 @@ def _dashboard_html() -> str:
         + '<div class="muted">score=' + esc(item.score) + ' · matched=' + esc((item.matched_keywords || []).join(', ')) + '</div></div>'
       ).join('') : '<div class="item"><div class="item-title">' + (confirmed ? '已执行' : '未发现候选') + '</div><div class="muted">请查看下方 JSON 证据详情。</div></div>';
     }
+    function renderAgentOverview(payload) {
+      const result = payload.result || {};
+      const summary = result.summary || {};
+      const metricItems = [
+        ['交互事件', summary.event_count || 0],
+        ['会话数量', summary.session_count || 0],
+        ['工具调用', summary.tool_call_count || 0],
+        ['稳定偏好', summary.stable_preference_count || 0]
+      ];
+      document.getElementById('agentMetrics').innerHTML = metricItems.map(([name,value]) =>
+        '<div class="panel"><div class="muted">' + esc(name) + '</div><div class="metric">' + esc(value) + '</div></div>'
+      ).join('');
+      const timeline = result.timeline || [];
+      document.getElementById('agentTimeline').innerHTML = timeline.length ? timeline.map(item => {
+        const classes = ['timeline-row'];
+        if (item.event_type === 'tool_call' || item.event_type === 'tool_result') classes.push('tool');
+        if (item.forgotten) classes.push('forgotten');
+        const body = item.forgotten ? '该事件载荷已执行遗忘，仅保留哈希和审计事实。'
+          : (item.content || item.tool_result || (item.tool_args && Object.keys(item.tool_args).length ? pretty(item.tool_args) : '无文本载荷'));
+        return '<div class="' + classes.join(' ') + '"><span class="timeline-dot"></span>'
+          + '<div class="timeline-meta">' + esc(item.sequence) + ' · ' + esc(item.role) + ' · ' + esc(item.event_type) + ' · ' + esc(item.turn_id) + '</div>'
+          + '<div class="timeline-body">' + esc(body) + '</div></div>';
+      }).join('') : '<div class="muted">当前筛选范围内没有 Agent 交互事件。</div>';
+      const preferences = result.preference_aggregates || [];
+      document.getElementById('agentPreferences').innerHTML = preferences.length ? preferences.map(item =>
+        '<div class="item"><div class="item-title">' + esc(item.topic) + ' = ' + esc(item.value) + '</div>'
+        + '<div class="muted">范围 ' + esc(item.preference_scope) + ' · 证据 ' + esc(item.evidence_count) + ' · 会话 ' + esc(item.distinct_sessions) + ' · 状态 ' + (item.stable ? '稳定' : '候选') + '</div>'
+        + (item.promoted_memory_id ? '<div class="actions"><button class="secondary" onclick="loadPreferenceEvidence(event,\\'' + esc(item.promoted_memory_id) + '\\')">查看证据</button></div>' : '')
+        + '</div>'
+      ).join('') : '<div class="muted">尚未形成偏好候选。</div>';
+      const labels = {planning:'规划', tool_selection:'工具选择', response_generation:'回答生成'};
+      const contexts = result.contexts || {};
+      document.getElementById('agentContexts').innerHTML = ['planning','tool_selection','response_generation'].map(stage => {
+        const value = contexts[stage] || {};
+        const memories = value.memories || [];
+        return '<div class="stage-column"><h3>' + labels[stage] + '</h3><div class="muted">' + memories.length + ' 条记忆 · ' + esc((value.budget || {}).estimated_context_tokens || 0) + ' tokens</div>'
+          + (memories.length ? memories.map(item => '<div class="item" style="margin-top:8px"><b>' + esc(item.preference_topic || item.subtype || item.type) + '</b><div class="muted">' + esc(item.selection_reason || '') + '</div></div>').join('') : '<div class="muted" style="margin-top:8px">无适用记忆</div>')
+          + '</div>';
+      }).join('');
+    }
+    async function loadAgentOverview(event) {
+      await withBusy(event, async () => {
+        const url = '/api/agent-overview?session_id=' + encodeURIComponent(agentSession.value)
+          + '&task=' + encodeURIComponent(agentTask.value) + '&limit=100';
+        const payload = await getJson(url);
+        renderAgentOverview(payload);
+        agentOut.textContent = pretty(payload);
+      });
+    }
+    async function loadPreferenceEvidence(event, memoryId) {
+      await withBusy(event, async () => {
+        agentOut.textContent = pretty(await getJson('/api/agent-evidence?memory_id=' + encodeURIComponent(memoryId)));
+      });
+    }
+    async function agentForget(event, confirmForget) {
+      if (confirmForget && !window.confirm('确认遗忘该交互偏好并清理受管事件载荷？外部 Agent 持久化副本需单独处理。')) return;
+      await withBusy(event, async () => {
+        const filters = {agent_name:agentForgetName.value, preference_topic:agentForgetTopic.value};
+        if (agentSession.value.trim()) filters.session_id = agentSession.value.trim();
+        const payload = await postJson('/api/agent-forget', {
+          filters:filters, confirm:confirmForget, compact:true, external_persistence:true
+        });
+        const affected = (payload.result || {}).affected || {};
+        const residue = (payload.result || {}).external_residue || {};
+        document.getElementById('agentForgetImpact').innerHTML =
+          '<div class="item"><div class="item-title">影响范围</div><div class="muted">事件 ' + esc((affected.event_ids || []).length)
+          + ' · 记忆 ' + esc((affected.memory_ids || []).length) + ' · 观察 ' + esc(affected.observation_count || 0)
+          + ' · 历史上下文使用 ' + esc(affected.context_usage_count || 0) + '</div></div>'
+          + '<div class="item"><div class="item-title">外部残留</div><div class="muted">' + esc(residue.explanation || '未报告') + '</div></div>';
+        agentOut.textContent = pretty(payload);
+        if (confirmForget) await loadAgentOverview(null);
+      });
+    }
     async function refresh(event) {
       if (event) return withBusy(event, async () => refresh(null));
       const status = await getJson('/api/status');
@@ -674,7 +822,7 @@ def _dashboard_html() -> str:
       if (event && event.currentTarget) event.currentTarget.blur();
       window.location.href = '/api/export-diagnostics';
     }
-    refresh(); audit(null);
+    refresh(); audit(null); loadAgentOverview(null);
   </script>
 </body>
 </html>"""
