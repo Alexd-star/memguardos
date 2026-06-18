@@ -21,6 +21,7 @@ from memguard.ingestion.config import config_entry_to_memory_text, load_config_e
 from memguard.ingestion.quality import assess_text_quality
 from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.events import AgentInteractionEvent
+from memguard.integrations.interaction_extractor import PreferenceObservation, extract_interaction_preferences
 from memguard.integrations.normalizer import normalize_event
 from memguard.models import AuditInfo, MemoryRecord, MemorySource, VersionInfo, make_memory, new_id, stable_hash, utc_now
 from memguard.os_guard.events import parse_os_event
@@ -129,29 +130,47 @@ class MemGuardService:
     def ingest_interaction(self, event: Union[AgentInteractionEvent, Dict[str, object]]) -> Dict[str, object]:
         parsed = event if isinstance(event, AgentInteractionEvent) else AgentInteractionEvent.from_dict(event)
         normalized = normalize_event(parsed)
-        result = self.meta.insert_agent_event(normalized)
+        extraction = extract_interaction_preferences(normalized)
+        safe_event, sensitivity = self._sanitize_interaction_event(
+            normalized,
+            remember_allowed=extraction.remember_allowed,
+        )
+        result = self.meta.insert_agent_event(safe_event)
         audit_type = "interaction_ingest" if result["stored"] else "interaction_duplicate"
         self._audit(
             audit_type,
             None,
             {
                 "event_id": result["event_id"],
-                "provenance_hash": normalized.provenance_hash,
-                "agent_name": normalized.agent_name,
-                "session_id": normalized.session_id,
-                "turn_id": normalized.turn_id,
-                "sequence": normalized.sequence,
-                "event_type": normalized.event_type,
-                "role": normalized.role,
+                "provenance_hash": safe_event.provenance_hash,
+                "agent_name": safe_event.agent_name,
+                "session_id": safe_event.session_id,
+                "turn_id": safe_event.turn_id,
+                "sequence": safe_event.sequence,
+                "event_type": safe_event.event_type,
+                "role": safe_event.role,
+                "remember_allowed": extraction.remember_allowed,
+                "sensitivity_level": sensitivity.level,
+                "sensitivity_labels": sensitivity.labels,
             },
         )
+        memory_ids = []
+        if result["stored"] and extraction.remember_allowed and sensitivity.level != "high":
+            for observation in extraction.observations:
+                memory = self._store_preference_observation(observation, safe_event)
+                self.link_memory_event(memory.memory_id, safe_event.event_id, "extracted_from")
+                memory_ids.append(memory.memory_id)
         return {
             **result,
-            "agent_name": normalized.agent_name,
-            "session_id": normalized.session_id,
-            "turn_id": normalized.turn_id,
-            "sequence": normalized.sequence,
-            "event_type": normalized.event_type,
+            "agent_name": safe_event.agent_name,
+            "session_id": safe_event.session_id,
+            "turn_id": safe_event.turn_id,
+            "sequence": safe_event.sequence,
+            "event_type": safe_event.event_type,
+            "remember_allowed": extraction.remember_allowed,
+            "remember_reason": extraction.reason,
+            "sensitivity": sensitivity.__dict__,
+            "memory_ids": memory_ids,
         }
 
     def link_memory_event(self, memory_id: str, event_id: str, relation: str = "extracted_from") -> Dict[str, object]:
@@ -208,6 +227,94 @@ class MemGuardService:
             },
         )
         return result
+
+    def _sanitize_interaction_event(
+        self,
+        event: AgentInteractionEvent,
+        remember_allowed: bool,
+    ) -> Tuple[AgentInteractionEvent, object]:
+        combined = " ".join(
+            part
+            for part in (
+                event.content,
+                event.tool_result,
+                event.state_before,
+                event.state_after,
+                event.user_feedback,
+            )
+            if part
+        )
+        sensitivity = self.detector.classify(combined, event.source_uri)
+        payload = event.to_dict()
+        payload["provenance_hash"] = ""
+        if not remember_allowed or sensitivity.level == "high":
+            for field in ("content", "tool_result", "state_before", "state_after", "user_feedback"):
+                payload[field] = ""
+            payload["tool_args"] = {}
+        elif sensitivity.labels:
+            for field in ("content", "tool_result", "state_before", "state_after", "user_feedback"):
+                payload[field] = self.detector.redact(str(payload[field]), event.source_uri)
+        return AgentInteractionEvent.from_dict(payload), sensitivity
+
+    def _store_preference_observation(
+        self,
+        observation: PreferenceObservation,
+        event: AgentInteractionEvent,
+    ) -> MemoryRecord:
+        subtype = {
+            "code_search_tool": "tool_preference",
+            "response_order": "output_style",
+            "response_language": "output_style",
+            "response_verbosity": "output_style",
+            "high_risk_confirmation": "security_policy",
+        }.get(observation.topic, "user_habit")
+        memory_type = "sensitive_policy" if subtype == "security_policy" else "preference"
+        content = (
+            "用户与 Agent 的显式偏好：topic=%s value=%s preference_scope=%s "
+            "agent=%s session=%s turn=%s"
+            % (
+                observation.topic,
+                observation.value,
+                observation.scope,
+                event.agent_name,
+                event.session_id,
+                event.turn_id,
+            )
+        )
+        summary = "用户交互偏好：%s=%s（%s）" % (
+            observation.topic,
+            observation.value,
+            observation.scope,
+        )
+        record = make_memory(
+            content=content,
+            memory_type=memory_type,
+            source=MemorySource(kind="agent_interaction", uri=event.source_uri or event.event_id),
+            summary=summary,
+            subtype=subtype,
+            scope=self.namespace,
+            tier="long_term" if observation.scope != "session" else "session",
+        )
+        record.confidence = observation.confidence
+        record.evidence = ["agent_event:%s" % event.event_id]
+        self._enrich_graph(record)
+        self.store.append(record)
+        self.meta.upsert_memory(record)
+        self._audit(
+            "interaction_preference_extract",
+            record.memory_id,
+            {
+                "event_id": event.event_id,
+                "agent_name": event.agent_name,
+                "session_id": event.session_id,
+                "turn_id": event.turn_id,
+                "topic": observation.topic,
+                "value": observation.value,
+                "preference_scope": observation.scope,
+                "confidence": observation.confidence,
+            },
+        )
+        return record
 
     def ingest_config(self, path: Path) -> Dict[str, object]:
         entries = load_config_entries(path)
