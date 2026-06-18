@@ -43,6 +43,7 @@ rsync -a --delete \
   --exclude='.pytest_cache/' \
   --exclude='.ruff_cache/' \
   --exclude='.venv/' \
+  --exclude='.venv-agent/' \
   --exclude='__pycache__/' \
   --exclude='dist/' \
   --exclude='memguardos.egg-info/' \
@@ -53,6 +54,7 @@ rsync -a --delete \
 
 install -m 0644 scripts/memguardd.service "${STAGING}/lib/systemd/system/memguardd.service"
 install -m 0644 scripts/memguardd@.service "${STAGING}/lib/systemd/system/memguardd@.service"
+install -m 0644 scripts/memguard-agent@.service "${STAGING}/lib/systemd/system/memguard-agent@.service"
 install -m 0644 README.md "${STAGING}/usr/share/doc/${PACKAGE_NAME}/README.md"
 install -m 0644 LICENSE "${STAGING}/usr/share/doc/${PACKAGE_NAME}/copyright"
 
@@ -97,7 +99,7 @@ fi
 cat >"${STAGING}/DEBIAN/postinst" <<'SH'
 #!/bin/sh
 set -e
-for unit in memguardd.service memguardd@.service; do
+for unit in memguardd.service memguardd@.service memguard-agent@.service; do
   legacy="/etc/systemd/system/${unit}"
   packaged="/lib/systemd/system/${unit}"
   if [ -f "${legacy}" ] && [ -f "${packaged}" ] && grep -q "MemGuardOS" "${legacy}"; then
