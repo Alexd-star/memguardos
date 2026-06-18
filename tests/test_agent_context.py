@@ -1,8 +1,11 @@
 import json
+import socket
+import threading
+import time
 
 import pytest
 
-from memguard.api.server import handle_request
+from memguard.api.server import handle_request, serve_unix_socket
 from memguard.cli.memctl import main as memctl_main
 from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.events import AgentInteractionEvent
@@ -257,3 +260,52 @@ def test_agent_cli_supports_ingest_context_status_evidence_and_replay(tmp_path, 
 
     assert memctl_main(["agent", "evidence", memory_id]) == 0
     assert json.loads(capsys.readouterr().out)["events"][0]["event_id"] == "evt-cli-agent"
+
+
+def test_unix_socket_can_build_agent_context_from_service_created_in_parent_thread(tmp_path):
+    if not hasattr(socket, "AF_UNIX"):
+        pytest.skip("Unix domain sockets are unavailable")
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    stop = {"value": False}
+    socket_path = tmp_path / "agent.sock"
+    try:
+        service.ingest_interaction(user_event("以后搜索代码优先使用 rg。", "evt-socket-agent"))
+        thread = threading.Thread(
+            target=serve_unix_socket,
+            args=(socket_path, service, lambda: stop["value"]),
+            daemon=True,
+        )
+        thread.start()
+        for _ in range(100):
+            if socket_path.exists():
+                break
+            time.sleep(0.01)
+
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+            client.connect(str(socket_path))
+            client.sendall(
+                (
+                    json.dumps(
+                        {
+                            "command": "build_agent_context",
+                            "task": "搜索代码",
+                            "stage": "tool_selection",
+                            "agent_name": "openhands",
+                            "session_id": "session-a",
+                            "token_budget": 400,
+                        },
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                ).encode("utf-8")
+            )
+            response = json.loads(client.recv(65536).decode("utf-8"))
+
+        assert response["ok"] is True
+        assert response["result"]["stage"] == "tool_selection"
+        assert response["result"]["memories"][0]["preference_value"] == "rg"
+    finally:
+        stop["value"] = True
+        if "thread" in locals():
+            thread.join(timeout=2)
+        service.close()

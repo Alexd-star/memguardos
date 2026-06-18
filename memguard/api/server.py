@@ -278,27 +278,35 @@ def serve_unix_socket(
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         path.unlink()
-    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as server:
-        server.bind(str(path))
-        os.chmod(path, mode)
-        server.listen(8)
-        server.settimeout(1.0)
-        if on_ready:
-            on_ready(str(path))
-        while not should_stop():
-            try:
-                conn, _addr = server.accept()
-            except socket.timeout:
-                continue
-            with conn:
+    socket_service = MemGuardService(
+        store_path=service.store.path,
+        db_path=service.meta.path,
+        namespace=service.namespace,
+    )
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as server:
+            server.bind(str(path))
+            os.chmod(path, mode)
+            server.listen(8)
+            server.settimeout(1.0)
+            if on_ready:
+                on_ready(str(path))
+            while not should_stop():
                 try:
-                    payload = _read_request(conn)
-                    response = _dispatch_payload(service, payload, auth_token=auth_token)
-                except RequestTooLarge:
-                    response = {"ok": False, "error": "payload_too_large", "detail": "request body exceeds 1 MiB"}
-                conn.sendall((json.dumps(response, ensure_ascii=False) + "\n").encode("utf-8"))
-    if path.exists():
-        path.unlink()
+                    conn, _addr = server.accept()
+                except socket.timeout:
+                    continue
+                with conn:
+                    try:
+                        payload = _read_request(conn)
+                        response = _dispatch_payload(socket_service, payload, auth_token=auth_token)
+                    except RequestTooLarge:
+                        response = {"ok": False, "error": "payload_too_large", "detail": "request body exceeds 1 MiB"}
+                    conn.sendall((json.dumps(response, ensure_ascii=False) + "\n").encode("utf-8"))
+    finally:
+        socket_service.close()
+        if path.exists():
+            path.unlink()
 
 
 def _read_request(conn: socket.socket) -> bytes:
