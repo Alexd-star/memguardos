@@ -51,7 +51,7 @@ bash scripts/install_agent_extras_openkylin.sh "$(pwd)" http://127.0.0.1:17897
 当 Windows VPN 只监听宿主机 `127.0.0.1:7897` 时，虚拟机无法直接访问该回环地址。可在临时 SSH 会话中建立反向端口转发：
 
 ```powershell
-ssh -N -R 17897:127.0.0.1:7897 luo@192.168.73.128
+ssh -N -R 17897:127.0.0.1:7897 luo@<openKylin虚拟机IP>
 ```
 
 该命令建立的是安装期网络通道，关闭 SSH 会话后即失效。正式演示不需要保持代理。

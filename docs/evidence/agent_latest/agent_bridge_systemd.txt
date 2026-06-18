@@ -2,14 +2,13 @@ $ systemctl status memguard-agent@luo.service --no-pager
 
 ● memguard-agent@luo.service - MemGuardOS OpenHands Agent bridge for user luo
      Loaded: loaded (/etc/systemd/system/memguard-agent@.service; enabled; preset: enabled)
-     Active: active (running) since Fri 2026-06-19 01:21:29 CST; 1h 32min ago
-   Main PID: 45168 (python)
+     Active: active (running) since Fri 2026-06-19 07:01:36 CST; 9min ago
+   Main PID: 2245 (python)
       Tasks: 1 (limit: 256)
-     Memory: 7.3M (max: 2.0G available: 1.9G peak: 19.2M swap: 9.9M swap peak: 9.9M)
-        CPU: 1.638s
+     Memory: 15.9M (max: 2.0G available: 1.8G peak: 17.5M)
+        CPU: 277ms
      CGroup: /system.slice/system-memguard\x2dagent.slice/memguard-agent@luo.service
-             └─45168 /opt/memguardos/.venv-agent/bin/python /opt/memguardos/scripts/memguard_agent_bridge.py --queue-root /var/lib/memguardos-agent/luo --namespace agent-luo
+             └─2245 /opt/memguardos/.venv-agent/bin/python /opt/memguardos/scripts/memguard_agent_bridge.py --queue-root /var/lib/memguardos-agent/luo --namespace agent-luo
 
-6月 19 01:21:29 luo-pc systemd[1]: Started memguard-agent@luo.service - MemGuardOS OpenHands Agent bridge for user luo.
-6月 19 01:21:29 luo-pc python[45168]: {"event": "agent_bridge_started", "namespace": "agent-luo", "queue_root": "/var/lib/memguardos-agent/luo", "model_configured": false, "base_url_configured": false, "api_key_configured": false}
-6月 19 01:21:29 luo-pc python[45168]: {"event": "agent_job_finished", "job_id": "service-invalid-002", "ok": false, "error_id": "24dba17ef13bb767"}
+6月 19 07:01:36 luo-pc systemd[1]: Started memguard-agent@luo.service - MemGuardOS OpenHands Agent bridge for user luo.
+6月 19 07:01:36 luo-pc python[2245]: {"event": "agent_bridge_started", "namespace": "agent-luo", "queue_root": "/var/lib/memguardos-agent/luo", "model_configured": false, "base_url_configured": false, "api_key_configured": false}

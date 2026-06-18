@@ -13,13 +13,18 @@ def test_competition_package_keeps_formal_and_process_materials_separate():
         "scripts/install_openkylin.sh",
         "scripts/build_deb.sh",
         "scripts/collect_openkylin_evidence.sh",
+        "scripts/collect_agent_evidence.sh",
         "native/bpf_lsm/memguard_lsm.bpf.c",
         "docs/项目介绍总览.md",
+        "docs/真实Agent接入使用说明.md",
+        "docs/真实Agent闭环测试报告.md",
         "docs/交付文档/MemGuardOS中文操作手册.md",
         "docs/交付文档/MemGuardOS中文操作手册.docx",
         "docs/交付文档/MemGuardOS中文操作手册.pdf",
         "docs/赛题符合性说明.md",
         "docs/evidence/latest/pytest.txt",
+        "docs/evidence/agent_latest/pytest_openkylin.txt",
+        "docs/evidence/agent_latest/benchmark/metrics.json",
         "pyproject.toml",
     ]
     process_paths = [
@@ -126,9 +131,46 @@ def test_submission_package_inspector_rejects_weak_sdk_evidence(tmp_path):
     assert any(item["path"] == "docs/evidence/latest/sdk_embedding_probe.txt" for item in report["evidence_content_failures"])
 
 
+def test_submission_package_inspector_rejects_weak_agent_evidence(tmp_path):
+    package = tmp_path / "submission.zip"
+    manifest = tmp_path / "submission_manifest.json"
+    names = sorted(REQUIRED_PATHS)
+    with ZipFile(package, "w", ZIP_DEFLATED) as zf:
+        for name in names:
+            body = sample_submission_body(name)
+            if name == "docs/evidence/agent_latest/benchmark/metrics.json":
+                body = '{"case_count":200,"metrics":{"extraction":{"f1":0.5}},"failures":["bad"]}\n'
+            zf.writestr(name, body)
+    manifest.write_text(
+        '{"files": [%s]}'
+        % ",".join('{"path": "%s", "role": "%s"}' % (name, classify_file(Path(name))) for name in names),
+        encoding="utf-8",
+    )
+    report = inspect_package(package, manifest)
+    assert report["ok"] is False
+    assert any(item["path"] == "docs/evidence/agent_latest/benchmark/metrics.json" for item in report["evidence_content_failures"])
+
+
 def sample_submission_body(name: str) -> str:
     if name == "docs/evidence/latest/pytest.txt":
         return "60 passed in 22.65s\n"
+    if name == "docs/evidence/agent_latest/pytest_openkylin.txt":
+        return "133 passed in 18.96s\n"
+    if name == "docs/evidence/agent_latest/benchmark/metrics.json":
+        return """
+{
+  "case_count": 200,
+  "metrics": {
+    "extraction": {"precision": 1.0, "recall": 1.0, "f1": 1.0},
+    "role_pollution_rate": 0.0,
+    "sensitive_leak_rate": 0.0,
+    "forget_success_rate": 1.0,
+    "cross_session_adherence": 1.0
+  },
+  "latency_ms": {"p95": 115.97},
+  "failures": []
+}
+""".strip()
     if name == "docs/evidence/latest/sdk_embedding_probe.txt":
         return '$ memctl sdk-status --probe-embedding\n\n{"embedding":{"inference_ready":true,"embedding_probe":{"dim":768}}}\n'
     if name == "docs/evidence/latest/eval_result_openkylin_10k.json":

@@ -32,16 +32,32 @@ run_capture() {
   } >"${OUT_DIR}/${name}.txt" 2>&1
 }
 
+run_capture_optional() {
+  local name="$1"
+  shift
+  local exit_code=0
+  {
+    printf '$'
+    printf ' %q' "$@"
+    printf '\n\n'
+    "$@" || exit_code=$?
+    printf '\noptional_command_exit_code=%s\n' "${exit_code}"
+  } >"${OUT_DIR}/${name}.txt" 2>&1
+  return 0
+}
+
 run_capture "openhands_runtime" "${AGENT_PYTHON}" -c \
   "import json; from memguard.integrations.openhands_adapter import detect_openhands_runtime; print(json.dumps(detect_openhands_runtime(), ensure_ascii=False, indent=2))"
+run_capture "pytest_openkylin" "${PYTHON_BIN}" -m pytest -q
 
 if command -v ollama >/dev/null 2>&1; then
-  run_capture "local_models" ollama list
+  run_capture_optional "local_models" ollama list
 elif [[ -x "${HOME}/.local/ollama/bin/ollama" ]]; then
-  run_capture "local_models" "${HOME}/.local/ollama/bin/ollama" list
+  run_capture_optional "local_models" "${HOME}/.local/ollama/bin/ollama" list
 else
   printf 'Ollama executable not found.\n' >"${OUT_DIR}/local_models.txt"
 fi
+sed -i 's/[[:space:]]\+$//' "${OUT_DIR}/local_models.txt"
 
 run_capture "agent_bridge_systemd" systemctl status "memguard-agent@${USER}.service" --no-pager
 run_capture "agent_bridge_security" systemctl show "memguard-agent@${USER}.service" \

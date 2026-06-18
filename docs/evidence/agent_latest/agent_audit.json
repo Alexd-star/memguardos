@@ -1,5 +1,86 @@
 [
   {
+    "audit_id": 281,
+    "event_type": "agent_context_build",
+    "memory_id": null,
+    "detail": "{\"agent_name\": \"openhands\", \"estimated_context_tokens\": 0, \"filtered_count\": 2, \"memory_ids\": [], \"namespace\": \"realagent-demo\", \"project_root\": \"\", \"session_id\": \"real-agent-session-b5\", \"stage\": \"response_generation\", \"task\": \"定位精准遗忘实现位置\", \"task_type\": \"\"}",
+    "created_at": "2026-06-18T23:11:02.399387+00:00",
+    "prev_hash": "d3a0bd907cd22760c17c6383188e1224d01bf788dccd2dfa91cc0260974cf367",
+    "event_hash": "e14e942ac6db21df101aebe21c9505bde4c041fb6c4b3ebb49c20662e7e93bbf"
+  },
+  {
+    "audit_id": 279,
+    "event_type": "agent_context_build",
+    "memory_id": null,
+    "detail": "{\"agent_name\": \"openhands\", \"estimated_context_tokens\": 86, \"filtered_count\": 0, \"memory_ids\": [\"mem_d75081eca2c04d92\"], \"namespace\": \"realagent-demo\", \"project_root\": \"\", \"session_id\": \"real-agent-session-b5\", \"stage\": \"tool_selection\", \"task\": \"定位精准遗忘实现位置\", \"task_type\": \"\"}",
+    "created_at": "2026-06-18T23:11:02.382854+00:00",
+    "prev_hash": "3d2176c7be03c09f1523b8d8781db8b26dfeb0a4e4d45dacca6a56627ac7be10",
+    "event_hash": "ac8e0d18807f0ae3888df8faab91edcd774ca8be3724e8a09837cc3e61f78209"
+  },
+  {
+    "audit_id": 276,
+    "event_type": "agent_context_build",
+    "memory_id": null,
+    "detail": "{\"agent_name\": \"openhands\", \"estimated_context_tokens\": 0, \"filtered_count\": 2, \"memory_ids\": [], \"namespace\": \"realagent-demo\", \"project_root\": \"\", \"session_id\": \"real-agent-session-b5\", \"stage\": \"planning\", \"task\": \"定位精准遗忘实现位置\", \"task_type\": \"\"}",
+    "created_at": "2026-06-18T23:11:02.358387+00:00",
+    "prev_hash": "c41e6666580174395df55466542bb7c3c9af43db73e17632c5f373d9d4a897ba",
+    "event_hash": "a61e2cc82392e5e985a67cff15269aa5f39b7bc83a0cd64f369dfe87756c62b4"
+  },
+  {
+    "audit_id": 272,
+    "event_type": "agent_context_build",
+    "memory_id": null,
+    "detail": "{\"agent_name\": \"openhands\", \"estimated_context_tokens\": 0, \"filtered_count\": 2, \"memory_ids\": [], \"namespace\": \"realagent-demo\", \"project_root\": \"\", \"session_id\": \"real-agent-session-b5\", \"stage\": \"response_generation\", \"task\": \"定位精准遗忘实现位置\", \"task_type\": \"\"}",
+    "created_at": "2026-06-18T23:07:14.288689+00:00",
+    "prev_hash": "9702e394cde9938665b42c2f21b4b4b9c500972e5d0d64d2572b3b1eb1e5da70",
+    "event_hash": "bb0883bd97a10e5f37b351f5a395bfa93c07a1838e880e849c7234c263d7dc5c"
+  },
+  {
+    "audit_id": 270,
+    "event_type": "agent_context_build",
+    "memory_id": null,
+    "detail": "{\"agent_name\": \"openhands\", \"estimated_context_tokens\": 86, \"filtered_count\": 0, \"memory_ids\": [\"mem_d75081eca2c04d92\"], \"namespace\": \"realagent-demo\", \"project_root\": \"\", \"session_id\": \"real-agent-session-b5\", \"stage\": \"tool_selection\", \"task\": \"定位精准遗忘实现位置\", \"task_type\": \"\"}",
+    "created_at": "2026-06-18T23:07:14.273129+00:00",
+    "prev_hash": "0e767fd56c346c16ba0e53f39c04c9f89ffaaf0baa0f2d21b7b159f46fb29f97",
+    "event_hash": "5625bed1b24961e833e5e958858e516031fd57b8743c3db669503af6dd24f820"
+  },
+  {
+    "audit_id": 267,
+    "event_type": "agent_context_build",
+    "memory_id": null,
+    "detail": "{\"agent_name\": \"openhands\", \"estimated_context_tokens\": 0, \"filtered_count\": 2, \"memory_ids\": [], \"namespace\": \"realagent-demo\", \"project_root\": \"\", \"session_id\": \"real-agent-session-b5\", \"stage\": \"planning\", \"task\": \"定位精准遗忘实现位置\", \"task_type\": \"\"}",
+    "created_at": "2026-06-18T23:07:14.249414+00:00",
+    "prev_hash": "eb1c86a0163b2e0957fc3031663a070241ff951ed6cacd36ecc9c9fb2ccbe0d4",
+    "event_hash": "f91ba4b7d2846810a2dae6acb01f76d8975096cb66a65038376003bc6dbb834a"
+  },
+  {
+    "audit_id": 263,
+    "event_type": "agent_context_build",
+    "memory_id": null,
+    "detail": "{\"agent_name\": \"openhands\", \"estimated_context_tokens\": 0, \"filtered_count\": 2, \"memory_ids\": [], \"namespace\": \"realagent-demo\", \"project_root\": \"\", \"session_id\": \"real-agent-session-b5\", \"stage\": \"response_generation\", \"task\": \"定位精准遗忘实现位置\", \"task_type\": \"\"}",
+    "created_at": "2026-06-18T23:06:02.469166+00:00",
+    "prev_hash": "075aecdea891f74c8b0e15cc309b0d2c8ac5244c7b2103987e734f87ada4f66a",
+    "event_hash": "ea032f4023227e1a7e9d1dbdf75ca2269806db83dfd7832ac4cc067dd21725db"
+  },
+  {
+    "audit_id": 261,
+    "event_type": "agent_context_build",
+    "memory_id": null,
+    "detail": "{\"agent_name\": \"openhands\", \"estimated_context_tokens\": 86, \"filtered_count\": 0, \"memory_ids\": [\"mem_d75081eca2c04d92\"], \"namespace\": \"realagent-demo\", \"project_root\": \"\", \"session_id\": \"real-agent-session-b5\", \"stage\": \"tool_selection\", \"task\": \"定位精准遗忘实现位置\", \"task_type\": \"\"}",
+    "created_at": "2026-06-18T23:06:02.453272+00:00",
+    "prev_hash": "7e194604ddc18b753b03020500a2d54898f2f6f90f0f9551f308d26e5e50e61c",
+    "event_hash": "a0d5791fea859d9b22be7c7358ea10eb9eee503a9a8b4e611e07a6013d5a46b2"
+  },
+  {
+    "audit_id": 258,
+    "event_type": "agent_context_build",
+    "memory_id": null,
+    "detail": "{\"agent_name\": \"openhands\", \"estimated_context_tokens\": 0, \"filtered_count\": 2, \"memory_ids\": [], \"namespace\": \"realagent-demo\", \"project_root\": \"\", \"session_id\": \"real-agent-session-b5\", \"stage\": \"planning\", \"task\": \"定位精准遗忘实现位置\", \"task_type\": \"\"}",
+    "created_at": "2026-06-18T23:06:02.428685+00:00",
+    "prev_hash": "b03309ed012c92eb6829dc9d935800dc06b615bfbfc057d0e253904e25a5ddb4",
+    "event_hash": "3cc5621aebd8e9250a84493c5351ac2fab09c11616b25f879165478fa4b7d8a7"
+  },
+  {
     "audit_id": 254,
     "event_type": "agent_context_build",
     "memory_id": null,

@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 136,
-    "passed": 136,
+    "total": 145,
+    "passed": 145,
     "failed": 0,
     "warnings": 0
   },
@@ -11,14 +11,14 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 3080",
+      "detail": "中文字符数 3501",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "PROJECT_INDEX.md",
       "ok": true,
-      "detail": "中文字符数 2392",
+      "detail": "中文字符数 2577",
       "severity": "P0"
     },
     {
@@ -151,7 +151,7 @@
       "category": "中文文档",
       "name": "docs/最终提交说明.md",
       "ok": true,
-      "detail": "中文字符数 2823",
+      "detail": "中文字符数 3090",
       "severity": "P0"
     },
     {
@@ -172,14 +172,14 @@
       "category": "中文文档",
       "name": "docs/概要设计说明书.md",
       "ok": true,
-      "detail": "中文字符数 1035",
+      "detail": "中文字符数 1349",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/详细设计说明书.md",
       "ok": true,
-      "detail": "中文字符数 2799",
+      "detail": "中文字符数 3220",
       "severity": "P0"
     },
     {
@@ -235,7 +235,21 @@
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 2489",
+      "detail": "中文字符数 2829",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/真实Agent接入使用说明.md",
+      "ok": true,
+      "detail": "中文字符数 1731",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/真实Agent闭环测试报告.md",
+      "ok": true,
+      "detail": "中文字符数 1515",
       "severity": "P0"
     },
     {
@@ -277,7 +291,7 @@
       "category": "中文文档",
       "name": "docs/演示视频脚本.md",
       "ok": true,
-      "detail": "中文字符数 615",
+      "detail": "中文字符数 593",
       "severity": "P0"
     },
     {
@@ -388,6 +402,55 @@
     {
       "category": "源码与脚本",
       "name": "scripts/collect_openkylin_evidence.sh",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/collect_agent_evidence.sh",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/run_openhands_memguard_demo.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/memguard_agent_bridge.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/memguard-agent@.service",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/integrations/openhands_adapter.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/integrations/openhands_runner.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/integrations/context_injector.py",
       "ok": true,
       "detail": "存在",
       "severity": "P0"

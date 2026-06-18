@@ -106,7 +106,7 @@ Agent 交互记忆专项 benchmark 共 200 条，组成如下：
 | 精准遗忘 | 20 |
 | 跨会话复用 | 20 |
 
-当前证据中的提取精确率、召回率、F1、遗忘成功率和跨会话遵循率均为 `1.0000`，角色污染率与敏感泄漏率均为 `0`，P95 为 `115.01 ms`。该 P95 包含每个案例创建隔离数据库的测试开销，不等同于 10k 主检索 benchmark 的查询 P95。专项数据集用于防止角色污染、误抽取和误删回归，不能替代公开真实用户数据集；由于交互数据涉及隐私，项目采用 60 条匿名化真实风格样例与 140 条合成难例的双轨数据。
+当前证据中的提取精确率、召回率、F1、遗忘成功率和跨会话遵循率均为 `1.0000`，角色污染率与敏感泄漏率均为 `0`，P95 为 `113.97 ms`。该 P95 包含每个案例创建隔离数据库的测试开销，不等同于 10k 主检索 benchmark 的查询 P95。专项数据集用于防止角色污染、误抽取和误删回归，不能替代公开真实用户数据集；由于交互数据涉及隐私，项目采用 60 条匿名化真实风格样例与 140 条合成难例的双轨数据。
 
 ## 6. 自动化测试
 
@@ -129,13 +129,22 @@ Agent 交互记忆专项 benchmark 共 200 条，组成如下：
 - Agent Web 治理接口；
 - 200 条专项 benchmark。
 
-openKylin 已完成真实 runner、systemd bridge、专项 benchmark、精准遗忘和审计链证据采集。最终提交前仍会再次执行完整 pytest，以最终门禁输出作为提交口径。
+openKylin 已完成真实 runner、systemd bridge、专项 benchmark、精准遗忘、审计链和完整 pytest 证据采集。
+
+最终 openKylin 全量测试结果为：
+
+```text
+133 passed
+```
+
+目标系统比 Windows 本地多执行一项 Linux 专属测试，因此两端计数不同是预期行为。
 
 ## 7. 证据文件说明
 
 | 文件 | 内容 |
 |---|---|
 | `openhands_runtime.txt` | OpenHands SDK 和运行时信息 |
+| `pytest_openkylin.txt` | openKylin 全量 pytest 输出 |
 | `local_models.txt` | 本地 Ollama 模型清单 |
 | `session_a_events.json` | 成功真实工具调用会话事件 |
 | `session_b_events.json` | 跨会话上下文使用事件 |

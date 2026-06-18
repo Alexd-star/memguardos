@@ -31,6 +31,7 @@ REQUIRED_PATHS = {
     "scripts/install_openkylin.sh",
     "scripts/build_deb.sh",
     "scripts/collect_openkylin_evidence.sh",
+    "scripts/collect_agent_evidence.sh",
     "scripts/web_dashboard_smoke.py",
     "scripts/memguard-agent@.service",
     "scripts/memguard_agent_bridge.py",
@@ -55,6 +56,15 @@ REQUIRED_PATHS = {
     "docs/evidence/latest/verify_audit.txt",
     "docs/evidence/latest/manifest.json",
     "docs/evidence/latest/SHA256SUMS.txt",
+    "docs/evidence/agent_latest/pytest_openkylin.txt",
+    "docs/evidence/agent_latest/benchmark/metrics.json",
+    "docs/evidence/agent_latest/session_a_events.json",
+    "docs/evidence/agent_latest/real-agent-session-b5_context.json",
+    "docs/evidence/agent_latest/interaction_status.json",
+    "docs/evidence/agent_latest/agent_bridge_security.txt",
+    "docs/evidence/agent_latest/audit_verify.json",
+    "docs/evidence/agent_latest/manifest.json",
+    "docs/evidence/agent_latest/SHA256SUMS.txt",
 } | FORMAL_DOCS
 
 FORBIDDEN_EXACT = {
@@ -185,6 +195,45 @@ def check_evidence_content(package: Path, name_set: set[str]) -> list[dict[str, 
         pytest_text = text("docs/evidence/latest/pytest.txt")
         if not re.search(r"\b\d+\s+passed\b", pytest_text) or " failed" in pytest_text:
             failures.append({"path": "docs/evidence/latest/pytest.txt", "reason": "missing clean pytest passed summary"})
+
+        agent_pytest_text = text("docs/evidence/agent_latest/pytest_openkylin.txt")
+        if not re.search(r"\b\d+\s+passed\b", agent_pytest_text) or " failed" in agent_pytest_text:
+            failures.append({"path": "docs/evidence/agent_latest/pytest_openkylin.txt", "reason": "missing clean openKylin pytest passed summary"})
+
+        agent_metrics = _json_from_text(text("docs/evidence/agent_latest/benchmark/metrics.json"))
+        if not agent_metrics:
+            failures.append({"path": "docs/evidence/agent_latest/benchmark/metrics.json", "reason": "cannot parse Agent benchmark JSON"})
+        else:
+            agent_rules = [
+                ("case_count", ["case_count"], 200.0, "lower"),
+                ("extraction.precision", ["metrics", "extraction", "precision"], 0.95, "lower"),
+                ("extraction.recall", ["metrics", "extraction", "recall"], 0.95, "lower"),
+                ("extraction.f1", ["metrics", "extraction", "f1"], 0.95, "lower"),
+                ("role_pollution_rate", ["metrics", "role_pollution_rate"], 0.0, "upper"),
+                ("sensitive_leak_rate", ["metrics", "sensitive_leak_rate"], 0.0, "upper"),
+                ("forget_success_rate", ["metrics", "forget_success_rate"], 0.95, "lower"),
+                ("cross_session_adherence", ["metrics", "cross_session_adherence"], 0.95, "lower"),
+                ("latency_ms.p95", ["latency_ms", "p95"], 500.0, "upper"),
+            ]
+            for label, keys, threshold, mode in agent_rules:
+                value = _nested_get(agent_metrics, keys)
+                ok = isinstance(value, (int, float)) and (value <= threshold if mode == "upper" else value >= threshold)
+                if not ok:
+                    failures.append(
+                        {
+                            "path": "docs/evidence/agent_latest/benchmark/metrics.json",
+                            "reason": "%s violates threshold" % label,
+                            "actual": value,
+                        }
+                    )
+            if agent_metrics.get("failures"):
+                failures.append(
+                    {
+                        "path": "docs/evidence/agent_latest/benchmark/metrics.json",
+                        "reason": "Agent benchmark contains failures",
+                        "actual": agent_metrics.get("failures"),
+                    }
+                )
 
         sdk_probe = _json_from_capture(text("docs/evidence/latest/sdk_embedding_probe.txt"))
         if not sdk_probe:
