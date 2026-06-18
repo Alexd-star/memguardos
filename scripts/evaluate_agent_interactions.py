@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from memguard.eval.agent_interactions import evaluate_agent_interaction_cases
+from memguard.eval.agent_interactions import evaluate_agent_interaction_cases  # noqa: E402
 
 
 def load_cases(path):

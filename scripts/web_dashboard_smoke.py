@@ -14,9 +14,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from memguard.service import MemGuardService
-from memguard.integrations.events import AgentInteractionEvent
-from memguard.web.dashboard import run_dashboard
+from memguard.service import MemGuardService  # noqa: E402
+from memguard.integrations.events import AgentInteractionEvent  # noqa: E402
+from memguard.web.dashboard import run_dashboard  # noqa: E402
 
 
 def main() -> int:

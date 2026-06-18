@@ -2,7 +2,7 @@
 
 MemGuardOS 是面向 **研究生操作系统开源创新大赛赛题 3：面向 Linux 的智能体记忆提取与精准遗忘机制** 的 Linux/openKylin 智能体记忆系统。
 
-它提供一条本地可运行、可测试、可审计、可在 openKylin 复验的链路：从多源数据中提取偏好记忆与知识记忆，经过敏感治理和轻量化存储后，为 OS Agent 构建 RAG 上下文，并支持自然语言级精准遗忘。
+它提供一条本地可运行、可测试、可审计、可在 openKylin 复验的链路：从用户与 Agent 的消息、反馈、工具调用、工具结果及补充 OS 数据中提取偏好记忆与知识记忆，经过敏感治理和轻量化存储后，为真实 OpenHands Agent 构建分阶段 RAG 上下文，并支持自然语言级精准遗忘。
 
 `Python 3.9+` · `Linux/openKylin` · `mmap + SQLite FTS` · `CLI + daemon + Unix socket API` · `MIT License`
 
@@ -34,8 +34,8 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地单元测试 | 70 passed |
-| openKylin 单元测试证据 | 68 passed |
+| 本地功能分支单元测试 | 132 passed, 1 skipped |
+| openKylin 真实 Agent | OpenHands 1.28.1，真实终端调用与跨会话上下文证据通过 |
 | 本地 1k 负载 P95 | 0.429 ms |
 | openKylin 1k 负载 P95 | 8.904 ms |
 | openKylin 10k 负载 P95 | 10.844 ms |
@@ -46,36 +46,38 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | 精准遗忘候选精确率 / 召回率 | 1.0000 / 1.0000 |
 | 冲突处理正确率 | 1.0000 |
 | benchmark 用例/种子总数 | 217 |
+| Agent 交互记忆专项 benchmark | 200 条，各项指标 1.0000，openKylin P95 115.01 ms |
 
-最新 openKylin 证据包位于 [docs/evidence/latest/](docs/evidence/latest/)。评测汇总见 [docs/测试报告.md](docs/测试报告.md) 和 [docs/评委证据包索引.md](docs/评委证据包索引.md)。
+通用 openKylin 证据位于 [docs/evidence/latest/](docs/evidence/latest/)，真实 Agent 专项证据位于 [docs/evidence/agent_latest/](docs/evidence/agent_latest/)。评测汇总见 [docs/测试报告.md](docs/测试报告.md)、[docs/真实Agent闭环测试报告.md](docs/真实Agent闭环测试报告.md) 和 [docs/评委证据包索引.md](docs/评委证据包索引.md)。
 
 ## 核心能力
 
 | 能力域 | 已实现内容 | 主要入口 |
 |---|---|---|
-| 多源记忆接入 | 文本、文件、结构化配置、shell 行为、工具执行结果、OS 事件、auditd 日志 | `memctl ingest`、`ingest-config`、`ingest-history`、`ingest-tool-result`、`ingest-os-event` |
+| 多源记忆接入 | 用户消息、Agent 消息、纠正反馈、工具调用、工具结果，以及文本、配置、shell、OS 事件和 auditd 补充数据 | `memctl agent-*`、`ingest-config`、`ingest-history`、`ingest-tool-result`、`ingest-os-event` |
+| 真实 Agent 闭环 | OpenHands 上下文注入、真实会话事件回收、跨会话偏好复用、systemd 队列桥 | `memguard/integrations/`、`scripts/run_openhands_memguard_demo.py`、`memguard-agent@.service` |
 | 记忆建模 | 偏好记忆、知识记忆、敏感策略记忆；可解释混合语义抽取；`working`、`session`、`long_term` 三层记忆；工具轨迹可建模为状态-动作-结果程序性记忆 | `memguard/extraction/semantic.py`、`memguard/models.py`、`memguard/service.py` |
 | 数据质量治理 | Unicode 标准化、空输入拒绝、低质量提示、结构化字段校验、质量分入审计 | `memguard/ingestion/quality.py` |
 | 轻量化存储 | mmap 追加式段文件、SQLite 元数据与脱敏检索副本、FTS、图谱边、审计哈希链 | `memguard/store/` |
 | 时间有效性 | `valid_from/valid_to/superseded_by` 描述事实生效窗口，更新、提升、回滚和遗忘都会关闭旧版本窗口 | `memctl temporal-status`、`memctl versions` |
 | 混合检索 | SQLite FTS、稳定 hash-vector、图谱关联、跨语言技术词扩展、冲突处理；摘要层、实体关系层、原文 chunk 层的层次图谱检索 | `memguard/retrieval/`、`memctl hierarchical-graph-search` |
 | RAG 上下文 | 检索、脱敏、排序、token 预算估算、上下文包、来源分布、选择轨迹、过滤策略和 provider-neutral prompt | `memctl build-context`、`memctl build-prompt` |
-| 精准遗忘 | 自然语言候选、dry-run、确认删除、tombstone、FTS/图谱清理、compact、明文探针验证 | `memctl forget`、`memctl verify-forget` |
+| 精准遗忘 | 自然语言候选、按 Agent/会话/轮次/主题/时间范围定位、dry-run、确认删除、事件载荷清理、tombstone、FTS/图谱清理、compact、明文探针验证 | `memctl forget`、`memctl agent forget`、`verify-forget` |
 | 敏感治理 | PII、凭据、私钥、银行卡、中文地址、OS 高风险路径、自定义正则、自然语言敏感规则 | `memguard/sensitivity/` |
 | 多会话隔离 | namespace 独立段文件、SQLite、敏感规则、审计链；systemd 模板服务配合 cgroup | `memctl --namespace`、`memguardd@.service` |
 | OS 集成 | systemd、cgroup、journald、auditd、BPF LSM 可选强制拦截、JSON denylist 策略生成、Peony 右键菜单可见验证、Peony 文本文件扫描导入闭环、UKUI 控制中心可见验证 | `scripts/`、`native/` |
 | Agent API | 本地 Unix socket JSON API，支持 health、ingest、search、batch_search、build_context、forget、audit 等 | `memguard/api/server.py` |
 | Kylin SDK 适配 | Kylin embedding/vector SDK 探测，embedding 可选重排后端，默认保留稳定 fallback | `memctl sdk-status`、`memguard/retrieval/kylin_sdk.py` |
-| 本地控制台 | 无外部依赖的 localhost Web 控制台，覆盖状态、写入、抽取解释、检索、RAG 上下文、精准遗忘、审计和系统诊断 | `memctl web`、`memguard/web/dashboard.py` |
+| 本地控制台 | localhost Web 控制台，覆盖 Agent 治理总览、交互时间线、偏好证据、三阶段上下文、交互遗忘、审计和系统诊断 | `memctl web`、`memguard/web/dashboard.py` |
 
 ## 系统架构
 
 ```mermaid
 flowchart LR
     subgraph Sources["多源输入"]
-        A["文本/文件/配置"]
-        B["shell 行为"]
-        C["工具执行结果"]
+        A["用户/Agent 消息与反馈"]
+        B["工具调用与工具结果"]
+        C["文本/配置/shell 补充数据"]
         D["OS 事件/auditd/journald"]
     end
 
@@ -88,9 +90,9 @@ flowchart LR
     end
 
     subgraph Use["Agent 使用路径"]
-        J["混合检索/批量检索"]
-        K["RAG 上下文包"]
-        L["Prompt 渲染"]
+        J["规划/工具/生成三阶段检索"]
+        K["RAG 上下文包与选择解释"]
+        L["OpenHands Hook 注入"]
     end
 
     subgraph Govern["治理与 OS 机制"]
@@ -160,7 +162,22 @@ python -m memguard.cli.memctl explain-extraction --text "真实案例：systemd 
 python -m memguard.cli.memctl web --host 127.0.0.1 --port 8765
 ```
 
-### 5. 精准遗忘和审计
+### 5. 接入现有 OpenHands Agent
+
+核心功能不依赖 Agent 额外环境。需要验证真实闭环时，在 openKylin 上安装可选依赖并运行：
+
+```bash
+bash scripts/install_agent_extras_openkylin.sh "$(pwd)"
+.venv-agent/bin/python scripts/run_openhands_memguard_demo.py \
+  --namespace realagent-demo \
+  --session-id real-agent-session-a \
+  --task "以后搜索代码使用 rg，并先给命令再解释。请查找 build_agent_context。" \
+  --max-iterations 8
+```
+
+完整安装、模型配置、systemd bridge、交互遗忘和排障步骤见 [docs/真实Agent接入使用说明.md](docs/真实Agent接入使用说明.md)。
+
+### 6. 精准遗忘和审计
 
 ```powershell
 python -m memguard.cli.memctl forget "忘掉 temporary project codename"
@@ -170,7 +187,7 @@ python -m memguard.cli.memctl temporal-status --limit 10
 python -m memguard.cli.memctl verify-audit
 ```
 
-### 6. 多会话隔离
+### 7. 多会话隔离
 
 ```powershell
 python -m memguard.cli.memctl --namespace demo-a ingest --text "demo-a 会话只保存 systemd MemoryMax 方案。"
@@ -188,6 +205,7 @@ source .venv/bin/activate
 python -m pytest -q
 bash scripts/openkylin_verify.sh
 bash scripts/collect_openkylin_evidence.sh --with-10k
+bash scripts/collect_agent_evidence.sh
 ```
 
 systemd/cgroup、auditd、SDK、UKUI、BPF LSM 常用验证入口：
@@ -237,12 +255,14 @@ python -m memguard.eval.run_eval --latency-size 10000 --latency-queries 150 --ou
 | Peony/UKUI 桌面集成 | [docs/Peony与UKUI桌面集成实现说明.md](docs/Peony与UKUI桌面集成实现说明.md)，Peony smoke 见 `scripts/peony_file_scan_smoke.sh` |
 | Kylin SDK 适配 | [docs/麒麟SDK集成证据.md](docs/麒麟SDK集成证据.md) |
 | 安全与精准遗忘 | [docs/安全设计说明书.md](docs/安全设计说明书.md) |
+| 真实 OpenHands Agent 接入 | [docs/真实Agent接入使用说明.md](docs/真实Agent接入使用说明.md)、[docs/真实Agent闭环测试报告.md](docs/真实Agent闭环测试报告.md) |
 
 ## 项目结构
 
 ```text
 memguardos/
 ├── memguard/       # 核心 Python 包：接入、建模、存储、检索、遗忘、安全、OS 适配、API
+│   └── integrations/ # OpenHands 事件规范化、偏好聚合、上下文注入、runner 与 bridge
 ├── scripts/        # 部署、验证、演示、证据采集、auditd/BPF/UKUI/Kylin SDK 脚本
 ├── native/         # BPF LSM、Peony 右键插件、UKUI 控制中心插件源码
 ├── tests/          # 核心功能、评测边界和回归测试
@@ -328,7 +348,9 @@ dist/memguardos_full_repository_<时间戳>_manifest.json
 - BPF LSM：已在 openKylin 对安全测试文件完成强制拒绝验证；支持从 JSON 生成可审查静态 denylist；默认不拦截 `/etc/shadow`、SSH、sudo 或 PAM 链路。
 - UKUI/Peony：Peony 右键菜单插件已在 openKylin 桌面右键菜单中可见验证；菜单动作会把选中文件写成 OS event，并对小于 1 MB 的文本类文件执行 `peony_file` 导入，形成“右键扫描 -> 记忆写入 -> 检索 -> 审计链”的闭环。UKUI 控制中心入口“MemGuardOS 记忆安全”已升级为本机运维面板，包含运行环境检查、审计链校验、端侧向量能力检查、诊断报告和本地控制台入口。
 - Web 控制台：用于本地运维、调试和评审操作，默认绑定 `127.0.0.1`，不作为公网 SaaS 管理台。
-- 用户行为：支持 shell 行为、工具结果、OS 事件和 auditd 事件；不宣称全量桌面行为捕获。
+- 用户行为：主链路采集用户与 OpenHands Agent 的消息、反馈、工具调用和工具结果；shell、配置、OS 事件和 auditd 是补充来源，不宣称全量桌面行为捕获。
+- 真实 Agent：已证明 OpenHands 真实终端调用、偏好自动提取和跨会话上下文选择；小参数本地模型的复杂命令成功率受模型能力与工具环境影响，不宣称所有任务均稳定完成。
+- 交互遗忘：保证 MemGuardOS 管理的事件、记忆、索引、图谱和段文件边界；OpenHands 原始会话、shell history、模型服务日志和外部备份需使用各自删除机制。
 - 外部 LLM：默认不依赖外部 API；只有显式选择 provider 时才调用本地命令或兼容远程端点。
 
 ## 许可证
