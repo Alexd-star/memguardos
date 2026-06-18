@@ -4,6 +4,7 @@ import pytest
 
 from memguard.integrations.events import AgentInteractionEvent
 from memguard.integrations.normalizer import normalize_event, normalize_events, normalize_tool_args
+from memguard.api.server import handle_request
 from memguard.service import MemGuardService
 
 
@@ -174,3 +175,73 @@ def test_existing_database_is_migrated_without_losing_memories(tmp_path):
         assert reopened.meta.get_memory(memory.memory_id)["deleted"] == 0
     finally:
         reopened.close()
+
+
+def test_memory_can_trace_back_to_multiple_agent_events(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        first_event = make_event(event_id="evt-first", sequence=1)
+        second_event = make_event(
+            event_id="evt-second",
+            session_id="session-b",
+            turn_id="turn-2",
+            sequence=1,
+            event_type="user_feedback",
+            user_feedback="确认以后都优先使用 rg。",
+        )
+        service.ingest_interaction(first_event)
+        service.ingest_interaction(second_event)
+        memory = service.ingest_text("以后搜索代码优先使用 rg。")["record"]
+
+        assert service.link_memory_event(memory.memory_id, first_event.event_id, "extracted_from")["linked"] is True
+        assert service.link_memory_event(memory.memory_id, second_event.event_id, "confirmed_by")["linked"] is True
+
+        evidence = service.preference_evidence(memory.memory_id)
+
+        assert evidence["memory_id"] == memory.memory_id
+        assert evidence["deleted"] is False
+        assert [item["event_id"] for item in evidence["events"]] == ["evt-first", "evt-second"]
+        assert evidence["events"][0]["content"] == "以后搜索代码优先使用 rg。"
+        assert evidence["events"][1]["relation"] == "confirmed_by"
+        assert evidence["events"][1]["session_id"] == "session-b"
+    finally:
+        service.close()
+
+
+def test_deleted_memory_evidence_does_not_return_original_event_text(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        event = make_event(event_id="evt-forgotten")
+        service.ingest_interaction(event)
+        memory = service.ingest_text("以后搜索代码优先使用 rg。")["record"]
+        service.link_memory_event(memory.memory_id, event.event_id, "extracted_from")
+        service.meta.mark_deleted(memory.memory_id)
+
+        evidence = service.preference_evidence(memory.memory_id)
+
+        assert evidence["deleted"] is True
+        assert evidence["events"][0]["content"] == ""
+        assert evidence["events"][0]["tool_result"] == ""
+        assert evidence["events"][0]["user_feedback"] == ""
+        assert evidence["events"][0]["provenance_hash"] == event.provenance_hash
+    finally:
+        service.close()
+
+
+def test_preference_evidence_is_available_through_local_api(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        event = make_event(event_id="evt-api")
+        service.ingest_interaction(event)
+        memory = service.ingest_text("以后搜索代码优先使用 rg。")["record"]
+        service.link_memory_event(memory.memory_id, event.event_id, "extracted_from")
+
+        response = handle_request(
+            service,
+            {"command": "preference_evidence", "memory_id": memory.memory_id},
+        )
+
+        assert response["ok"] is True
+        assert response["result"]["events"][0]["event_id"] == "evt-api"
+    finally:
+        service.close()

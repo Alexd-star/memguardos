@@ -125,6 +125,17 @@ class SQLiteMetaStore:
             )
             """
         )
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS memory_event_links (
+                memory_id TEXT NOT NULL,
+                event_id TEXT NOT NULL,
+                relation TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY (memory_id, event_id, relation)
+            )
+            """
+        )
         try:
             self.conn.execute(
                 """
@@ -143,6 +154,10 @@ class SQLiteMetaStore:
             "ON agent_events(agent_name, session_id, sequence)"
         )
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_events_type ON agent_events(event_type, created_at DESC)")
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_memory_event_links_event "
+            "ON memory_event_links(event_id, memory_id)"
+        )
         self.conn.commit()
 
     def close(self) -> None:
@@ -327,6 +342,53 @@ class SQLiteMetaStore:
         sql += " ORDER BY agent_name, session_id, sequence, event_id LIMIT ?"
         params.append(max(0, int(limit)))
         rows = self.conn.execute(sql, params).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["tool_args"] = json.loads(item.pop("tool_args_json"))
+            result.append(item)
+        return result
+
+    def link_memory_event(self, memory_id: str, event_id: str, relation: str) -> Dict[str, Any]:
+        memory = self.conn.execute(
+            "SELECT memory_id FROM memory WHERE memory_id = ?",
+            (memory_id,),
+        ).fetchone()
+        if memory is None:
+            return {"linked": False, "reason": "memory_not_found", "memory_id": memory_id, "event_id": event_id}
+        event = self.conn.execute(
+            "SELECT event_id FROM agent_events WHERE event_id = ?",
+            (event_id,),
+        ).fetchone()
+        if event is None:
+            return {"linked": False, "reason": "event_not_found", "memory_id": memory_id, "event_id": event_id}
+        cursor = self.conn.execute(
+            """
+            INSERT OR IGNORE INTO memory_event_links(memory_id, event_id, relation, created_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (memory_id, event_id, relation, utc_now()),
+        )
+        self.conn.commit()
+        return {
+            "linked": True,
+            "created": cursor.rowcount == 1,
+            "memory_id": memory_id,
+            "event_id": event_id,
+            "relation": relation,
+        }
+
+    def memory_event_evidence(self, memory_id: str) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT e.*, l.relation, l.created_at AS linked_at
+            FROM memory_event_links l
+            JOIN agent_events e ON e.event_id = l.event_id
+            WHERE l.memory_id = ?
+            ORDER BY l.created_at ASC, e.event_id ASC
+            """,
+            (memory_id,),
+        ).fetchall()
         result = []
         for row in rows:
             item = dict(row)

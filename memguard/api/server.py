@@ -118,6 +118,10 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         return {"ok": bool(result.get("ok")) if isinstance(result, dict) else False, "result": result}
     if command == "retrieval_status":
         return {"ok": True, "result": _jsonable(service.retrieval_status())}
+    if command == "preference_evidence":
+        memory_id = _string_param(request, "memory_id", "", max_chars=128)
+        result = _jsonable(service.preference_evidence(memory_id))
+        return {"ok": bool(result.get("found")) if isinstance(result, dict) else False, "result": result}
     if command == "ingest":
         text = _string_param(request, "text", "", max_chars=200000)
         source_kind = _string_param(request, "source_kind", "api", max_chars=64)

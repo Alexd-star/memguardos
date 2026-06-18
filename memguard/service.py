@@ -154,6 +154,61 @@ class MemGuardService:
             "event_type": normalized.event_type,
         }
 
+    def link_memory_event(self, memory_id: str, event_id: str, relation: str = "extracted_from") -> Dict[str, object]:
+        allowed_relations = {"extracted_from", "confirmed_by", "contradicted_by", "derived_from", "used_by"}
+        if relation not in allowed_relations:
+            return {
+                "linked": False,
+                "reason": "unsupported_relation",
+                "memory_id": memory_id,
+                "event_id": event_id,
+                "relation": relation,
+            }
+        result = self.meta.link_memory_event(memory_id, event_id, relation)
+        if result.get("linked"):
+            self._audit(
+                "memory_event_link",
+                memory_id,
+                {
+                    "event_id": event_id,
+                    "relation": relation,
+                    "created": result.get("created", False),
+                },
+            )
+        return result
+
+    def preference_evidence(self, memory_id: str) -> Dict[str, object]:
+        memory = self.meta.get_memory(memory_id)
+        if memory is None:
+            return {"found": False, "reason": "memory_not_found", "memory_id": memory_id, "events": []}
+        deleted = bool(memory.get("deleted"))
+        events = self.meta.memory_event_evidence(memory_id)
+        if deleted:
+            for event in events:
+                event["content"] = ""
+                event["tool_args"] = {}
+                event["tool_result"] = ""
+                event["state_before"] = ""
+                event["state_after"] = ""
+                event["user_feedback"] = ""
+        result = {
+            "found": True,
+            "memory_id": memory_id,
+            "deleted": deleted,
+            "type": memory.get("type"),
+            "subtype": memory.get("subtype"),
+            "events": events,
+        }
+        self._audit(
+            "preference_evidence",
+            memory_id,
+            {
+                "deleted": deleted,
+                "event_count": len(events),
+            },
+        )
+        return result
+
     def ingest_config(self, path: Path) -> Dict[str, object]:
         entries = load_config_entries(path)
         ingested = []
