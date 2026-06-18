@@ -4,7 +4,10 @@ import subprocess
 import sys
 from types import SimpleNamespace
 
-from memguard.integrations.openhands_runner import OpenHandsMemoryRunner
+from memguard.integrations.openhands_runner import (
+    OpenHandsMemoryRunner,
+    build_openhands_llm_kwargs,
+)
 from memguard.api.server import handle_request
 from memguard.cli.memctl import main as memctl_main
 from memguard.service import MemGuardService
@@ -78,6 +81,18 @@ class FakeConversation:
         self.closed = True
 
 
+class FakeErrorConversation(FakeConversation):
+    def run(self):
+        self.callback(
+            fake_event(
+                "ConversationErrorEvent",
+                id="fake-conversation-error-1",
+                source="environment",
+                error="Agent reached maximum iterations limit.",
+            )
+        )
+
+
 def make_service(tmp_path):
     return MemGuardService(
         store_path=tmp_path / "memory.segment",
@@ -108,6 +123,7 @@ def test_runner_builds_traceable_three_stage_context_without_changing_user_promp
         stored = json.loads(context_file.read_text(encoding="utf-8"))
         assert stored["user_task"] == "请查找 build_agent_context 的实现。"
         assert stored["trace_id"] == bundle["trace_id"]
+        assert stored["allowed_tools"] == []
         assert "请查找 build_agent_context 的实现。" not in stored["additional_context"]
     finally:
         service.close()
@@ -139,6 +155,13 @@ def test_runner_callback_automatically_persists_real_agent_events(tmp_path):
         assert created["workspace"] == (tmp_path / "workspace").resolve()
         assert created["context_file"].is_file()
         assert created["callback"].__self__ is runner
+        assert created["max_iterations"] == 8
+        assert created["tool_profile"] == "default"
+        stored_context = json.loads(created["context_file"].read_text(encoding="utf-8"))
+        assert all(
+            stage["budget"]["token_budget"] == 256
+            for stage in stored_context["stages"].values()
+        )
         events = service.meta.list_agent_events(session_id="session-runner-b")
         assert [item["event_type"] for item in events] == [
             "user_message",
@@ -170,10 +193,52 @@ def test_runner_rejects_workspace_that_is_not_a_dedicated_directory(tmp_path):
         service.close()
 
 
+def test_runner_reports_conversation_error_as_failed_run(tmp_path):
+    service = make_service(tmp_path)
+
+    def conversation_factory(**kwargs):
+        return FakeErrorConversation(kwargs["callback"])
+
+    try:
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id="session-runner-error",
+            workspace=tmp_path / "workspace",
+            state_dir=tmp_path / "state",
+            conversation_factory=conversation_factory,
+        )
+        result = runner.run("测试错误状态")
+
+        assert result["ok"] is False
+        assert result["event_summary"]["task_errors"] == 1
+    finally:
+        service.close()
+
+
+def test_openhands_ollama_model_uses_native_ollama_base_url():
+    kwargs = build_openhands_llm_kwargs(
+        model="ollama/qwen2.5-coder:1.5b",
+        api_key="",
+        base_url="http://127.0.0.1:11434",
+    )
+
+    assert kwargs["model"] == "ollama/qwen2.5-coder:1.5b"
+    assert kwargs["ollama_base_url"] == "http://127.0.0.1:11434"
+    assert "base_url" not in kwargs
+    assert kwargs["reasoning_effort"] == "none"
+    assert kwargs["enable_encrypted_reasoning"] is False
+
+
 def test_openhands_hook_injects_context_and_blocks_high_risk_commands(tmp_path):
     context_file = tmp_path / "context.json"
     context_file.write_text(
-        json.dumps({"additional_context": "只使用已筛选记忆。"}, ensure_ascii=False),
+        json.dumps(
+            {
+                "additional_context": "只使用已筛选记忆。",
+                "allowed_tools": ["terminal", "finish"],
+            },
+            ensure_ascii=False,
+        ),
         encoding="utf-8",
     )
     script = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
@@ -203,6 +268,22 @@ def test_openhands_hook_injects_context_and_blocks_high_risk_commands(tmp_path):
     assert json.loads(inject.stdout)["additionalContext"] == "只使用已筛选记忆。"
     assert guard.returncode == 2
     assert json.loads(guard.stdout)["decision"] == "deny"
+
+    disallowed = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--context-file",
+            str(context_file),
+            "--guard-tool",
+        ],
+        input=json.dumps({"tool_name": "think", "tool_input": {"summary": "x"}}),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert disallowed.returncode == 2
+    assert "not allowed" in json.loads(disallowed.stdout)["reason"]
 
 
 def interaction_event(content, event_id, sequence, session_id="session-forget-a"):

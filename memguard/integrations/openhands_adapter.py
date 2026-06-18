@@ -38,7 +38,7 @@ class OpenHandsEventAdapter:
             return self._action_event(raw_event)
         if event_name == "ObservationEvent":
             return self._observation_event(raw_event)
-        if event_name == "AgentErrorEvent":
+        if event_name in {"AgentErrorEvent", "ConversationErrorEvent"}:
             return self._error_event(raw_event)
         if event_name == "HookExecutionEvent":
             return self._hook_event(raw_event)
@@ -49,15 +49,26 @@ class OpenHandsEventAdapter:
     def _message_event(self, raw_event: Any) -> AgentInteractionEvent:
         message = raw_event.llm_message
         role = str(getattr(message, "role", "assistant"))
-        if role == "user":
+        source = _source_name(getattr(raw_event, "source", ""))
+        content = _content_text(getattr(message, "content", []))
+        is_real_user = (
+            role == "user"
+            and source == "user"
+            and not _is_openhands_internal_feedback(content)
+        )
+        if is_real_user:
             self.current_turn += 1
         turn_id = self._turn_id()
-        event_type = "user_message" if role == "user" else "assistant_message"
+        if role == "user" and not is_real_user:
+            role = "system"
+            event_type = "system_message"
+        else:
+            event_type = "user_message" if role == "user" else "assistant_message"
         return self._event(
             raw_event,
             event_type=event_type,
             role=role if role in {"user", "assistant", "tool", "system"} else "assistant",
-            content=_content_text(getattr(message, "content", [])),
+            content=content,
             turn_id=turn_id,
         )
 
@@ -153,6 +164,23 @@ def _content_text(content: Any) -> str:
         if text:
             parts.append(str(text))
     return "\n".join(parts)
+
+
+def _source_name(source: Any) -> str:
+    value = getattr(source, "value", source)
+    clean = str(value).strip().lower()
+    if "." in clean:
+        clean = clean.rsplit(".", 1)[-1]
+    return clean
+
+
+def _is_openhands_internal_feedback(content: str) -> bool:
+    normalized = " ".join(str(content).split())
+    return normalized in {
+        "Your last response did not include a function call or a message. "
+        "Please use a tool to proceed with the task.",
+        "You have 1000 weighted tokens left",
+    }
 
 
 def detect_openhands_runtime(

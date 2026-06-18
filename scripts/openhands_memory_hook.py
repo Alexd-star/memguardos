@@ -41,6 +41,20 @@ def main() -> int:
         return 0
 
     hook_input = json.load(sys.stdin)
+    tool_name = str(hook_input.get("tool_name") or "")
+    allowed_tools = [str(item) for item in payload.get("allowed_tools") or []]
+    if allowed_tools and tool_name not in allowed_tools:
+        print(
+            json.dumps(
+                {
+                    "decision": "deny",
+                    "reason": "Tool %s is not allowed by the active MemGuardOS profile." % tool_name,
+                    "continue": False,
+                },
+                ensure_ascii=False,
+            )
+        )
+        return 2
     tool_input = hook_input.get("tool_input") or {}
     serialized = json.dumps(tool_input, ensure_ascii=False).lower()
     blocked_marker = next((marker for marker in HIGH_RISK_MARKERS if marker in serialized), "")

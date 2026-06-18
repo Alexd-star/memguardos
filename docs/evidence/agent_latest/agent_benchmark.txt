@@ -1,0 +1,40 @@
+$ .venv/bin/python scripts/evaluate_agent_interactions.py --output-dir docs/evidence/agent_latest/benchmark
+
+{
+  "case_count": 200,
+  "source_distribution": {
+    "real_anonymized": 60,
+    "synthetic": 140
+  },
+  "category_distribution": {
+    "correction_exception": 20,
+    "cross_session": 20,
+    "explicit_preference": 40,
+    "implicit_habit": 20,
+    "precise_forgetting": 20,
+    "role_pollution": 30,
+    "sensitive_interaction": 20,
+    "tool_trace": 30
+  },
+  "metrics": {
+    "extraction": {
+      "true_positive": 140,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "role_pollution_rate": 0.0,
+    "sensitive_leak_rate": 0.0,
+    "forget_success_rate": 1.0,
+    "cross_session_adherence": 1.0
+  },
+  "latency_ms": {
+    "mean": 37.756,
+    "p50": 24.893,
+    "p95": 115.01,
+    "max": 119.584
+  },
+  "failures": []
+}

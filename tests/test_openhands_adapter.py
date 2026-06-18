@@ -117,7 +117,7 @@ def test_openhands_action_and_observation_map_tool_trace():
         "ObservationEvent",
         id="oh-observation-1",
         timestamp="2026-06-19T00:00:02Z",
-        source="environment",
+        source="user",
         tool_name="terminal",
         tool_call_id="call-1",
         observation=SimpleNamespace(content=[text("memguard/service.py:1310")], is_error=False),
@@ -141,3 +141,43 @@ def test_openhands_adapter_ignores_unknown_events_without_raising():
 
     assert adapter.convert(unknown) is None
     assert seen == [unknown]
+
+
+def test_openhands_environment_feedback_is_not_mapped_as_user_message():
+    adapter = OpenHandsEventAdapter("session-a")
+    raw = fake_event(
+        "MessageEvent",
+        id="oh-environment-feedback-1",
+        source="user",
+        llm_message=SimpleNamespace(
+            role="user",
+            content=[
+                text(
+                    "Your last response did not include a function call or a message. "
+                    "Please use a tool to proceed with the task."
+                )
+            ],
+        ),
+    )
+
+    event = adapter.convert(raw)
+
+    assert event.event_type == "system_message"
+    assert event.role == "system"
+
+
+def test_openhands_conversation_error_maps_to_task_error():
+    adapter = OpenHandsEventAdapter("session-a")
+    raw = fake_event(
+        "ConversationErrorEvent",
+        id="oh-conversation-error-1",
+        source="environment",
+        error="Agent reached maximum iterations limit.",
+    )
+
+    event = adapter.convert(raw)
+
+    assert event.event_type == "task_error"
+    assert event.role == "assistant"
+    assert event.exit_code == 1
+    assert "maximum iterations" in event.content

@@ -29,6 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--model", default=os.environ.get("OPENHANDS_MODEL", ""))
     parser.add_argument("--base-url", default=os.environ.get("OPENHANDS_BASE_URL", ""))
     parser.add_argument("--api-key-env", default="OPENHANDS_API_KEY")
+    parser.add_argument("--tool-profile", choices=["default", "terminal"], default="default")
     parser.add_argument(
         "--dry-init",
         action="store_true",
@@ -63,6 +64,7 @@ def main() -> int:
             model=args.model,
             api_key=api_key,
             base_url=args.base_url,
+            tool_profile=args.tool_profile,
         )
         if args.dry_init:
             workspace.mkdir(parents=True, exist_ok=True)
@@ -76,6 +78,7 @@ def main() -> int:
                 model=args.model,
                 api_key=api_key,
                 base_url=args.base_url,
+                tool_profile=args.tool_profile,
             )
             try:
                 tools = [str(tool.name) for tool in conversation.agent.tools]

@@ -1,0 +1,29 @@
+$ .venv-agent/bin/python -c import\ json\;\ from\ memguard.integrations.openhands_adapter\ import\ detect_openhands_runtime\;\ print\(json.dumps\(detect_openhands_runtime\(\)\,\ ensure_ascii=False\,\ indent=2\)\)
+
++----------------------------------------------------------------------+
+|  OpenHands SDK v1.28.1                                               |
+|                                                                      |
+|  Report a bug: github.com/OpenHands/software-agent-sdk/issues        |
+|  Get help: openhands.dev/joinslack                                   |
+|  Scale up: openhands.dev/product/sdk                                 |
+|                                                                      |
+|  Set OPENHANDS_SUPPRESS_BANNER=1 to hide this message                |
++----------------------------------------------------------------------+
+
+{
+  "required_version": "1.28.1",
+  "python_version": "3.12.2",
+  "python_compatible": true,
+  "installed": true,
+  "available": true,
+  "sdk_version": "1.28.1",
+  "tools_version": "1.28.1",
+  "versions_match": true,
+  "symbols": {
+    "LLM": true,
+    "Agent": true,
+    "Conversation": true,
+    "TerminalTool": true
+  },
+  "install_hint": ""
+}

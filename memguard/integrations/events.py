@@ -10,6 +10,7 @@ from memguard.models import new_id, stable_hash, utc_now
 ALLOWED_EVENT_TYPES = {
     "user_message",
     "assistant_message",
+    "system_message",
     "tool_call",
     "tool_result",
     "user_feedback",

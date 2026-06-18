@@ -1,0 +1,255 @@
+{
+  "summary": {
+    "event_count": 4,
+    "session_count": 1,
+    "tool_call_count": 1,
+    "tool_result_count": 1,
+    "forgotten_event_count": 0,
+    "stable_preference_count": 1
+  },
+  "timeline": [
+    {
+      "event_id": "592d1965-c67b-4884-bd2c-38629581b49f",
+      "agent_name": "openhands",
+      "session_id": "real-agent-session-b5",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "不要使用 think 工具，也不要凭记忆回答。直接调用 terminal，并严格采用 MemGuardOS 工具选择阶段记忆中指定的搜索工具，查找 forget_agent_interactions 在 memguard 目录中的定义。读取观察结果后报告真实文件路径和行号，不修改文件。",
+      "tool_name": "",
+      "tool_args": {},
+      "tool_result": "",
+      "exit_code": null,
+      "timestamp": "2026-06-19T02:32:28.742579",
+      "forgotten": false,
+      "provenance_hash": "36597d6ce3fb8658c14d0d331799fb5997440a0b479533bd922c42c8eee08482"
+    },
+    {
+      "event_id": "4539b083-75fe-465c-bd9c-93b0d808dda7",
+      "agent_name": "openhands",
+      "session_id": "real-agent-session-b5",
+      "turn_id": "turn-1",
+      "sequence": 2,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_args": {
+        "command": "rg -n 'forget_agent_interactions' /memguard",
+        "is_input": false,
+        "reset": true,
+        "security_risk": "LOW",
+        "summary": "Search for 'forget_agent_interactions' in /memguard",
+        "timeout": 10
+      },
+      "tool_result": "",
+      "exit_code": null,
+      "timestamp": "2026-06-19T02:33:16.163486",
+      "forgotten": false,
+      "provenance_hash": "611055dea8710cf76dd8ceb0d9c0fbadbb770f772e5c16ab88cc4a166a0f2d21"
+    },
+    {
+      "event_id": "1bccfe09-88b8-4d0f-af10-c21f9f1cf688",
+      "agent_name": "openhands",
+      "session_id": "real-agent-session-b5",
+      "turn_id": "turn-1",
+      "sequence": 3,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_args": {},
+      "tool_result": "Terminal session has been reset. All previous environment variables and session state have been cleared. \u001b[?2004lbash: rg: 未找到命令 \u001b[?2004h",
+      "exit_code": 127,
+      "timestamp": "2026-06-19T02:33:17.244117",
+      "forgotten": false,
+      "provenance_hash": "3a34b331ce04e052329878df8ee6f59a2c5d9d9e00d773890c2a7aedc785e649"
+    },
+    {
+      "event_id": "8e0c81b4-e474-4fd5-a602-9101b800d785",
+      "agent_name": "openhands",
+      "session_id": "real-agent-session-b5",
+      "turn_id": "turn-1",
+      "sequence": 4,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "I've reset the terminal session and cleared all previous environment variables. Let me try again: 1. I'll check if `rg` (which is `grep` in Linux) is installed 2. If it's not installed, I'll try to install it 3. Once installed, I'll run the command again Let me check if `rg` is installed first: {\"name\": \"execute\", \"arguments\": {\"command\": \"which rg\"}}",
+      "tool_name": "",
+      "tool_args": {},
+      "tool_result": "",
+      "exit_code": null,
+      "timestamp": "2026-06-19T02:34:06.406912",
+      "forgotten": false,
+      "provenance_hash": "ba606338ddd98e80d220161dc88f87714237e08e6fede2244c5efc168695eb58"
+    }
+  ],
+  "preference_aggregates": [
+    {
+      "topic": "code_search_tool",
+      "value": "rg",
+      "preference_scope": "global",
+      "project_root": "",
+      "task_type": "",
+      "scope_agent_name": "",
+      "scope_session_id": "",
+      "evidence_count": 2,
+      "distinct_sessions": 2,
+      "explicit_confirmation": true,
+      "promoted_memory_id": "mem_d75081eca2c04d92",
+      "first_seen_at": "2026-06-18T17:55:19.163833+00:00",
+      "last_seen_at": "2026-06-18T18:43:04.323826+00:00",
+      "contradiction_count": 0,
+      "positive_ratio": 1.0,
+      "stable": true
+    }
+  ],
+  "contexts": {
+    "planning": {
+      "task": "定位精准遗忘实现位置",
+      "stage": "planning",
+      "agent_name": "openhands",
+      "session_id": "real-agent-session-b5",
+      "project_root": "",
+      "task_type": "",
+      "retrieval_passes": 1,
+      "memory_count": 0,
+      "context": "",
+      "memories": [],
+      "explainability": {
+        "selected": [],
+        "filtered": [
+          {
+            "memory_id": "mem_d75081eca2c04d92",
+            "type": "preference",
+            "subtype": "tool_preference",
+            "reason": "preference_topic_not_used_in_stage"
+          },
+          {
+            "memory_id": "mem_d75081eca2c04d92",
+            "type": "preference",
+            "subtype": "tool_preference",
+            "reason": "preferences_must_pass_scope_selection"
+          }
+        ],
+        "stage_policy": "planning",
+        "preference_scope_order": [
+          "session",
+          "project",
+          "task_type",
+          "agent",
+          "global"
+        ]
+      },
+      "budget": {
+        "max_chars": 4000,
+        "token_budget": 800,
+        "context_chars": 0,
+        "estimated_context_tokens": 0,
+        "truncated": false,
+        "estimator": "cjk_chars_plus_latin_chars_div_4"
+      }
+    },
+    "tool_selection": {
+      "task": "定位精准遗忘实现位置",
+      "stage": "tool_selection",
+      "agent_name": "openhands",
+      "session_id": "real-agent-session-b5",
+      "project_root": "",
+      "task_type": "",
+      "retrieval_passes": 1,
+      "memory_count": 1,
+      "context": "[mem_d75081eca2c04d92] type=preference subtype=tool_preference reason=applicable scoped preference for tool_selection\nsummary: 用户交互偏好：code_search_tool=rg（global）\nevidence: 用户与 Agent 的显式偏好：topic=code_search_tool value=rg preference_scope=global agent=openhands session=real-agent-session-a2 turn=turn-1",
+      "memories": [
+        {
+          "memory_id": "mem_d75081eca2c04d92",
+          "type": "preference",
+          "subtype": "tool_preference",
+          "tier": "long_term",
+          "score": null,
+          "preference_topic": "code_search_tool",
+          "preference_value": "rg",
+          "preference_scope": "global",
+          "selection_reason": "applicable scoped preference for tool_selection",
+          "source_event_ids": [
+            "c2139345-9ec1-4be1-ab54-ccd4f6a7eed1"
+          ],
+          "estimated_tokens": 86
+        }
+      ],
+      "explainability": {
+        "selected": [
+          {
+            "memory_id": "mem_d75081eca2c04d92",
+            "reason": "applicable scoped preference for tool_selection",
+            "source_event_ids": [
+              "c2139345-9ec1-4be1-ab54-ccd4f6a7eed1"
+            ]
+          }
+        ],
+        "filtered": [],
+        "stage_policy": "tool_selection",
+        "preference_scope_order": [
+          "session",
+          "project",
+          "task_type",
+          "agent",
+          "global"
+        ]
+      },
+      "budget": {
+        "max_chars": 4000,
+        "token_budget": 800,
+        "context_chars": 301,
+        "estimated_context_tokens": 86,
+        "truncated": false,
+        "estimator": "cjk_chars_plus_latin_chars_div_4"
+      }
+    },
+    "response_generation": {
+      "task": "定位精准遗忘实现位置",
+      "stage": "response_generation",
+      "agent_name": "openhands",
+      "session_id": "real-agent-session-b5",
+      "project_root": "",
+      "task_type": "",
+      "retrieval_passes": 1,
+      "memory_count": 0,
+      "context": "",
+      "memories": [],
+      "explainability": {
+        "selected": [],
+        "filtered": [
+          {
+            "memory_id": "mem_d75081eca2c04d92",
+            "type": "preference",
+            "subtype": "tool_preference",
+            "reason": "preference_topic_not_used_in_stage"
+          },
+          {
+            "memory_id": "mem_d75081eca2c04d92",
+            "type": "preference",
+            "subtype": "tool_preference",
+            "reason": "preferences_must_pass_scope_selection"
+          }
+        ],
+        "stage_policy": "response_generation",
+        "preference_scope_order": [
+          "session",
+          "project",
+          "task_type",
+          "agent",
+          "global"
+        ]
+      },
+      "budget": {
+        "max_chars": 4000,
+        "token_budget": 800,
+        "context_chars": 0,
+        "estimated_context_tokens": 0,
+        "truncated": false,
+        "estimator": "cjk_chars_plus_latin_chars_div_4"
+      }
+    }
+  }
+}

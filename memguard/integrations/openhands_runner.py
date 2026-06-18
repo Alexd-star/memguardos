@@ -30,6 +30,9 @@ class OpenHandsMemoryRunner:
         model: str = "",
         api_key: str = "",
         base_url: str = "",
+        context_token_budget_per_stage: int = 256,
+        max_iterations: int = 8,
+        tool_profile: str = "default",
         conversation_factory: Optional[ConversationFactory] = None,
     ):
         self.service = service
@@ -43,6 +46,13 @@ class OpenHandsMemoryRunner:
         self.model = str(model)
         self.api_key = str(api_key)
         self.base_url = str(base_url)
+        self.context_token_budget_per_stage = max(
+            64, min(int(context_token_budget_per_stage), 2000)
+        )
+        self.max_iterations = max(1, min(int(max_iterations), 100))
+        if tool_profile not in {"default", "terminal"}:
+            raise ValueError("tool_profile must be default or terminal")
+        self.tool_profile = tool_profile
         self.conversation_factory = conversation_factory or create_openhands_conversation
         self.adapter = OpenHandsEventAdapter(
             session_id=self.session_id,
@@ -68,6 +78,7 @@ class OpenHandsMemoryRunner:
                 session_id=self.session_id,
                 project_root=self.project_root,
                 task_type=self.task_type,
+                token_budget=self.context_token_budget_per_stage,
             )
         payload = {
             "schema_version": "1.0",
@@ -75,6 +86,9 @@ class OpenHandsMemoryRunner:
             "created_at": utc_now(),
             "session_id": self.session_id,
             "user_task": clean_task,
+            "allowed_tools": (
+                ["terminal", "finish"] if self.tool_profile == "terminal" else []
+            ),
             "stages": stages,
             "additional_context": format_agent_context(trace_id, stages),
         }
@@ -111,6 +125,8 @@ class OpenHandsMemoryRunner:
             model=self.model,
             api_key=self.api_key,
             base_url=self.base_url,
+            max_iterations=self.max_iterations,
+            tool_profile=self.tool_profile,
         )
         try:
             conversation.send_message(str(task).strip())
@@ -124,8 +140,9 @@ class OpenHandsMemoryRunner:
             for item in self._event_results
             if not item.get("remember_allowed") or item.get("sensitivity", {}).get("level") == "high"
         )
+        task_errors = self._event_types["task_error"]
         return {
-            "ok": blocked == 0,
+            "ok": blocked == 0 and task_errors == 0,
             "session_id": self.session_id,
             "trace_id": context_bundle["trace_id"],
             "context_file": context_bundle["context_file"],
@@ -135,6 +152,7 @@ class OpenHandsMemoryRunner:
                 "blocked": blocked,
                 "tool_calls": self._event_types["tool_call"],
                 "tool_results": self._event_types["tool_result"],
+                "task_errors": task_errors,
                 "event_types": dict(self._event_types),
                 "unknown_event_types": dict(self._unknown_events),
             },
@@ -184,13 +202,14 @@ def create_openhands_conversation(**kwargs: Any) -> Any:
         raise ValueError("OPENHANDS_MODEL or --model is required for a real Agent run")
     api_key = str(kwargs.get("api_key") or os.environ.get("OPENHANDS_API_KEY") or "").strip()
     base_url = str(kwargs.get("base_url") or os.environ.get("OPENHANDS_BASE_URL") or "").strip()
-    llm_kwargs: Dict[str, object] = {"model": model, "log_completions": False}
-    if api_key:
-        llm_kwargs["api_key"] = api_key
-    if base_url:
-        llm_kwargs["base_url"] = base_url
+    llm_kwargs = build_openhands_llm_kwargs(model, api_key, base_url)
     llm = LLM(**llm_kwargs)
     agent = get_default_agent(llm, cli_mode=True)
+    if str(kwargs.get("tool_profile") or "default") == "terminal":
+        terminal_tools = [tool for tool in agent.tools if str(tool.name) == "terminal"]
+        if not terminal_tools:
+            raise RuntimeError("OpenHands default Agent did not expose the terminal tool")
+        agent = agent.model_copy(update={"tools": terminal_tools})
 
     context_file = Path(kwargs["context_file"]).resolve()
     hook_script = Path(__file__).resolve().parents[2] / "scripts" / "openhands_memory_hook.py"
@@ -227,8 +246,32 @@ def create_openhands_conversation(**kwargs: Any) -> Any:
         persistence_dir=persistence_dir,
         callbacks=[kwargs["callback"]],
         hook_config=hooks,
-        max_iteration_per_run=30,
+        max_iteration_per_run=int(kwargs.get("max_iterations") or 8),
         visualizer=None,
         delete_on_close=False,
         tags={"integration": "memguardos"},
     )
+
+
+def build_openhands_llm_kwargs(
+    model: str,
+    api_key: str = "",
+    base_url: str = "",
+) -> Dict[str, object]:
+    clean_model = str(model).strip()
+    values: Dict[str, object] = {
+        "model": clean_model,
+        "log_completions": False,
+    }
+    if api_key:
+        values["api_key"] = str(api_key)
+    if base_url:
+        if clean_model.startswith(("ollama/", "ollama_chat/")):
+            values["ollama_base_url"] = str(base_url).rstrip("/")
+            values["reasoning_effort"] = "none"
+            values["reasoning_summary"] = None
+            values["enable_encrypted_reasoning"] = False
+            values["extended_thinking_budget"] = None
+        else:
+            values["base_url"] = str(base_url).rstrip("/")
+    return values
