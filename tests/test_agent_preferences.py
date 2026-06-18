@@ -136,3 +136,133 @@ def test_high_risk_secret_is_not_persisted_in_agent_event(tmp_path):
         assert result["memory_ids"] == []
     finally:
         service.close()
+
+
+def test_one_tool_request_remains_an_implicit_candidate(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        result = service.ingest_interaction(event("请用 rg 搜索 build_context。"))
+
+        assert result["memory_ids"] == []
+        status = service.interaction_status()
+        assert status["preference_aggregates"][0]["topic"] == "code_search_tool"
+        assert status["preference_aggregates"][0]["value"] == "rg"
+        assert status["preference_aggregates"][0]["evidence_count"] == 1
+        assert status["preference_aggregates"][0]["stable"] is False
+    finally:
+        service.close()
+
+
+def test_repeated_tool_requests_across_sessions_promote_one_stable_habit(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        events = [
+            event("请用 rg 搜索 build_context。", event_id="evt-habit-1"),
+            event(
+                "用 rg 查找精准遗忘实现。",
+                event_id="evt-habit-2",
+                turn_id="turn-2",
+                sequence=2,
+            ),
+            event(
+                "请使用 rg 搜索 systemd 配置。",
+                event_id="evt-habit-3",
+                session_id="session-b",
+                turn_id="turn-1",
+                sequence=1,
+            ),
+        ]
+
+        results = [service.ingest_interaction(item) for item in events]
+
+        assert results[0]["memory_ids"] == []
+        assert results[1]["memory_ids"] == []
+        assert len(results[2]["memory_ids"]) == 1
+        memories = service.meta.list_memories()
+        assert len(memories) == 1
+        assert memories[0]["subtype"] == "tool_preference"
+        evidence = service.preference_evidence(memories[0]["memory_id"])
+        assert {item["event_id"] for item in evidence["events"]} == {
+            "evt-habit-1",
+            "evt-habit-2",
+            "evt-habit-3",
+        }
+        aggregate = service.interaction_status()["preference_aggregates"][0]
+        assert aggregate["stable"] is True
+        assert aggregate["distinct_sessions"] == 2
+        assert aggregate["promoted_memory_id"] == memories[0]["memory_id"]
+    finally:
+        service.close()
+
+
+def test_conflicting_tool_observation_prevents_implicit_promotion(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        observations = [
+            event("请用 rg 搜索第一处定义。", event_id="evt-conflict-1"),
+            event(
+                "用 rg 查找第二处定义。",
+                event_id="evt-conflict-2",
+                turn_id="turn-2",
+                sequence=2,
+            ),
+            event(
+                "请用 grep 搜索第三处定义。",
+                event_id="evt-conflict-3",
+                session_id="session-b",
+            ),
+            event(
+                "使用 rg 查找第四处定义。",
+                event_id="evt-conflict-4",
+                session_id="session-b",
+                turn_id="turn-2",
+                sequence=2,
+            ),
+        ]
+
+        for item in observations:
+            service.ingest_interaction(item)
+
+        assert service.meta.list_memories() == []
+        rg = next(
+            item
+            for item in service.interaction_status()["preference_aggregates"]
+            if item["value"] == "rg"
+        )
+        assert rg["evidence_count"] == 3
+        assert rg["contradiction_count"] == 1
+        assert rg["stable"] is False
+    finally:
+        service.close()
+
+
+def test_explicit_confirmation_promotes_existing_implicit_evidence(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        service.ingest_interaction(event("请用 rg 搜索第一处定义。", event_id="evt-confirm-1"))
+        service.ingest_interaction(
+            event(
+                "用 rg 查找第二处定义。",
+                event_id="evt-confirm-2",
+                turn_id="turn-2",
+                sequence=2,
+            )
+        )
+
+        confirmed = service.ingest_interaction(
+            event(
+                "对，以后默认使用 rg。",
+                event_id="evt-confirm-3",
+                session_id="session-b",
+            )
+        )
+
+        assert len(confirmed["memory_ids"]) == 1
+        evidence = service.preference_evidence(confirmed["memory_ids"][0])
+        assert {item["event_id"] for item in evidence["events"]} == {
+            "evt-confirm-1",
+            "evt-confirm-2",
+            "evt-confirm-3",
+        }
+    finally:
+        service.close()

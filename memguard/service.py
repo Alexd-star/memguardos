@@ -21,6 +21,7 @@ from memguard.ingestion.config import config_entry_to_memory_text, load_config_e
 from memguard.ingestion.quality import assess_text_quality
 from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.events import AgentInteractionEvent
+from memguard.integrations.habit_aggregator import PreferenceAggregate
 from memguard.integrations.interaction_extractor import PreferenceObservation, extract_interaction_preferences
 from memguard.integrations.normalizer import normalize_event
 from memguard.models import AuditInfo, MemoryRecord, MemorySource, VersionInfo, make_memory, new_id, stable_hash, utc_now
@@ -157,9 +158,15 @@ class MemGuardService:
         memory_ids = []
         if result["stored"] and extraction.remember_allowed and sensitivity.level != "high":
             for observation in extraction.observations:
-                memory = self._store_preference_observation(observation, safe_event)
-                self.link_memory_event(memory.memory_id, safe_event.event_id, "extracted_from")
-                memory_ids.append(memory.memory_id)
+                self.meta.add_preference_observation(observation, safe_event)
+                aggregate_row = self._preference_aggregate(observation.topic, observation.value, observation.scope)
+                if aggregate_row and aggregate_row["stable"] and not aggregate_row.get("promoted_memory_id"):
+                    memory = self._store_preference_observation(observation, safe_event)
+                    for event_id in self.meta.preference_observation_event_ids(observation.topic, observation.value):
+                        relation = "confirmed_by" if event_id == safe_event.event_id and observation.explicit else "extracted_from"
+                        self.link_memory_event(memory.memory_id, event_id, relation)
+                    self.meta.mark_preference_promoted(observation.topic, observation.value, memory.memory_id)
+                    memory_ids.append(memory.memory_id)
         return {
             **result,
             "agent_name": safe_event.agent_name,
@@ -172,6 +179,51 @@ class MemGuardService:
             "sensitivity": sensitivity.__dict__,
             "memory_ids": memory_ids,
         }
+
+    def interaction_status(self) -> Dict[str, object]:
+        aggregates = []
+        for row in self.meta.list_preference_aggregates():
+            aggregate = PreferenceAggregate(
+                evidence_count=int(row["evidence_count"]),
+                distinct_sessions=int(row["distinct_sessions"]),
+                positive_ratio=float(row["positive_ratio"]),
+                contradiction_count=int(row["contradiction_count"]),
+                explicit_confirmation=bool(row["explicit_confirmation"]),
+            )
+            item = dict(row)
+            item["stable"] = aggregate.stable
+            aggregates.append(item)
+        result = {
+            "namespace": self.namespace,
+            "event_count": len(self.meta.list_agent_events(limit=1000000)),
+            "preference_aggregates": aggregates,
+        }
+        self._audit(
+            "interaction_status",
+            None,
+            {
+                "event_count": result["event_count"],
+                "aggregate_count": len(aggregates),
+                "stable_count": sum(1 for item in aggregates if item["stable"]),
+            },
+        )
+        return result
+
+    def _preference_aggregate(self, topic: str, value: str, scope: str) -> Optional[Dict[str, object]]:
+        for row in self.meta.list_preference_aggregates():
+            if row["topic"] != topic or row["value"] != value or row["preference_scope"] != scope:
+                continue
+            aggregate = PreferenceAggregate(
+                evidence_count=int(row["evidence_count"]),
+                distinct_sessions=int(row["distinct_sessions"]),
+                positive_ratio=float(row["positive_ratio"]),
+                contradiction_count=int(row["contradiction_count"]),
+                explicit_confirmation=bool(row["explicit_confirmation"]),
+            )
+            result = dict(row)
+            result["stable"] = aggregate.stable
+            return result
+        return None
 
     def link_memory_event(self, memory_id: str, event_id: str, relation: str = "extracted_from") -> Dict[str, object]:
         allowed_relations = {"extracted_from", "confirmed_by", "contradicted_by", "derived_from", "used_by"}
@@ -269,10 +321,12 @@ class MemGuardService:
             "high_risk_confirmation": "security_policy",
         }.get(observation.topic, "user_habit")
         memory_type = "sensitive_policy" if subtype == "security_policy" else "preference"
+        evidence_kind = "显式偏好" if observation.explicit else "多轮交互习惯"
         content = (
-            "用户与 Agent 的显式偏好：topic=%s value=%s preference_scope=%s "
+            "用户与 Agent 的%s：topic=%s value=%s preference_scope=%s "
             "agent=%s session=%s turn=%s"
             % (
+                evidence_kind,
                 observation.topic,
                 observation.value,
                 observation.scope,

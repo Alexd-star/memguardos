@@ -136,6 +136,25 @@ class SQLiteMetaStore:
             )
             """
         )
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS preference_observations (
+                observation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id TEXT NOT NULL,
+                agent_name TEXT NOT NULL,
+                session_id TEXT NOT NULL,
+                topic TEXT NOT NULL,
+                value TEXT NOT NULL,
+                polarity TEXT NOT NULL,
+                preference_scope TEXT NOT NULL,
+                explicit INTEGER NOT NULL,
+                confidence REAL NOT NULL,
+                promoted_memory_id TEXT,
+                created_at TEXT NOT NULL,
+                UNIQUE(event_id, topic, value, polarity, preference_scope)
+            )
+            """
+        )
         try:
             self.conn.execute(
                 """
@@ -157,6 +176,10 @@ class SQLiteMetaStore:
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_memory_event_links_event "
             "ON memory_event_links(event_id, memory_id)"
+        )
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_preference_observations_topic "
+            "ON preference_observations(topic, value, created_at)"
         )
         self.conn.commit()
 
@@ -395,6 +418,96 @@ class SQLiteMetaStore:
             item["tool_args"] = json.loads(item.pop("tool_args_json"))
             result.append(item)
         return result
+
+    def add_preference_observation(self, observation: Any, event: Any) -> Dict[str, Any]:
+        cursor = self.conn.execute(
+            """
+            INSERT OR IGNORE INTO preference_observations (
+                event_id, agent_name, session_id, topic, value, polarity,
+                preference_scope, explicit, confidence, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                event.event_id,
+                event.agent_name,
+                event.session_id,
+                observation.topic,
+                observation.value,
+                observation.polarity,
+                observation.scope,
+                1 if observation.explicit else 0,
+                observation.confidence,
+                utc_now(),
+            ),
+        )
+        self.conn.commit()
+        return {
+            "created": cursor.rowcount == 1,
+            "event_id": event.event_id,
+            "topic": observation.topic,
+            "value": observation.value,
+        }
+
+    def list_preference_aggregates(self) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT
+                topic,
+                value,
+                preference_scope,
+                COUNT(*) AS evidence_count,
+                COUNT(DISTINCT session_id) AS distinct_sessions,
+                SUM(CASE WHEN polarity = 'positive' THEN 1 ELSE 0 END) AS positive_count,
+                MAX(explicit) AS explicit_confirmation,
+                MAX(promoted_memory_id) AS promoted_memory_id,
+                MIN(created_at) AS first_seen_at,
+                MAX(created_at) AS last_seen_at
+            FROM preference_observations
+            GROUP BY topic, value, preference_scope
+            ORDER BY topic, value, preference_scope
+            """
+        ).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            contradiction = self.conn.execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM preference_observations
+                WHERE topic = ? AND value != ?
+                """,
+                (item["topic"], item["value"]),
+            ).fetchone()
+            item["contradiction_count"] = int(contradiction["count"] if contradiction else 0)
+            evidence_count = max(1, int(item["evidence_count"]))
+            item["positive_ratio"] = float(item.pop("positive_count") or 0) / evidence_count
+            item["explicit_confirmation"] = bool(item["explicit_confirmation"])
+            result.append(item)
+        return result
+
+    def preference_observation_event_ids(self, topic: str, value: str) -> List[str]:
+        rows = self.conn.execute(
+            """
+            SELECT event_id
+            FROM preference_observations
+            WHERE topic = ? AND value = ?
+            ORDER BY created_at ASC, event_id ASC
+            """,
+            (topic, value),
+        ).fetchall()
+        return [str(row["event_id"]) for row in rows]
+
+    def mark_preference_promoted(self, topic: str, value: str, memory_id: str) -> None:
+        self.conn.execute(
+            """
+            UPDATE preference_observations
+            SET promoted_memory_id = ?
+            WHERE topic = ? AND value = ?
+            """,
+            (memory_id, topic, value),
+        )
+        self.conn.commit()
 
     def search_text(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         query = query.strip()

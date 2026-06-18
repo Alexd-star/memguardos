@@ -42,9 +42,23 @@ def extract_interaction_preferences(event: AgentInteractionEvent) -> Interaction
         observations.append(_observation(event, "code_search_tool", "grep", scope="session"))
         observations.append(_observation(event, "code_search_tool", "rg", scope="global"))
     elif _prefers_rg(text, lowered):
-        observations.append(_observation(event, "code_search_tool", "rg"))
+        observations.append(
+            _observation(
+                event,
+                "code_search_tool",
+                "rg",
+                explicit=_explicit_tool_preference(text, lowered),
+            )
+        )
     elif _prefers_grep(text, lowered):
-        observations.append(_observation(event, "code_search_tool", "grep"))
+        observations.append(
+            _observation(
+                event,
+                "code_search_tool",
+                "grep",
+                explicit=_explicit_tool_preference(text, lowered),
+            )
+        )
 
     if _command_before_explanation(text, lowered):
         observations.append(_observation(event, "response_order", "command_then_explanation"))
@@ -66,14 +80,15 @@ def _observation(
     topic: str,
     value: str,
     scope: str = "global",
+    explicit: bool = True,
 ) -> PreferenceObservation:
     return PreferenceObservation(
         topic=topic,
         value=value,
         polarity="positive",
         scope=scope,
-        explicit=True,
-        confidence=0.98,
+        explicit=explicit,
+        confidence=0.98 if explicit else 0.72,
         evidence_event_id=event.event_id,
     )
 
@@ -113,6 +128,12 @@ def _prefers_grep(text: str, lowered: str) -> bool:
     return "grep" in lowered and any(
         marker in lowered
         for marker in ("优先", "首选", "默认", "prefer", "use grep", "使用 grep", "用 grep")
+    )
+
+
+def _explicit_tool_preference(text: str, lowered: str) -> bool:
+    return any(marker in text for marker in ("以后", "默认", "优先", "首选", "每次", "总是")) or any(
+        marker in lowered for marker in ("prefer", "always", "by default")
     )
 
 
