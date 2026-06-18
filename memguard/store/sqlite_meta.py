@@ -98,6 +98,33 @@ class SQLiteMetaStore:
             )
             """
         )
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS agent_events (
+                event_id TEXT PRIMARY KEY,
+                provenance_hash TEXT NOT NULL UNIQUE,
+                schema_version TEXT NOT NULL,
+                agent_name TEXT NOT NULL,
+                agent_version TEXT NOT NULL,
+                session_id TEXT NOT NULL,
+                turn_id TEXT NOT NULL,
+                sequence INTEGER NOT NULL,
+                event_type TEXT NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                tool_name TEXT NOT NULL,
+                tool_args_json TEXT NOT NULL,
+                tool_result TEXT NOT NULL,
+                exit_code INTEGER,
+                state_before TEXT NOT NULL DEFAULT '',
+                state_after TEXT NOT NULL DEFAULT '',
+                user_feedback TEXT NOT NULL DEFAULT '',
+                timestamp TEXT NOT NULL,
+                source_uri TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
         try:
             self.conn.execute(
                 """
@@ -111,6 +138,11 @@ class SQLiteMetaStore:
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_live_updated ON memory(deleted, updated_at DESC)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_tier_live ON memory(tier, deleted, updated_at DESC)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_entity_entity ON memory_entity(entity, memory_id)")
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_agent_events_session_sequence "
+            "ON agent_events(agent_name, session_id, sequence)"
+        )
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_events_type ON agent_events(event_type, created_at DESC)")
         self.conn.commit()
 
     def close(self) -> None:
@@ -226,6 +258,81 @@ class SQLiteMetaStore:
     def get_memory(self, memory_id: str) -> Optional[Dict[str, Any]]:
         row = self.conn.execute("SELECT * FROM memory WHERE memory_id = ?", (memory_id,)).fetchone()
         return dict(row) if row else None
+
+    def insert_agent_event(self, event: Any) -> Dict[str, Any]:
+        cursor = self.conn.execute(
+            """
+            INSERT OR IGNORE INTO agent_events (
+                event_id, provenance_hash, schema_version, agent_name, agent_version,
+                session_id, turn_id, sequence, event_type, role, content, tool_name,
+                tool_args_json, tool_result, exit_code, state_before, state_after,
+                user_feedback, timestamp, source_uri, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                event.event_id,
+                event.provenance_hash,
+                event.schema_version,
+                event.agent_name,
+                event.agent_version,
+                event.session_id,
+                event.turn_id,
+                event.sequence,
+                event.event_type,
+                event.role,
+                event.content,
+                event.tool_name,
+                json.dumps(event.tool_args, ensure_ascii=False, sort_keys=True),
+                event.tool_result,
+                event.exit_code,
+                event.state_before,
+                event.state_after,
+                event.user_feedback,
+                event.timestamp,
+                event.source_uri,
+                utc_now(),
+            ),
+        )
+        self.conn.commit()
+        stored = cursor.rowcount == 1
+        row = self.conn.execute(
+            "SELECT event_id FROM agent_events WHERE provenance_hash = ?",
+            (event.provenance_hash,),
+        ).fetchone()
+        return {
+            "stored": stored,
+            "duplicate": not stored,
+            "event_id": row["event_id"] if row else event.event_id,
+            "provenance_hash": event.provenance_hash,
+        }
+
+    def list_agent_events(
+        self,
+        session_id: Optional[str] = None,
+        event_type: Optional[str] = None,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        clauses = []
+        params: List[Any] = []
+        if session_id:
+            clauses.append("session_id = ?")
+            params.append(session_id)
+        if event_type:
+            clauses.append("event_type = ?")
+            params.append(event_type)
+        sql = "SELECT * FROM agent_events"
+        if clauses:
+            sql += " WHERE " + " AND ".join(clauses)
+        sql += " ORDER BY agent_name, session_id, sequence, event_id LIMIT ?"
+        params.append(max(0, int(limit)))
+        rows = self.conn.execute(sql, params).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["tool_args"] = json.loads(item.pop("tool_args_json"))
+            result.append(item)
+        return result
 
     def search_text(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         query = query.strip()

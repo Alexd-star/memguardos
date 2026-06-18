@@ -2,7 +2,7 @@ from pathlib import Path
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import perf_counter
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from memguard.config import (
     DEFAULT_NAMESPACE,
@@ -20,6 +20,8 @@ from memguard.ingestion.behavior import BehaviorEvent, load_shell_history
 from memguard.ingestion.config import config_entry_to_memory_text, load_config_entries, validate_config_entry
 from memguard.ingestion.quality import assess_text_quality
 from memguard.ingestion.tool_result import ToolResult
+from memguard.integrations.events import AgentInteractionEvent
+from memguard.integrations.normalizer import normalize_event
 from memguard.models import AuditInfo, MemoryRecord, MemorySource, VersionInfo, make_memory, new_id, stable_hash, utc_now
 from memguard.os_guard.events import parse_os_event
 from memguard.os_guard.cgroup import cgroup_status
@@ -123,6 +125,34 @@ class MemGuardService:
             source_uri=source_uri,
             tier="session" if tool_result.exit_code == 0 else "working",
         )
+
+    def ingest_interaction(self, event: Union[AgentInteractionEvent, Dict[str, object]]) -> Dict[str, object]:
+        parsed = event if isinstance(event, AgentInteractionEvent) else AgentInteractionEvent.from_dict(event)
+        normalized = normalize_event(parsed)
+        result = self.meta.insert_agent_event(normalized)
+        audit_type = "interaction_ingest" if result["stored"] else "interaction_duplicate"
+        self._audit(
+            audit_type,
+            None,
+            {
+                "event_id": result["event_id"],
+                "provenance_hash": normalized.provenance_hash,
+                "agent_name": normalized.agent_name,
+                "session_id": normalized.session_id,
+                "turn_id": normalized.turn_id,
+                "sequence": normalized.sequence,
+                "event_type": normalized.event_type,
+                "role": normalized.role,
+            },
+        )
+        return {
+            **result,
+            "agent_name": normalized.agent_name,
+            "session_id": normalized.session_id,
+            "turn_id": normalized.turn_id,
+            "sequence": normalized.sequence,
+            "event_type": normalized.event_type,
+        }
 
     def ingest_config(self, path: Path) -> Dict[str, object]:
         entries = load_config_entries(path)

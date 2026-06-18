@@ -3,6 +3,8 @@ import json
 import pytest
 
 from memguard.integrations.events import AgentInteractionEvent
+from memguard.integrations.normalizer import normalize_event, normalize_events, normalize_tool_args
+from memguard.service import MemGuardService
 
 
 def make_event(**overrides):
@@ -84,3 +86,91 @@ def test_event_from_dict_rejects_supplied_hash_that_does_not_match_payload():
 
     with pytest.raises(ValueError, match="provenance_hash does not match"):
         AgentInteractionEvent.from_dict(payload)
+
+
+def test_tool_arguments_are_recursively_redacted_before_persistence():
+    normalized = normalize_tool_args(
+        {
+            "path": "/tmp/demo",
+            "password": "plain-password",
+            "env": {
+                "API_TOKEN": "token-value",
+                "MEMGUARD_MODE": "demo",
+            },
+            "headers": {
+                "Authorization": "Bearer secret-token",
+                "Accept": "application/json",
+            },
+        }
+    )
+
+    assert normalized["path"] == "/tmp/demo"
+    assert normalized["password"] == "[REDACTED]"
+    assert normalized["env"]["API_TOKEN"] == "[REDACTED]"
+    assert normalized["env"]["MEMGUARD_MODE"] == "demo"
+    assert normalized["headers"]["Authorization"] == "[REDACTED]"
+    assert normalized["headers"]["Accept"] == "application/json"
+
+
+def test_normalize_event_recomputes_hash_after_redaction():
+    event = make_event(
+        event_type="tool_call",
+        role="assistant",
+        tool_name="shell",
+        tool_args={"command": "curl", "api_key": "secret-value"},
+    )
+
+    normalized = normalize_event(event)
+
+    assert normalized.tool_args["api_key"] == "[REDACTED]"
+    assert normalized.provenance_hash != event.provenance_hash
+
+
+def test_normalize_events_orders_one_session_by_sequence():
+    events = [
+        make_event(sequence=3, event_type="assistant_message", role="assistant"),
+        make_event(sequence=1),
+        make_event(sequence=2, event_type="tool_call", role="assistant"),
+    ]
+
+    normalized = normalize_events(events)
+
+    assert [event.sequence for event in normalized] == [1, 2, 3]
+
+
+def test_service_ingest_interaction_is_idempotent_and_audited(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        event = make_event()
+
+        first = service.ingest_interaction(event)
+        second = service.ingest_interaction(AgentInteractionEvent.from_json(event.to_json()))
+
+        assert first["stored"] is True
+        assert first["duplicate"] is False
+        assert second["stored"] is False
+        assert second["duplicate"] is True
+        assert len(service.meta.list_agent_events()) == 1
+        assert len(service.audit(event_type="interaction_ingest")) == 1
+        assert len(service.audit(event_type="interaction_duplicate")) == 1
+    finally:
+        service.close()
+
+
+def test_existing_database_is_migrated_without_losing_memories(tmp_path):
+    db_path = tmp_path / "meta.sqlite3"
+    service = MemGuardService(tmp_path / "memory.segment", db_path)
+    try:
+        memory = service.ingest_text("openKylin 使用 systemd 管理 MemGuardOS 服务。")["record"]
+    finally:
+        service.close()
+
+    reopened = MemGuardService(tmp_path / "memory.segment", db_path)
+    try:
+        table = reopened.meta.conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='agent_events'"
+        ).fetchone()
+        assert table is not None
+        assert reopened.meta.get_memory(memory.memory_id)["deleted"] == 0
+    finally:
+        reopened.close()
