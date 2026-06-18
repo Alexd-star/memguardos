@@ -21,9 +21,14 @@ from memguard.ingestion.config import config_entry_to_memory_text, load_config_e
 from memguard.ingestion.quality import assess_text_quality
 from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.events import AgentInteractionEvent
+from memguard.integrations.context_injector import (
+    stage_allows_memory,
+    stage_allows_preference,
+    validate_agent_context_stage,
+)
 from memguard.integrations.habit_aggregator import PreferenceAggregate
 from memguard.integrations.interaction_extractor import PreferenceObservation, extract_interaction_preferences
-from memguard.integrations.normalizer import normalize_event
+from memguard.integrations.normalizer import normalize_event, normalize_events
 from memguard.models import AuditInfo, MemoryRecord, MemorySource, VersionInfo, make_memory, new_id, stable_hash, utc_now
 from memguard.os_guard.events import parse_os_event
 from memguard.os_guard.cgroup import cgroup_status
@@ -178,6 +183,33 @@ class MemGuardService:
             "remember_reason": extraction.reason,
             "sensitivity": sensitivity.__dict__,
             "memory_ids": memory_ids,
+        }
+
+    def ingest_interactions(
+        self,
+        events: List[Union[AgentInteractionEvent, Dict[str, object]]],
+    ) -> Dict[str, object]:
+        if len(events) > 500:
+            raise ValueError("events must contain at most 500 items")
+        parsed = [
+            event if isinstance(event, AgentInteractionEvent) else AgentInteractionEvent.from_dict(event)
+            for event in events
+        ]
+        results = [self.ingest_interaction(event) for event in normalize_events(parsed)]
+        return {
+            "event_count": len(results),
+            "stored_count": sum(1 for result in results if result["stored"]),
+            "duplicate_count": sum(1 for result in results if result["duplicate"]),
+            "blocked_memory_count": sum(
+                1 for result in results if result["sensitivity"]["level"] == "high" or not result["remember_allowed"]
+            ),
+            "memory_count": sum(len(result["memory_ids"]) for result in results),
+            "memory_ids": [
+                memory_id
+                for result in results
+                for memory_id in result["memory_ids"]
+            ],
+            "results": results,
         }
 
     def interaction_status(self) -> Dict[str, object]:
@@ -1261,6 +1293,223 @@ class MemGuardService:
             },
         )
         return result
+
+    def build_agent_context(
+        self,
+        task: str,
+        stage: str,
+        agent_name: str,
+        session_id: str,
+        project_root: str = "",
+        task_type: str = "",
+        limit: int = 8,
+        max_chars: int = 4000,
+        token_budget: int = 800,
+    ) -> Dict[str, object]:
+        clean_stage = validate_agent_context_stage(stage)
+        clean_task = str(task).strip()
+        if not clean_task:
+            raise ValueError("task is required")
+        search_hits = self.search(clean_task, limit=max(limit * 3, limit), audit=False)
+        preference_selection = self.select_preferences(
+            agent_name=agent_name,
+            session_id=session_id,
+            project_root=project_root,
+            task_type=task_type,
+        )
+
+        candidates = []
+        filtered = []
+        seen = set()
+        for preference in preference_selection["selected"]:
+            memory_id = str(preference.get("memory_id") or "")
+            if stage_allows_preference(clean_stage, preference):
+                candidate = dict(preference)
+                candidate["selection_reason"] = "applicable scoped preference for %s" % clean_stage
+                candidates.append(candidate)
+                seen.add(memory_id)
+            else:
+                filtered.append(
+                    {
+                        "memory_id": memory_id,
+                        "type": preference.get("type"),
+                        "subtype": preference.get("subtype"),
+                        "reason": "preference_topic_not_used_in_stage",
+                    }
+                )
+        for preference in preference_selection["excluded"]:
+            filtered.append(
+                {
+                    "memory_id": preference.get("memory_id"),
+                    "type": preference.get("type"),
+                    "subtype": preference.get("subtype"),
+                    "reason": preference.get("reason", "preference_not_selected"),
+                }
+            )
+
+        for hit in search_hits:
+            memory_id = str(hit.get("memory_id") or "")
+            if not memory_id or memory_id in seen:
+                continue
+            if hit.get("type") in {"preference", "sensitive_policy"}:
+                filtered.append(
+                    {
+                        "memory_id": memory_id,
+                        "type": hit.get("type"),
+                        "subtype": hit.get("subtype"),
+                        "reason": "preferences_must_pass_scope_selection",
+                    }
+                )
+                continue
+            if not stage_allows_memory(clean_stage, hit):
+                filtered.append(
+                    {
+                        "memory_id": memory_id,
+                        "type": hit.get("type"),
+                        "subtype": hit.get("subtype"),
+                        "reason": "memory_subtype_not_used_in_stage",
+                    }
+                )
+                continue
+            candidate = dict(hit)
+            candidate["selection_reason"] = "hybrid retrieval result relevant to %s" % clean_stage
+            candidates.append(candidate)
+            seen.add(memory_id)
+
+        memories = []
+        context_lines = []
+        used_chars = 0
+        used_tokens = 0
+        for candidate in candidates:
+            if len(memories) >= limit:
+                filtered.append(
+                    {
+                        "memory_id": candidate.get("memory_id"),
+                        "type": candidate.get("type"),
+                        "subtype": candidate.get("subtype"),
+                        "reason": "stage_limit_reached",
+                    }
+                )
+                continue
+            memory_id = str(candidate.get("memory_id") or "")
+            summary = " ".join(str(candidate.get("summary") or "").split())
+            content = " ".join(str(candidate.get("content") or "").split())
+            line = (
+                "[%s] type=%s subtype=%s reason=%s\nsummary: %s\nevidence: %s"
+                % (
+                    memory_id,
+                    candidate.get("type", ""),
+                    candidate.get("subtype", ""),
+                    candidate.get("selection_reason", ""),
+                    summary[:300],
+                    content[:500],
+                )
+            )
+            remaining_chars = max_chars - used_chars
+            remaining_tokens = token_budget - used_tokens
+            line = self._fit_context_line(line, remaining_chars, remaining_tokens)
+            if not line:
+                filtered.append(
+                    {
+                        "memory_id": memory_id,
+                        "type": candidate.get("type"),
+                        "subtype": candidate.get("subtype"),
+                        "reason": "context_budget_exhausted",
+                    }
+                )
+                continue
+            source_event_ids = []
+            if candidate.get("preference_topic"):
+                evidence = self.preference_evidence(memory_id)
+                source_event_ids = [str(item["event_id"]) for item in evidence.get("events", [])]
+            line_tokens = self.estimate_tokens(line)
+            used_chars += len(line)
+            used_tokens += line_tokens
+            context_lines.append(line)
+            memories.append(
+                {
+                    "memory_id": memory_id,
+                    "type": candidate.get("type"),
+                    "subtype": candidate.get("subtype"),
+                    "tier": candidate.get("tier"),
+                    "score": candidate.get("score"),
+                    "preference_topic": candidate.get("preference_topic", ""),
+                    "preference_value": candidate.get("preference_value", ""),
+                    "preference_scope": candidate.get("preference_scope", ""),
+                    "selection_reason": candidate.get("selection_reason"),
+                    "source_event_ids": source_event_ids,
+                    "estimated_tokens": line_tokens,
+                }
+            )
+
+        context = "\n\n".join(context_lines)
+        result = {
+            "task": clean_task,
+            "stage": clean_stage,
+            "agent_name": agent_name,
+            "session_id": session_id,
+            "project_root": project_root,
+            "task_type": task_type,
+            "retrieval_passes": 1,
+            "memory_count": len(memories),
+            "context": context,
+            "memories": memories,
+            "explainability": {
+                "selected": [
+                    {
+                        "memory_id": item["memory_id"],
+                        "reason": item["selection_reason"],
+                        "source_event_ids": item["source_event_ids"],
+                    }
+                    for item in memories
+                ],
+                "filtered": filtered,
+                "stage_policy": clean_stage,
+                "preference_scope_order": ["session", "project", "task_type", "agent", "global"],
+            },
+            "budget": {
+                "max_chars": max_chars,
+                "token_budget": token_budget,
+                "context_chars": len(context),
+                "estimated_context_tokens": self.estimate_tokens(context),
+                "truncated": any(item["reason"] in {"context_budget_exhausted", "stage_limit_reached"} for item in filtered),
+                "estimator": "cjk_chars_plus_latin_chars_div_4",
+            },
+        }
+        self._audit(
+            "agent_context_build",
+            None,
+            {
+                "task": clean_task,
+                "stage": clean_stage,
+                "agent_name": agent_name,
+                "session_id": session_id,
+                "project_root": project_root,
+                "task_type": task_type,
+                "memory_ids": [item["memory_id"] for item in memories],
+                "filtered_count": len(filtered),
+                "estimated_context_tokens": result["budget"]["estimated_context_tokens"],
+            },
+        )
+        return result
+
+    def _fit_context_line(self, line: str, remaining_chars: int, remaining_tokens: int) -> str:
+        if remaining_chars <= 0 or remaining_tokens <= 0:
+            return ""
+        candidate = line[:remaining_chars]
+        if self.estimate_tokens(candidate) <= remaining_tokens:
+            return candidate
+        low = 0
+        high = len(candidate)
+        while low < high:
+            middle = (low + high + 1) // 2
+            if self.estimate_tokens(candidate[:middle]) <= remaining_tokens:
+                low = middle
+            else:
+                high = middle - 1
+        if low < 24:
+            return ""
+        return candidate[:low]
 
     @staticmethod
     def estimate_tokens(text: str) -> int:

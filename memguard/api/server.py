@@ -118,6 +118,48 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         return {"ok": bool(result.get("ok")) if isinstance(result, dict) else False, "result": result}
     if command == "retrieval_status":
         return {"ok": True, "result": _jsonable(service.retrieval_status())}
+    if command == "ingest_interaction":
+        event = request.get("event")
+        if not isinstance(event, dict):
+            raise ValueError("event must be an object")
+        return {"ok": True, "result": _jsonable(service.ingest_interaction(event))}
+    if command == "ingest_interactions":
+        events = request.get("events")
+        if not isinstance(events, list):
+            raise ValueError("events must be an array")
+        if len(events) > 500:
+            raise ValueError("events must contain at most 500 items")
+        if any(not isinstance(event, dict) for event in events):
+            raise ValueError("every event must be an object")
+        return {"ok": True, "result": _jsonable(service.ingest_interactions(events))}
+    if command == "interaction_status":
+        return {"ok": True, "result": _jsonable(service.interaction_status())}
+    if command == "build_agent_context":
+        task = _string_param(request, "task", "", max_chars=4096)
+        stage = _string_param(request, "stage", "", max_chars=64)
+        agent_name = _string_param(request, "agent_name", "", max_chars=128)
+        session_id = _string_param(request, "session_id", "", max_chars=256)
+        project_root = _string_param(request, "project_root", "", max_chars=2048)
+        task_type = _string_param(request, "task_type", "", max_chars=128)
+        limit = _int_param(request, "limit", 8, minimum=1, maximum=50)
+        max_chars = _int_param(request, "max_chars", 4000, minimum=128, maximum=20000)
+        token_budget = _int_param(request, "token_budget", 800, minimum=64, maximum=32000)
+        return {
+            "ok": True,
+            "result": _jsonable(
+                service.build_agent_context(
+                    task,
+                    stage=stage,
+                    agent_name=agent_name,
+                    session_id=session_id,
+                    project_root=project_root,
+                    task_type=task_type,
+                    limit=limit,
+                    max_chars=max_chars,
+                    token_budget=token_budget,
+                )
+            ),
+        }
     if command == "preference_evidence":
         memory_id = _string_param(request, "memory_id", "", max_chars=128)
         result = _jsonable(service.preference_evidence(memory_id))

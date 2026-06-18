@@ -7,6 +7,7 @@ from pathlib import Path
 
 from memguard.config import list_namespaces
 from memguard.ingestion.tool_result import ToolResult
+from memguard.integrations.replay import load_event_file, load_event_jsonl
 from memguard.llm.adapter import LLMAdapterError, generate_answer
 from memguard.llm.prompt import render_generation_prompt
 from memguard.os_guard.auditd_events import parse_auditd_events
@@ -187,6 +188,28 @@ def build_parser() -> argparse.ArgumentParser:
     auditd.add_argument("--key", default="memguard_sensitive")
     auditd.add_argument("--existing-only", action="store_true", help="Only emit rules for paths that exist on this host")
 
+    agent = sub.add_parser("agent", help="Ingest, replay, inspect, and build context for external Agent interactions")
+    agent_sub = agent.add_subparsers(dest="agent_command", required=True)
+    agent_ingest = agent_sub.add_parser("ingest-event", help="Ingest one normalized Agent event JSON file")
+    agent_ingest.add_argument("--file", required=True)
+    agent_session = agent_sub.add_parser("ingest-session", help="Ingest one Agent event JSONL session")
+    agent_session.add_argument("--file", required=True)
+    agent_replay = agent_sub.add_parser("replay", help="Replay one Agent event JSONL session idempotently")
+    agent_replay.add_argument("--file", required=True)
+    agent_context = agent_sub.add_parser("context", help="Build stage-specific memory context for an Agent")
+    agent_context.add_argument("--task", required=True)
+    agent_context.add_argument("--stage", required=True, choices=["planning", "tool_selection", "response_generation"])
+    agent_context.add_argument("--agent-name", required=True)
+    agent_context.add_argument("--session-id", required=True)
+    agent_context.add_argument("--project-root", default="")
+    agent_context.add_argument("--task-type", default="")
+    agent_context.add_argument("--limit", type=int, default=8)
+    agent_context.add_argument("--max-chars", type=int, default=4000)
+    agent_context.add_argument("--token-budget", type=int, default=800)
+    agent_sub.add_parser("status", help="Show Agent event and preference aggregation status")
+    agent_evidence = agent_sub.add_parser("evidence", help="Show interaction evidence for one memory")
+    agent_evidence.add_argument("memory_id")
+
     return parser
 
 
@@ -197,6 +220,36 @@ def main(argv: list[str] | None = None) -> int:
 
     service = MemGuardService(namespace=args.namespace)
     try:
+        if args.command == "agent":
+            if args.agent_command == "ingest-event":
+                print(json.dumps(service.ingest_interaction(load_event_file(Path(args.file))), ensure_ascii=False, indent=2))
+                return 0
+            if args.agent_command in {"ingest-session", "replay"}:
+                result = service.ingest_interactions(load_event_jsonl(Path(args.file)))
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0
+            if args.agent_command == "context":
+                result = service.build_agent_context(
+                    args.task,
+                    stage=args.stage,
+                    agent_name=args.agent_name,
+                    session_id=args.session_id,
+                    project_root=args.project_root,
+                    task_type=args.task_type,
+                    limit=args.limit,
+                    max_chars=args.max_chars,
+                    token_budget=args.token_budget,
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0
+            if args.agent_command == "status":
+                print(json.dumps(service.interaction_status(), ensure_ascii=False, indent=2))
+                return 0
+            if args.agent_command == "evidence":
+                result = service.preference_evidence(args.memory_id)
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0 if result.get("found") else 2
+
         if args.command == "ingest":
             text, source_uri = _read_ingest(args)
             result = service.ingest_text(text, source_kind=args.source_kind, source_uri=source_uri, tier=args.tier)
