@@ -4,7 +4,10 @@ import json
 import subprocess
 import sys
 
-from memguard.eval.real_agent_behavior import evaluate_real_agent_run
+from memguard.eval.real_agent_behavior import (
+    aggregate_real_agent_results,
+    evaluate_real_agent_run,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -225,3 +228,43 @@ def test_openhands_behavior_suite_validates_dataset_without_running_model(tmp_pa
     assert validation["valid"] is True
     assert validation["case_count"] == 12
     assert validation["case_ids"] == ["R%02d" % index for index in range(1, 13)]
+
+
+def test_real_agent_aggregate_reports_completion_and_unclassified_failures():
+    result = aggregate_real_agent_results(
+        [
+            {
+                "case_id": "R01",
+                "evaluation": {
+                    "status": "pass",
+                    "memory_system": {"passed": True},
+                    "agent_behavior": {"passed": True},
+                    "error_classification": [],
+                },
+            },
+            {
+                "case_id": "R02",
+                "evaluation": {
+                    "status": "memory_pass_agent_fail",
+                    "memory_system": {"passed": True},
+                    "agent_behavior": {"passed": False},
+                    "error_classification": ["task_assertion_failure"],
+                },
+            },
+            {
+                "case_id": "R03",
+                "evaluation": {
+                    "status": "fail",
+                    "memory_system": {"passed": False},
+                    "agent_behavior": {"passed": False},
+                    "error_classification": [],
+                },
+            },
+        ]
+    )
+
+    assert result["case_count"] == 3
+    assert result["completed_case_count"] == 3
+    assert result["unclassified_failure_count"] == 1
+    assert result["memory_system_pass_rate"] == 0.666667
+    assert result["agent_behavior_pass_rate"] == 0.333333

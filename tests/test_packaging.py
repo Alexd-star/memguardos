@@ -8,6 +8,7 @@ from scripts.smoke_submission_archive import command_name
 from scripts.check_competition_ready import (
     check_deb_install_evidence,
     check_eval,
+    check_memory_value_evidence,
     check_openkylin_metrics,
     check_performance_evidence,
 )
@@ -54,6 +55,25 @@ def test_competition_package_keeps_formal_and_process_materials_separate():
     for rel in process_paths:
         assert classify_file(Path(rel)) not in COMPETITION_ROLES, rel
     assert should_skip(ROOT / "docs/research/sources/arxiv_2512.13564.pdf") is True
+
+
+def test_competition_package_requires_memory_value_code_data_and_evidence():
+    required = {
+        "memguard/eval/memory_value.py",
+        "memguard/eval/real_agent_behavior.py",
+        "scripts/evaluate_memory_value.py",
+        "scripts/run_openhands_behavior_suite.py",
+        "scripts/collect_memory_value_evidence.sh",
+        "data/benchmarks/agent_memory_value.jsonl",
+        "data/benchmarks/real_agent_behavior.jsonl",
+        "docs/真实Agent记忆价值评测报告.md",
+        "docs/evidence/memory_value_latest/deterministic/metrics.json",
+        "docs/evidence/memory_value_latest/real_agent/metrics.json",
+        "docs/evidence/memory_value_latest/manifest.json",
+        "docs/evidence/memory_value_latest/SHA256SUMS.txt",
+    }
+
+    assert required.issubset(REQUIRED_PATHS)
 
 
 def test_submission_package_inspector_rejects_process_materials(tmp_path):
@@ -157,6 +177,31 @@ def test_submission_package_inspector_rejects_weak_agent_evidence(tmp_path):
     assert any(item["path"] == "docs/evidence/agent_latest/benchmark/metrics.json" for item in report["evidence_content_failures"])
 
 
+def test_submission_package_inspector_rejects_incomplete_memory_value_evidence(tmp_path):
+    package = tmp_path / "submission.zip"
+    manifest = tmp_path / "submission_manifest.json"
+    names = sorted(REQUIRED_PATHS)
+    with ZipFile(package, "w", ZIP_DEFLATED) as zf:
+        for name in names:
+            body = sample_submission_body(name)
+            if name == "docs/evidence/memory_value_latest/real_agent/metrics.json":
+                body = '{"case_count":10,"completed_case_count":9,"unclassified_failure_count":1,"memory_system_pass_rate":0.5}\n'
+            zf.writestr(name, body)
+    manifest.write_text(
+        '{"files": [%s]}'
+        % ",".join('{"path": "%s", "role": "%s"}' % (name, classify_file(Path(name))) for name in names),
+        encoding="utf-8",
+    )
+
+    report = inspect_package(package, manifest)
+
+    assert report["ok"] is False
+    assert any(
+        item["path"] == "docs/evidence/memory_value_latest/real_agent/metrics.json"
+        for item in report["evidence_content_failures"]
+    )
+
+
 def sample_submission_body(name: str) -> str:
     if name == "docs/evidence/latest/pytest.txt":
         return "60 passed in 22.65s\n"
@@ -177,6 +222,10 @@ def sample_submission_body(name: str) -> str:
   "failures": []
 }
 """.strip()
+    if name == "docs/evidence/memory_value_latest/deterministic/metrics.json":
+        return '{"case_count":16,"system_validation":{"passed":16,"failed":0},"failures":[]}\n'
+    if name == "docs/evidence/memory_value_latest/real_agent/metrics.json":
+        return '{"case_count":12,"completed_case_count":12,"unclassified_failure_count":0,"memory_system_pass_rate":0.916667,"agent_behavior_pass_rate":0.75}\n'
     if name == "docs/evidence/latest/sdk_embedding_probe.txt":
         return '$ memctl sdk-status --probe-embedding\n\n{"embedding":{"inference_ready":true,"embedding_probe":{"dim":768}}}\n'
     if name == "docs/evidence/latest/eval_result_openkylin_10k.json":
@@ -365,3 +414,64 @@ $ memctl sdk-status --probe-embedding
     checks = check_deb_install_evidence(evidence, severity="P0")
     assert checks
     assert all(item.ok for item in checks)
+
+
+def test_competition_ready_requires_complete_memory_value_evidence(tmp_path):
+    evidence = tmp_path / "memory_value"
+    (evidence / "deterministic").mkdir(parents=True)
+    (evidence / "real_agent").mkdir(parents=True)
+    (evidence / "deterministic" / "metrics.json").write_text(
+        json.dumps(
+            {
+                "case_count": 16,
+                "system_validation": {"passed": 16, "failed": 0},
+                "failures": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (evidence / "real_agent" / "metrics.json").write_text(
+        json.dumps(
+            {
+                "case_count": 12,
+                "completed_case_count": 12,
+                "unclassified_failure_count": 0,
+                "memory_system_pass_rate": 0.916667,
+                "agent_behavior_pass_rate": 0.75,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (evidence / "manifest.json").write_text(
+        '{"file_count": 2, "files": []}',
+        encoding="utf-8",
+    )
+    (evidence / "SHA256SUMS.txt").write_text("evidence hashes\n", encoding="utf-8")
+
+    checks = check_memory_value_evidence(evidence, severity="P0")
+    by_name = {item.name: item for item in checks}
+
+    assert by_name["16 组确定性配对实验"].ok is True
+    assert by_name["12 组真实 OpenHands 案例"].ok is True
+    assert by_name["真实案例失败均已归因"].ok is True
+    assert by_name["真实记忆系统层通过率"].ok is True
+
+
+def test_competition_ready_rejects_incomplete_memory_value_evidence(tmp_path):
+    evidence = tmp_path / "memory_value"
+    (evidence / "real_agent").mkdir(parents=True)
+    (evidence / "real_agent" / "metrics.json").write_text(
+        json.dumps(
+            {
+                "case_count": 10,
+                "completed_case_count": 9,
+                "unclassified_failure_count": 1,
+                "memory_system_pass_rate": 0.5,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    checks = check_memory_value_evidence(evidence, severity="P0")
+
+    assert any(not item.ok for item in checks)

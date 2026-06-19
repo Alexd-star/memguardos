@@ -24,6 +24,8 @@ REQUIRED_PATHS = {
     "memguard/integrations/openhands_adapter.py",
     "memguard/integrations/openhands_runner.py",
     "memguard/integrations/bridge.py",
+    "memguard/eval/memory_value.py",
+    "memguard/eval/real_agent_behavior.py",
     "memguard/store/mmap_store.py",
     "memguard/store/sqlite_meta.py",
     "memguard/retrieval/hybrid.py",
@@ -37,7 +39,12 @@ REQUIRED_PATHS = {
     "scripts/memguard_agent_bridge.py",
     "scripts/run_openhands_memguard_demo.py",
     "scripts/evaluate_agent_interactions.py",
+    "scripts/evaluate_memory_value.py",
+    "scripts/run_openhands_behavior_suite.py",
+    "scripts/collect_memory_value_evidence.sh",
     "data/benchmarks/agent_interactions.jsonl",
+    "data/benchmarks/agent_memory_value.jsonl",
+    "data/benchmarks/real_agent_behavior.jsonl",
     "scripts/peony_file_scan_smoke.sh",
     "native/bpf_lsm/memguard_lsm.bpf.c",
     "native/ukui/peony-memguard/memguard_peony_plugin.cpp",
@@ -65,6 +72,11 @@ REQUIRED_PATHS = {
     "docs/evidence/agent_latest/audit_verify.json",
     "docs/evidence/agent_latest/manifest.json",
     "docs/evidence/agent_latest/SHA256SUMS.txt",
+    "docs/evidence/memory_value_latest/deterministic/metrics.json",
+    "docs/evidence/memory_value_latest/real_agent/metrics.json",
+    "docs/evidence/memory_value_latest/manifest.json",
+    "docs/evidence/memory_value_latest/SHA256SUMS.txt",
+    "docs/真实Agent记忆价值评测报告.md",
 } | FORMAL_DOCS
 
 FORBIDDEN_EXACT = {
@@ -232,6 +244,76 @@ def check_evidence_content(package: Path, name_set: set[str]) -> list[dict[str, 
                         "path": "docs/evidence/agent_latest/benchmark/metrics.json",
                         "reason": "Agent benchmark contains failures",
                         "actual": agent_metrics.get("failures"),
+                    }
+                )
+
+        memory_value_deterministic = _json_from_text(
+            text(
+                "docs/evidence/memory_value_latest/deterministic/metrics.json"
+            )
+        )
+        if not memory_value_deterministic:
+            failures.append(
+                {
+                    "path": "docs/evidence/memory_value_latest/deterministic/metrics.json",
+                    "reason": "cannot parse deterministic memory-value metrics",
+                }
+            )
+        else:
+            deterministic_ok = (
+                memory_value_deterministic.get("case_count") == 16
+                and _nested_get(
+                    memory_value_deterministic,
+                    ["system_validation", "passed"],
+                )
+                == 16
+                and _nested_get(
+                    memory_value_deterministic,
+                    ["system_validation", "failed"],
+                )
+                == 0
+                and not memory_value_deterministic.get("failures")
+            )
+            if not deterministic_ok:
+                failures.append(
+                    {
+                        "path": "docs/evidence/memory_value_latest/deterministic/metrics.json",
+                        "reason": "16-case deterministic memory-value gate did not pass",
+                    }
+                )
+
+        memory_value_real = _json_from_text(
+            text("docs/evidence/memory_value_latest/real_agent/metrics.json")
+        )
+        if not memory_value_real:
+            failures.append(
+                {
+                    "path": "docs/evidence/memory_value_latest/real_agent/metrics.json",
+                    "reason": "cannot parse real Agent memory-value metrics",
+                }
+            )
+        else:
+            real_rules = [
+                ("case_count", 12),
+                ("completed_case_count", 12),
+                ("unclassified_failure_count", 0),
+            ]
+            for key, expected in real_rules:
+                if memory_value_real.get(key) != expected:
+                    failures.append(
+                        {
+                            "path": "docs/evidence/memory_value_latest/real_agent/metrics.json",
+                            "reason": "%s must equal %s" % (key, expected),
+                            "actual": memory_value_real.get(key),
+                        }
+                    )
+            memory_rate = memory_value_real.get("memory_system_pass_rate")
+            if not isinstance(memory_rate, (int, float)) or memory_rate < 0.75:
+                failures.append(
+                    {
+                        "path": "docs/evidence/memory_value_latest/real_agent/metrics.json",
+                        "reason": "memory_system_pass_rate must be at least 0.75",
+                        "actual": memory_rate,
                     }
                 )
 

@@ -141,6 +141,10 @@ def evaluate_real_agent_run(
         error_classes.append("tool_failure")
     if expected_tool and not first_tool_correct:
         error_classes.append("tool_selection")
+    if memory_failures and "memory_assertion_failure" not in error_classes:
+        error_classes.append("memory_assertion_failure")
+    if behavior_failures and not error_classes:
+        error_classes.append("task_assertion_failure")
 
     return {
         "status": status,
@@ -167,6 +171,49 @@ def evaluate_real_agent_run(
             "task_error_count": len(task_errors),
         },
         "error_classification": error_classes,
+    }
+
+
+def aggregate_real_agent_results(
+    results: List[Dict[str, object]],
+) -> Dict[str, object]:
+    status_distribution = Counter(
+        str(result.get("evaluation", {}).get("status") or "fail")
+        for result in results
+    )
+    behavior_passed = sum(
+        1
+        for result in results
+        if result.get("evaluation", {}).get("agent_behavior", {}).get("passed")
+    )
+    memory_passed = sum(
+        1
+        for result in results
+        if result.get("evaluation", {}).get("memory_system", {}).get("passed")
+    )
+    unclassified = sum(
+        1
+        for result in results
+        if result.get("evaluation", {}).get("status") != "pass"
+        and not result.get("evaluation", {}).get("error_classification")
+    )
+    count = len(results)
+    return {
+        "case_count": count,
+        "completed_case_count": count,
+        "status_distribution": dict(sorted(status_distribution.items())),
+        "memory_system_pass_rate": round(memory_passed / count, 6)
+        if count
+        else 0.0,
+        "agent_behavior_pass_rate": round(behavior_passed / count, 6)
+        if count
+        else 0.0,
+        "unclassified_failure_count": unclassified,
+        "failed_case_ids": [
+            str(result.get("case_id") or "")
+            for result in results
+            if result.get("evaluation", {}).get("status") != "pass"
+        ],
     }
 
 

@@ -14,7 +14,10 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from memguard.eval.real_agent_behavior import evaluate_real_agent_run  # noqa: E402
+from memguard.eval.real_agent_behavior import (  # noqa: E402
+    aggregate_real_agent_results,
+    evaluate_real_agent_run,
+)
 from memguard.ingestion.tool_result import ToolResult  # noqa: E402
 from memguard.integrations.events import AgentInteractionEvent  # noqa: E402
 from memguard.integrations.openhands_adapter import detect_openhands_runtime  # noqa: E402
@@ -257,38 +260,6 @@ def flatten_context(context):
     return flattened
 
 
-def aggregate_results(results):
-    status_distribution = Counter(
-        str(result.get("evaluation", {}).get("status") or "fail")
-        for result in results
-    )
-    behavior_passed = sum(
-        1
-        for result in results
-        if result.get("evaluation", {}).get("agent_behavior", {}).get("passed")
-    )
-    memory_passed = sum(
-        1
-        for result in results
-        if result.get("evaluation", {}).get("memory_system", {}).get("passed")
-    )
-    return {
-        "case_count": len(results),
-        "status_distribution": dict(sorted(status_distribution.items())),
-        "memory_system_pass_rate": round(memory_passed / len(results), 6)
-        if results
-        else 0.0,
-        "agent_behavior_pass_rate": round(behavior_passed / len(results), 6)
-        if results
-        else 0.0,
-        "failed_case_ids": [
-            result["case_id"]
-            for result in results
-            if result.get("evaluation", {}).get("status") != "pass"
-        ],
-    }
-
-
 def workspace_manifest(workspace: Path):
     return [
         {
@@ -387,7 +358,7 @@ def main():
         case for case in cases if not selected_ids or case["case_id"] in selected_ids
     ]
     results = [run_case(case, output_dir, args) for case in selected]
-    metrics = aggregate_results(results)
+    metrics = aggregate_real_agent_results(results)
     metrics["runtime"] = runtime
     (output_dir / "metrics.json").write_text(
         json.dumps(metrics, ensure_ascii=False, indent=2),

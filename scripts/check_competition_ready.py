@@ -57,6 +57,7 @@ REQUIRED_DOCS = [
     "docs/测试报告.md",
     "docs/真实Agent接入使用说明.md",
     "docs/真实Agent闭环测试报告.md",
+    "docs/真实Agent记忆价值评测报告.md",
     "docs/赛题符合性说明.md",
     "docs/可解释抽取答辩说明.md",
     "docs/评委证据包索引.md",
@@ -78,7 +79,10 @@ REQUIRED_SOURCE_PATHS = [
     "scripts/install_openkylin.sh",
     "scripts/collect_openkylin_evidence.sh",
     "scripts/collect_agent_evidence.sh",
+    "scripts/collect_memory_value_evidence.sh",
     "scripts/run_openhands_memguard_demo.py",
+    "scripts/run_openhands_behavior_suite.py",
+    "scripts/evaluate_memory_value.py",
     "scripts/memguard_agent_bridge.py",
     "scripts/memguard-agent@.service",
     "memguard/integrations/openhands_adapter.py",
@@ -86,6 +90,8 @@ REQUIRED_SOURCE_PATHS = [
     "memguard/integrations/context_injector.py",
     "memguard/eval/ablation.py",
     "memguard/eval/performance_suite.py",
+    "memguard/eval/memory_value.py",
+    "memguard/eval/real_agent_behavior.py",
     "scripts/build_deb.sh",
     "scripts/generate_bpf_lsm_policy.py",
     "scripts/package_submission.py",
@@ -158,6 +164,11 @@ def main() -> int:
         default="docs/evidence/performance_latest",
         help="Optimized concurrency and ablation evidence directory",
     )
+    parser.add_argument(
+        "--memory-value-evidence-dir",
+        default="docs/evidence/memory_value_latest",
+        help="Agent memory-value paired and real OpenHands evidence directory",
+    )
     parser.add_argument("--output", default="", help="Optional JSON report path")
     parser.add_argument("--markdown", default="", help="Optional Markdown report path")
     parser.add_argument("--allow-missing-openkylin", action="store_true", help="Downgrade missing openKylin evidence files to P1 warnings")
@@ -166,12 +177,14 @@ def main() -> int:
     eval_path = _resolve(args.eval)
     evidence_dir = _resolve(args.evidence_dir)
     performance_evidence_dir = _resolve(args.performance_evidence_dir)
+    memory_value_evidence_dir = _resolve(args.memory_value_evidence_dir)
     checks = []
     checks.extend(check_docs())
     checks.extend(check_sources())
     checks.extend(check_eval(eval_path))
     checks.extend(check_openkylin_evidence(evidence_dir, allow_missing=args.allow_missing_openkylin))
     checks.extend(check_performance_evidence(performance_evidence_dir, severity="P0"))
+    checks.extend(check_memory_value_evidence(memory_value_evidence_dir, severity="P0"))
     checks.extend(check_repository_hygiene())
 
     failed = [item for item in checks if not item.ok and item.severity == "P0"]
@@ -558,6 +571,125 @@ def check_performance_evidence(evidence_dir: Path, severity: str) -> List[Check]
             severity=severity,
         )
     )
+    return checks
+
+
+def check_memory_value_evidence(
+    evidence_dir: Path,
+    severity: str,
+) -> List[Check]:
+    checks = [
+        Check(
+            "Agent记忆价值证据",
+            "证据目录",
+            evidence_dir.exists(),
+            _display_path(evidence_dir),
+            severity=severity,
+        )
+    ]
+    deterministic = _load_evidence_json(
+        evidence_dir / "deterministic" / "metrics.json"
+    )
+    real_agent = _load_evidence_json(
+        evidence_dir / "real_agent" / "metrics.json"
+    )
+    deterministic_ok = bool(
+        deterministic
+        and int(deterministic.get("case_count", 0)) == 16
+        and int(
+            _nested_get(deterministic, ["system_validation", "passed"]) or 0
+        )
+        == 16
+        and int(
+            _nested_get(deterministic, ["system_validation", "failed"]) or 0
+        )
+        == 0
+        and not deterministic.get("failures")
+    )
+    checks.append(
+        Check(
+            "Agent记忆价值证据",
+            "16 组确定性配对实验",
+            deterministic_ok,
+            (
+                "case_count=%s passed=%s failed=%s"
+                % (
+                    deterministic.get("case_count"),
+                    _nested_get(deterministic, ["system_validation", "passed"]),
+                    _nested_get(deterministic, ["system_validation", "failed"]),
+                )
+                if deterministic
+                else "metrics.json 缺失或无法解析"
+            ),
+            severity=severity,
+        )
+    )
+    real_case_count = int(real_agent.get("case_count", 0)) if real_agent else 0
+    completed_count = (
+        int(real_agent.get("completed_case_count", 0)) if real_agent else 0
+    )
+    checks.append(
+        Check(
+            "Agent记忆价值证据",
+            "12 组真实 OpenHands 案例",
+            real_case_count == 12 and completed_count == 12,
+            "case_count=%s completed=%s" % (real_case_count, completed_count),
+            severity=severity,
+        )
+    )
+    unclassified = (
+        int(real_agent.get("unclassified_failure_count", -1))
+        if real_agent
+        else -1
+    )
+    checks.append(
+        Check(
+            "Agent记忆价值证据",
+            "真实案例失败均已归因",
+            unclassified == 0,
+            "unclassified_failure_count=%s" % unclassified,
+            severity=severity,
+        )
+    )
+    memory_pass_rate = (
+        float(real_agent.get("memory_system_pass_rate", 0.0))
+        if real_agent
+        else 0.0
+    )
+    checks.append(
+        Check(
+            "Agent记忆价值证据",
+            "真实记忆系统层通过率",
+            memory_pass_rate >= 0.75,
+            "当前 %.4f，要求 >= 0.7500" % memory_pass_rate,
+            severity=severity,
+        )
+    )
+    behavior_pass_rate = (
+        float(real_agent.get("agent_behavior_pass_rate", 0.0))
+        if real_agent
+        else 0.0
+    )
+    checks.append(
+        Check(
+            "Agent记忆价值证据",
+            "真实 Agent 行为层结果已记录",
+            real_agent is not None and 0.0 <= behavior_pass_rate <= 1.0,
+            "agent_behavior_pass_rate=%.4f" % behavior_pass_rate,
+            severity=severity,
+        )
+    )
+    for name in ("manifest.json", "SHA256SUMS.txt"):
+        path = evidence_dir / name
+        checks.append(
+            Check(
+                "Agent记忆价值证据",
+                name,
+                path.exists() and path.stat().st_size > 0,
+                "存在且非空" if path.exists() and path.stat().st_size > 0 else "缺失或为空",
+                severity=severity,
+            )
+        )
     return checks
 
 
