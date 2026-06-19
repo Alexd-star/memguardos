@@ -250,6 +250,31 @@ class FakeStructuredIntentConversation(FakePreferenceRepairConversation):
         )
 
 
+class FakeSuccessfulToolWithStructuredAnswerConversation(FakeConversation):
+    def run(self):
+        super().run()
+        self.callback(
+            fake_event(
+                "MessageEvent",
+                id="fake-structured-answer-after-success",
+                source="agent",
+                llm_message=SimpleNamespace(
+                    role="assistant",
+                    content=[
+                        text(
+                            json.dumps(
+                                {
+                                    "command": "rg -n build_agent_context .",
+                                    "timeout": 10,
+                                }
+                            )
+                        )
+                    ],
+                ),
+            )
+        )
+
+
 class FakeStructuredIntentAfterRepairConversation(FakePreferenceRepairConversation):
     def run(self):
         self.run_count += 1
@@ -606,6 +631,50 @@ def test_runner_recovers_strict_read_only_structured_tool_intent(tmp_path):
         service.close()
 
 
+def test_runner_does_not_reexecute_structured_intent_after_successful_preferred_tool(
+    tmp_path,
+):
+    service = make_service(tmp_path)
+    service.ingest_interaction(
+        interaction_event(
+            "以后搜索项目代码优先使用 rg。",
+            "evt-no-duplicate-recovery-history",
+            1,
+            session_id="session-no-duplicate-recovery-history",
+        )
+    )
+    executions = []
+
+    def recovery_executor(argv, **kwargs):
+        executions.append((argv, kwargs))
+        raise AssertionError("successful preferred tool must not be re-executed")
+
+    def conversation_factory(**kwargs):
+        return FakeSuccessfulToolWithStructuredAnswerConversation(kwargs["callback"])
+
+    try:
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id="session-no-duplicate-recovery",
+            workspace=tmp_path / "workspace",
+            state_dir=tmp_path / "state",
+            conversation_factory=conversation_factory,
+            structured_intent_executor=recovery_executor,
+        )
+
+        result = runner.run("请查找 build_agent_context 的定义位置。")
+
+        assert result["ok"] is True
+        assert result["structured_intent_recovery"]["attempted"] is False
+        assert (
+            result["structured_intent_recovery"]["reason"]
+            == "successful preferred tool already available"
+        )
+        assert executions == []
+    finally:
+        service.close()
+
+
 def test_runner_recovers_structured_intent_emitted_after_bounded_repair(tmp_path):
     service = make_service(tmp_path)
     service.ingest_interaction(
@@ -643,6 +712,32 @@ def test_runner_recovers_structured_intent_emitted_after_bounded_repair(tmp_path
         assert result["structured_intent_recovery"]["attempted"] is True
         assert result["structured_intent_recovery"]["executed"] is True
         assert result["adherence"]["remaining_issues"] == []
+    finally:
+        service.close()
+
+
+def test_runner_resets_per_run_metrics_when_instance_is_reused(tmp_path):
+    service = make_service(tmp_path)
+
+    def conversation_factory(**kwargs):
+        return FakeConversation(kwargs["callback"])
+
+    try:
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id="session-reused-runner",
+            workspace=tmp_path / "workspace",
+            state_dir=tmp_path / "state",
+            conversation_factory=conversation_factory,
+        )
+
+        first = runner.run("第一次查找 build_agent_context。")
+        second = runner.run("第二次查找 build_agent_context。")
+
+        assert first["event_summary"]["tool_calls"] == 1
+        assert second["event_summary"]["tool_calls"] == 1
+        assert second["event_summary"]["tool_results"] == 1
+        assert second["event_summary"]["task_errors"] == 0
     finally:
         service.close()
 

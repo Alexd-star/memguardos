@@ -4,6 +4,7 @@ import json
 
 from scripts.inspect_submission_package import REQUIRED_PATHS, inspect_package
 from scripts.package_submission import COMPETITION_ROLES, ROOT, classify_file, should_skip
+from scripts.refresh_evidence_manifest import refresh_evidence_manifest
 from scripts.smoke_submission_archive import command_name
 from scripts.check_competition_ready import (
     check_deb_install_evidence,
@@ -84,6 +85,37 @@ def test_memory_value_collector_supports_synchronized_tree_without_git_head():
     assert "git rev-parse --verify HEAD" in script
     assert "MEMGUARD_SOURCE_REVISION" in script
     assert "synchronized_tree_without_git_metadata" in script
+    assert "\\`deterministic/\\`" in script
+    assert "\\`real_agent/\\`" in script
+
+
+def test_refresh_evidence_manifest_rebuilds_checksums_and_manifest(tmp_path):
+    evidence = tmp_path / "evidence"
+    (evidence / "nested").mkdir(parents=True)
+    (evidence / "README.md").write_text("证据说明\n", encoding="utf-8")
+    (evidence / "nested" / "result.json").write_text(
+        '{"ok": true}\n',
+        encoding="utf-8",
+    )
+
+    report = refresh_evidence_manifest(evidence)
+
+    assert report["file_count"] == 3
+    checksum_lines = (evidence / "SHA256SUMS.txt").read_text(
+        encoding="utf-8"
+    ).splitlines()
+    assert len(checksum_lines) == 2
+    assert checksum_lines[0].endswith("  README.md")
+    assert checksum_lines[1].endswith("  nested/result.json")
+    manifest = json.loads(
+        (evidence / "manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["file_count"] == 3
+    assert [item["path"] for item in manifest["files"]] == [
+        "README.md",
+        "SHA256SUMS.txt",
+        "nested/result.json",
+    ]
 
 
 def test_submission_package_inspector_rejects_process_materials(tmp_path):

@@ -14,6 +14,7 @@ from time import perf_counter
 from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.adherence import (
     build_adherence_repair_message,
+    command_executable,
     detect_adherence_issues,
     parse_structured_tool_intent,
     procedural_memory_evidence,
@@ -175,6 +176,7 @@ class OpenHandsMemoryRunner:
 
     def run(self, task: str) -> Dict[str, object]:
         started = perf_counter()
+        self._reset_run_state()
         self._validate_workspace()
         self.workspace.mkdir(parents=True, exist_ok=True)
         context_bundle = self.prepare_context(task)
@@ -310,6 +312,16 @@ class OpenHandsMemoryRunner:
             },
         }
 
+    def _reset_run_state(self) -> None:
+        self._event_results.clear()
+        self._event_types.clear()
+        self._unknown_events.clear()
+        self._tool_commands.clear()
+        self._procedural_memories.clear()
+        self._live_events.clear()
+        self.adapter.tool_turns.clear()
+        self.adapter.internal_feedback.clear()
+
     def _recover_structured_tool_intent(
         self,
         stages: Dict[str, object],
@@ -325,6 +337,12 @@ class OpenHandsMemoryRunner:
         }
         if not preferred_tool:
             result["reason"] = "no applicable tool preference"
+            return result
+        if any(
+            command_executable(command) == preferred_tool
+            for command in successful_terminal_commands(self._live_events)
+        ):
+            result["reason"] = "successful preferred tool already available"
             return result
         intent = None
         for event in reversed(self._live_events):
