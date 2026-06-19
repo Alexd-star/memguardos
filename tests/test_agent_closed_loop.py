@@ -280,9 +280,32 @@ def test_formatted_agent_context_turns_structured_preferences_into_clear_directi
     formatted = format_agent_context("ctx-test", stages)
 
     assert "代码搜索必须优先使用 `rg`" in formatted
-    assert "`rg -n '关键词' 路径`" in formatted
+    assert "`rg -n '关键词' .`" in formatted
     assert "高风险操作必须先获得用户确认" in formatted
     assert "最终回答必须先给命令或结论，再解释原因" in formatted
+
+
+def test_formatted_agent_context_turns_tool_history_into_reuse_and_avoid_guidance():
+    stages = {
+        "planning": {
+            "context": (
+                "Tool result: command=find memguard -name service.py "
+                "status=success exit_code=0\n"
+                "Tool result: command=fd service.py status=failure exit_code=127"
+            ),
+            "memories": [
+                {"subtype": "procedural_trace"},
+                {"subtype": "tool_failure_case"},
+            ],
+        },
+        "tool_selection": {"context": "", "memories": []},
+        "response_generation": {"context": "", "memories": []},
+    }
+
+    formatted = format_agent_context("ctx-procedure", stages)
+
+    assert "优先直接复用 `find memguard -name service.py`" in formatted
+    assert "不要重复执行 `fd service.py`" in formatted
 
 
 def test_openhands_hook_injects_context_and_blocks_high_risk_commands(tmp_path):
