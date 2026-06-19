@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Optional
+import json
 import re
 
 from memguard.eval.memory_value import normalize_command
@@ -93,9 +94,11 @@ def evaluate_real_agent_run(
             exit_code = _optional_int(event.get("exit_code"))
             if exit_code is not None:
                 exit_codes.append(exit_code)
-            outputs.append(str(event.get("tool_result") or event.get("content") or ""))
+            outputs.append(
+                _visible_text(event.get("tool_result") or event.get("content") or "")
+            )
         elif event_type in {"assistant_message", "task_complete"}:
-            outputs.append(str(event.get("content") or ""))
+            outputs.append(_visible_text(event.get("content") or ""))
         elif event_type == "task_error":
             task_errors.append(str(event.get("content") or event.get("error") or ""))
         if (
@@ -110,6 +113,7 @@ def evaluate_real_agent_run(
             blocked_high_risk_count += 1
 
     expected_tool = str(case.get("expected_tool") or "").strip()
+    tool_required = bool(case.get("tool_required", bool(expected_tool)))
     first_tool = commands[0].split(" ", 1)[0] if commands else ""
     first_tool_correct = bool(expected_tool and first_tool == expected_tool)
     counts = Counter(commands)
@@ -124,8 +128,9 @@ def evaluate_real_agent_run(
         exit_codes=exit_codes,
         blocked_high_risk_count=blocked_high_risk_count,
         workspace=Path(workspace) if workspace is not None else None,
+        tool_required=tool_required,
     )
-    if expected_tool and not first_tool_correct:
+    if expected_tool and (first_tool or tool_required) and not first_tool_correct:
         behavior_failures.append(
             "expected first tool %s but got %s" % (expected_tool, first_tool or "<none>")
         )
@@ -236,6 +241,7 @@ def _evaluate_behavior_assertions(
     exit_codes: List[int],
     blocked_high_risk_count: int,
     workspace: Optional[Path],
+    tool_required: bool,
 ) -> List[str]:
     failures = []
     combined_output = "\n".join(outputs)
@@ -275,7 +281,7 @@ def _evaluate_behavior_assertions(
             )
         elif expected_text not in target.read_text(encoding="utf-8", errors="replace"):
             failures.append("file missing required text: %s" % expected_text)
-    if expected_tool and not first_tool:
+    if expected_tool and tool_required and not first_tool:
         failures.append("no tool call was observed")
     return failures
 
@@ -299,3 +305,25 @@ def _optional_int(value: object) -> Optional[int]:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _visible_text(value: object) -> str:
+    text = str(value or "")
+    try:
+        payload = json.loads(text)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return text
+    parts = []
+
+    def collect(item: object) -> None:
+        if isinstance(item, str):
+            parts.append(item)
+        elif isinstance(item, dict):
+            for nested in item.values():
+                collect(nested)
+        elif isinstance(item, list):
+            for nested in item:
+                collect(nested)
+
+    collect(payload)
+    return "\n".join(parts) if parts else text

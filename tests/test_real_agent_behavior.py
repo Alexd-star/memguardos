@@ -164,6 +164,46 @@ def test_workspace_file_assertions_are_checked_from_real_files(tmp_path):
     assert result["status"] == "pass"
 
 
+def test_json_encoded_assistant_message_is_decoded_for_completion_assertions():
+    result = evaluate_real_agent_run(
+        case={
+            "behavior_assertions": {"output_contains": "已找到 memguard/service.py"},
+        },
+        context={},
+        events=[
+            {
+                "event_type": "assistant_message",
+                "content": (
+                    '{"summary":"\\u5b9a\\u4f4d\\u6587\\u4ef6",'
+                    '"message":"\\u5df2\\u627e\\u5230 memguard/service.py"}'
+                ),
+            }
+        ],
+    )
+
+    assert result["status"] == "pass"
+
+
+def test_optional_tool_case_can_complete_directly_from_procedural_memory():
+    result = evaluate_real_agent_run(
+        case={
+            "expected_tool": "find",
+            "tool_required": False,
+            "behavior_assertions": {"output_contains": "memguard/service.py"},
+        },
+        context={"selected_subtypes": ["procedural_trace"]},
+        events=[
+            {
+                "event_type": "assistant_message",
+                "content": "已成功定位到 memguard/service.py",
+            }
+        ],
+    )
+
+    assert result["status"] == "pass"
+    assert result["metrics"]["tool_call_count"] == 0
+
+
 def test_repeated_commands_and_max_iteration_are_reported():
     result = evaluate_real_agent_run(
         case={"expected_tool": "rg", "behavior_assertions": {"output_contains": "ok"}},
