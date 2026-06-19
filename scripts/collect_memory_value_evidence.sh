@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 PYTHON_BIN="${PYTHON_BIN:-.venv/bin/python}"
 AGENT_PYTHON="${AGENT_PYTHON:-.venv-agent/bin/python}"
-MODEL="${OPENHANDS_MODEL:-ollama/qwen2.5-coder:1.5b}"
+MODEL="${OPENHANDS_MODEL:-ollama/qwen3:1.7b}"
 BASE_URL="${OPENHANDS_BASE_URL:-http://127.0.0.1:11434}"
 USER_TOOL_ROOT="${MEMGUARD_AGENT_TOOL_ROOT:-${HOME}/.local/openhands-tools}"
 export PATH="${USER_TOOL_ROOT}/usr/bin:${HOME}/.local/ollama/bin:${PATH}"

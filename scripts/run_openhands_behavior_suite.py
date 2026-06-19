@@ -316,7 +316,7 @@ def build_parser():
     )
     parser.add_argument(
         "--model",
-        default=os.environ.get("OPENHANDS_MODEL", "ollama/qwen2.5-coder:1.5b"),
+        default=os.environ.get("OPENHANDS_MODEL", "ollama/qwen3:1.7b"),
     )
     parser.add_argument(
         "--base-url",
