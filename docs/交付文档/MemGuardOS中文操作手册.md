@@ -810,7 +810,7 @@ python scripts/web_dashboard_smoke.py
 python -m memguard.eval.run_eval --latency-size 10000 --latency-queries 150 --output docs/eval_result_openkylin_10k.json --markdown docs/eval_report_openkylin_10k.md
 ```
 
-当前正式证据中，openKylin 10k 负载 P95 为 10.844 ms，P99 为 106.095 ms，RSS 为 149284 KB；openKylin 单元测试证据为 68 passed；本地单元测试为 70 passed。提交前如果重新运行评测并得到新结果，应同步更新 README、测试报告、平台摘要和答辩材料中的指标。
+当前正式证据中，openKylin 10k 负载 P95 为 10.844 ms，P99 为 106.095 ms，RSS 为 149284 KB；openKylin 单元测试为 133 passed；本地单元测试为 133 passed、1 skipped。真实 Agent 专项包含 200 条交互样例，提取、遗忘和跨会话指标均为 1.0000，角色污染率和敏感泄漏率为 0，P95 为 113.97 ms。通用评测与 Agent 专项应分开报告，避免混淆任务口径。
 
 ### 10.3 竞赛就绪自检
 
@@ -1218,7 +1218,7 @@ RAG 上下文是敏感信息最容易外传的环节。写入系统内部的记�
 
 文档材料应以正式中文文档为主。研究笔记可以保留在仓库的研究目录中，但不应作为评委第一阅读入口。评委最需要的是项目介绍、部署手册、用户手册、测试报告、赛题符合性说明、证据包索引、答辩稿和操作手册。材料太多且重复，会让评委难以抓住重点；材料少但有清晰证据，反而更容易建立信任。
 
-提交前应检查所有指标口径是否一致。比如本地测试已复跑为 70 passed、openKylin 证据为 68 passed，就不要继续引用旧的 60 passed。不同环境的测试数量如果确实不同是可以解释的，但如果文档互相矛盾，会让评委怀疑证据是否过期。每次重新采集证据后，都应同步更新 README、平台摘要、测试报告和答辩稿中的关键数字。
+提交前应检查所有指标口径是否一致。当前本地测试为 133 passed、1 skipped，openKylin 为 133 passed；差异来自 Linux 专属测试在目标系统实际执行。不同环境的测试数量如果确实不同是可以解释的，但文档之间不能引用过期数字。每次重新采集证据后，都应同步更新 README、平台摘要、测试报告、答辩稿和操作手册中的关键数字。
 
 ## 第19章 长期维护与二次开发说明
 

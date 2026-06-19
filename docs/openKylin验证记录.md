@@ -1,10 +1,10 @@
 # openKylin 验证记录
 
-本文记录在 openKylin 上验证 MemGuardOS 的命令和结果。录制最终视频前需要在最终环境中复跑。
+本文记录在 openKylin 上验证 MemGuardOS 的命令和结果。通用功能与真实 Agent 专项已经完成最终环境复跑。
 
 ## 0. 已验证 VM 快照
 
-日期：2026-05-18 至 2026-06-07
+日期：2026-05-18 至 2026-06-19
 
 说明：本页记录已经完成的 openKylin 证据。最新证据包采集时间为 `20260607_123336`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、可解释语义抽取、时间有效性窗口、本地 Web 控制台、Kylin embedding 实际检索重排、Kylin 向量数据库探针、BPF JSON 策略生成、BPF LSM 安全测试文件强制拒绝、Peony/UKUI 原生插件构建、UKUI 插件可见性核查和 10k 规模评测。当前已补充 Peony 右键菜单、UKUI 控制中心桌面可见验证证据、Debian 安装包构建、openKylin 维护模式完整 apt 安装复验证据、企业化控制中心面板、默认演示库审计链重建验证和诊断报告证据。
 
@@ -26,6 +26,8 @@
 - Kylin vector SDK：`libkysdk-vector-engine-client.so.1` 可加载，C++ 探针完成连接、建表、插入、搜索和清理
 - Debian 安装包：维护模式完整 `apt install` 通过；安装后 `memguardd.service` active、cgroup 限制生效、Peony/UKUI 插件依赖完整、审计链验证通过；安装后 Kylin embedding Python/C++ 探针返回 768 维向量
 - Kylin vector engine 用户服务：active，socket 可用
+- OpenHands SDK：1.28.1，真实终端调用、事件回收与跨会话上下文已验证
+- Agent bridge：`memguard-agent@luo.service` active，普通用户运行，`NoNewPrivileges=yes`、`ProtectSystem=strict`、`MemoryMax=2G`
 
 已验证命令：
 
@@ -39,11 +41,14 @@ python -m memguard.eval.run_eval --latency-size 1000 --latency-queries 120 \
 bash scripts/openkylin_verify.sh
 python -m memguard.cli.memctl sdk-status
 bash scripts/collect_openkylin_evidence.sh --with-10k
+bash scripts/collect_agent_evidence.sh
 ```
 
 最新结果：
 
-- 单元测试：`68 passed`
+- 单元测试：`133 passed`
+- 真实 Agent：OpenHands 实际执行 `rg -n build_agent_context memguard` 并返回真实文件与行号
+- Agent 专项 benchmark：200 条，提取/遗忘/跨会话指标 1.0000，污染率/泄漏率 0，P95 113.97 ms
 - 负载评测：1000 条记忆，120 次检索请求
 - 最新 1k 负载 P95：8.904 ms
 - 最新证据包未单独采集 5k 负载；10k 规模评测覆盖更大数据量

@@ -109,7 +109,7 @@
       "category": "中文文档",
       "name": "docs/13_测试说明.md",
       "ok": true,
-      "detail": "中文字符数 418",
+      "detail": "中文字符数 448",
       "severity": "P0"
     },
     {
@@ -158,14 +158,14 @@
       "category": "中文文档",
       "name": "docs/平台摘要.md",
       "ok": true,
-      "detail": "中文字符数 2711",
+      "detail": "中文字符数 2575",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/项目介绍总览.md",
       "ok": true,
-      "detail": "中文字符数 5928",
+      "detail": "中文字符数 5980",
       "severity": "P0"
     },
     {
@@ -214,7 +214,7 @@
       "category": "中文文档",
       "name": "docs/openKylin验证记录.md",
       "ok": true,
-      "detail": "中文字符数 1565",
+      "detail": "中文字符数 1627",
       "severity": "P0"
     },
     {
@@ -256,7 +256,7 @@
       "category": "中文文档",
       "name": "docs/赛题符合性说明.md",
       "ok": true,
-      "detail": "中文字符数 1082",
+      "detail": "中文字符数 1111",
       "severity": "P0"
     },
     {
@@ -270,21 +270,21 @@
       "category": "中文文档",
       "name": "docs/评委证据包索引.md",
       "ok": true,
-      "detail": "中文字符数 1828",
+      "detail": "中文字符数 1872",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/答辩提纲.md",
       "ok": true,
-      "detail": "中文字符数 1261",
+      "detail": "中文字符数 1293",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/答辩稿.md",
       "ok": true,
-      "detail": "中文字符数 5960",
+      "detail": "中文字符数 5999",
       "severity": "P0"
     },
     {
