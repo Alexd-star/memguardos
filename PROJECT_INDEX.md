@@ -60,6 +60,8 @@ MemGuardOS 是面向 Linux/openKylin 的智能体记忆提取与精准遗忘系�
 | `memguard/forgetting/planner.py` | 自然语言精准遗忘候选规划。 | 遗忘请求、候选记忆。 | 候选列表、匹配理由、风险提示。 | service、tests |
 | `memguard/eval/run_eval.py` | 评测入口。 | benchmark 数据、负载规模参数。 | JSON 指标和 Markdown 报告。 | data、service |
 | `memguard/eval/agent_interactions.py` | Agent 交互专项评测。 | 200 条交互样例。 | 提取、污染、泄漏、遗忘、跨会话和延迟指标。 | integrations、service |
+| `memguard/eval/memory_value.py` | Agent 记忆价值配对指标。 | 三组任务结果与工具轨迹。 | 完成率、工具准确率、轮数、token、错误和重复尝试变化。 | service、Agent benchmark |
+| `memguard/eval/real_agent_behavior.py` | 真实 Agent 行为判定与归因。 | OpenHands 上下文、live session 事件和工作区结果。 | 记忆系统层、Agent 行为层、错误分类和聚合指标。 | openhands_runner |
 | `memguard/integrations/openhands_runner.py` | 运行真实 OpenHands 会话并注入记忆。 | 任务、namespace、会话、模型配置。 | 真实 Agent 结果、标准事件和上下文证据。 | OpenHands SDK、context_injector |
 | `memguard/integrations/interaction_extractor.py` | 提取用户偏好、纠正和反馈。 | 标准 Agent 事件。 | 带证据和作用域的偏好记忆。 | habit_aggregator、service |
 | `memguard/integrations/context_injector.py` | 构建三阶段 Agent 上下文。 | 任务、Agent、会话、阶段、token 预算。 | 规划、工具选择或结果生成上下文。 | retrieval、service |
@@ -71,11 +73,11 @@ MemGuardOS 是面向 Linux/openKylin 的智能体记忆提取与精准遗忘系�
 
 ## 6. 数据文件说明
 
-`data/demo/` 保存演示输入，包括用户配置、工具执行结果、Linux 工作流文本和 BPF LSM 策略示例。`data/benchmarks/` 保存评测 JSONL，包括通用记忆种子、检索、精准遗忘、敏感检测、配置质量、冲突处理、图谱检索、程序性记忆和 `agent_interactions.jsonl` 交互专项样例。不得将可识别个人身份的真实交互、真实凭据或私人日志直接放入该目录。
+`data/demo/` 保存演示输入，包括用户配置、工具执行结果、Linux 工作流文本和 BPF LSM 策略示例。`data/benchmarks/` 保存评测 JSONL，包括通用记忆种子、检索、精准遗忘、敏感检测、配置质量、冲突处理、图谱检索、程序性记忆、`agent_interactions.jsonl` 交互抽取专项、`agent_memory_value.jsonl` 的 16 组配对实验和 `real_agent_behavior.jsonl` 的 12 组真实 Agent 场景。不得将可识别个人身份的真实交互、真实凭据或私人日志直接放入该目录。
 
 ## 7. 文档文件说明
 
-正式中文文档集中在 `docs/` 根目录、`docs/交付文档/` 和 `项目全流程导师资料包/`。其中 `docs/项目介绍总览.md`、`docs/概要设计说明书.md`、`docs/详细设计说明书.md`、`docs/真实Agent接入使用说明.md`、`docs/真实Agent闭环测试报告.md`、`docs/测试报告.md`、`docs/赛题符合性说明.md` 面向正式评审；`docs/evidence/latest/` 是通用 openKylin 证据，`docs/evidence/agent_latest/` 是真实 Agent 专项证据；`项目全流程导师资料包/` 面向参赛者本人从零理解、验收和答辩训练。
+正式中文文档集中在 `docs/` 根目录、`docs/交付文档/` 和 `项目全流程导师资料包/`。其中 `docs/项目介绍总览.md`、`docs/概要设计说明书.md`、`docs/详细设计说明书.md`、`docs/真实Agent接入使用说明.md`、`docs/真实Agent闭环测试报告.md`、`docs/真实Agent记忆价值评测报告.md`、`docs/测试报告.md`、`docs/赛题符合性说明.md` 面向正式评审；`docs/evidence/latest/` 是通用 openKylin 证据，`docs/evidence/agent_latest/` 是真实 Agent 基础闭环证据，`docs/evidence/memory_value_latest/` 是 16+12 组记忆价值证据；`项目全流程导师资料包/` 面向参赛者本人从零理解、验收和答辩训练。
 
 编号文档 `docs/01_项目简介.md` 到 `docs/17_项目交付说明.md` 是本次补齐的维护型中文文档体系，用于把项目介绍、用户操作、部署运维、开发者说明、架构、代码结构、算法、接口、数据、配置、测试、FAQ、更新日志、历史文件和交付边界统一串起来。
 
@@ -140,7 +142,7 @@ python scripts/smoke_submission_archive.py
 ```
 
 openKylin 环境还应运行 `scripts/openkylin_verify.sh`、`scripts/collect_openkylin_evidence.sh`、Kylin SDK 探针、UKUI/Peony smoke、BPF LSM 安全测试和 `.deb` 安装复验。
-真实 Agent 验证还应运行 `scripts/install_agent_extras_openkylin.sh`、`scripts/run_openhands_memguard_demo.py`、`scripts/collect_agent_evidence.sh` 和 `scripts/evaluate_agent_interactions.py`。
+真实 Agent 验证还应运行 `scripts/install_agent_extras_openkylin.sh`、`scripts/run_openhands_memguard_demo.py`、`scripts/collect_agent_evidence.sh` 和 `scripts/evaluate_agent_interactions.py`。记忆价值复验使用 `scripts/evaluate_memory_value.py`、`scripts/run_openhands_behavior_suite.py` 和 `scripts/collect_memory_value_evidence.sh`。
 
 ## 14. 后续维护建议
 

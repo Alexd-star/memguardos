@@ -1,0 +1,1707 @@
+{
+  "case_id": "R03",
+  "title": "多会话重复选择 rg 后形成工具习惯",
+  "category": "implicit_habit",
+  "model": "ollama/qwen3:1.7b",
+  "setup_event_count": 3,
+  "forget_result": null,
+  "run": {
+    "ok": true,
+    "session_id": "r03-live",
+    "trace_id": "ctx_22169395dba9412d",
+    "context_file": "context.json",
+    "duration_ms": 100271.254,
+    "context": {
+      "trace_id": "ctx_22169395dba9412d",
+      "stage_budgets": {
+        "planning": {
+          "max_chars": 4000,
+          "token_budget": 256,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "tool_selection": {
+          "max_chars": 4000,
+          "token_budget": 256,
+          "context_chars": 287,
+          "estimated_context_tokens": 84,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "response_generation": {
+          "max_chars": 4000,
+          "token_budget": 256,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        }
+      },
+      "selected_memory_ids": {
+        "planning": [],
+        "tool_selection": [
+          "mem_cec197c5075641df"
+        ],
+        "response_generation": []
+      },
+      "selected_topics": {
+        "planning": [],
+        "tool_selection": [
+          "code_search_tool"
+        ],
+        "response_generation": []
+      },
+      "selected_values": {
+        "planning": [],
+        "tool_selection": [
+          "rg"
+        ],
+        "response_generation": []
+      },
+      "selected_subtypes": {
+        "planning": [],
+        "tool_selection": [
+          "tool_preference"
+        ],
+        "response_generation": []
+      }
+    },
+    "event_summary": {
+      "stored": 5,
+      "duplicate": 0,
+      "blocked": 0,
+      "tool_calls": 1,
+      "tool_results": 1,
+      "procedural_memories": 1,
+      "procedural_memory_ids": [
+        "mem_097260d7f19e4b7a"
+      ],
+      "task_errors": 0,
+      "event_types": {
+        "user_message": 1,
+        "policy_decision": 1,
+        "tool_call": 1,
+        "tool_result": 1,
+        "assistant_message": 1
+      },
+      "unknown_event_types": {
+        "SystemPromptEvent": 1,
+        "HookExecutionEvent": 1
+      }
+    }
+  },
+  "evaluation": {
+    "status": "pass",
+    "memory_system": {
+      "passed": true,
+      "context_selected": true,
+      "selected_topics": [
+        "code_search_tool"
+      ],
+      "selected_subtypes": [
+        "tool_preference"
+      ],
+      "selected_values": [
+        "rg"
+      ],
+      "failures": []
+    },
+    "agent_behavior": {
+      "passed": true,
+      "task_completed": true,
+      "first_tool": "rg",
+      "first_tool_correct": true,
+      "failures": []
+    },
+    "metrics": {
+      "tool_call_count": 1,
+      "failed_command_count": 0,
+      "repeated_command_count": 0,
+      "blocked_high_risk_count": 0,
+      "task_error_count": 0
+    },
+    "error_classification": []
+  },
+  "events": [
+    {
+      "event_id": "evt-r03-setup-1",
+      "provenance_hash": "c10bd19f642edda3971edc77dda48b977068d5fcc5794923623f2e6dbb580070",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r03-a",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "这次搜索代码请用 rg。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T13:05:57.163552+00:00",
+      "source_uri": "memory-value-real://R03/setup/1",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:05:57.163774+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "evt-r03-setup-2",
+      "provenance_hash": "5cb405b747e73a71714c0e412c026cef7181ea343872086a8f097160c1f98634",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r03-b",
+      "turn_id": "turn-2",
+      "sequence": 2,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "这次仍然用 rg 查找定义。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T13:05:57.171910+00:00",
+      "source_uri": "memory-value-real://R03/setup/2",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:05:57.172086+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "evt-r03-setup-3",
+      "provenance_hash": "006d747dec678fe89c897359fd26d0b71c59712445e3b5c20cd217415a572275",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r03-b",
+      "turn_id": "turn-3",
+      "sequence": 3,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "继续使用 rg 搜索项目。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T13:05:57.180384+00:00",
+      "source_uri": "memory-value-real://R03/setup/3",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:05:57.180589+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "80b0a0bf-138e-4dfc-a841-425f64999229",
+      "provenance_hash": "beadfd8a7a19622763b3e9a39ec61e6f9b79c6bcc5f6e6b21a710f4499aec815",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r03-live",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "请查找项目中定义 forget_agent_interactions 的文件。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/docs/evidence/memory_value_latest/real_agent/cases/R03/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T21:05:57.434655",
+      "source_uri": "openhands://r03-live/80b0a0bf-138e-4dfc-a841-425f64999229",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:05:57.434861+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "7779d918-1ed7-4a88-867b-ee66f0533b57",
+      "provenance_hash": "85d6107ea296e84c04b640b6564554a75bab2d7912b7caab6cce6ef1f8a92910",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r03-live",
+      "turn_id": "turn-1",
+      "sequence": 2,
+      "event_type": "policy_decision",
+      "role": "system",
+      "content": "{\"decision\": \"allow\", \"continue\": true}",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": 0,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/docs/evidence/memory_value_latest/real_agent/cases/R03/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T21:06:44.369313",
+      "source_uri": "openhands://r03-live/7779d918-1ed7-4a88-867b-ee66f0533b57",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:06:44.369547+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "c9753333-4b4b-4ee1-9725-c74930458ff3",
+      "provenance_hash": "6baaf22949ef5a54d0b4d413bf652a273bde1f5ff93ef6a2ca29ddc20c0a420f",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r03-live",
+      "turn_id": "turn-1",
+      "sequence": 3,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/docs/evidence/memory_value_latest/real_agent/cases/R03/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T21:06:44.332707",
+      "source_uri": "openhands://r03-live/c9753333-4b4b-4ee1-9725-c74930458ff3",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:06:44.378472+00:00",
+      "tool_args": {
+        "command": "rg -n 'forget_agent_interactions' .",
+        "is_input": false,
+        "security_risk": "LOW",
+        "summary": "List all Python files in current directory",
+        "timeout": 30
+      }
+    },
+    {
+      "event_id": "b491ca66-73df-44c4-ace8-bee7eff5851e",
+      "provenance_hash": "0e173088397f1329ca5e37fb5be6c79ed2e9f639c88c22fdb937d995d44a3862",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r03-live",
+      "turn_id": "turn-1",
+      "sequence": 4,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "./memguard/web/dashboard.py 169: \"command\": \"forget_agent_interactions\", ./memguard/service.py 1782: def forget_agent_interactions( ./memguard/api/server.py 137: if command == \"forget_agent_interactions\": 158: service.forget_agent_interactions( ./memguard/cli/memctl.py 271: result = service.forget_agent_interactions( ./memguard/eval/agent_interactions.py 75: result = service.forget_agent_interactions( ./memguard/eval/memory_value.py 281: forget_result = service.forget_agent_interactions(",
+      "exit_code": 0,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/docs/evidence/memory_value_latest/real_agent/cases/R03/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T21:06:45.293830",
+      "source_uri": "openhands://r03-live/b491ca66-73df-44c4-ace8-bee7eff5851e",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:06:45.294184+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "3e034c57-9deb-4e8d-b11d-7910dddeee54",
+      "provenance_hash": "e2218f6c01fbc2dbdb2d56caf27130dc983bbe72450a3d38dc3620a7eaa2dd7e",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r03-live",
+      "turn_id": "turn-1",
+      "sequence": 5,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "{\"type\": \"function\", \"function\": {\"name\": \"finish\", \"parameters\": {\"summary\": \"Found 'forget_agent_interactions' in multiple files\", \"message\": \"The command was executed successfully and found 'forget_agent_interactions' in the following files: ./memguard/web/dashboard.py, ./memguard/service.py, ./memguard/api/server.py, ./memguard/cli/memctl.py, ./memguard/eval/agent_interactions.py, and ./memguard/eval/memory_value.py.\"}}}",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/docs/evidence/memory_value_latest/real_agent/cases/R03/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T21:07:37.477248",
+      "source_uri": "openhands://r03-live/3e034c57-9deb-4e8d-b11d-7910dddeee54",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:07:37.477614+00:00",
+      "tool_args": {}
+    }
+  ],
+  "workspace_before": [
+    {
+      "path": "memguard/__init__.py",
+      "size": 55
+    },
+    {
+      "path": "memguard/__pycache__/__init__.cpython-312.pyc",
+      "size": 206
+    },
+    {
+      "path": "memguard/__pycache__/__init__.cpython-39.pyc",
+      "size": 216
+    },
+    {
+      "path": "memguard/__pycache__/config.cpython-312.pyc",
+      "size": 7424
+    },
+    {
+      "path": "memguard/__pycache__/config.cpython-39.pyc",
+      "size": 4612
+    },
+    {
+      "path": "memguard/__pycache__/daemon.cpython-312.pyc",
+      "size": 6534
+    },
+    {
+      "path": "memguard/__pycache__/daemon.cpython-39.pyc",
+      "size": 4117
+    },
+    {
+      "path": "memguard/__pycache__/models.cpython-312.pyc",
+      "size": 9926
+    },
+    {
+      "path": "memguard/__pycache__/models.cpython-39.pyc",
+      "size": 5591
+    },
+    {
+      "path": "memguard/__pycache__/service.cpython-312.pyc",
+      "size": 109697
+    },
+    {
+      "path": "memguard/__pycache__/service.cpython-39.pyc",
+      "size": 40514
+    },
+    {
+      "path": "memguard/api/__init__.py",
+      "size": 28
+    },
+    {
+      "path": "memguard/api/__pycache__/__init__.cpython-312.pyc",
+      "size": 178
+    },
+    {
+      "path": "memguard/api/__pycache__/__init__.cpython-39.pyc",
+      "size": 191
+    },
+    {
+      "path": "memguard/api/__pycache__/server.cpython-312.pyc",
+      "size": 19546
+    },
+    {
+      "path": "memguard/api/__pycache__/server.cpython-39.pyc",
+      "size": 7923
+    },
+    {
+      "path": "memguard/api/server.py",
+      "size": 16504
+    },
+    {
+      "path": "memguard/cli/__init__.py",
+      "size": 31
+    },
+    {
+      "path": "memguard/cli/__pycache__/__init__.cpython-312.pyc",
+      "size": 180
+    },
+    {
+      "path": "memguard/cli/__pycache__/__init__.cpython-39.pyc",
+      "size": 193
+    },
+    {
+      "path": "memguard/cli/__pycache__/memctl.cpython-312.pyc",
+      "size": 43502
+    },
+    {
+      "path": "memguard/cli/__pycache__/memctl.cpython-39.pyc",
+      "size": 18166
+    },
+    {
+      "path": "memguard/cli/memctl.py",
+      "size": 33509
+    },
+    {
+      "path": "memguard/config.py",
+      "size": 5186
+    },
+    {
+      "path": "memguard/daemon.py",
+      "size": 4541
+    },
+    {
+      "path": "memguard/eval/__init__.py",
+      "size": 29
+    },
+    {
+      "path": "memguard/eval/__pycache__/__init__.cpython-312.pyc",
+      "size": 179
+    },
+    {
+      "path": "memguard/eval/__pycache__/__init__.cpython-39.pyc",
+      "size": 192
+    },
+    {
+      "path": "memguard/eval/__pycache__/ablation.cpython-312.pyc",
+      "size": 18013
+    },
+    {
+      "path": "memguard/eval/__pycache__/agent_interactions.cpython-312.pyc",
+      "size": 10519
+    },
+    {
+      "path": "memguard/eval/__pycache__/memory_value.cpython-312.pyc",
+      "size": 18648
+    },
+    {
+      "path": "memguard/eval/__pycache__/metrics.cpython-312.pyc",
+      "size": 2453
+    },
+    {
+      "path": "memguard/eval/__pycache__/metrics.cpython-39.pyc",
+      "size": 1573
+    },
+    {
+      "path": "memguard/eval/__pycache__/performance_suite.cpython-312.pyc",
+      "size": 8527
+    },
+    {
+      "path": "memguard/eval/__pycache__/real_agent_behavior.cpython-312.pyc",
+      "size": 17872
+    },
+    {
+      "path": "memguard/eval/__pycache__/run_eval.cpython-312.pyc",
+      "size": 44922
+    },
+    {
+      "path": "memguard/eval/__pycache__/run_eval.cpython-39.pyc",
+      "size": 26159
+    },
+    {
+      "path": "memguard/eval/ablation.py",
+      "size": 14477
+    },
+    {
+      "path": "memguard/eval/agent_interactions.py",
+      "size": 7928
+    },
+    {
+      "path": "memguard/eval/memory_value.py",
+      "size": 14093
+    },
+    {
+      "path": "memguard/eval/metrics.py",
+      "size": 1457
+    },
+    {
+      "path": "memguard/eval/performance_suite.py",
+      "size": 6454
+    },
+    {
+      "path": "memguard/eval/real_agent_behavior.py",
+      "size": 12488
+    },
+    {
+      "path": "memguard/eval/run_eval.py",
+      "size": 37929
+    },
+    {
+      "path": "memguard/extraction/__init__.py",
+      "size": 34
+    },
+    {
+      "path": "memguard/extraction/__pycache__/__init__.cpython-312.pyc",
+      "size": 190
+    },
+    {
+      "path": "memguard/extraction/__pycache__/__init__.cpython-39.pyc",
+      "size": 203
+    },
+    {
+      "path": "memguard/extraction/__pycache__/entity.cpython-312.pyc",
+      "size": 2570
+    },
+    {
+      "path": "memguard/extraction/__pycache__/entity.cpython-39.pyc",
+      "size": 1863
+    },
+    {
+      "path": "memguard/extraction/__pycache__/semantic.cpython-312.pyc",
+      "size": 15569
+    },
+    {
+      "path": "memguard/extraction/__pycache__/semantic.cpython-39.pyc",
+      "size": 10241
+    },
+    {
+      "path": "memguard/extraction/entity.py",
+      "size": 1792
+    },
+    {
+      "path": "memguard/extraction/semantic.py",
+      "size": 11462
+    },
+    {
+      "path": "memguard/forgetting/__init__.py",
+      "size": 36
+    },
+    {
+      "path": "memguard/forgetting/__pycache__/__init__.cpython-312.pyc",
+      "size": 192
+    },
+    {
+      "path": "memguard/forgetting/__pycache__/__init__.cpython-39.pyc",
+      "size": 205
+    },
+    {
+      "path": "memguard/forgetting/__pycache__/planner.cpython-312.pyc",
+      "size": 7140
+    },
+    {
+      "path": "memguard/forgetting/__pycache__/planner.cpython-39.pyc",
+      "size": 4857
+    },
+    {
+      "path": "memguard/forgetting/planner.py",
+      "size": 6140
+    },
+    {
+      "path": "memguard/ingestion/__init__.py",
+      "size": 37
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/__init__.cpython-312.pyc",
+      "size": 192
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/__init__.cpython-39.pyc",
+      "size": 205
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/behavior.cpython-312.pyc",
+      "size": 4440
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/behavior.cpython-39.pyc",
+      "size": 3102
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/config.cpython-312.pyc",
+      "size": 7412
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/config.cpython-39.pyc",
+      "size": 4470
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/quality.cpython-312.pyc",
+      "size": 5175
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/quality.cpython-39.pyc",
+      "size": 3079
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/tool_result.cpython-312.pyc",
+      "size": 4704
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/tool_result.cpython-39.pyc",
+      "size": 2926
+    },
+    {
+      "path": "memguard/ingestion/behavior.py",
+      "size": 2282
+    },
+    {
+      "path": "memguard/ingestion/config.py",
+      "size": 4073
+    },
+    {
+      "path": "memguard/ingestion/quality.py",
+      "size": 2958
+    },
+    {
+      "path": "memguard/ingestion/tool_result.py",
+      "size": 2845
+    },
+    {
+      "path": "memguard/integrations/__init__.py",
+      "size": 151
+    },
+    {
+      "path": "memguard/integrations/__pycache__/__init__.cpython-312.pyc",
+      "size": 317
+    },
+    {
+      "path": "memguard/integrations/__pycache__/__init__.cpython-39.pyc",
+      "size": 356
+    },
+    {
+      "path": "memguard/integrations/__pycache__/bridge.cpython-312.pyc",
+      "size": 8825
+    },
+    {
+      "path": "memguard/integrations/__pycache__/context_injector.cpython-312.pyc",
+      "size": 2038
+    },
+    {
+      "path": "memguard/integrations/__pycache__/context_injector.cpython-39.pyc",
+      "size": 1571
+    },
+    {
+      "path": "memguard/integrations/__pycache__/events.cpython-312.pyc",
+      "size": 8562
+    },
+    {
+      "path": "memguard/integrations/__pycache__/events.cpython-39.pyc",
+      "size": 5354
+    },
+    {
+      "path": "memguard/integrations/__pycache__/habit_aggregator.cpython-312.pyc",
+      "size": 1142
+    },
+    {
+      "path": "memguard/integrations/__pycache__/habit_aggregator.cpython-39.pyc",
+      "size": 900
+    },
+    {
+      "path": "memguard/integrations/__pycache__/interaction_extractor.cpython-312.pyc",
+      "size": 11901
+    },
+    {
+      "path": "memguard/integrations/__pycache__/interaction_extractor.cpython-39.pyc",
+      "size": 8178
+    },
+    {
+      "path": "memguard/integrations/__pycache__/normalizer.cpython-312.pyc",
+      "size": 3968
+    },
+    {
+      "path": "memguard/integrations/__pycache__/normalizer.cpython-39.pyc",
+      "size": 2936
+    },
+    {
+      "path": "memguard/integrations/__pycache__/openhands_adapter.cpython-312.pyc",
+      "size": 12625
+    },
+    {
+      "path": "memguard/integrations/__pycache__/openhands_runner.cpython-312.pyc",
+      "size": 23496
+    },
+    {
+      "path": "memguard/integrations/__pycache__/replay.cpython-312.pyc",
+      "size": 1889
+    },
+    {
+      "path": "memguard/integrations/__pycache__/replay.cpython-39.pyc",
+      "size": 1264
+    },
+    {
+      "path": "memguard/integrations/bridge.py",
+      "size": 5991
+    },
+    {
+      "path": "memguard/integrations/context_injector.py",
+      "size": 1581
+    },
+    {
+      "path": "memguard/integrations/events.py",
+      "size": 5436
+    },
+    {
+      "path": "memguard/integrations/habit_aggregator.py",
+      "size": 538
+    },
+    {
+      "path": "memguard/integrations/interaction_extractor.py",
+      "size": 7179
+    },
+    {
+      "path": "memguard/integrations/normalizer.py",
+      "size": 2229
+    },
+    {
+      "path": "memguard/integrations/openhands_adapter.py",
+      "size": 10238
+    },
+    {
+      "path": "memguard/integrations/openhands_runner.py",
+      "size": 17805
+    },
+    {
+      "path": "memguard/integrations/replay.py",
+      "size": 1057
+    },
+    {
+      "path": "memguard/llm/__init__.py",
+      "size": 97
+    },
+    {
+      "path": "memguard/llm/__pycache__/__init__.cpython-312.pyc",
+      "size": 241
+    },
+    {
+      "path": "memguard/llm/__pycache__/__init__.cpython-39.pyc",
+      "size": 248
+    },
+    {
+      "path": "memguard/llm/__pycache__/adapter.cpython-312.pyc",
+      "size": 7020
+    },
+    {
+      "path": "memguard/llm/__pycache__/adapter.cpython-39.pyc",
+      "size": 4615
+    },
+    {
+      "path": "memguard/llm/__pycache__/prompt.cpython-312.pyc",
+      "size": 1676
+    },
+    {
+      "path": "memguard/llm/__pycache__/prompt.cpython-39.pyc",
+      "size": 1243
+    },
+    {
+      "path": "memguard/llm/adapter.py",
+      "size": 5224
+    },
+    {
+      "path": "memguard/llm/prompt.py",
+      "size": 1271
+    },
+    {
+      "path": "memguard/models.py",
+      "size": 5889
+    },
+    {
+      "path": "memguard/os_guard/__init__.py",
+      "size": 37
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/__init__.cpython-312.pyc",
+      "size": 191
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/__init__.cpython-39.pyc",
+      "size": 204
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/auditd.cpython-312.pyc",
+      "size": 2674
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/auditd.cpython-39.pyc",
+      "size": 1866
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/auditd_events.cpython-312.pyc",
+      "size": 4027
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/auditd_events.cpython-39.pyc",
+      "size": 2607
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/cgroup.cpython-312.pyc",
+      "size": 1853
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/cgroup.cpython-39.pyc",
+      "size": 1295
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/doctor.cpython-312.pyc",
+      "size": 2057
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/doctor.cpython-39.pyc",
+      "size": 1348
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/events.cpython-312.pyc",
+      "size": 2631
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/events.cpython-39.pyc",
+      "size": 1743
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/journald.cpython-312.pyc",
+      "size": 1998
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/journald.cpython-39.pyc",
+      "size": 1557
+    },
+    {
+      "path": "memguard/os_guard/auditd.py",
+      "size": 1687
+    },
+    {
+      "path": "memguard/os_guard/auditd_events.py",
+      "size": 2883
+    },
+    {
+      "path": "memguard/os_guard/cgroup.py",
+      "size": 1126
+    },
+    {
+      "path": "memguard/os_guard/doctor.py",
+      "size": 1403
+    },
+    {
+      "path": "memguard/os_guard/events.py",
+      "size": 1605
+    },
+    {
+      "path": "memguard/os_guard/journald.py",
+      "size": 1191
+    },
+    {
+      "path": "memguard/retrieval/__init__.py",
+      "size": 26
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/__init__.cpython-312.pyc",
+      "size": 181
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/__init__.cpython-39.pyc",
+      "size": 194
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/conflict.cpython-312.pyc",
+      "size": 5038
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/conflict.cpython-39.pyc",
+      "size": 3525
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/hybrid.cpython-312.pyc",
+      "size": 15541
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/hybrid.cpython-39.pyc",
+      "size": 9461
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/kylin_sdk.cpython-312.pyc",
+      "size": 29735
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/kylin_sdk.cpython-39.pyc",
+      "size": 18911
+    },
+    {
+      "path": "memguard/retrieval/conflict.py",
+      "size": 2791
+    },
+    {
+      "path": "memguard/retrieval/hybrid.py",
+      "size": 8499
+    },
+    {
+      "path": "memguard/retrieval/kylin_sdk.py",
+      "size": 23899
+    },
+    {
+      "path": "memguard/sensitivity/__init__.py",
+      "size": 40
+    },
+    {
+      "path": "memguard/sensitivity/__pycache__/__init__.cpython-312.pyc",
+      "size": 197
+    },
+    {
+      "path": "memguard/sensitivity/__pycache__/__init__.cpython-39.pyc",
+      "size": 210
+    },
+    {
+      "path": "memguard/sensitivity/__pycache__/custom_patterns.cpython-312.pyc",
+      "size": 11128
+    },
+    {
+      "path": "memguard/sensitivity/__pycache__/custom_patterns.cpython-39.pyc",
+      "size": 7127
+    },
+    {
+      "path": "memguard/sensitivity/__pycache__/detector.cpython-312.pyc",
+      "size": 6717
+    },
+    {
+      "path": "memguard/sensitivity/__pycache__/detector.cpython-39.pyc",
+      "size": 4793
+    },
+    {
+      "path": "memguard/sensitivity/custom_patterns.py",
+      "size": 7009
+    },
+    {
+      "path": "memguard/sensitivity/detector.py",
+      "size": 4843
+    },
+    {
+      "path": "memguard/service.py",
+      "size": 97599
+    },
+    {
+      "path": "memguard/store/__init__.py",
+      "size": 25
+    },
+    {
+      "path": "memguard/store/__pycache__/__init__.cpython-312.pyc",
+      "size": 176
+    },
+    {
+      "path": "memguard/store/__pycache__/__init__.cpython-39.pyc",
+      "size": 189
+    },
+    {
+      "path": "memguard/store/__pycache__/mmap_store.cpython-312.pyc",
+      "size": 9167
+    },
+    {
+      "path": "memguard/store/__pycache__/mmap_store.cpython-39.pyc",
+      "size": 5331
+    },
+    {
+      "path": "memguard/store/__pycache__/sqlite_meta.cpython-312.pyc",
+      "size": 50785
+    },
+    {
+      "path": "memguard/store/__pycache__/sqlite_meta.cpython-39.pyc",
+      "size": 17019
+    },
+    {
+      "path": "memguard/store/mmap_store.py",
+      "size": 5100
+    },
+    {
+      "path": "memguard/store/sqlite_meta.py",
+      "size": 40151
+    },
+    {
+      "path": "memguard/web/__init__.py",
+      "size": 42
+    },
+    {
+      "path": "memguard/web/__pycache__/__init__.cpython-312.pyc",
+      "size": 192
+    },
+    {
+      "path": "memguard/web/__pycache__/__init__.cpython-39.pyc",
+      "size": 205
+    },
+    {
+      "path": "memguard/web/__pycache__/dashboard.cpython-312.pyc",
+      "size": 53640
+    },
+    {
+      "path": "memguard/web/__pycache__/dashboard.cpython-39.pyc",
+      "size": 33626
+    },
+    {
+      "path": "memguard/web/dashboard.py",
+      "size": 48534
+    }
+  ],
+  "workspace_after": [
+    {
+      "path": "memguard/__init__.py",
+      "size": 55
+    },
+    {
+      "path": "memguard/__pycache__/__init__.cpython-312.pyc",
+      "size": 206
+    },
+    {
+      "path": "memguard/__pycache__/__init__.cpython-39.pyc",
+      "size": 216
+    },
+    {
+      "path": "memguard/__pycache__/config.cpython-312.pyc",
+      "size": 7424
+    },
+    {
+      "path": "memguard/__pycache__/config.cpython-39.pyc",
+      "size": 4612
+    },
+    {
+      "path": "memguard/__pycache__/daemon.cpython-312.pyc",
+      "size": 6534
+    },
+    {
+      "path": "memguard/__pycache__/daemon.cpython-39.pyc",
+      "size": 4117
+    },
+    {
+      "path": "memguard/__pycache__/models.cpython-312.pyc",
+      "size": 9926
+    },
+    {
+      "path": "memguard/__pycache__/models.cpython-39.pyc",
+      "size": 5591
+    },
+    {
+      "path": "memguard/__pycache__/service.cpython-312.pyc",
+      "size": 109697
+    },
+    {
+      "path": "memguard/__pycache__/service.cpython-39.pyc",
+      "size": 40514
+    },
+    {
+      "path": "memguard/api/__init__.py",
+      "size": 28
+    },
+    {
+      "path": "memguard/api/__pycache__/__init__.cpython-312.pyc",
+      "size": 178
+    },
+    {
+      "path": "memguard/api/__pycache__/__init__.cpython-39.pyc",
+      "size": 191
+    },
+    {
+      "path": "memguard/api/__pycache__/server.cpython-312.pyc",
+      "size": 19546
+    },
+    {
+      "path": "memguard/api/__pycache__/server.cpython-39.pyc",
+      "size": 7923
+    },
+    {
+      "path": "memguard/api/server.py",
+      "size": 16504
+    },
+    {
+      "path": "memguard/cli/__init__.py",
+      "size": 31
+    },
+    {
+      "path": "memguard/cli/__pycache__/__init__.cpython-312.pyc",
+      "size": 180
+    },
+    {
+      "path": "memguard/cli/__pycache__/__init__.cpython-39.pyc",
+      "size": 193
+    },
+    {
+      "path": "memguard/cli/__pycache__/memctl.cpython-312.pyc",
+      "size": 43502
+    },
+    {
+      "path": "memguard/cli/__pycache__/memctl.cpython-39.pyc",
+      "size": 18166
+    },
+    {
+      "path": "memguard/cli/memctl.py",
+      "size": 33509
+    },
+    {
+      "path": "memguard/config.py",
+      "size": 5186
+    },
+    {
+      "path": "memguard/daemon.py",
+      "size": 4541
+    },
+    {
+      "path": "memguard/eval/__init__.py",
+      "size": 29
+    },
+    {
+      "path": "memguard/eval/__pycache__/__init__.cpython-312.pyc",
+      "size": 179
+    },
+    {
+      "path": "memguard/eval/__pycache__/__init__.cpython-39.pyc",
+      "size": 192
+    },
+    {
+      "path": "memguard/eval/__pycache__/ablation.cpython-312.pyc",
+      "size": 18013
+    },
+    {
+      "path": "memguard/eval/__pycache__/agent_interactions.cpython-312.pyc",
+      "size": 10519
+    },
+    {
+      "path": "memguard/eval/__pycache__/memory_value.cpython-312.pyc",
+      "size": 18648
+    },
+    {
+      "path": "memguard/eval/__pycache__/metrics.cpython-312.pyc",
+      "size": 2453
+    },
+    {
+      "path": "memguard/eval/__pycache__/metrics.cpython-39.pyc",
+      "size": 1573
+    },
+    {
+      "path": "memguard/eval/__pycache__/performance_suite.cpython-312.pyc",
+      "size": 8527
+    },
+    {
+      "path": "memguard/eval/__pycache__/real_agent_behavior.cpython-312.pyc",
+      "size": 17872
+    },
+    {
+      "path": "memguard/eval/__pycache__/run_eval.cpython-312.pyc",
+      "size": 44922
+    },
+    {
+      "path": "memguard/eval/__pycache__/run_eval.cpython-39.pyc",
+      "size": 26159
+    },
+    {
+      "path": "memguard/eval/ablation.py",
+      "size": 14477
+    },
+    {
+      "path": "memguard/eval/agent_interactions.py",
+      "size": 7928
+    },
+    {
+      "path": "memguard/eval/memory_value.py",
+      "size": 14093
+    },
+    {
+      "path": "memguard/eval/metrics.py",
+      "size": 1457
+    },
+    {
+      "path": "memguard/eval/performance_suite.py",
+      "size": 6454
+    },
+    {
+      "path": "memguard/eval/real_agent_behavior.py",
+      "size": 12488
+    },
+    {
+      "path": "memguard/eval/run_eval.py",
+      "size": 37929
+    },
+    {
+      "path": "memguard/extraction/__init__.py",
+      "size": 34
+    },
+    {
+      "path": "memguard/extraction/__pycache__/__init__.cpython-312.pyc",
+      "size": 190
+    },
+    {
+      "path": "memguard/extraction/__pycache__/__init__.cpython-39.pyc",
+      "size": 203
+    },
+    {
+      "path": "memguard/extraction/__pycache__/entity.cpython-312.pyc",
+      "size": 2570
+    },
+    {
+      "path": "memguard/extraction/__pycache__/entity.cpython-39.pyc",
+      "size": 1863
+    },
+    {
+      "path": "memguard/extraction/__pycache__/semantic.cpython-312.pyc",
+      "size": 15569
+    },
+    {
+      "path": "memguard/extraction/__pycache__/semantic.cpython-39.pyc",
+      "size": 10241
+    },
+    {
+      "path": "memguard/extraction/entity.py",
+      "size": 1792
+    },
+    {
+      "path": "memguard/extraction/semantic.py",
+      "size": 11462
+    },
+    {
+      "path": "memguard/forgetting/__init__.py",
+      "size": 36
+    },
+    {
+      "path": "memguard/forgetting/__pycache__/__init__.cpython-312.pyc",
+      "size": 192
+    },
+    {
+      "path": "memguard/forgetting/__pycache__/__init__.cpython-39.pyc",
+      "size": 205
+    },
+    {
+      "path": "memguard/forgetting/__pycache__/planner.cpython-312.pyc",
+      "size": 7140
+    },
+    {
+      "path": "memguard/forgetting/__pycache__/planner.cpython-39.pyc",
+      "size": 4857
+    },
+    {
+      "path": "memguard/forgetting/planner.py",
+      "size": 6140
+    },
+    {
+      "path": "memguard/ingestion/__init__.py",
+      "size": 37
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/__init__.cpython-312.pyc",
+      "size": 192
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/__init__.cpython-39.pyc",
+      "size": 205
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/behavior.cpython-312.pyc",
+      "size": 4440
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/behavior.cpython-39.pyc",
+      "size": 3102
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/config.cpython-312.pyc",
+      "size": 7412
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/config.cpython-39.pyc",
+      "size": 4470
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/quality.cpython-312.pyc",
+      "size": 5175
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/quality.cpython-39.pyc",
+      "size": 3079
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/tool_result.cpython-312.pyc",
+      "size": 4704
+    },
+    {
+      "path": "memguard/ingestion/__pycache__/tool_result.cpython-39.pyc",
+      "size": 2926
+    },
+    {
+      "path": "memguard/ingestion/behavior.py",
+      "size": 2282
+    },
+    {
+      "path": "memguard/ingestion/config.py",
+      "size": 4073
+    },
+    {
+      "path": "memguard/ingestion/quality.py",
+      "size": 2958
+    },
+    {
+      "path": "memguard/ingestion/tool_result.py",
+      "size": 2845
+    },
+    {
+      "path": "memguard/integrations/__init__.py",
+      "size": 151
+    },
+    {
+      "path": "memguard/integrations/__pycache__/__init__.cpython-312.pyc",
+      "size": 317
+    },
+    {
+      "path": "memguard/integrations/__pycache__/__init__.cpython-39.pyc",
+      "size": 356
+    },
+    {
+      "path": "memguard/integrations/__pycache__/bridge.cpython-312.pyc",
+      "size": 8825
+    },
+    {
+      "path": "memguard/integrations/__pycache__/context_injector.cpython-312.pyc",
+      "size": 2038
+    },
+    {
+      "path": "memguard/integrations/__pycache__/context_injector.cpython-39.pyc",
+      "size": 1571
+    },
+    {
+      "path": "memguard/integrations/__pycache__/events.cpython-312.pyc",
+      "size": 8562
+    },
+    {
+      "path": "memguard/integrations/__pycache__/events.cpython-39.pyc",
+      "size": 5354
+    },
+    {
+      "path": "memguard/integrations/__pycache__/habit_aggregator.cpython-312.pyc",
+      "size": 1142
+    },
+    {
+      "path": "memguard/integrations/__pycache__/habit_aggregator.cpython-39.pyc",
+      "size": 900
+    },
+    {
+      "path": "memguard/integrations/__pycache__/interaction_extractor.cpython-312.pyc",
+      "size": 11901
+    },
+    {
+      "path": "memguard/integrations/__pycache__/interaction_extractor.cpython-39.pyc",
+      "size": 8178
+    },
+    {
+      "path": "memguard/integrations/__pycache__/normalizer.cpython-312.pyc",
+      "size": 3968
+    },
+    {
+      "path": "memguard/integrations/__pycache__/normalizer.cpython-39.pyc",
+      "size": 2936
+    },
+    {
+      "path": "memguard/integrations/__pycache__/openhands_adapter.cpython-312.pyc",
+      "size": 12625
+    },
+    {
+      "path": "memguard/integrations/__pycache__/openhands_runner.cpython-312.pyc",
+      "size": 23496
+    },
+    {
+      "path": "memguard/integrations/__pycache__/replay.cpython-312.pyc",
+      "size": 1889
+    },
+    {
+      "path": "memguard/integrations/__pycache__/replay.cpython-39.pyc",
+      "size": 1264
+    },
+    {
+      "path": "memguard/integrations/bridge.py",
+      "size": 5991
+    },
+    {
+      "path": "memguard/integrations/context_injector.py",
+      "size": 1581
+    },
+    {
+      "path": "memguard/integrations/events.py",
+      "size": 5436
+    },
+    {
+      "path": "memguard/integrations/habit_aggregator.py",
+      "size": 538
+    },
+    {
+      "path": "memguard/integrations/interaction_extractor.py",
+      "size": 7179
+    },
+    {
+      "path": "memguard/integrations/normalizer.py",
+      "size": 2229
+    },
+    {
+      "path": "memguard/integrations/openhands_adapter.py",
+      "size": 10238
+    },
+    {
+      "path": "memguard/integrations/openhands_runner.py",
+      "size": 17805
+    },
+    {
+      "path": "memguard/integrations/replay.py",
+      "size": 1057
+    },
+    {
+      "path": "memguard/llm/__init__.py",
+      "size": 97
+    },
+    {
+      "path": "memguard/llm/__pycache__/__init__.cpython-312.pyc",
+      "size": 241
+    },
+    {
+      "path": "memguard/llm/__pycache__/__init__.cpython-39.pyc",
+      "size": 248
+    },
+    {
+      "path": "memguard/llm/__pycache__/adapter.cpython-312.pyc",
+      "size": 7020
+    },
+    {
+      "path": "memguard/llm/__pycache__/adapter.cpython-39.pyc",
+      "size": 4615
+    },
+    {
+      "path": "memguard/llm/__pycache__/prompt.cpython-312.pyc",
+      "size": 1676
+    },
+    {
+      "path": "memguard/llm/__pycache__/prompt.cpython-39.pyc",
+      "size": 1243
+    },
+    {
+      "path": "memguard/llm/adapter.py",
+      "size": 5224
+    },
+    {
+      "path": "memguard/llm/prompt.py",
+      "size": 1271
+    },
+    {
+      "path": "memguard/models.py",
+      "size": 5889
+    },
+    {
+      "path": "memguard/os_guard/__init__.py",
+      "size": 37
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/__init__.cpython-312.pyc",
+      "size": 191
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/__init__.cpython-39.pyc",
+      "size": 204
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/auditd.cpython-312.pyc",
+      "size": 2674
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/auditd.cpython-39.pyc",
+      "size": 1866
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/auditd_events.cpython-312.pyc",
+      "size": 4027
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/auditd_events.cpython-39.pyc",
+      "size": 2607
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/cgroup.cpython-312.pyc",
+      "size": 1853
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/cgroup.cpython-39.pyc",
+      "size": 1295
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/doctor.cpython-312.pyc",
+      "size": 2057
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/doctor.cpython-39.pyc",
+      "size": 1348
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/events.cpython-312.pyc",
+      "size": 2631
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/events.cpython-39.pyc",
+      "size": 1743
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/journald.cpython-312.pyc",
+      "size": 1998
+    },
+    {
+      "path": "memguard/os_guard/__pycache__/journald.cpython-39.pyc",
+      "size": 1557
+    },
+    {
+      "path": "memguard/os_guard/auditd.py",
+      "size": 1687
+    },
+    {
+      "path": "memguard/os_guard/auditd_events.py",
+      "size": 2883
+    },
+    {
+      "path": "memguard/os_guard/cgroup.py",
+      "size": 1126
+    },
+    {
+      "path": "memguard/os_guard/doctor.py",
+      "size": 1403
+    },
+    {
+      "path": "memguard/os_guard/events.py",
+      "size": 1605
+    },
+    {
+      "path": "memguard/os_guard/journald.py",
+      "size": 1191
+    },
+    {
+      "path": "memguard/retrieval/__init__.py",
+      "size": 26
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/__init__.cpython-312.pyc",
+      "size": 181
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/__init__.cpython-39.pyc",
+      "size": 194
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/conflict.cpython-312.pyc",
+      "size": 5038
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/conflict.cpython-39.pyc",
+      "size": 3525
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/hybrid.cpython-312.pyc",
+      "size": 15541
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/hybrid.cpython-39.pyc",
+      "size": 9461
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/kylin_sdk.cpython-312.pyc",
+      "size": 29735
+    },
+    {
+      "path": "memguard/retrieval/__pycache__/kylin_sdk.cpython-39.pyc",
+      "size": 18911
+    },
+    {
+      "path": "memguard/retrieval/conflict.py",
+      "size": 2791
+    },
+    {
+      "path": "memguard/retrieval/hybrid.py",
+      "size": 8499
+    },
+    {
+      "path": "memguard/retrieval/kylin_sdk.py",
+      "size": 23899
+    },
+    {
+      "path": "memguard/sensitivity/__init__.py",
+      "size": 40
+    },
+    {
+      "path": "memguard/sensitivity/__pycache__/__init__.cpython-312.pyc",
+      "size": 197
+    },
+    {
+      "path": "memguard/sensitivity/__pycache__/__init__.cpython-39.pyc",
+      "size": 210
+    },
+    {
+      "path": "memguard/sensitivity/__pycache__/custom_patterns.cpython-312.pyc",
+      "size": 11128
+    },
+    {
+      "path": "memguard/sensitivity/__pycache__/custom_patterns.cpython-39.pyc",
+      "size": 7127
+    },
+    {
+      "path": "memguard/sensitivity/__pycache__/detector.cpython-312.pyc",
+      "size": 6717
+    },
+    {
+      "path": "memguard/sensitivity/__pycache__/detector.cpython-39.pyc",
+      "size": 4793
+    },
+    {
+      "path": "memguard/sensitivity/custom_patterns.py",
+      "size": 7009
+    },
+    {
+      "path": "memguard/sensitivity/detector.py",
+      "size": 4843
+    },
+    {
+      "path": "memguard/service.py",
+      "size": 97599
+    },
+    {
+      "path": "memguard/store/__init__.py",
+      "size": 25
+    },
+    {
+      "path": "memguard/store/__pycache__/__init__.cpython-312.pyc",
+      "size": 176
+    },
+    {
+      "path": "memguard/store/__pycache__/__init__.cpython-39.pyc",
+      "size": 189
+    },
+    {
+      "path": "memguard/store/__pycache__/mmap_store.cpython-312.pyc",
+      "size": 9167
+    },
+    {
+      "path": "memguard/store/__pycache__/mmap_store.cpython-39.pyc",
+      "size": 5331
+    },
+    {
+      "path": "memguard/store/__pycache__/sqlite_meta.cpython-312.pyc",
+      "size": 50785
+    },
+    {
+      "path": "memguard/store/__pycache__/sqlite_meta.cpython-39.pyc",
+      "size": 17019
+    },
+    {
+      "path": "memguard/store/mmap_store.py",
+      "size": 5100
+    },
+    {
+      "path": "memguard/store/sqlite_meta.py",
+      "size": 40151
+    },
+    {
+      "path": "memguard/web/__init__.py",
+      "size": 42
+    },
+    {
+      "path": "memguard/web/__pycache__/__init__.cpython-312.pyc",
+      "size": 192
+    },
+    {
+      "path": "memguard/web/__pycache__/__init__.cpython-39.pyc",
+      "size": 205
+    },
+    {
+      "path": "memguard/web/__pycache__/dashboard.cpython-312.pyc",
+      "size": 53640
+    },
+    {
+      "path": "memguard/web/__pycache__/dashboard.cpython-39.pyc",
+      "size": 33626
+    },
+    {
+      "path": "memguard/web/dashboard.py",
+      "size": 48534
+    }
+  ]
+}

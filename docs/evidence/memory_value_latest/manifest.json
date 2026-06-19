@@ -1,0 +1,221 @@
+{
+  "schema_version": "1.0",
+  "file_count": 43,
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 338,
+      "sha256": "a79e9df8ea5fb89dc8977fd53d58fce31df6c5bf5e9c9a6ddd4e21606feaba2e"
+    },
+    {
+      "path": "SHA256SUMS.txt",
+      "bytes": 4036,
+      "sha256": "8f3329db30bd7996d8aeebdce961fbe92c35dff74aa28fa1b354cd6436453306"
+    },
+    {
+      "path": "audit_ingest.txt",
+      "bytes": 618,
+      "sha256": "139768668d06fc9cf370a258d8f71df1f6b0ea683975322934bf3e9c74d2c469"
+    },
+    {
+      "path": "audit_verify.txt",
+      "bytes": 241,
+      "sha256": "0b991b7bc84aae1227a3d90918fb24d3054675680b0534b39860d608fbb01e00"
+    },
+    {
+      "path": "deterministic/cases.json",
+      "bytes": 29027,
+      "sha256": "39369d43a4b371a6a5b2cfc283c2fec4bceccf31139eb33331589fca85ea0988"
+    },
+    {
+      "path": "deterministic/metrics.json",
+      "bytes": 1307,
+      "sha256": "a801f635eb509b9aa940e289e749a4c6c10910043506ea52d97cf04627d9eae1"
+    },
+    {
+      "path": "deterministic/report.md",
+      "bytes": 1495,
+      "sha256": "ccaf172f554f5dcc87e03e3f7c8bc2205c0bc83f685213092b786b2236c16edd"
+    },
+    {
+      "path": "deterministic_run.txt",
+      "bytes": 1308,
+      "sha256": "f2870894e6504c31b17cccf8cc7d85a0a92748ed0482d4172fe9c8059c698bdc"
+    },
+    {
+      "path": "git_head.txt",
+      "bytes": 108,
+      "sha256": "42d38427b6d47683ff15c24a19b1c2f24da24844bdc350fbd430c959d2da4548"
+    },
+    {
+      "path": "git_status.txt",
+      "bytes": 80,
+      "sha256": "6220416910f3c2185f8a3213f66a6670e076297c74ef95afa940976eb83d4d93"
+    },
+    {
+      "path": "ollama_models.txt",
+      "bytes": 207,
+      "sha256": "1f44a0f634abaa69c66f6cb5e48672bb3c09cfe026d7c5b2b5592693bfa4fce9"
+    },
+    {
+      "path": "ollama_version.txt",
+      "bytes": 46,
+      "sha256": "178ebf1cb50ab8142c77ee9ac808ec9b09af382e22a2b8741c959a69b7754f0b"
+    },
+    {
+      "path": "openhands_environment.txt",
+      "bytes": 561,
+      "sha256": "c1027e65ea0728ab56de33b13aff438244730a59b2445431c6834009e27087e3"
+    },
+    {
+      "path": "pytest_openkylin.txt",
+      "bytes": 294,
+      "sha256": "84132f1aa6ee700c65089a83c925b3ae737b045cb7f642316fab4cdaa1f60cc3"
+    },
+    {
+      "path": "python_environment.txt",
+      "bytes": 304,
+      "sha256": "571d21010f0821ca9b9a967c1d84462fe38d89ba23f99c9e2f1e27021d5ae675"
+    },
+    {
+      "path": "real_agent/cases/R01/context.json",
+      "bytes": 6333,
+      "sha256": "c8d459d5209914189e178c42033d07e0e0e5250930cc4200064876a7ffe9cfd9"
+    },
+    {
+      "path": "real_agent/cases/R01/result.json",
+      "bytes": 42644,
+      "sha256": "ece3bf7d7b49fa9727546122acaf39f7da676790e49c4a1310e7564eb11b2fba"
+    },
+    {
+      "path": "real_agent/cases/R02/context.json",
+      "bytes": 6121,
+      "sha256": "3d421f44a021abb67233a0d0c3c91844832adc9f8c0737c7b56f8327a26ee374"
+    },
+    {
+      "path": "real_agent/cases/R02/result.json",
+      "bytes": 12054,
+      "sha256": "6016d3d151ef8e94b88c141db12a69c40175ff854def1aa8fa2e6b6f921317ec"
+    },
+    {
+      "path": "real_agent/cases/R03/context.json",
+      "bytes": 6353,
+      "sha256": "1dacc8a3b58beee7882e58cef6cf25d26da55e3ea9beae4b6a0a8eb8c7314464"
+    },
+    {
+      "path": "real_agent/cases/R03/result.json",
+      "bytes": 44069,
+      "sha256": "850c68f7f90e940eb55060975a8152871fdf506c80ea0d9989456e23b23a4501"
+    },
+    {
+      "path": "real_agent/cases/R04/context.json",
+      "bytes": 6345,
+      "sha256": "c67f0f7cb9ba4d29fa08e55afe5dbb205ab4ca9c0f08d564de1f89a63bb0ed81"
+    },
+    {
+      "path": "real_agent/cases/R04/result.json",
+      "bytes": 45026,
+      "sha256": "03056f2978c52dabba0733caa2fa9aa1fe26e050fd424e68b7f333e8f2c427e3"
+    },
+    {
+      "path": "real_agent/cases/R05/context.json",
+      "bytes": 11106,
+      "sha256": "b2ae4fa714501bdffe45f15712b86638b93790ce2f8a158719bb7b1fffa8cebd"
+    },
+    {
+      "path": "real_agent/cases/R05/result.json",
+      "bytes": 41101,
+      "sha256": "0cb521a9005e1970fc7cee526f20d334e326d72762c0263a63f593ba38da1a1d"
+    },
+    {
+      "path": "real_agent/cases/R06/context.json",
+      "bytes": 11001,
+      "sha256": "2ffd1be5e940d71c0dee13785bb681c3225657975a41b0e93ae532724ddcc222"
+    },
+    {
+      "path": "real_agent/cases/R06/result.json",
+      "bytes": 9268,
+      "sha256": "dcd8ac0964fcaabe017356c7c34394b90f4e3fcc5c219a0f2d8abe2df3b67f90"
+    },
+    {
+      "path": "real_agent/cases/R07/context.json",
+      "bytes": 7276,
+      "sha256": "85723cae776b4af59e85fcc0df47bcdec8adf51d2df95ad9cfa9feaebdf021f8"
+    },
+    {
+      "path": "real_agent/cases/R07/result.json",
+      "bytes": 11103,
+      "sha256": "cad18bd1738ea192d9c8ee0842c998cf490d3e48dda5a20b55536bf40af210f3"
+    },
+    {
+      "path": "real_agent/cases/R08/context.json",
+      "bytes": 6886,
+      "sha256": "4f502ad9e89eb6055fd3f7b466e8ddb4aadbe047ebb8ea48abc91cc4a6f06d9e"
+    },
+    {
+      "path": "real_agent/cases/R08/result.json",
+      "bytes": 11114,
+      "sha256": "1e6af26c4d1358db6aed143d624b096c1de5d3e1f11d83a46dae67321aef38ac"
+    },
+    {
+      "path": "real_agent/cases/R09/context.json",
+      "bytes": 6237,
+      "sha256": "1d8baa53acc5965def1ac25f8f05db4abd70ffcf16f577cca54eb20095262710"
+    },
+    {
+      "path": "real_agent/cases/R09/result.json",
+      "bytes": 41850,
+      "sha256": "2583ef5394578aee1302ef9fa4aaaf90e7a4a26b8da2654e68f607636e9c49d7"
+    },
+    {
+      "path": "real_agent/cases/R10/context.json",
+      "bytes": 6201,
+      "sha256": "4c27bcc259de4f327de04b72f2a719c7a567c338257944aa75c60110c8d699a9"
+    },
+    {
+      "path": "real_agent/cases/R10/result.json",
+      "bytes": 44635,
+      "sha256": "edd84b67f4de4fae99568d3876700e17ab574e90899bd93ebae9c15d571dfb5b"
+    },
+    {
+      "path": "real_agent/cases/R11/context.json",
+      "bytes": 6221,
+      "sha256": "56b879e41f40adaec4592aa3032946be03df997fcbed6d9d69d80fb7e84806c9"
+    },
+    {
+      "path": "real_agent/cases/R11/result.json",
+      "bytes": 44675,
+      "sha256": "6f60e2337861d62c171909101b1ba135036b5ad0b78db6ffc78007c3addc79d9"
+    },
+    {
+      "path": "real_agent/cases/R12/context.json",
+      "bytes": 9947,
+      "sha256": "54df57364b714c4eeeed01b969c5f08e78796d5450c6efc4783b259b6dbc4835"
+    },
+    {
+      "path": "real_agent/cases/R12/result.json",
+      "bytes": 39414,
+      "sha256": "5412fe64b074c112530dd780fe80ca87c42ad118350c2f3f4dd499e8d43cce4e"
+    },
+    {
+      "path": "real_agent/dataset_validation.json",
+      "bytes": 453,
+      "sha256": "1a0bbef821e9717bd3e14a1c2e534ed8af7bc9b28c79c66edefd2479458e2596"
+    },
+    {
+      "path": "real_agent/metrics.json",
+      "bytes": 689,
+      "sha256": "0846625cb8b0efe76a75c7a17666fa7f04ee443743f90be1eabcf70bbf9138d5"
+    },
+    {
+      "path": "real_agent/report.md",
+      "bytes": 792,
+      "sha256": "2619542eb1b5c1b1bf3d875438f7338369dc1a611a273078c1a0f9d6e812c2cf"
+    },
+    {
+      "path": "real_agent_run.txt",
+      "bytes": 17094,
+      "sha256": "3c26a47b2699f405c6b4baf2517418c4574a24b688161a0ab07950c3dde75c9a"
+    }
+  ]
+}

@@ -1,0 +1,370 @@
+{
+  "case_id": "R02",
+  "title": "纠正回答顺序后回答简单命令问题",
+  "category": "user_correction",
+  "model": "ollama/qwen3:1.7b",
+  "setup_event_count": 1,
+  "forget_result": null,
+  "run": {
+    "ok": true,
+    "session_id": "r02-live",
+    "trace_id": "ctx_3d98f8d39a384771",
+    "context_file": "context.json",
+    "duration_ms": 96201.995,
+    "context": {
+      "trace_id": "ctx_3d98f8d39a384771",
+      "stage_budgets": {
+        "planning": {
+          "max_chars": 4000,
+          "token_budget": 256,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "tool_selection": {
+          "max_chars": 4000,
+          "token_budget": 256,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "response_generation": {
+          "max_chars": 4000,
+          "token_budget": 256,
+          "context_chars": 333,
+          "estimated_context_tokens": 94,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        }
+      },
+      "selected_memory_ids": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "mem_0ccfc3ca4abe4031"
+        ]
+      },
+      "selected_topics": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "response_order"
+        ]
+      },
+      "selected_values": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "command_then_explanation"
+        ]
+      },
+      "selected_subtypes": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "output_style"
+        ]
+      }
+    },
+    "event_summary": {
+      "stored": 7,
+      "duplicate": 0,
+      "blocked": 0,
+      "tool_calls": 2,
+      "tool_results": 2,
+      "procedural_memories": 2,
+      "procedural_memory_ids": [
+        "mem_9fd4f2aed2c2431b",
+        "mem_a0ef1371c1d14be1"
+      ],
+      "task_errors": 0,
+      "event_types": {
+        "user_message": 1,
+        "policy_decision": 2,
+        "tool_call": 2,
+        "tool_result": 2
+      },
+      "unknown_event_types": {
+        "SystemPromptEvent": 1,
+        "HookExecutionEvent": 1
+      }
+    }
+  },
+  "evaluation": {
+    "status": "memory_pass_agent_fail",
+    "memory_system": {
+      "passed": true,
+      "context_selected": true,
+      "selected_topics": [
+        "response_order"
+      ],
+      "selected_subtypes": [
+        "output_style"
+      ],
+      "selected_values": [
+        "command_then_explanation"
+      ],
+      "failures": []
+    },
+    "agent_behavior": {
+      "passed": false,
+      "task_completed": false,
+      "first_tool": "pwd",
+      "first_tool_correct": false,
+      "failures": [
+        "output missing required text: pwd"
+      ]
+    },
+    "metrics": {
+      "tool_call_count": 1,
+      "failed_command_count": 0,
+      "repeated_command_count": 0,
+      "blocked_high_risk_count": 0,
+      "task_error_count": 0
+    },
+    "error_classification": [
+      "task_assertion_failure"
+    ]
+  },
+  "events": [
+    {
+      "event_id": "evt-r02-setup-1",
+      "provenance_hash": "b84ffe7ea14559d41b6181364bd28c9bccf0e4c16751a74c68d642e39f37c614",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r02-history",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "刚才解释太长，以后回答先给命令，再解释原因。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T13:04:20.864039+00:00",
+      "source_uri": "memory-value-real://R02/setup/1",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:04:20.865602+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "b70cbf6a-cb25-43ad-9f8f-71dc8fb5f2ae",
+      "provenance_hash": "0dde03a343301a3a5175500fadfc9e0230c71f59620118304ef98e70311519a1",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r02-live",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "如何在 Linux 中显示当前工作目录？",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/docs/evidence/memory_value_latest/real_agent/cases/R02/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T21:04:21.125654",
+      "source_uri": "openhands://r02-live/b70cbf6a-cb25-43ad-9f8f-71dc8fb5f2ae",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:04:21.126001+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "5273e69c-2d23-48c8-9324-3506852ce917",
+      "provenance_hash": "b4ab3eba72107ff97e28f1e0e9c2ad65d4531b5c1895ceebc64bf70fb2bcd4f4",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r02-live",
+      "turn_id": "turn-1",
+      "sequence": 2,
+      "event_type": "policy_decision",
+      "role": "system",
+      "content": "{\"decision\": \"allow\", \"continue\": true}",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": 0,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/docs/evidence/memory_value_latest/real_agent/cases/R02/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T21:05:07.999035",
+      "source_uri": "openhands://r02-live/5273e69c-2d23-48c8-9324-3506852ce917",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:05:07.999319+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "9b09f715-ba2e-49f2-ac5a-ef75e72414d4",
+      "provenance_hash": "339fabf79946a8af31e26005b654e5982a03df73cb21457ac68514ce4c38e7b0",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r02-live",
+      "turn_id": "turn-1",
+      "sequence": 3,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/docs/evidence/memory_value_latest/real_agent/cases/R02/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T21:05:07.964114",
+      "source_uri": "openhands://r02-live/9b09f715-ba2e-49f2-ac5a-ef75e72414d4",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:05:08.016436+00:00",
+      "tool_args": {
+        "command": "pwd",
+        "is_input": false,
+        "reset": true,
+        "security_risk": "LOW",
+        "timeout": 10
+      }
+    },
+    {
+      "event_id": "479b9995-cbd5-47f7-a830-f9f8e032d2c2",
+      "provenance_hash": "022156d70e2ae66b68ee5d09538aea6972b2968f51bb34152ecc8cde3e55a15e",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r02-live",
+      "turn_id": "turn-1",
+      "sequence": 4,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "Terminal session has been reset. All previous environment variables and session state have been cleared. /home/luo/memguardos/docs/evidence/memory_value_latest/real_agent/cases/R02/workspace",
+      "exit_code": 0,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/docs/evidence/memory_value_latest/real_agent/cases/R02/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T21:05:08.686183",
+      "source_uri": "openhands://r02-live/479b9995-cbd5-47f7-a830-f9f8e032d2c2",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:05:08.686503+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "4c413ff3-ec06-4ee2-b507-d4f56c1e27d0",
+      "provenance_hash": "5a8fb211ab78ae728d4fba7077c7905ee42a8a7d5bfd3ea11c10eb657c727d9a",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r02-live",
+      "turn_id": "turn-1",
+      "sequence": 5,
+      "event_type": "policy_decision",
+      "role": "system",
+      "content": "{\"decision\": \"allow\", \"continue\": true}",
+      "tool_name": "finish",
+      "tool_result": "",
+      "exit_code": 0,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/docs/evidence/memory_value_latest/real_agent/cases/R02/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T21:05:57.051055",
+      "source_uri": "openhands://r02-live/4c413ff3-ec06-4ee2-b507-d4f56c1e27d0",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:05:57.051309+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "c6a4d71a-89c2-4ef3-a526-c54639499fcd",
+      "provenance_hash": "aaa81f109b4d7eba1092d282e9608825acf942d561704e639169478338de7d0d",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r02-live",
+      "turn_id": "turn-1",
+      "sequence": 6,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "",
+      "tool_name": "finish",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/docs/evidence/memory_value_latest/real_agent/cases/R02/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T21:05:57.011627",
+      "source_uri": "openhands://r02-live/c6a4d71a-89c2-4ef3-a526-c54639499fcd",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:05:57.060708+00:00",
+      "tool_args": {
+        "message": "当前工作目录为 /home/luo/memguardos/docs/evidence/memory_value_latest/real_agent/cases/R02/workspace",
+        "summary": "显示当前工作目录"
+      }
+    },
+    {
+      "event_id": "c8462d53-63d2-46f2-a4cb-34a9c586d39d",
+      "provenance_hash": "c1935e86e58de845216f7b2ae029bc0e537b4de5210fff69008e6083abf67fc0",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r02-live",
+      "turn_id": "turn-1",
+      "sequence": 7,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "finish",
+      "tool_result": "当前工作目录为 /home/luo/memguardos/docs/evidence/memory_value_latest/real_agent/cases/R02/workspace",
+      "exit_code": 0,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/docs/evidence/memory_value_latest/real_agent/cases/R02/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-19T21:05:57.069975",
+      "source_uri": "openhands://r02-live/c8462d53-63d2-46f2-a4cb-34a9c586d39d",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-19T13:05:57.070462+00:00",
+      "tool_args": {}
+    }
+  ],
+  "workspace_before": [
+    {
+      "path": "README.txt",
+      "size": 21
+    }
+  ],
+  "workspace_after": [
+    {
+      "path": "README.txt",
+      "size": 21
+    }
+  ]
+}
