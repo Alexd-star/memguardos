@@ -63,13 +63,41 @@ def extract_interaction_preferences(event: AgentInteractionEvent) -> Interaction
         )
 
     if _command_before_explanation(text, lowered):
-        observations.append(_observation(event, "response_order", "command_then_explanation"))
+        observations.append(
+            _observation(
+                event,
+                "response_order",
+                "command_then_explanation",
+                scope=_scope_for_text(text, lowered),
+            )
+        )
     if _prefers_chinese(text, lowered):
-        observations.append(_observation(event, "response_language", "zh-CN"))
+        observations.append(
+            _observation(
+                event,
+                "response_language",
+                "zh-CN",
+                scope=_scope_for_text(text, lowered),
+            )
+        )
     if _prefers_concise(text, lowered):
-        observations.append(_observation(event, "response_verbosity", "concise"))
+        observations.append(
+            _observation(
+                event,
+                "response_verbosity",
+                "concise",
+                scope=_scope_for_text(text, lowered),
+            )
+        )
     if _requires_risk_confirmation(text, lowered):
-        observations.append(_observation(event, "high_risk_confirmation", "required"))
+        observations.append(
+            _observation(
+                event,
+                "high_risk_confirmation",
+                "required",
+                scope=_scope_for_text(text, lowered),
+            )
+        )
 
     return InteractionExtractionResult(
         remember_allowed=True,

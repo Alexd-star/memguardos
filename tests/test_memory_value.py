@@ -1,9 +1,26 @@
+from collections import Counter
+from pathlib import Path
+import json
+import subprocess
+import sys
+
 from memguard.eval.memory_value import (
     aggregate_paired_results,
+    evaluate_memory_value_cases,
     evaluate_paired_case,
     normalize_command,
     summarize_group,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_jsonl(path):
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
 
 
 def test_paired_case_reports_memory_value_without_using_no_memory_as_token_baseline():
@@ -150,3 +167,65 @@ def test_aggregate_results_recomputes_rates_and_means_from_cases():
     assert result["groups"]["memguard"]["task_completion_rate"] == 1.0
     assert result["mean_deltas"]["completion_vs_no_memory"] == 0.5
     assert result["mean_deltas"]["prompt_token_reduction_ratio"] == 0.55
+
+
+def test_memory_value_dataset_has_sixteen_balanced_cases():
+    cases = load_jsonl(ROOT / "data" / "benchmarks" / "agent_memory_value.jsonl")
+
+    assert len(cases) == 16
+    assert Counter(case["category"] for case in cases) == {
+        "user_correction": 2,
+        "implicit_habit": 2,
+        "conflict_override": 2,
+        "repair_experience": 2,
+        "risk_confirmation": 2,
+        "cross_session": 2,
+        "precise_forgetting": 2,
+        "role_pollution": 2,
+    }
+    assert [case["case_id"] for case in cases] == [
+        "D%02d" % index for index in range(1, 17)
+    ]
+    assert all(
+        set(case["groups"]) == {"no_memory", "full_history", "memguard"}
+        for case in cases
+    )
+    assert all(case["history_events"] for case in cases)
+
+
+def test_all_deterministic_cases_validate_memguard_system_behavior(tmp_path):
+    cases = load_jsonl(ROOT / "data" / "benchmarks" / "agent_memory_value.jsonl")
+
+    result = evaluate_memory_value_cases(cases, tmp_path)
+
+    assert result["aggregate"]["case_count"] == 16
+    assert result["system_validation"]["passed"] == 16
+    assert result["system_validation"]["failed"] == 0
+    assert result["failures"] == []
+
+
+def test_memory_value_cli_writes_traceable_json_and_chinese_report(tmp_path):
+    output_dir = tmp_path / "evaluation"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "evaluate_memory_value.py"),
+            "--output-dir",
+            str(output_dir),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    metrics = json.loads((output_dir / "metrics.json").read_text(encoding="utf-8"))
+    cases = json.loads((output_dir / "cases.json").read_text(encoding="utf-8"))
+    report = (output_dir / "report.md").read_text(encoding="utf-8")
+    assert metrics["case_count"] == 16
+    assert metrics["system_validation"]["failed"] == 0
+    assert len(cases) == 16
+    assert "任务完成率" in report
+    assert "Prompt token" in report
+    assert "失败与边界" in report

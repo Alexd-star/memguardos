@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 from collections import Counter
+from pathlib import Path
 from statistics import mean
 from typing import Dict, Iterable, List, Optional
+
+from memguard.ingestion.tool_result import ToolResult
+from memguard.integrations.events import AgentInteractionEvent
+from memguard.service import MemGuardService
 
 
 GROUP_NAMES = ("no_memory", "full_history", "memguard")
@@ -128,6 +133,190 @@ def aggregate_paired_results(
         "case_count": len(cases),
         "groups": groups,
         "mean_deltas": mean_deltas,
+    }
+
+
+def evaluate_memory_value_cases(
+    cases: Iterable[Dict[str, object]],
+    work_root: Path,
+) -> Dict[str, object]:
+    case_results = []
+    failures = []
+    root = Path(work_root)
+    root.mkdir(parents=True, exist_ok=True)
+    for index, raw_case in enumerate(cases):
+        case = dict(raw_case)
+        case_id = str(case.get("case_id") or "case-%02d" % (index + 1))
+        case_root = root / case_id
+        service = MemGuardService(
+            store_path=case_root / "memory.segment",
+            db_path=case_root / "memory.sqlite3",
+        )
+        try:
+            system_result = _validate_system_behavior(service, case)
+            paired_result = evaluate_paired_case(case)
+            paired_result["system_validation"] = system_result
+            case_results.append(paired_result)
+            for reason in system_result["failures"]:
+                failures.append({"case_id": case_id, "reason": reason})
+        finally:
+            service.close()
+    passed = sum(
+        1 for result in case_results if result["system_validation"]["passed"]
+    )
+    return {
+        "case_count": len(case_results),
+        "aggregate": aggregate_paired_results(case_results),
+        "system_validation": {
+            "passed": passed,
+            "failed": len(case_results) - passed,
+        },
+        "cases": case_results,
+        "failures": failures,
+    }
+
+
+def _validate_system_behavior(
+    service: MemGuardService,
+    case: Dict[str, object],
+) -> Dict[str, object]:
+    case_id = str(case.get("case_id") or "case")
+    last_commands: Dict[str, str] = {}
+    project_root = ""
+    task_type = "code_assistance"
+    for sequence, raw_event in enumerate(case.get("history_events") or [], start=1):
+        event_data = dict(raw_event)
+        session_id = str(event_data.get("session_id") or case_id)
+        project_root = str(event_data.get("project_root") or project_root)
+        task_type = str(event_data.get("task_type") or task_type)
+        event_type = str(event_data.get("event_type") or "user_message")
+        tool_args = dict(event_data.get("tool_args") or {})
+        event = AgentInteractionEvent(
+            agent_name=str(event_data.get("agent_name") or "openhands"),
+            agent_version=str(event_data.get("agent_version") or "1.28.1"),
+            session_id=session_id,
+            turn_id=str(event_data.get("turn_id") or "turn-%s" % sequence),
+            sequence=sequence,
+            event_type=event_type,
+            role=str(event_data.get("role") or "user"),
+            content=str(event_data.get("content") or ""),
+            tool_name=str(event_data.get("tool_name") or ""),
+            tool_args=tool_args,
+            tool_result=str(event_data.get("tool_result") or ""),
+            exit_code=event_data.get("exit_code"),
+            project_root=str(event_data.get("project_root") or ""),
+            task_type=str(event_data.get("task_type") or task_type),
+            source_uri="memory-value://%s/%s" % (case_id, sequence),
+            event_id="evt-%s-%s" % (case_id.lower(), sequence),
+        )
+        service.ingest_interaction(event)
+        if event_type == "tool_call":
+            last_commands[session_id] = str(tool_args.get("command") or "")
+        elif event_type == "tool_result":
+            exit_code = int(event_data.get("exit_code") or 0)
+            output = str(event_data.get("tool_result") or "")
+            service.ingest_tool_result(
+                ToolResult(
+                    command=last_commands.get(session_id, ""),
+                    cwd=project_root,
+                    exit_code=exit_code,
+                    stdout=output if exit_code == 0 else "",
+                    stderr=output if exit_code != 0 else "",
+                    tool_name=str(event_data.get("tool_name") or "terminal"),
+                    state_before="待完成同类任务",
+                    state_after="命令执行完成" if exit_code == 0 else "命令执行失败",
+                    lesson=(
+                        "后续同类任务避免重复失败并优先复用已验证成功的命令"
+                        if exit_code != 0
+                        else "该命令已在当前环境验证"
+                    ),
+                ),
+                source_uri="memory-value-tool://%s/%s" % (case_id, sequence),
+            )
+
+    assertions = dict(case.get("assertions") or {})
+    expected_topics = set(str(item) for item in case.get("expected_topics") or [])
+    selection = service.select_preferences(
+        agent_name="openhands",
+        session_id="%s-eval" % case_id.lower(),
+        project_root=project_root,
+        task_type=task_type,
+    )
+    selected = list(selection["selected"])
+    selected_topics = {
+        str(item.get("preference_topic") or "") for item in selected
+    }
+    selected_values = {
+        str(item.get("preference_value") or "") for item in selected
+    }
+    failures = []
+    if not expected_topics.issubset(selected_topics):
+        failures.append(
+            "expected topics %s but selected %s"
+            % (sorted(expected_topics), sorted(selected_topics))
+        )
+    selected_scope = str(assertions.get("selected_scope") or "")
+    if selected_scope and not any(
+        str(item.get("preference_scope") or "") == selected_scope for item in selected
+    ):
+        failures.append("expected selected scope %s" % selected_scope)
+    selected_value = str(assertions.get("selected_value") or "")
+    if selected_value and selected_value not in selected_values:
+        failures.append("expected selected value %s" % selected_value)
+    forbidden_value = str(assertions.get("forbidden_value") or "")
+    if forbidden_value and forbidden_value in selected_values:
+        failures.append("forbidden polluted value selected: %s" % forbidden_value)
+
+    required_subtype = str(assertions.get("required_subtype") or "")
+    active_memories = service.list_memories(include_deleted=False)
+    if required_subtype and not any(
+        str(item.get("subtype") or "") == required_subtype
+        for item in active_memories
+    ):
+        failures.append("required memory subtype missing: %s" % required_subtype)
+
+    forget_result = None
+    forget_filters = dict(case.get("forget_filters") or {})
+    if forget_filters:
+        forget_result = service.forget_agent_interactions(
+            forget_filters,
+            confirm=True,
+            compact=True,
+            external_persistence=False,
+        )
+        after = service.select_preferences(
+            agent_name="openhands",
+            session_id="%s-after-forget" % case_id.lower(),
+            project_root=project_root,
+            task_type=task_type,
+        )
+        after_topics = {
+            str(item.get("preference_topic") or "") for item in after["selected"]
+        }
+        absent_topics = set(str(item) for item in assertions.get("absent_topics") or [])
+        retained_topics = set(
+            str(item) for item in assertions.get("retained_topics") or []
+        )
+        if absent_topics & after_topics:
+            failures.append(
+                "forgotten topics remained: %s"
+                % sorted(absent_topics & after_topics)
+            )
+        if not retained_topics.issubset(after_topics):
+            failures.append(
+                "unrelated topics not retained: expected=%s actual=%s"
+                % (sorted(retained_topics), sorted(after_topics))
+            )
+        if not forget_result["verification"]["all_stages_absent"]:
+            failures.append("forget verification reported stage residue")
+
+    return {
+        "passed": not failures,
+        "selected_topics": sorted(selected_topics),
+        "selected_values": sorted(selected_values),
+        "memory_count": len(active_memories),
+        "forget_result": forget_result,
+        "failures": failures,
     }
 
 
