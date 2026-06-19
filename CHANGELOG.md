@@ -2,6 +2,17 @@
 
 本文记录 MemGuardOS 的主要版本和能力变化。
 
+## v0.1.0-performance - 2026-06-19
+
+- 检索候选生成改为按 64 条预算依次使用 FTS、图谱和最新记忆补足，避免 FTS 已充足时重复读取兜底候选。
+- Agent 批量检索改为每个工作线程复用一个服务和 SQLite 连接，不再为每条查询重复初始化。
+- 新增 `memguard.eval.ablation`，统一比较纯文本、混合无图谱、完整无缓存、完整热缓存和 Kylin SDK 可选增强。
+- 新增 `memguard.eval.performance_suite`，默认执行三轮并发试验，同时报告中位数和最差 P95/P99。
+- openKylin 三轮 1k/120 查询/6 worker 并发最差 P95 为 `54.381 ms`；完整 10k 评测内并发 P95 为 `139.264 ms`。
+- openKylin 10k 主负载 P95 为 `10.105 ms`、P99 为 `75.255 ms`、RSS 为 `130444 KB`。
+- 统一消融中纯文本 Recall@5 为 `0.8426`，混合与完整系统为 `1.0000`。
+- 本地测试 `141 passed, 1 skipped`，openKylin 测试 `142 passed`。
+
 ## v0.1-stable - 2026-05-22
 
 首个稳定快照，已推送到私有 GitHub 仓库并打标签。

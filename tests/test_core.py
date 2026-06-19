@@ -548,6 +548,113 @@ def test_search_cache_uses_store_revision_and_invalidates_after_write(tmp_path, 
         service.close()
 
 
+def test_search_candidates_skip_fallback_when_fts_fills_budget(tmp_path, monkeypatch):
+    service = make_service(tmp_path)
+    try:
+        fts_rows = [
+            {
+                "memory_id": "fts-%03d" % index,
+                "type": "knowledge",
+                "summary": "systemd MemoryMax",
+                "content": "openKylin service memory limit",
+                "sensitivity_level": "none",
+            }
+            for index in range(8)
+        ]
+        calls = {"graph": 0, "recent": 0}
+        monkeypatch.setattr(service.meta, "search_text", lambda query, limit: fts_rows[:limit])
+
+        def graph_search(query, limit):
+            calls["graph"] += 1
+            return []
+
+        def list_recent_memories(limit, exclude_ids=None):
+            calls["recent"] += 1
+            return []
+
+        monkeypatch.setattr(service.meta, "graph_search", graph_search)
+        monkeypatch.setattr(service.meta, "list_recent_memories", list_recent_memories, raising=False)
+
+        candidates = service._search_candidates("systemd MemoryMax", limit=5)
+
+        assert [item["memory_id"] for item in candidates] == [
+            "fts-000",
+            "fts-001",
+            "fts-002",
+            "fts-003",
+            "fts-004",
+        ]
+        assert calls == {"graph": 0, "recent": 0}
+    finally:
+        service.close()
+
+
+def test_search_candidates_fill_remaining_budget_without_duplicates(tmp_path, monkeypatch):
+    service = make_service(tmp_path)
+    try:
+        monkeypatch.setattr(
+            service.meta,
+            "search_text",
+            lambda query, limit: [
+                {"memory_id": "fts-1"},
+                {"memory_id": "shared"},
+            ],
+        )
+        monkeypatch.setattr(
+            service.meta,
+            "graph_search",
+            lambda query, limit: [
+                {"memory_id": "shared"},
+                {"memory_id": "graph-1"},
+            ],
+        )
+        observed = {}
+
+        def list_recent_memories(limit, exclude_ids=None):
+            observed["limit"] = limit
+            observed["exclude_ids"] = set(exclude_ids or [])
+            return [
+                {"memory_id": "recent-1"},
+                {"memory_id": "recent-2"},
+            ][:limit]
+
+        monkeypatch.setattr(service.meta, "list_recent_memories", list_recent_memories, raising=False)
+
+        candidates = service._search_candidates("systemd", limit=5)
+
+        assert [item["memory_id"] for item in candidates] == [
+            "fts-1",
+            "shared",
+            "graph-1",
+            "recent-1",
+            "recent-2",
+        ]
+        assert observed["limit"] == 2
+        assert observed["exclude_ids"] == {"fts-1", "shared", "graph-1"}
+    finally:
+        service.close()
+
+
+def test_search_uses_bounded_candidate_pool_for_top_five(tmp_path, monkeypatch):
+    service = make_service(tmp_path)
+    try:
+        observed = {}
+
+        def search_candidates(query, limit):
+            observed["query"] = query
+            observed["limit"] = limit
+            return []
+
+        monkeypatch.setattr(service, "_search_candidates", search_candidates)
+        monkeypatch.setattr(service.meta, "graph_search", lambda query, limit: [])
+        monkeypatch.setattr(service.meta, "search_text", lambda query, limit: [])
+
+        assert service.search("systemd MemoryMax", limit=5, audit=False) == []
+        assert observed == {"query": "systemd MemoryMax", "limit": 64}
+    finally:
+        service.close()
+
+
 def test_auto_retrieval_falls_back_when_kylin_embedding_fails(monkeypatch):
     def fake_embed(_text, _timeout_seconds, include_vector=True):
         return {"ok": False, "error": "sdk unavailable in test", "include_vector": include_vector}
@@ -1054,6 +1161,42 @@ def test_batch_search_reports_ordered_agent_queries_and_audit(tmp_path):
         assert result["latency"]["p95_ms"] >= 0
         assert service.verify_audit()["ok"] is True
         assert service.audit(event_type="batch_search")
+    finally:
+        service.close()
+
+
+def test_batch_search_reuses_one_service_per_worker(tmp_path, monkeypatch):
+    service = make_service(tmp_path)
+    try:
+        for index in range(8):
+            service.ingest_text(
+                "批量检索连接复用样例 %s：openKylin systemd audit mmap。" % index,
+                source_kind="batch_pool_test",
+                source_uri="batch_pool_%s" % index,
+            )
+        original_service = MemGuardService
+        created = {"count": 0}
+
+        def counting_service(*args, **kwargs):
+            created["count"] += 1
+            return original_service(*args, **kwargs)
+
+        monkeypatch.setattr("memguard.service.MemGuardService", counting_service)
+        queries = [
+            "openKylin systemd",
+            "audit mmap",
+            "systemd audit",
+            "mmap openKylin",
+            "服务内存",
+            "精准遗忘",
+        ]
+
+        result = service.batch_search(queries, limit=3, workers=2)
+
+        assert result["ok"] is True
+        assert [item["query"] for item in result["results"]] == queries
+        assert created["count"] == 2
+        assert result["worker_service_count"] == 2
     finally:
         service.close()
 

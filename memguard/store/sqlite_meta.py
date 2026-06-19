@@ -343,6 +343,25 @@ class SQLiteMetaStore:
             params.append(max(0, int(limit)))
         return [dict(row) for row in self.conn.execute(sql, params)]
 
+    def list_recent_memories(
+        self,
+        limit: int,
+        exclude_ids: Optional[List[str]] = None,
+    ) -> List[Dict[str, Any]]:
+        effective_limit = max(0, int(limit))
+        if effective_limit == 0:
+            return []
+        excluded = list(dict.fromkeys(str(memory_id) for memory_id in (exclude_ids or []) if memory_id))
+        sql = "SELECT * FROM memory WHERE deleted = 0"
+        params: List[Any] = []
+        if excluded:
+            placeholders = ",".join("?" for _ in excluded)
+            sql += " AND memory_id NOT IN (%s)" % placeholders
+            params.extend(excluded)
+        sql += " ORDER BY updated_at DESC LIMIT ?"
+        params.append(effective_limit)
+        return [dict(row) for row in self.conn.execute(sql, params)]
+
     def get_memory(self, memory_id: str) -> Optional[Dict[str, Any]]:
         row = self.conn.execute("SELECT * FROM memory WHERE memory_id = ?", (memory_id,)).fetchone()
         return dict(row) if row else None

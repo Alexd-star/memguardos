@@ -1,10 +1,16 @@
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
+import json
 
 from scripts.inspect_submission_package import REQUIRED_PATHS, inspect_package
 from scripts.package_submission import COMPETITION_ROLES, ROOT, classify_file, should_skip
 from scripts.smoke_submission_archive import command_name
-from scripts.check_competition_ready import check_deb_install_evidence, check_eval, check_openkylin_metrics
+from scripts.check_competition_ready import (
+    check_deb_install_evidence,
+    check_eval,
+    check_openkylin_metrics,
+    check_performance_evidence,
+)
 
 
 def test_competition_package_keeps_formal_and_process_materials_separate():
@@ -281,6 +287,54 @@ def test_competition_ready_checks_openkylin_metric_evidence(tmp_path):
     checks = check_openkylin_metrics(evidence, severity="P0")
     assert checks
     assert all(item.ok for item in checks)
+
+
+def test_competition_ready_checks_optimized_performance_and_ablation(tmp_path):
+    evidence = tmp_path / "performance"
+    evidence.mkdir()
+    (evidence / "eval_result_openkylin_10k_optimized.json").write_text(
+        json.dumps(
+            {
+                "latency_load": {"p95_latency_ms": 10.105, "p99_latency_ms": 75.255},
+                "resource_usage": {"process_rss_kb": 130444},
+                "agent_batch_search": {"p95_latency_ms": 11.699},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (evidence / "performance_suite_openkylin.json").write_text(
+        json.dumps(
+            {
+                "concurrent_summary": {
+                    "all_ok": True,
+                    "worst_p95_latency_ms": 54.381,
+                    "worst_p99_latency_ms": 69.783,
+                },
+                "ablation": {
+                    "variants": {
+                        "text_only": {"status": "completed", "recall_at_5": 0.8426},
+                        "full_no_cache": {"status": "completed", "recall_at_5": 1.0},
+                        "full_kylin_sdk": {
+                            "status": "completed",
+                            "recall_at_5": 1.0,
+                            "p95_latency_ms": 279.641,
+                            "p99_latency_ms": 1492.348,
+                        },
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    checks = check_performance_evidence(evidence, severity="P0")
+    by_name = {item.name: item for item in checks}
+
+    assert all(item.ok for item in checks)
+    assert by_name["优化后 10k 负载 P95 < 500ms"].detail.startswith("当前 10.1050")
+    assert by_name["多轮并发最差 P95 < 500ms"].detail.startswith("当前 54.3810")
+    assert by_name["消融实验证明混合检索提升召回"].ok is True
+    assert "P99=1492.348" in by_name["Kylin SDK 消融边界已记录"].detail
 
 
 def test_competition_ready_accepts_current_deb_install_evidence_format(tmp_path):

@@ -84,6 +84,8 @@ REQUIRED_SOURCE_PATHS = [
     "memguard/integrations/openhands_adapter.py",
     "memguard/integrations/openhands_runner.py",
     "memguard/integrations/context_injector.py",
+    "memguard/eval/ablation.py",
+    "memguard/eval/performance_suite.py",
     "scripts/build_deb.sh",
     "scripts/generate_bpf_lsm_policy.py",
     "scripts/package_submission.py",
@@ -151,6 +153,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Check MemGuardOS competition-readiness gates")
     parser.add_argument("--eval", default="docs/eval_result.json", help="Evaluation JSON path")
     parser.add_argument("--evidence-dir", default="docs/evidence/latest", help="openKylin evidence directory")
+    parser.add_argument(
+        "--performance-evidence-dir",
+        default="docs/evidence/performance_latest",
+        help="Optimized concurrency and ablation evidence directory",
+    )
     parser.add_argument("--output", default="", help="Optional JSON report path")
     parser.add_argument("--markdown", default="", help="Optional Markdown report path")
     parser.add_argument("--allow-missing-openkylin", action="store_true", help="Downgrade missing openKylin evidence files to P1 warnings")
@@ -158,11 +165,13 @@ def main() -> int:
 
     eval_path = _resolve(args.eval)
     evidence_dir = _resolve(args.evidence_dir)
+    performance_evidence_dir = _resolve(args.performance_evidence_dir)
     checks = []
     checks.extend(check_docs())
     checks.extend(check_sources())
     checks.extend(check_eval(eval_path))
     checks.extend(check_openkylin_evidence(evidence_dir, allow_missing=args.allow_missing_openkylin))
+    checks.extend(check_performance_evidence(performance_evidence_dir, severity="P0"))
     checks.extend(check_repository_hygiene())
 
     failed = [item for item in checks if not item.ok and item.severity == "P0"]
@@ -407,6 +416,148 @@ def check_openkylin_metrics(evidence_dir: Path, severity: str) -> List[Check]:
                 severity=severity,
             )
         )
+    return checks
+
+
+def check_performance_evidence(evidence_dir: Path, severity: str) -> List[Check]:
+    checks: List[Check] = [
+        Check(
+            "性能与消融证据",
+            "证据目录",
+            evidence_dir.exists(),
+            _display_path(evidence_dir),
+            severity=severity,
+        )
+    ]
+    optimized = _load_evidence_json(evidence_dir / "eval_result_openkylin_10k_optimized.json")
+    suite = _load_evidence_json(evidence_dir / "performance_suite_openkylin.json")
+    if optimized is None:
+        checks.append(
+            Check(
+                "性能与消融证据",
+                "优化后 10k 评测 JSON",
+                False,
+                "eval_result_openkylin_10k_optimized.json 不存在或无法解析",
+                severity=severity,
+            )
+        )
+    else:
+        checks.extend(
+            [
+                _metric_check(
+                    optimized,
+                    "性能与消融证据",
+                    "优化后 10k 负载 P95 < 500ms",
+                    ["latency_load", "p95_latency_ms"],
+                    500.0,
+                    upper_bound=True,
+                ),
+                _metric_check(
+                    optimized,
+                    "性能与消融证据",
+                    "优化后 10k 负载 P99 < 500ms",
+                    ["latency_load", "p99_latency_ms"],
+                    500.0,
+                    upper_bound=True,
+                ),
+                _metric_check(
+                    optimized,
+                    "性能与消融证据",
+                    "优化后 10k RSS < 256MB",
+                    ["resource_usage", "process_rss_kb"],
+                    256 * 1024,
+                    upper_bound=True,
+                ),
+                _metric_check(
+                    optimized,
+                    "性能与消融证据",
+                    "优化后 Agent 批量检索 P95 < 100ms",
+                    ["agent_batch_search", "p95_latency_ms"],
+                    100.0,
+                    upper_bound=True,
+                ),
+            ]
+        )
+
+    if suite is None:
+        checks.append(
+            Check(
+                "性能与消融证据",
+                "多轮并发与消融 JSON",
+                False,
+                "performance_suite_openkylin.json 不存在或无法解析",
+                severity=severity,
+            )
+        )
+        return checks
+
+    summary = suite.get("concurrent_summary", {})
+    checks.extend(
+        [
+            Check(
+                "性能与消融证据",
+                "多轮并发全部通过",
+                summary.get("all_ok") is True,
+                "all_ok=%s" % summary.get("all_ok"),
+                severity=severity,
+            ),
+            _metric_check(
+                suite,
+                "性能与消融证据",
+                "多轮并发最差 P95 < 500ms",
+                ["concurrent_summary", "worst_p95_latency_ms"],
+                500.0,
+                upper_bound=True,
+            ),
+            _metric_check(
+                suite,
+                "性能与消融证据",
+                "多轮并发最差 P99 < 500ms",
+                ["concurrent_summary", "worst_p99_latency_ms"],
+                500.0,
+                upper_bound=True,
+            ),
+        ]
+    )
+    variants = _nested_get(suite, ["ablation", "variants"]) or {}
+    text_recall = _nested_get(variants, ["text_only", "recall_at_5"])
+    full_recall = _nested_get(variants, ["full_no_cache", "recall_at_5"])
+    recall_ok = (
+        isinstance(text_recall, (int, float))
+        and isinstance(full_recall, (int, float))
+        and float(full_recall) >= 0.90
+        and float(full_recall) > float(text_recall)
+    )
+    checks.append(
+        Check(
+            "性能与消融证据",
+            "消融实验证明混合检索提升召回",
+            recall_ok,
+            "text_only=%s full_no_cache=%s" % (text_recall, full_recall),
+            severity=severity,
+        )
+    )
+    kylin = variants.get("full_kylin_sdk", {}) if isinstance(variants, dict) else {}
+    kylin_status = kylin.get("status")
+    kylin_has_boundary = kylin_status == "skipped" or (
+        kylin_status == "completed"
+        and isinstance(kylin.get("p95_latency_ms"), (int, float))
+        and isinstance(kylin.get("p99_latency_ms"), (int, float))
+    )
+    checks.append(
+        Check(
+            "性能与消融证据",
+            "Kylin SDK 消融边界已记录",
+            kylin_has_boundary,
+            "status=%s P95=%s P99=%s"
+            % (
+                kylin_status,
+                kylin.get("p95_latency_ms"),
+                kylin.get("p99_latency_ms"),
+            ),
+            severity=severity,
+        )
+    )
     return checks
 
 

@@ -34,14 +34,15 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地功能分支单元测试 | 132 passed, 1 skipped |
-| openKylin 全量测试 | 133 passed |
+| 本地功能分支单元测试 | 141 passed, 1 skipped |
+| openKylin 全量测试 | 142 passed |
 | openKylin 真实 Agent | OpenHands 1.28.1，真实终端调用与跨会话上下文证据通过 |
 | 本地 1k 负载 P95 | 0.429 ms |
 | openKylin 1k 负载 P95 | 8.904 ms |
-| openKylin 10k 负载 P95 | 10.844 ms |
-| openKylin 10k 负载 P99 | 106.095 ms |
-| openKylin 10k RSS | 149284 KB |
+| openKylin 10k 负载 P95 | 10.105 ms |
+| openKylin 10k 负载 P99 | 75.255 ms |
+| openKylin 10k RSS | 130444 KB |
+| openKylin 6 线程并发检索 | 三轮最差 P95 54.381 ms；完整 10k 评测内 P95 139.264 ms |
 | Recall@5 / 跨语言 Recall@5 | 1.0000 / 1.0000 |
 | 敏感阻断 F1 / 脱敏 F1 / 标签 F1 | 1.0000 / 1.0000 / 1.0000 |
 | 精准遗忘候选精确率 / 召回率 | 1.0000 / 1.0000 |
@@ -49,7 +50,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | benchmark 用例/种子总数 | 217 |
 | Agent 交互记忆专项 benchmark | 200 条，各项指标 1.0000，openKylin P95 113.97 ms |
 
-通用 openKylin 证据位于 [docs/evidence/latest/](docs/evidence/latest/)，真实 Agent 专项证据位于 [docs/evidence/agent_latest/](docs/evidence/agent_latest/)。评测汇总见 [docs/测试报告.md](docs/测试报告.md)、[docs/真实Agent闭环测试报告.md](docs/真实Agent闭环测试报告.md) 和 [docs/评委证据包索引.md](docs/评委证据包索引.md)。
+通用 openKylin 证据位于 [docs/evidence/latest/](docs/evidence/latest/)，真实 Agent 专项证据位于 [docs/evidence/agent_latest/](docs/evidence/agent_latest/)，并发优化与消融证据位于 [docs/evidence/performance_latest/](docs/evidence/performance_latest/)。评测汇总见 [docs/测试报告.md](docs/测试报告.md)、[docs/真实Agent闭环测试报告.md](docs/真实Agent闭环测试报告.md) 和 [docs/评委证据包索引.md](docs/评委证据包索引.md)。
 
 ## 核心能力
 

@@ -1110,7 +1110,7 @@ class MemGuardService:
                 self._audit("search", None, {"query": clean_query, "count": len(results), "cache": "hit"})
             return results
 
-        candidates = self._search_candidates(query, limit=max(limit * 8, 128))
+        candidates = self._search_candidates(query, limit=max(limit * 8, 64))
         ranked = self.retriever.rank(query, candidates, limit=limit)
         results = []
         seen = set()
@@ -1159,33 +1159,59 @@ class MemGuardService:
         results: List[Optional[Dict[str, object]]] = [None] * len(clean_queries)
         latencies: List[float] = []
         errors: List[Dict[str, object]] = []
+        partitions: List[List[Tuple[int, str]]] = [[] for _ in range(workers)]
+        for index, query in enumerate(clean_queries):
+            partitions[index % workers].append((index, query))
 
-        def run_one(index: int, query: str) -> Dict[str, object]:
+        def run_partition(items: List[Tuple[int, str]]) -> Dict[str, object]:
             worker_service = MemGuardService(store_path=self.store.path, db_path=self.meta.path, namespace=self.namespace)
+            partition_results: List[Dict[str, object]] = []
+            partition_errors: List[Dict[str, object]] = []
             try:
-                query_started = perf_counter()
-                hits = worker_service.search(query, limit=limit, audit=False)
-                elapsed_ms = (perf_counter() - query_started) * 1000
-                return {"index": index, "query": query, "hits": hits, "latency_ms": round(elapsed_ms, 3)}
+                for index, query in items:
+                    try:
+                        query_started = perf_counter()
+                        hits = worker_service.search(query, limit=limit, audit=False)
+                        elapsed_ms = (perf_counter() - query_started) * 1000
+                        partition_results.append(
+                            {
+                                "index": index,
+                                "query": query,
+                                "hits": hits,
+                                "latency_ms": round(elapsed_ms, 3),
+                            }
+                        )
+                    except Exception as exc:
+                        partition_errors.append({"index": index, "query": query, "error": repr(exc)})
             finally:
                 worker_service.close()
+            return {"results": partition_results, "errors": partition_errors}
 
         with ThreadPoolExecutor(max_workers=workers) as executor:
-            future_map = {executor.submit(run_one, index, query): index for index, query in enumerate(clean_queries)}
+            future_map = {
+                executor.submit(run_partition, partition): partition_index
+                for partition_index, partition in enumerate(partitions)
+                if partition
+            }
             for future in as_completed(future_map):
-                index = future_map[future]
                 try:
-                    item = future.result()
-                    results[index] = item
-                    latencies.append(float(item["latency_ms"]))
+                    partition_result = future.result()
+                    errors.extend(partition_result["errors"])
+                    for item in partition_result["results"]:
+                        index = int(item["index"])
+                        results[index] = item
+                        latencies.append(float(item["latency_ms"]))
                 except Exception as exc:
-                    errors.append({"index": index, "query": clean_queries[index], "error": repr(exc)})
+                    partition_index = future_map[future]
+                    for index, query in partitions[partition_index]:
+                        errors.append({"index": index, "query": query, "error": repr(exc)})
 
         total_ms = (perf_counter() - started) * 1000
         ordered_results = [item for item in results if item is not None]
         result = {
             "query_count": len(clean_queries),
             "workers": workers,
+            "worker_service_count": len(future_map),
             "read_path_audit": "single_batch_audit_event",
             "results": ordered_results,
             "latency": {
@@ -1596,22 +1622,28 @@ class MemGuardService:
         return cjk + ((latin_like + 3) // 4) + ((other + 1) // 2)
 
     def _search_candidates(self, query: str, limit: int = 80) -> List[Dict[str, object]]:
+        candidate_limit = max(1, int(limit))
         seen = set()
         candidates: List[Dict[str, object]] = []
-        for source in (
-            self.meta.search_text(query, limit=limit),
-            self.meta.graph_search(query, limit=max(10, limit // 4)),
-            self.meta.list_memories(include_deleted=False, limit=limit),
-        ):
+
+        def add_unique(source: List[Dict[str, object]]) -> None:
             for record in source:
                 memory_id = record.get("memory_id")
                 if memory_id in seen:
                     continue
                 seen.add(memory_id)
                 candidates.append(record)
-        if not candidates:
-            return self.meta.list_memories(include_deleted=False, limit=limit)
-        return candidates
+                if len(candidates) >= candidate_limit:
+                    return
+
+        add_unique(self.meta.search_text(query, limit=candidate_limit))
+        if len(candidates) < candidate_limit:
+            remaining = candidate_limit - len(candidates)
+            add_unique(self.meta.graph_search(query, limit=max(10, remaining)))
+        if len(candidates) < candidate_limit:
+            remaining = candidate_limit - len(candidates)
+            add_unique(self.meta.list_recent_memories(remaining, exclude_ids=list(seen)))
+        return candidates[:candidate_limit]
 
     def graph_search(self, entity_query: str, limit: int = 10) -> List[Dict[str, object]]:
         results = self.meta.graph_search(entity_query, limit=limit)

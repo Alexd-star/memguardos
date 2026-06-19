@@ -113,7 +113,7 @@ Agent 交互记忆专项 benchmark 共 200 条，组成如下：
 功能分支在 Windows 开发机的全量测试结果为：
 
 ```text
-132 passed, 1 skipped
+141 passed, 1 skipped
 ```
 
 其中新增测试覆盖：
@@ -134,7 +134,7 @@ openKylin 已完成真实 runner、systemd bridge、专项 benchmark、精准遗
 最终 openKylin 全量测试结果为：
 
 ```text
-133 passed
+142 passed
 ```
 
 目标系统比 Windows 本地多执行一项 Linux 专属测试，因此两端计数不同是预期行为。

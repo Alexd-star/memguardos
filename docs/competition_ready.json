@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 145,
-    "passed": 145,
+    "total": 157,
+    "passed": 157,
     "failed": 0,
     "warnings": 0
   },
@@ -11,7 +11,7 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 3501",
+      "detail": "中文字符数 3527",
       "severity": "P0"
     },
     {
@@ -109,7 +109,7 @@
       "category": "中文文档",
       "name": "docs/13_测试说明.md",
       "ok": true,
-      "detail": "中文字符数 448",
+      "detail": "中文字符数 455",
       "severity": "P0"
     },
     {
@@ -123,7 +123,7 @@
       "category": "中文文档",
       "name": "docs/15_更新日志.md",
       "ok": true,
-      "detail": "中文字符数 403",
+      "detail": "中文字符数 514",
       "severity": "P0"
     },
     {
@@ -151,21 +151,21 @@
       "category": "中文文档",
       "name": "docs/最终提交说明.md",
       "ok": true,
-      "detail": "中文字符数 3090",
+      "detail": "中文字符数 3131",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/平台摘要.md",
       "ok": true,
-      "detail": "中文字符数 2575",
+      "detail": "中文字符数 2609",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/项目介绍总览.md",
       "ok": true,
-      "detail": "中文字符数 5980",
+      "detail": "中文字符数 5988",
       "severity": "P0"
     },
     {
@@ -214,7 +214,7 @@
       "category": "中文文档",
       "name": "docs/openKylin验证记录.md",
       "ok": true,
-      "detail": "中文字符数 1627",
+      "detail": "中文字符数 1661",
       "severity": "P0"
     },
     {
@@ -235,7 +235,7 @@
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 2829",
+      "detail": "中文字符数 3138",
       "severity": "P0"
     },
     {
@@ -256,7 +256,7 @@
       "category": "中文文档",
       "name": "docs/赛题符合性说明.md",
       "ok": true,
-      "detail": "中文字符数 1111",
+      "detail": "中文字符数 1138",
       "severity": "P0"
     },
     {
@@ -270,21 +270,21 @@
       "category": "中文文档",
       "name": "docs/评委证据包索引.md",
       "ok": true,
-      "detail": "中文字符数 1872",
+      "detail": "中文字符数 1914",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/答辩提纲.md",
       "ok": true,
-      "detail": "中文字符数 1293",
+      "detail": "中文字符数 1296",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/答辩稿.md",
       "ok": true,
-      "detail": "中文字符数 5999",
+      "detail": "中文字符数 6048",
       "severity": "P0"
     },
     {
@@ -451,6 +451,20 @@
     {
       "category": "源码与脚本",
       "name": "memguard/integrations/context_injector.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/eval/ablation.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/eval/performance_suite.py",
       "ok": true,
       "detail": "存在",
       "severity": "P0"
@@ -999,6 +1013,76 @@
       "name": "SHA256SUMS 覆盖全部证据文件",
       "ok": true,
       "detail": "覆盖 71 个证据文件",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "证据目录",
+      "ok": true,
+      "detail": "docs/evidence/performance_latest",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "优化后 10k 负载 P95 < 500ms",
+      "ok": true,
+      "detail": "当前 10.1050，要求 <= 500.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "优化后 10k 负载 P99 < 500ms",
+      "ok": true,
+      "detail": "当前 75.2550，要求 <= 500.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "优化后 10k RSS < 256MB",
+      "ok": true,
+      "detail": "当前 130444.0000，要求 <= 262144.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "优化后 Agent 批量检索 P95 < 100ms",
+      "ok": true,
+      "detail": "当前 11.6990，要求 <= 100.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "多轮并发全部通过",
+      "ok": true,
+      "detail": "all_ok=True",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "多轮并发最差 P95 < 500ms",
+      "ok": true,
+      "detail": "当前 54.3810，要求 <= 500.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "多轮并发最差 P99 < 500ms",
+      "ok": true,
+      "detail": "当前 69.7830，要求 <= 500.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "消融实验证明混合检索提升召回",
+      "ok": true,
+      "detail": "text_only=0.8426 full_no_cache=1.0",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "Kylin SDK 消融边界已记录",
+      "ok": true,
+      "detail": "status=completed P95=279.641 P99=1492.348",
       "severity": "P0"
     },
     {
