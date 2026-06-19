@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from memguard.integrations.openhands_runner import (
     OpenHandsMemoryRunner,
     build_openhands_llm_kwargs,
+    format_agent_context,
 )
 from memguard.api.server import handle_request
 from memguard.cli.memctl import main as memctl_main
@@ -247,6 +248,40 @@ def test_openhands_ollama_model_uses_native_ollama_base_url():
     assert "base_url" not in kwargs
     assert kwargs["reasoning_effort"] == "none"
     assert kwargs["enable_encrypted_reasoning"] is False
+
+
+def test_formatted_agent_context_turns_structured_preferences_into_clear_directives():
+    stages = {
+        "planning": {"context": "", "memories": []},
+        "tool_selection": {
+            "context": "evidence",
+            "memories": [
+                {
+                    "preference_topic": "code_search_tool",
+                    "preference_value": "rg",
+                },
+                {
+                    "preference_topic": "high_risk_confirmation",
+                    "preference_value": "required",
+                },
+            ],
+        },
+        "response_generation": {
+            "context": "evidence",
+            "memories": [
+                {
+                    "preference_topic": "response_order",
+                    "preference_value": "command_then_explanation",
+                }
+            ],
+        },
+    }
+
+    formatted = format_agent_context("ctx-test", stages)
+
+    assert "代码搜索必须优先使用 `rg`" in formatted
+    assert "高风险操作必须先获得用户确认" in formatted
+    assert "最终回答必须先给命令或结论，再解释原因" in formatted
 
 
 def test_openhands_hook_injects_context_and_blocks_high_risk_commands(tmp_path):
