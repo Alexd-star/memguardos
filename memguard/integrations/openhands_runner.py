@@ -281,7 +281,11 @@ def format_agent_context(trace_id: str, stages: Dict[str, object]) -> str:
 
 def _preference_directives(stages: Dict[str, object]) -> list[str]:
     mappings = {
-        ("code_search_tool", "rg"): "代码搜索必须优先使用 `rg`，不要自行改用 `grep`。",
+        (
+            "code_search_tool",
+            "rg",
+        ): "代码搜索必须优先使用 `rg`，搜索文本时采用 `rg -n '关键词' 路径`，"
+        "不要把只列文件名的 `rg --files` 当作文本搜索，也不要自行改用 `grep`。",
         ("code_search_tool", "grep"): "代码搜索必须优先使用 `grep`。",
         (
             "high_risk_confirmation",

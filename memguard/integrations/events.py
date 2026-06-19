@@ -16,6 +16,7 @@ ALLOWED_EVENT_TYPES = {
     "user_feedback",
     "task_complete",
     "task_error",
+    "policy_decision",
     "session_start",
     "session_end",
 }

@@ -75,7 +75,14 @@ rm -rf -- "${TMP_DIR}/deterministic/work"
   >"${TMP_DIR}/real_agent_run.txt" 2>&1
 
 run_capture "pytest_openkylin" "${PYTHON_BIN}" -m pytest -q
-run_capture "audit_verify" "${PYTHON_BIN}" -m memguard.cli.memctl verify-audit
+AUDIT_HOME="/tmp/memguardos-memory-value-audit-${STAMP}"
+rm -rf -- "${AUDIT_HOME}"
+MEMGUARD_HOME="${AUDIT_HOME}" "${PYTHON_BIN}" -m memguard.cli.memctl ingest \
+  --text "智能体记忆价值证据审计链隔离验证" \
+  >"${TMP_DIR}/audit_ingest.txt" 2>&1
+run_capture "audit_verify" env MEMGUARD_HOME="${AUDIT_HOME}" \
+  "${PYTHON_BIN}" -m memguard.cli.memctl verify-audit
+rm -rf -- "${AUDIT_HOME}"
 run_capture "git_head" git rev-parse HEAD
 run_capture "git_status" git status --short
 

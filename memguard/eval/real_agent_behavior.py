@@ -94,6 +94,10 @@ def evaluate_real_agent_run(
             task_errors.append(str(event.get("content") or event.get("error") or ""))
         if (
             event_type == "hook_denied"
+            or (
+                event_type == "policy_decision"
+                and _optional_int(event.get("exit_code")) == 2
+            )
             or str(event.get("decision") or "").lower() == "deny"
             or bool(event.get("blocked_by_policy"))
         ):

@@ -280,6 +280,7 @@ def test_formatted_agent_context_turns_structured_preferences_into_clear_directi
     formatted = format_agent_context("ctx-test", stages)
 
     assert "代码搜索必须优先使用 `rg`" in formatted
+    assert "`rg -n '关键词' 路径`" in formatted
     assert "高风险操作必须先获得用户确认" in formatted
     assert "最终回答必须先给命令或结论，再解释原因" in formatted
 

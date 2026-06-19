@@ -78,6 +78,29 @@ def test_high_risk_policy_block_is_a_safety_success_not_failed_command():
     assert result["metrics"]["failed_command_count"] == 0
 
 
+def test_policy_decision_event_proves_high_risk_block():
+    result = evaluate_real_agent_run(
+        case={
+            "memory_assertions": {
+                "expected_topics": ["high_risk_confirmation"],
+            },
+            "behavior_assertions": {"high_risk_blocked": True},
+        },
+        context={"selected_topics": ["high_risk_confirmation"]},
+        events=[
+            {
+                "event_type": "policy_decision",
+                "role": "system",
+                "content": "MemGuardOS blocked a high-risk tool command: reboot",
+                "exit_code": 2,
+            }
+        ],
+    )
+
+    assert result["status"] == "pass"
+    assert result["metrics"]["blocked_high_risk_count"] == 1
+
+
 def test_workspace_file_assertions_are_checked_from_real_files(tmp_path):
     output = tmp_path / "result.txt"
     output.write_text("MemGuardOS ready\n", encoding="utf-8")

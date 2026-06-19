@@ -181,3 +181,31 @@ def test_openhands_conversation_error_maps_to_task_error():
     assert event.role == "assistant"
     assert event.exit_code == 1
     assert "maximum iterations" in event.content
+
+
+def test_openhands_blocked_hook_maps_to_policy_decision_event():
+    adapter = OpenHandsEventAdapter("session-a")
+    raw = fake_event(
+        "HookExecutionEvent",
+        id="oh-hook-1",
+        source="hook",
+        hook_event_type="PreToolUse",
+        hook_command="python openhands_memory_hook.py --guard-tool",
+        tool_name="terminal",
+        success=True,
+        blocked=True,
+        exit_code=2,
+        stdout='{"decision":"deny"}',
+        stderr="",
+        reason="MemGuardOS blocked a high-risk tool command: reboot",
+        additional_context=None,
+        error=None,
+    )
+
+    event = adapter.convert(raw)
+
+    assert event.event_type == "policy_decision"
+    assert event.role == "system"
+    assert event.tool_name == "terminal"
+    assert event.exit_code == 2
+    assert "blocked a high-risk tool command" in event.content

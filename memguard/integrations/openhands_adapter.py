@@ -121,6 +121,23 @@ class OpenHandsEventAdapter:
 
     def _hook_event(self, raw_event: Any) -> Optional[AgentInteractionEvent]:
         hook_type = str(getattr(raw_event, "hook_event_type", ""))
+        if hook_type == "PreToolUse":
+            blocked = bool(getattr(raw_event, "blocked", False))
+            reason = str(
+                getattr(raw_event, "reason", "")
+                or getattr(raw_event, "error", "")
+                or getattr(raw_event, "stdout", "")
+                or "OpenHands pre-tool policy decision"
+            )
+            return self._event(
+                raw_event,
+                event_type="policy_decision",
+                role="system",
+                content=reason,
+                tool_name=str(getattr(raw_event, "tool_name", "") or ""),
+                exit_code=int(getattr(raw_event, "exit_code", 2 if blocked else 0)),
+                turn_id=self._turn_id(),
+            )
         event_type = {"SessionStart": "session_start", "SessionEnd": "session_end"}.get(hook_type)
         if event_type is None:
             if self.on_unknown:
