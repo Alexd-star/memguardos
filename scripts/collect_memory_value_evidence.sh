@@ -83,8 +83,15 @@ MEMGUARD_HOME="${AUDIT_HOME}" "${PYTHON_BIN}" -m memguard.cli.memctl ingest \
 run_capture "audit_verify" env MEMGUARD_HOME="${AUDIT_HOME}" \
   "${PYTHON_BIN}" -m memguard.cli.memctl verify-audit
 rm -rf -- "${AUDIT_HOME}"
-run_capture "git_head" git rev-parse HEAD
-run_capture "git_status" git status --short
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  run_capture "git_head" git rev-parse HEAD
+  run_capture "git_status" git status --short
+else
+  printf 'source_revision=%s\nsource_mode=synchronized_tree_without_git_metadata\n' \
+    "${MEMGUARD_SOURCE_REVISION:-unknown}" >"${TMP_DIR}/git_head.txt"
+  printf 'Git metadata is intentionally absent from the synchronized openKylin test tree.\n' \
+    >"${TMP_DIR}/git_status.txt"
+fi
 
 cat >"${TMP_DIR}/README.md" <<EOF
 # MemGuardOS 智能体记忆价值证据
