@@ -17,6 +17,7 @@ from memguard.integrations.adherence import (
     detect_adherence_issues,
     parse_structured_tool_intent,
     procedural_memory_evidence,
+    repair_failed_preferred_tool_intent,
     recoverable_tool_schema_error_count,
     selected_preferences,
     successful_terminal_commands,
@@ -335,6 +336,11 @@ class OpenHandsMemoryRunner:
             )
             if intent is not None:
                 break
+        if intent is None:
+            intent = repair_failed_preferred_tool_intent(
+                self._live_events,
+                preferred_tool=preferred_tool,
+            )
         if intent is None:
             result["reason"] = "no safe structured tool intent"
             return result

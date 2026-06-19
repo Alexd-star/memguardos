@@ -9,6 +9,7 @@ from memguard.integrations.openhands_runner import (
     build_openhands_llm_kwargs,
     detect_adherence_issues,
     format_agent_context,
+    repair_failed_preferred_tool_intent,
 )
 from memguard.ingestion.tool_result import ToolResult
 from memguard.api.server import handle_request
@@ -749,6 +750,45 @@ def test_adherence_requires_successful_preferred_tool_after_policy_denial():
             "reason": "未观察到成功执行的当前偏好工具命令",
         }
     ]
+    repaired = repair_failed_preferred_tool_intent(
+        events,
+        preferred_tool="rg",
+    )
+    assert repaired == {
+        "command": "rg -n service.py .",
+        "argv": ["rg", "-n", "service.py", "."],
+        "timeout": 10,
+    }
+
+
+def test_failed_rg_repair_drops_files_mode_and_preserves_only_query():
+    repaired = repair_failed_preferred_tool_intent(
+        [
+            {
+                "event_type": "tool_call",
+                "tool_name": "terminal",
+                "tool_args": {
+                    "command": (
+                        "rg -n 'OpenHandsMemoryRunner' . "
+                        "--ignore-case --files"
+                    )
+                },
+            },
+            {
+                "event_type": "tool_result",
+                "tool_name": "terminal",
+                "exit_code": 2,
+                "tool_result": "invalid argument order",
+            },
+        ],
+        preferred_tool="rg",
+    )
+
+    assert repaired == {
+        "command": "rg -n -i OpenHandsMemoryRunner .",
+        "argv": ["rg", "-n", "-i", "OpenHandsMemoryRunner", "."],
+        "timeout": 10,
+    }
 
 
 def test_structured_intent_recovery_rejects_shell_and_workspace_escape():

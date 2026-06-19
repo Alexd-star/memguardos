@@ -199,7 +199,10 @@ def run_case(case, output_dir: Path, args):
         )
         run_result = runner.run(str(case["task"]))
         events = service.meta.list_agent_events(limit=10000)
-        context = flatten_context(run_result.get("context") or {})
+        context = flatten_context(
+            run_result.get("context") or {},
+            adherence=run_result.get("adherence") or {},
+        )
         evaluation = evaluate_real_agent_run(
             case=case,
             context=context,
@@ -271,13 +274,15 @@ def finalize_case_artifacts(case_dir: Path, result, retain_runtime: bool):
             shutil.rmtree(target)
 
 
-def flatten_context(context):
+def flatten_context(context, adherence=None):
     flattened = {}
     for key in ("selected_topics", "selected_values", "selected_subtypes"):
         values = []
         for stage_values in dict(context.get(key) or {}).values():
             values.extend(str(item) for item in stage_values if item)
         flattened[key] = sorted(set(values))
+    if isinstance(adherence, dict) and "passed" in adherence:
+        flattened["adherence_passed"] = bool(adherence["passed"])
     return flattened
 
 

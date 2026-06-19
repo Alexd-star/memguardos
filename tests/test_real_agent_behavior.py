@@ -271,6 +271,38 @@ def test_structured_intent_success_does_not_hide_max_iteration_error():
     assert "max_iterations" in result["error_classification"]
 
 
+def test_runtime_adherence_failure_cannot_pass_from_guessed_output():
+    result = evaluate_real_agent_run(
+        case={
+            "expected_tool": "rg",
+            "behavior_assertions": {"output_contains": "openhands_runner.py"},
+        },
+        context={"adherence_passed": False},
+        events=[
+            {
+                "event_type": "tool_call",
+                "tool_name": "terminal",
+                "tool_args": {"command": "rg -n OpenHandsMemoryRunner .py"},
+            },
+            {
+                "event_type": "tool_result",
+                "tool_name": "terminal",
+                "exit_code": 2,
+                "tool_result": "No such file or directory",
+            },
+            {
+                "event_type": "assistant_message",
+                "content": "路径可能是 memguard/integrations/openhands_runner.py",
+            },
+        ],
+    )
+
+    assert result["status"] == "memory_pass_agent_fail"
+    assert "runtime adherence guard did not converge" in result[
+        "agent_behavior"
+    ]["failures"]
+
+
 def test_workspace_file_assertions_are_checked_from_real_files(tmp_path):
     output = tmp_path / "result.txt"
     output.write_text("MemGuardOS ready\n", encoding="utf-8")

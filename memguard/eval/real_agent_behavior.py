@@ -176,6 +176,8 @@ def evaluate_real_agent_run(
         workspace=Path(workspace) if workspace is not None else None,
         tool_required=tool_required,
     )
+    if context.get("adherence_passed") is False:
+        behavior_failures.append("runtime adherence guard did not converge")
     if expected_tool and (first_tool or tool_required) and not first_tool_correct:
         behavior_failures.append(
             "expected first tool %s but got %s" % (expected_tool, first_tool or "<none>")

@@ -270,6 +270,107 @@ def parse_structured_tool_intent(
     }
 
 
+def repair_failed_preferred_tool_intent(
+    events: list[Dict[str, object]],
+    *,
+    preferred_tool: str,
+) -> Optional[Dict[str, object]]:
+    failed_commands = []
+    pending_command = ""
+    pending_denied = False
+    for event in events:
+        event_type = str(event.get("event_type") or "")
+        if event_type == "policy_decision":
+            policy = dict(event.get("tool_args") or {})
+            pending_denied = (
+                str(policy.get("decision") or "").lower() == "deny"
+                or int(event.get("exit_code") or 0) == 2
+            )
+        elif event_type == "tool_call":
+            if str(event.get("tool_name") or "") not in {"", "terminal"}:
+                pending_command = ""
+                pending_denied = False
+                continue
+            command = " ".join(
+                str(dict(event.get("tool_args") or {}).get("command") or "").split()
+            )
+            pending_command = "" if pending_denied else command
+            pending_denied = False
+        elif event_type == "tool_result" and pending_command:
+            if int(event.get("exit_code") or 0) == 2:
+                failed_commands.append(pending_command)
+            pending_command = ""
+    for command in reversed(failed_commands):
+        repaired = _canonical_search_command(command, preferred_tool)
+        if repaired is not None:
+            return repaired
+    return None
+
+
+def _canonical_search_command(
+    command: str,
+    preferred_tool: str,
+) -> Optional[Dict[str, object]]:
+    if preferred_tool not in {"rg", "grep"}:
+        return None
+    if any(marker in command for marker in (";", "|", ">", "<", "`", "\n", "\r")):
+        return None
+    try:
+        argv = shlex.split(command)
+    except ValueError:
+        return None
+    if not argv or argv[0] != preferred_tool:
+        return None
+    no_value_options = {
+        "-n",
+        "--line-number",
+        "-S",
+        "--smart-case",
+        "-i",
+        "--ignore-case",
+        "-F",
+        "--fixed-strings",
+        "-w",
+        "--word-regexp",
+        "-R",
+        "-r",
+        "--recursive",
+        "--files",
+    }
+    values = []
+    ignore_case = False
+    for argument in argv[1:]:
+        if argument.startswith("-"):
+            if argument not in no_value_options:
+                return None
+            if argument in {"-i", "--ignore-case"}:
+                ignore_case = True
+            continue
+        if argument == ".":
+            continue
+        values.append(argument)
+    if not values:
+        return None
+    pattern = values[0]
+    if len(pattern) > 256:
+        return None
+    pattern_path = Path(pattern)
+    if pattern_path.is_absolute() or ".." in pattern_path.parts:
+        return None
+    repaired_argv = [preferred_tool]
+    if preferred_tool == "grep":
+        repaired_argv.append("-R")
+    repaired_argv.append("-n")
+    if ignore_case:
+        repaired_argv.append("-i")
+    repaired_argv.extend([pattern, "."])
+    return {
+        "command": shlex.join(repaired_argv),
+        "argv": repaired_argv,
+        "timeout": 10,
+    }
+
+
 def recoverable_tool_schema_error_count(
     events: list[Dict[str, object]],
 ) -> int:
