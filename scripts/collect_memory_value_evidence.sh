@@ -15,24 +15,28 @@ STAMP="$(date +%Y%m%d_%H%M%S)"
 PARENT_DIR="$(dirname "${FINAL_DIR}")"
 TMP_DIR="${PARENT_DIR}/.memory_value_${STAMP}.tmp"
 BACKUP_DIR="${PARENT_DIR}/.memory_value_${STAMP}.backup"
+FAILED_DIR="${PARENT_DIR}/.memory_value_${STAMP}.failed"
 
 case "${FINAL_DIR}" in
   ""|"/"|".") echo "Refusing unsafe evidence path: ${FINAL_DIR}" >&2; exit 2 ;;
 esac
 
 mkdir -p "${PARENT_DIR}"
-if [[ -e "${TMP_DIR}" || -e "${BACKUP_DIR}" ]]; then
+if [[ -e "${TMP_DIR}" || -e "${BACKUP_DIR}" || -e "${FAILED_DIR}" ]]; then
   echo "Temporary evidence path already exists." >&2
   exit 2
 fi
 mkdir -p "${TMP_DIR}"
 
-cleanup() {
-  if [[ -d "${TMP_DIR}" ]]; then
-    rm -rf -- "${TMP_DIR}"
+preserve_failure() {
+  local exit_code=$?
+  if [[ ${exit_code} -ne 0 && -d "${TMP_DIR}" ]]; then
+    mv -- "${TMP_DIR}" "${FAILED_DIR}"
+    printf 'Evidence collection failed; partial evidence preserved at %s\n' "${FAILED_DIR}" >&2
   fi
+  exit "${exit_code}"
 }
-trap cleanup EXIT
+trap preserve_failure EXIT
 
 run_capture() {
   local name="$1"
