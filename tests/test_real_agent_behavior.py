@@ -8,6 +8,7 @@ from memguard.eval.real_agent_behavior import (
     aggregate_real_agent_results,
     evaluate_real_agent_run,
 )
+from scripts.run_openhands_behavior_suite import finalize_case_artifacts
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -371,3 +372,26 @@ def test_real_agent_aggregate_reports_completion_and_unclassified_failures():
     assert result["unclassified_failure_count"] == 1
     assert result["memory_system_pass_rate"] == 0.666667
     assert result["agent_behavior_pass_rate"] == 0.333333
+
+
+def test_case_evidence_keeps_context_but_prunes_runtime_workspace_and_state(tmp_path):
+    case_dir = tmp_path / "R01"
+    workspace = case_dir / "workspace"
+    state = case_dir / "state"
+    workspace.mkdir(parents=True)
+    state.mkdir(parents=True)
+    (workspace / "input.txt").write_text("fixture", encoding="utf-8")
+    context_file = state / "ctx_test.json"
+    context_file.write_text('{"trace_id":"ctx_test"}', encoding="utf-8")
+    result = {
+        "run": {"context_file": str(context_file)},
+        "workspace_before": [{"path": "input.txt", "size": 7}],
+        "workspace_after": [{"path": "input.txt", "size": 7}],
+    }
+
+    finalize_case_artifacts(case_dir, result, retain_runtime=False)
+
+    assert (case_dir / "context.json").is_file()
+    assert not workspace.exists()
+    assert not state.exists()
+    assert result["run"]["context_file"] == "context.json"

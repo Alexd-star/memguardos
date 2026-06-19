@@ -244,11 +244,31 @@ def run_case(case, output_dir: Path, args):
         }
     finally:
         service.close()
+    finalize_case_artifacts(
+        case_dir,
+        result,
+        retain_runtime=bool(args.retain_runtime),
+    )
     result_file.write_text(
         json.dumps(result, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
     return result
+
+
+def finalize_case_artifacts(case_dir: Path, result, retain_runtime: bool):
+    if retain_runtime:
+        return
+    run = dict(result.get("run") or {})
+    context_path = Path(str(run.get("context_file") or ""))
+    if context_path.is_file():
+        target = case_dir / "context.json"
+        shutil.copy2(context_path, target)
+        result["run"]["context_file"] = "context.json"
+    for name in ("workspace", "state"):
+        target = case_dir / name
+        if target.is_dir():
+            shutil.rmtree(target)
 
 
 def flatten_context(context):
@@ -327,6 +347,11 @@ def build_parser():
     parser.add_argument("--case-id", action="append", default=[])
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--validate-only", action="store_true")
+    parser.add_argument(
+        "--retain-runtime",
+        action="store_true",
+        help="保留逐案例 workspace 和状态目录，仅用于本地调试",
+    )
     return parser
 
 
