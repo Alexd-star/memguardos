@@ -13,7 +13,13 @@ def evaluate_real_agent_run(
     context: Dict[str, object],
     events: List[Dict[str, object]],
     workspace: Optional[Path] = None,
+    session_id: str = "",
 ) -> Dict[str, object]:
+    evaluated_events = [
+        event
+        for event in events
+        if not session_id or str(event.get("session_id") or "") == session_id
+    ]
     selected_topics = set(str(item) for item in context.get("selected_topics") or [])
     selected_subtypes = set(
         str(item) for item in context.get("selected_subtypes") or []
@@ -75,7 +81,7 @@ def evaluate_real_agent_run(
     exit_codes = []
     blocked_high_risk_count = 0
     task_errors = []
-    for raw_event in events:
+    for raw_event in evaluated_events:
         event = dict(raw_event)
         event_type = str(event.get("event_type") or "")
         if event_type == "tool_call":

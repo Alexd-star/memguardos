@@ -205,6 +205,7 @@ def run_case(case, output_dir: Path, args):
             context=context,
             events=events,
             workspace=workspace,
+            session_id="%s-live" % case_id.lower(),
         )
         result = {
             "case_id": case_id,

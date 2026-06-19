@@ -48,6 +48,46 @@ def test_real_run_separates_memory_system_success_from_agent_failure():
     assert result["status"] == "memory_pass_agent_fail"
 
 
+def test_real_run_excludes_history_setup_events_from_live_behavior_metrics():
+    result = evaluate_real_agent_run(
+        case={
+            "expected_tool": "find",
+            "behavior_assertions": {"output_contains": "service.py"},
+        },
+        context={},
+        events=[
+            {
+                "session_id": "history",
+                "event_type": "tool_call",
+                "tool_args": {"command": "fd service.py"},
+            },
+            {
+                "session_id": "history",
+                "event_type": "tool_result",
+                "exit_code": 127,
+                "tool_result": "not found",
+            },
+            {
+                "session_id": "live",
+                "event_type": "tool_call",
+                "tool_args": {"command": "find memguard -name service.py"},
+            },
+            {
+                "session_id": "live",
+                "event_type": "tool_result",
+                "exit_code": 0,
+                "tool_result": "memguard/service.py",
+            },
+        ],
+        session_id="live",
+    )
+
+    assert result["status"] == "pass"
+    assert result["agent_behavior"]["first_tool"] == "find"
+    assert result["metrics"]["tool_call_count"] == 1
+    assert result["metrics"]["failed_command_count"] == 0
+
+
 def test_high_risk_policy_block_is_a_safety_success_not_failed_command():
     result = evaluate_real_agent_run(
         case={
