@@ -7,11 +7,13 @@ import json
 import os
 import re
 import shlex
+import subprocess
 import sys
 from time import perf_counter
 
 from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.openhands_adapter import OpenHandsEventAdapter
+from memguard.integrations.events import AgentInteractionEvent
 from memguard.models import new_id, utc_now
 
 
@@ -37,6 +39,7 @@ class OpenHandsMemoryRunner:
         max_iterations: int = 8,
         tool_profile: str = "default",
         conversation_factory: Optional[ConversationFactory] = None,
+        structured_intent_executor: Optional[Callable[..., Any]] = None,
     ):
         self.service = service
         self.session_id = str(session_id).strip()
@@ -57,6 +60,9 @@ class OpenHandsMemoryRunner:
             raise ValueError("tool_profile must be default or terminal")
         self.tool_profile = tool_profile
         self.conversation_factory = conversation_factory or create_openhands_conversation
+        self.structured_intent_executor = (
+            structured_intent_executor or subprocess.run
+        )
         self.adapter = OpenHandsEventAdapter(
             session_id=self.session_id,
             project_root=self.project_root,
@@ -67,6 +73,7 @@ class OpenHandsMemoryRunner:
         self._unknown_events = Counter()
         self._tool_commands: Dict[str, str] = {}
         self._procedural_memories = []
+        self._live_events = []
 
     def prepare_context(self, task: str) -> Dict[str, object]:
         clean_task = str(task).strip()
@@ -113,7 +120,11 @@ class OpenHandsMemoryRunner:
         if event is None:
             self._unknown_events[raw_event.__class__.__name__] += 1
             return
+        self._ingest_event(event)
+
+    def _ingest_event(self, event: AgentInteractionEvent) -> None:
         result = self.service.ingest_interaction(event)
+        self._live_events.append(event.to_dict())
         self._event_results.append(result)
         self._event_types[event.event_type] += 1
         if not result.get("stored"):
@@ -172,6 +183,27 @@ class OpenHandsMemoryRunner:
         try:
             conversation.send_message(str(task).strip())
             conversation.run()
+            structured_recovery = self._recover_structured_tool_intent(
+                context_bundle["stages"]
+            )
+            initial_issues = detect_adherence_issues(
+                context_bundle["stages"],
+                self._live_events,
+            )
+            repair_attempt_count = 0
+            if initial_issues:
+                repair_message = build_adherence_repair_message(
+                    initial_issues,
+                    self._live_events,
+                )
+                self.adapter.register_internal_feedback(repair_message)
+                conversation.send_message(repair_message)
+                conversation.run()
+                repair_attempt_count = 1
+            remaining_issues = detect_adherence_issues(
+                context_bundle["stages"],
+                self._live_events,
+            )
         finally:
             conversation.close()
         stored = sum(1 for item in self._event_results if item.get("stored"))
@@ -182,6 +214,10 @@ class OpenHandsMemoryRunner:
             if not item.get("remember_allowed") or item.get("sensitivity", {}).get("level") == "high"
         )
         task_errors = self._event_types["task_error"]
+        recovered_task_errors = min(
+            _recoverable_tool_schema_error_count(self._live_events),
+            1 if structured_recovery.get("executed") else 0,
+        )
         context_summary = {
             "trace_id": context_bundle["trace_id"],
             "stage_budgets": {
@@ -221,12 +257,24 @@ class OpenHandsMemoryRunner:
             },
         }
         return {
-            "ok": blocked == 0 and task_errors == 0,
+            "ok": (
+                blocked == 0
+                and task_errors == recovered_task_errors
+                and not remaining_issues
+            ),
             "session_id": self.session_id,
             "trace_id": context_bundle["trace_id"],
             "context_file": context_bundle["context_file"],
             "duration_ms": round((perf_counter() - started) * 1000.0, 3),
             "context": context_summary,
+            "structured_intent_recovery": structured_recovery,
+            "adherence": {
+                "repair_attempted": bool(repair_attempt_count),
+                "repair_attempt_count": repair_attempt_count,
+                "initial_issues": initial_issues,
+                "remaining_issues": remaining_issues,
+                "passed": not remaining_issues,
+            },
             "event_summary": {
                 "stored": stored,
                 "duplicate": duplicate,
@@ -236,10 +284,112 @@ class OpenHandsMemoryRunner:
                 "procedural_memories": len(self._procedural_memories),
                 "procedural_memory_ids": list(self._procedural_memories),
                 "task_errors": task_errors,
+                "recovered_task_errors": recovered_task_errors,
                 "event_types": dict(self._event_types),
                 "unknown_event_types": dict(self._unknown_events),
             },
         }
+
+    def _recover_structured_tool_intent(
+        self,
+        stages: Dict[str, object],
+    ) -> Dict[str, object]:
+        preferences = _selected_preferences(stages)
+        preferred_tool = preferences.get("code_search_tool", "")
+        result: Dict[str, object] = {
+            "attempted": False,
+            "executed": False,
+            "command": "",
+            "exit_code": None,
+            "reason": "",
+        }
+        if not preferred_tool:
+            result["reason"] = "no applicable tool preference"
+            return result
+        intent = None
+        for event in reversed(self._live_events):
+            if str(event.get("event_type") or "") != "assistant_message":
+                continue
+            intent = parse_structured_tool_intent(
+                str(event.get("content") or ""),
+                preferred_tool=preferred_tool,
+            )
+            if intent is not None:
+                break
+        if intent is None:
+            result["reason"] = "no safe structured tool intent"
+            return result
+
+        result["attempted"] = True
+        result["command"] = intent["command"]
+        try:
+            completed = self.structured_intent_executor(
+                intent["argv"],
+                cwd=self.workspace,
+                text=True,
+                capture_output=True,
+                timeout=int(intent["timeout"]),
+                check=False,
+            )
+            exit_code = int(completed.returncode)
+            stdout = str(completed.stdout or "")[:16384]
+            stderr = str(completed.stderr or "")[:16384]
+        except subprocess.TimeoutExpired as exc:
+            exit_code = 124
+            stdout = str(exc.stdout or "")[:16384]
+            stderr = "structured tool intent timed out"
+        except (FileNotFoundError, OSError) as exc:
+            exit_code = 127
+            stdout = ""
+            stderr = str(exc)[:16384]
+
+        turn_id = "turn-%s" % max(1, self.adapter.current_turn)
+        common = {
+            "agent_name": "openhands",
+            "agent_version": self.adapter.agent_version,
+            "session_id": self.session_id,
+            "turn_id": turn_id,
+            "project_root": self.project_root,
+            "task_type": self.task_type,
+        }
+        self.adapter.sequence += 1
+        call_event = AgentInteractionEvent(
+            sequence=self.adapter.sequence,
+            event_type="tool_call",
+            role="assistant",
+            tool_name="terminal",
+            tool_args={
+                "command": intent["command"],
+                "execution_origin": "structured_intent_recovery",
+                "security_risk": "LOW",
+            },
+            source_uri="memguard-recovery://%s/tool-call" % self.session_id,
+            event_id=new_id("evt"),
+            **common,
+        )
+        self._ingest_event(call_event)
+        self.adapter.sequence += 1
+        result_event = AgentInteractionEvent(
+            sequence=self.adapter.sequence,
+            event_type="tool_result",
+            role="tool",
+            tool_name="terminal",
+            tool_args={"execution_origin": "structured_intent_recovery"},
+            tool_result=stdout if exit_code == 0 else stderr,
+            exit_code=exit_code,
+            source_uri="memguard-recovery://%s/tool-result" % self.session_id,
+            event_id=new_id("evt"),
+            **common,
+        )
+        self._ingest_event(result_event)
+        result["executed"] = exit_code == 0
+        result["exit_code"] = exit_code
+        result["reason"] = (
+            "safe structured intent executed"
+            if exit_code == 0
+            else "safe structured intent execution failed"
+        )
+        return result
 
     def _validate_workspace(self) -> None:
         forbidden = {
@@ -349,6 +499,253 @@ def _is_high_risk_command(command: str) -> bool:
     return any(
         marker in lowered
         for marker in ("rm -rf /", "mkfs.", "dd if=", "shutdown", "reboot")
+    )
+
+
+def detect_adherence_issues(
+    stages: Dict[str, object],
+    events: list[Dict[str, object]],
+) -> list[Dict[str, str]]:
+    preferences = _selected_preferences(stages)
+    commands = _terminal_commands(events)
+    issues = []
+    preferred_search = preferences.get("code_search_tool", "")
+    if preferred_search and not any(
+        _command_executable(command) == preferred_search for command in commands
+    ):
+        issues.append(
+            {
+                "topic": "code_search_tool",
+                "expected_value": preferred_search,
+                "reason": "未观察到符合当前工具偏好的实际命令",
+            }
+        )
+    if preferences.get("response_order") == "command_then_explanation":
+        successful_commands = _successful_terminal_commands(events)
+        final_output = _final_visible_output(events)
+        if successful_commands and not any(
+            command in final_output
+            or _command_executable(command) in final_output
+            for command in successful_commands
+        ):
+            issues.append(
+                {
+                    "topic": "response_order",
+                    "expected_value": "command_then_explanation",
+                    "reason": "最终回答未先呈现已执行或建议的命令",
+                }
+            )
+    return issues
+
+
+def build_adherence_repair_message(
+    issues: list[Dict[str, str]],
+    events: list[Dict[str, object]],
+) -> str:
+    lines = [
+        "[MemGuardOS 合规修复]",
+        "上一轮没有完整遵循已生效的用户记忆。请只修复以下问题，"
+        "不要声称这是用户的新偏好，也不要重复已经成功完成的无关操作。",
+    ]
+    for issue in issues:
+        if issue["topic"] == "code_search_tool":
+            preferred = issue["expected_value"]
+            lines.append(
+                "- 代码文本搜索必须使用 `%s`。请用 `%s -n '目标符号' .` "
+                "完成当前任务，不要改用 grep。" % (preferred, preferred)
+            )
+        elif issue["topic"] == "response_order":
+            commands = _successful_terminal_commands(events)
+            command = commands[-1] if commands else "相关命令"
+            lines.append(
+                "- 重新给出最终回答，第一行先写命令 `%s`，然后用中文简要解释。"
+                % command
+            )
+    return "\n".join(lines)
+
+
+def _selected_preferences(stages: Dict[str, object]) -> Dict[str, str]:
+    values = {}
+    for stage in ("planning", "tool_selection", "response_generation"):
+        result = dict(stages.get(stage) or {})
+        for memory in result.get("memories") or []:
+            topic = str(memory.get("preference_topic") or "").strip()
+            value = str(memory.get("preference_value") or "").strip()
+            if topic and value:
+                values[topic] = value
+    return values
+
+
+def _terminal_commands(events: list[Dict[str, object]]) -> list[str]:
+    commands = []
+    for event in events:
+        if str(event.get("event_type") or "") != "tool_call":
+            continue
+        if str(event.get("tool_name") or "") not in {"", "terminal"}:
+            continue
+        command = " ".join(
+            str(dict(event.get("tool_args") or {}).get("command") or "").split()
+        )
+        if command:
+            commands.append(command)
+    return commands
+
+
+def _successful_terminal_commands(
+    events: list[Dict[str, object]],
+) -> list[str]:
+    commands = []
+    pending = []
+    for event in events:
+        event_type = str(event.get("event_type") or "")
+        if event_type == "tool_call":
+            if str(event.get("tool_name") or "") not in {"", "terminal"}:
+                continue
+            command = " ".join(
+                str(dict(event.get("tool_args") or {}).get("command") or "").split()
+            )
+            if command:
+                pending.append(command)
+        elif event_type == "tool_result" and pending:
+            if int(event.get("exit_code") or 0) == 0:
+                commands.append(pending.pop(0))
+            else:
+                pending.pop(0)
+    return commands
+
+
+def _final_visible_output(events: list[Dict[str, object]]) -> str:
+    outputs = []
+    for event in events:
+        event_type = str(event.get("event_type") or "")
+        if event_type in {"assistant_message", "task_complete"}:
+            outputs.append(str(event.get("content") or ""))
+        elif event_type == "tool_result" and str(event.get("tool_name") or "") == "finish":
+            outputs.append(str(event.get("tool_result") or ""))
+    return outputs[-1] if outputs else ""
+
+
+def _command_executable(command: str) -> str:
+    clean = str(command).strip()
+    if not clean:
+        return ""
+    try:
+        parts = shlex.split(clean)
+    except ValueError:
+        parts = clean.split()
+    while parts and parts[0] in {"sudo", "env", "command"}:
+        parts.pop(0)
+    return Path(parts[0]).name if parts else ""
+
+
+def parse_structured_tool_intent(
+    content: str,
+    *,
+    preferred_tool: str,
+) -> Optional[Dict[str, object]]:
+    try:
+        payload = json.loads(str(content or "").strip())
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    candidate = payload
+    function = payload.get("function")
+    if isinstance(function, dict):
+        if str(function.get("name") or "") not in {"terminal", "function_name"}:
+            return None
+        arguments = function.get("arguments")
+        if isinstance(arguments, str):
+            try:
+                arguments = json.loads(arguments)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                return None
+        if not isinstance(arguments, dict):
+            return None
+        candidate = arguments
+    command = " ".join(str(candidate.get("command") or "").split())
+    if not command or len(command) > 2048:
+        return None
+    if any(marker in command for marker in (";", "|", ">", "<", "`", "\n", "\r")):
+        return None
+    try:
+        argv = shlex.split(command)
+    except ValueError:
+        return None
+    if not argv or argv[0] != preferred_tool:
+        return None
+    if preferred_tool not in {"rg", "grep"}:
+        return None
+    if len(argv) < 3 or argv[-1] != ".":
+        return None
+    allowed_options = {
+        "rg": {
+            "-n",
+            "--line-number",
+            "-S",
+            "--smart-case",
+            "-i",
+            "--ignore-case",
+            "-F",
+            "--fixed-strings",
+            "-w",
+            "--word-regexp",
+        },
+        "grep": {
+            "-n",
+            "--line-number",
+            "-i",
+            "--ignore-case",
+            "-F",
+            "--fixed-strings",
+            "-w",
+            "--word-regexp",
+            "-R",
+            "-r",
+            "--recursive",
+        },
+    }
+    patterns = []
+    for argument in argv[1:-1]:
+        if argument.startswith("-"):
+            if argument not in allowed_options[preferred_tool]:
+                return None
+            continue
+        patterns.append(argument)
+    if len(patterns) != 1 or len(patterns[0]) > 256:
+        return None
+    for argument in argv[1:]:
+        path = Path(argument)
+        if path.is_absolute() or ".." in path.parts:
+            return None
+    timeout = candidate.get("timeout", 10)
+    try:
+        timeout_value = max(1, min(int(timeout), 15))
+    except (TypeError, ValueError):
+        timeout_value = 10
+    return {
+        "command": command,
+        "argv": argv,
+        "timeout": timeout_value,
+    }
+
+
+def _recoverable_tool_schema_error_count(
+    events: list[Dict[str, object]],
+) -> int:
+    return sum(
+        1
+        for event in events
+        if str(event.get("event_type") or "") == "task_error"
+        and _is_tool_schema_error(str(event.get("content") or ""))
+    )
+
+
+def _is_tool_schema_error(value: str) -> bool:
+    lowered = str(value or "").lower()
+    return "tool" in lowered and any(
+        marker in lowered
+        for marker in ("not found", "function call", "invalid function", "unknown tool")
     )
 
 

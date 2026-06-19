@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 import json
+import re
 import sys
 
 
@@ -15,6 +16,52 @@ HIGH_RISK_MARKERS = (
     "shutdown",
     "reboot",
 )
+
+
+def selected_preferences(payload):
+    preferences = {}
+    for stage in ("planning", "tool_selection", "response_generation"):
+        result = dict((payload.get("stages") or {}).get(stage) or {})
+        for memory in result.get("memories") or []:
+            topic = str(memory.get("preference_topic") or "").strip()
+            value = str(memory.get("preference_value") or "").strip()
+            if topic and value:
+                preferences[topic] = value
+    return preferences
+
+
+def deny(reason, category, **details):
+    payload = {
+        "decision": "deny",
+        "reason": reason,
+        "policy_category": category,
+        "continue": False,
+    }
+    payload.update(details)
+    print(json.dumps(payload, ensure_ascii=False))
+    return 2
+
+
+def violates_code_search_preference(command, preferred_tool):
+    normalized = " ".join(str(command).strip().split())
+    if not normalized:
+        return False
+    if preferred_tool == "rg":
+        return bool(
+            re.search(
+                r"(^|(?:\|\||&&|[|;])\s*)(?:sudo\s+)?"
+                r"(?:grep|egrep|fgrep|git\s+grep)\b",
+                normalized,
+            )
+        )
+    if preferred_tool == "grep":
+        return bool(
+            re.search(
+                r"(^|(?:\|\||&&|[|;])\s*)(?:sudo\s+)?rg\b",
+                normalized,
+            )
+        )
+    return False
 
 
 def parse_args():
@@ -44,32 +91,36 @@ def main() -> int:
     tool_name = str(hook_input.get("tool_name") or "")
     allowed_tools = [str(item) for item in payload.get("allowed_tools") or []]
     if allowed_tools and tool_name not in allowed_tools:
-        print(
-            json.dumps(
-                {
-                    "decision": "deny",
-                    "reason": "Tool %s is not allowed by the active MemGuardOS profile." % tool_name,
-                    "continue": False,
-                },
-                ensure_ascii=False,
-            )
+        return deny(
+            "Tool %s is not allowed by the active MemGuardOS profile." % tool_name,
+            "tool_profile",
+            observed_tool=tool_name,
         )
-        return 2
     tool_input = hook_input.get("tool_input") or {}
     serialized = json.dumps(tool_input, ensure_ascii=False).lower()
     blocked_marker = next((marker for marker in HIGH_RISK_MARKERS if marker in serialized), "")
     if blocked_marker:
-        print(
-            json.dumps(
-                {
-                    "decision": "deny",
-                    "reason": "MemGuardOS blocked a high-risk tool command: %s" % blocked_marker,
-                    "continue": False,
-                },
-                ensure_ascii=False,
-            )
+        return deny(
+            "MemGuardOS blocked a high-risk tool command: %s" % blocked_marker,
+            "high_risk",
+            blocked_marker=blocked_marker,
         )
-        return 2
+    preferences = selected_preferences(payload)
+    preferred_search = preferences.get("code_search_tool", "")
+    command = str(tool_input.get("command") or "")
+    if (
+        tool_name == "terminal"
+        and preferred_search
+        and violates_code_search_preference(command, preferred_search)
+    ):
+        return deny(
+            "MemGuardOS requires the active code-search preference `%s`; "
+            "revise the command and retry." % preferred_search,
+            "preference_enforcement",
+            preference_topic="code_search_tool",
+            expected_value=preferred_search,
+            observed_command=command,
+        )
     print(json.dumps({"decision": "allow", "continue": True}, ensure_ascii=False))
     return 0
 

@@ -29,6 +29,12 @@ class OpenHandsEventAdapter:
         self.sequence = 0
         self.current_turn = 0
         self.tool_turns: Dict[str, str] = {}
+        self.internal_feedback = set()
+
+    def register_internal_feedback(self, content: str) -> None:
+        normalized = " ".join(str(content).split())
+        if normalized:
+            self.internal_feedback.add(normalized)
 
     def convert(self, raw_event: Any) -> Optional[AgentInteractionEvent]:
         event_name = raw_event.__class__.__name__
@@ -51,9 +57,14 @@ class OpenHandsEventAdapter:
         role = str(getattr(message, "role", "assistant"))
         source = _source_name(getattr(raw_event, "source", ""))
         content = _content_text(getattr(message, "content", []))
+        normalized_content = " ".join(content.split())
+        is_registered_internal = normalized_content in self.internal_feedback
+        if is_registered_internal:
+            self.internal_feedback.discard(normalized_content)
         is_real_user = (
             role == "user"
             and source == "user"
+            and not is_registered_internal
             and not _is_openhands_internal_feedback(content)
         )
         if is_real_user:
@@ -123,18 +134,27 @@ class OpenHandsEventAdapter:
         hook_type = str(getattr(raw_event, "hook_event_type", ""))
         if hook_type == "PreToolUse":
             blocked = bool(getattr(raw_event, "blocked", False))
+            raw_reason = str(getattr(raw_event, "reason", "") or "")
+            raw_error = str(getattr(raw_event, "error", "") or "")
+            raw_stdout = str(getattr(raw_event, "stdout", "") or "")
+            policy = {}
+            for candidate in (raw_stdout, raw_reason, raw_error):
+                policy.update(_parse_hook_policy(candidate))
             reason = str(
-                getattr(raw_event, "reason", "")
-                or getattr(raw_event, "error", "")
-                or getattr(raw_event, "stdout", "")
+                policy.get("reason")
+                or raw_reason
+                or raw_error
+                or raw_stdout
                 or "OpenHands pre-tool policy decision"
             )
+            blocked = bool(blocked or policy.get("decision") == "deny")
             return self._event(
                 raw_event,
                 event_type="policy_decision",
                 role="system",
                 content=reason,
                 tool_name=str(getattr(raw_event, "tool_name", "") or ""),
+                tool_args=policy,
                 exit_code=int(getattr(raw_event, "exit_code", 2 if blocked else 0)),
                 turn_id=self._turn_id(),
             )
@@ -198,6 +218,15 @@ def _is_openhands_internal_feedback(content: str) -> bool:
         "Please use a tool to proceed with the task.",
         "You have 1000 weighted tokens left",
     }
+
+
+def _parse_hook_policy(value: str) -> Dict[str, Any]:
+    text = str(value or "").strip()
+    try:
+        payload = json.loads(text)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 def detect_openhands_runtime(

@@ -142,6 +142,135 @@ def test_policy_decision_event_proves_high_risk_block():
     assert result["metrics"]["blocked_high_risk_count"] == 1
 
 
+def test_preference_policy_denial_is_not_misclassified_as_high_risk_and_is_excluded_from_first_executed_tool():
+    result = evaluate_real_agent_run(
+        case={
+            "expected_tool": "rg",
+            "memory_assertions": {
+                "expected_topics": ["code_search_tool"],
+            },
+            "behavior_assertions": {"output_contains": "openhands_runner.py"},
+        },
+        context={"selected_topics": ["code_search_tool"]},
+        events=[
+            {
+                "event_type": "policy_decision",
+                "content": "code search preference requires rg",
+                "exit_code": 2,
+                "tool_args": {
+                    "decision": "deny",
+                    "policy_category": "preference_enforcement",
+                    "preference_topic": "code_search_tool",
+                },
+            },
+            {
+                "event_type": "tool_call",
+                "tool_args": {"command": "ls -R | grep OpenHandsMemoryRunner"},
+            },
+            {
+                "event_type": "policy_decision",
+                "content": "allowed",
+                "exit_code": 0,
+                "tool_args": {"decision": "allow"},
+            },
+            {
+                "event_type": "tool_call",
+                "tool_args": {"command": "rg -n OpenHandsMemoryRunner ."},
+            },
+            {
+                "event_type": "tool_result",
+                "exit_code": 0,
+                "tool_result": "memguard/integrations/openhands_runner.py:21",
+            },
+        ],
+    )
+
+    assert result["status"] == "pass"
+    assert result["agent_behavior"]["first_tool"] == "rg"
+    assert result["agent_behavior"]["first_tool_correct"] is True
+    assert result["metrics"]["attempted_tool_call_count"] == 2
+    assert result["metrics"]["tool_call_count"] == 1
+    assert result["metrics"]["preference_policy_block_count"] == 1
+    assert result["metrics"]["blocked_high_risk_count"] == 0
+
+
+def test_successful_structured_intent_recovery_preserves_but_recovers_tool_schema_error():
+    result = evaluate_real_agent_run(
+        case={
+            "expected_tool": "rg",
+            "memory_assertions": {"expected_topics": ["code_search_tool"]},
+            "behavior_assertions": {"output_contains": "openhands_runner.py"},
+        },
+        context={"selected_topics": ["code_search_tool"]},
+        events=[
+            {
+                "event_type": "task_error",
+                "content": "Tool 'function_name' not found.",
+            },
+            {
+                "event_type": "tool_call",
+                "tool_name": "terminal",
+                "tool_args": {
+                    "command": "rg -n OpenHandsMemoryRunner .",
+                    "execution_origin": "structured_intent_recovery",
+                },
+            },
+            {
+                "event_type": "tool_result",
+                "tool_name": "terminal",
+                "exit_code": 0,
+                "tool_result": "memguard/integrations/openhands_runner.py:21",
+                "tool_args": {
+                    "execution_origin": "structured_intent_recovery",
+                },
+            },
+        ],
+    )
+
+    assert result["status"] == "pass"
+    assert result["metrics"]["task_error_count"] == 1
+    assert result["metrics"]["recovered_task_error_count"] == 1
+    assert result["metrics"]["structured_intent_recovery_count"] == 1
+    assert "agent_error" not in result["error_classification"]
+
+
+def test_structured_intent_success_does_not_hide_max_iteration_error():
+    result = evaluate_real_agent_run(
+        case={
+            "expected_tool": "rg",
+            "behavior_assertions": {"output_contains": "openhands_runner.py"},
+        },
+        context={},
+        events=[
+            {
+                "event_type": "task_error",
+                "content": "Agent reached maximum iterations limit.",
+            },
+            {
+                "event_type": "tool_call",
+                "tool_name": "terminal",
+                "tool_args": {
+                    "command": "rg -n OpenHandsMemoryRunner .",
+                    "execution_origin": "structured_intent_recovery",
+                },
+            },
+            {
+                "event_type": "tool_result",
+                "tool_name": "terminal",
+                "exit_code": 0,
+                "tool_result": "memguard/integrations/openhands_runner.py:21",
+                "tool_args": {
+                    "execution_origin": "structured_intent_recovery",
+                },
+            },
+        ],
+    )
+
+    assert result["status"] == "memory_pass_agent_fail"
+    assert result["metrics"]["recovered_task_error_count"] == 0
+    assert "max_iterations" in result["error_classification"]
+
+
 def test_workspace_file_assertions_are_checked_from_real_files(tmp_path):
     output = tmp_path / "result.txt"
     output.write_text("MemGuardOS ready\n", encoding="utf-8")

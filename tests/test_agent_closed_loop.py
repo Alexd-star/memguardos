@@ -94,6 +94,159 @@ class FakeErrorConversation(FakeConversation):
         )
 
 
+class FakePreferenceRepairConversation(FakeConversation):
+    def __init__(self, callback):
+        super().__init__(callback)
+        self.run_count = 0
+
+    def send_message(self, message):
+        self.messages.append(message)
+        self.callback(
+            fake_event(
+                "MessageEvent",
+                id="fake-user-%s" % len(self.messages),
+                source="user",
+                llm_message=SimpleNamespace(role="user", content=[text(message)]),
+            )
+        )
+
+    def run(self):
+        self.run_count += 1
+        if self.run_count == 1:
+            self.callback(
+                fake_event(
+                    "MessageEvent",
+                    id="fake-assistant-before-repair",
+                    source="agent",
+                    llm_message=SimpleNamespace(
+                        role="assistant",
+                        content=[text("我没有执行代码搜索。")],
+                    ),
+                )
+            )
+            return
+        self.callback(
+            fake_event(
+                "ActionEvent",
+                id="fake-action-after-repair",
+                source="agent",
+                tool_name="terminal",
+                tool_call_id="call-repair",
+                tool_call=SimpleNamespace(
+                    arguments='{"command":"rg -n format_agent_context ."}'
+                ),
+                thought=[text("按用户偏好重新搜索")],
+            )
+        )
+        self.callback(
+            fake_event(
+                "ObservationEvent",
+                id="fake-observation-after-repair",
+                source="environment",
+                tool_name="terminal",
+                tool_call_id="call-repair",
+                observation=SimpleNamespace(
+                    content=[text("memguard/integrations/openhands_runner.py:1")],
+                    is_error=False,
+                    exit_code=0,
+                ),
+            )
+        )
+        self.callback(
+            fake_event(
+                "MessageEvent",
+                id="fake-assistant-after-repair",
+                source="agent",
+                llm_message=SimpleNamespace(
+                    role="assistant",
+                    content=[text("已找到 openhands_runner.py。")],
+                ),
+            )
+        )
+
+
+class FakeResponseOrderRepairConversation(FakePreferenceRepairConversation):
+    def run(self):
+        self.run_count += 1
+        if self.run_count == 1:
+            self.callback(
+                fake_event(
+                    "ActionEvent",
+                    id="fake-pwd-action",
+                    source="agent",
+                    tool_name="terminal",
+                    tool_call_id="call-pwd",
+                    tool_call=SimpleNamespace(arguments='{"command":"pwd"}'),
+                    thought=[text("查询当前目录")],
+                )
+            )
+            self.callback(
+                fake_event(
+                    "ObservationEvent",
+                    id="fake-pwd-result",
+                    source="environment",
+                    tool_name="terminal",
+                    tool_call_id="call-pwd",
+                    observation=SimpleNamespace(
+                        content=[text("/tmp/workspace")],
+                        is_error=False,
+                        exit_code=0,
+                    ),
+                )
+            )
+            self.callback(
+                fake_event(
+                    "MessageEvent",
+                    id="fake-pwd-answer-before-repair",
+                    source="agent",
+                    llm_message=SimpleNamespace(
+                        role="assistant",
+                        content=[text("当前目录是 /tmp/workspace。")],
+                    ),
+                )
+            )
+            return
+        self.callback(
+            fake_event(
+                "MessageEvent",
+                id="fake-pwd-answer-after-repair",
+                source="agent",
+                llm_message=SimpleNamespace(
+                    role="assistant",
+                    content=[text("pwd\n用于显示当前工作目录。")],
+                ),
+            )
+        )
+
+
+class FakeStructuredIntentConversation(FakePreferenceRepairConversation):
+    def run(self):
+        self.run_count += 1
+        self.callback(
+            fake_event(
+                "MessageEvent",
+                id="fake-structured-intent",
+                source="agent",
+                llm_message=SimpleNamespace(
+                    role="assistant",
+                    content=[
+                        text(
+                            json.dumps(
+                                {
+                                    "command": "rg -n 'format_agent_context' .",
+                                    "is_input": False,
+                                    "timeout": 10,
+                                    "reset": False,
+                                    "security_risk": "LOW",
+                                }
+                            )
+                        )
+                    ],
+                ),
+            )
+        )
+
+
 def make_service(tmp_path):
     return MemGuardService(
         store_path=tmp_path / "memory.segment",
@@ -236,6 +389,205 @@ def test_runner_reports_conversation_error_as_failed_run(tmp_path):
         service.close()
 
 
+def test_runner_performs_one_bounded_preference_repair_without_user_memory_pollution(
+    tmp_path,
+):
+    service = make_service(tmp_path)
+    created = {}
+    service.ingest_interaction(
+        interaction_event(
+            "以后搜索项目代码优先使用 rg。",
+            "evt-preference-repair-history",
+            1,
+            session_id="session-preference-history",
+        )
+    )
+
+    def conversation_factory(**kwargs):
+        conversation = FakePreferenceRepairConversation(kwargs["callback"])
+        created["conversation"] = conversation
+        return conversation
+
+    try:
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id="session-preference-repair",
+            workspace=tmp_path / "workspace",
+            state_dir=tmp_path / "state",
+            conversation_factory=conversation_factory,
+        )
+
+        result = runner.run("请查找 format_agent_context 的定义位置。")
+
+        assert result["adherence"]["repair_attempted"] is True
+        assert result["adherence"]["repair_attempt_count"] == 1
+        assert result["adherence"]["initial_issues"][0]["topic"] == "code_search_tool"
+        assert result["adherence"]["remaining_issues"] == []
+        assert created["conversation"].run_count == 2
+        events = service.meta.list_agent_events(
+            session_id="session-preference-repair"
+        )
+        repair_events = [
+            event
+            for event in events
+            if "MemGuardOS 合规修复" in str(event.get("content") or "")
+        ]
+        assert len(repair_events) == 1
+        assert repair_events[0]["role"] == "system"
+        assert repair_events[0]["event_type"] == "system_message"
+    finally:
+        service.close()
+
+
+def test_runner_repairs_response_order_by_reusing_successful_command(tmp_path):
+    service = make_service(tmp_path)
+    service.ingest_interaction(
+        interaction_event(
+            "以后回答先给命令，再解释原因。",
+            "evt-response-order-history",
+            1,
+            session_id="session-response-order-history",
+        )
+    )
+
+    def conversation_factory(**kwargs):
+        return FakeResponseOrderRepairConversation(kwargs["callback"])
+
+    try:
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id="session-response-order-repair",
+            workspace=tmp_path / "workspace",
+            state_dir=tmp_path / "state",
+            conversation_factory=conversation_factory,
+        )
+
+        result = runner.run("如何在 Linux 中显示当前工作目录？")
+
+        assert result["adherence"]["repair_attempted"] is True
+        assert result["adherence"]["initial_issues"] == [
+            {
+                "topic": "response_order",
+                "expected_value": "command_then_explanation",
+                "reason": "最终回答未先呈现已执行或建议的命令",
+            }
+        ]
+        assert result["adherence"]["remaining_issues"] == []
+        events = service.meta.list_agent_events(
+            session_id="session-response-order-repair"
+        )
+        repair = next(
+            event
+            for event in events
+            if "MemGuardOS 合规修复" in str(event.get("content") or "")
+        )
+        assert "`pwd`" in repair["content"]
+        assert repair["role"] == "system"
+    finally:
+        service.close()
+
+
+def test_runner_recovers_strict_read_only_structured_tool_intent(tmp_path):
+    service = make_service(tmp_path)
+    service.ingest_interaction(
+        interaction_event(
+            "以后搜索项目代码优先使用 rg。",
+            "evt-structured-recovery-history",
+            1,
+            session_id="session-structured-recovery-history",
+        )
+    )
+    executions = []
+
+    def recovery_executor(argv, **kwargs):
+        executions.append((argv, kwargs))
+        return SimpleNamespace(
+            returncode=0,
+            stdout="memguard/integrations/openhands_runner.py:1",
+            stderr="",
+        )
+
+    def conversation_factory(**kwargs):
+        return FakeStructuredIntentConversation(kwargs["callback"])
+
+    try:
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id="session-structured-recovery",
+            workspace=tmp_path / "workspace",
+            state_dir=tmp_path / "state",
+            conversation_factory=conversation_factory,
+            structured_intent_executor=recovery_executor,
+        )
+
+        result = runner.run("请查找 format_agent_context 的定义位置。")
+
+        assert result["structured_intent_recovery"]["attempted"] is True
+        assert result["structured_intent_recovery"]["executed"] is True
+        assert result["structured_intent_recovery"]["command"] == (
+            "rg -n 'format_agent_context' ."
+        )
+        assert result["adherence"]["repair_attempted"] is False
+        assert result["adherence"]["remaining_issues"] == []
+        assert executions[0][0] == ["rg", "-n", "format_agent_context", "."]
+        assert executions[0][1]["cwd"] == (tmp_path / "workspace").resolve()
+        events = service.meta.list_agent_events(
+            session_id="session-structured-recovery"
+        )
+        recovered_call = next(
+            event
+            for event in events
+            if event["event_type"] == "tool_call"
+            and event["tool_args"].get("execution_origin")
+            == "structured_intent_recovery"
+        )
+        assert recovered_call["tool_args"]["command"] == (
+            "rg -n 'format_agent_context' ."
+        )
+    finally:
+        service.close()
+
+
+def test_structured_intent_recovery_rejects_shell_and_workspace_escape():
+    from memguard.integrations.openhands_runner import parse_structured_tool_intent
+
+    assert (
+        parse_structured_tool_intent(
+            '{"command":"rg -n token .; cat /etc/shadow"}',
+            preferred_tool="rg",
+        )
+        is None
+    )
+    assert (
+        parse_structured_tool_intent(
+            '{"command":"rg -n token ../"}',
+            preferred_tool="rg",
+        )
+        is None
+    )
+    assert (
+        parse_structured_tool_intent(
+            '{"command":"grep -R token ."}',
+            preferred_tool="rg",
+        )
+        is None
+    )
+    assert (
+        parse_structured_tool_intent(
+            '{"command":"rg --pre /bin/cat token ."}',
+            preferred_tool="rg",
+        )
+        is None
+    )
+    assert (
+        parse_structured_tool_intent(
+            '{"command":"/tmp/rg -n token ."}',
+            preferred_tool="rg",
+        )
+        is None
+    )
+
+
 def test_openhands_ollama_model_uses_native_ollama_base_url():
     kwargs = build_openhands_llm_kwargs(
         model="ollama/qwen2.5-coder:1.5b",
@@ -363,6 +715,81 @@ def test_openhands_hook_injects_context_and_blocks_high_risk_commands(tmp_path):
     )
     assert disallowed.returncode == 2
     assert "not allowed" in json.loads(disallowed.stdout)["reason"]
+
+
+def test_openhands_hook_enforces_selected_code_search_preference(tmp_path):
+    context_file = tmp_path / "context.json"
+    context_file.write_text(
+        json.dumps(
+            {
+                "additional_context": "使用已筛选记忆。",
+                "allowed_tools": ["terminal", "finish"],
+                "stages": {
+                    "planning": {"memories": []},
+                    "tool_selection": {
+                        "memories": [
+                            {
+                                "preference_topic": "code_search_tool",
+                                "preference_value": "rg",
+                            }
+                        ]
+                    },
+                    "response_generation": {"memories": []},
+                },
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    script = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
+
+    denied = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--context-file",
+            str(context_file),
+            "--guard-tool",
+        ],
+        input=json.dumps(
+            {
+                "tool_name": "terminal",
+                "tool_input": {"command": "ls -R | grep OpenHandsMemoryRunner"},
+            }
+        ),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    allowed = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--context-file",
+            str(context_file),
+            "--guard-tool",
+        ],
+        input=json.dumps(
+            {
+                "tool_name": "terminal",
+                "tool_input": {
+                    "command": "rg -n 'OpenHandsMemoryRunner' ."
+                },
+            }
+        ),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    denied_payload = json.loads(denied.stdout)
+    assert denied.returncode == 2
+    assert denied_payload["decision"] == "deny"
+    assert denied_payload["policy_category"] == "preference_enforcement"
+    assert denied_payload["preference_topic"] == "code_search_tool"
+    assert denied_payload["expected_value"] == "rg"
+    assert allowed.returncode == 0
+    assert json.loads(allowed.stdout)["decision"] == "allow"
 
 
 def interaction_event(content, event_id, sequence, session_id="session-forget-a"):

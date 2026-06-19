@@ -195,7 +195,10 @@ def test_openhands_blocked_hook_maps_to_policy_decision_event():
         success=True,
         blocked=True,
         exit_code=2,
-        stdout='{"decision":"deny"}',
+        stdout=(
+            '{"decision":"deny","policy_category":"high_risk",'
+            '"blocked_marker":"reboot"}'
+        ),
         stderr="",
         reason="MemGuardOS blocked a high-risk tool command: reboot",
         additional_context=None,
@@ -209,3 +212,6 @@ def test_openhands_blocked_hook_maps_to_policy_decision_event():
     assert event.tool_name == "terminal"
     assert event.exit_code == 2
     assert "blocked a high-risk tool command" in event.content
+    assert event.tool_args["decision"] == "deny"
+    assert event.tool_args["policy_category"] == "high_risk"
+    assert event.tool_args["blocked_marker"] == "reboot"
