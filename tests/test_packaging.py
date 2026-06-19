@@ -76,6 +76,16 @@ def test_competition_package_requires_memory_value_code_data_and_evidence():
     assert required.issubset(REQUIRED_PATHS)
 
 
+def test_memory_value_collector_supports_synchronized_tree_without_git_head():
+    script = (ROOT / "scripts" / "collect_memory_value_evidence.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "git rev-parse --verify HEAD" in script
+    assert "MEMGUARD_SOURCE_REVISION" in script
+    assert "synchronized_tree_without_git_metadata" in script
+
+
 def test_submission_package_inspector_rejects_process_materials(tmp_path):
     package = tmp_path / "submission.zip"
     manifest = tmp_path / "submission_manifest.json"

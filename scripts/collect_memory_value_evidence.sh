@@ -83,7 +83,8 @@ MEMGUARD_HOME="${AUDIT_HOME}" "${PYTHON_BIN}" -m memguard.cli.memctl ingest \
 run_capture "audit_verify" env MEMGUARD_HOME="${AUDIT_HOME}" \
   "${PYTHON_BIN}" -m memguard.cli.memctl verify-audit
 rm -rf -- "${AUDIT_HOME}"
-if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+  && git rev-parse --verify HEAD >/dev/null 2>&1; then
   run_capture "git_head" git rev-parse HEAD
   run_capture "git_status" git status --short
 else

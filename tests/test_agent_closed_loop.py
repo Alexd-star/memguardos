@@ -7,8 +7,10 @@ from types import SimpleNamespace
 from memguard.integrations.openhands_runner import (
     OpenHandsMemoryRunner,
     build_openhands_llm_kwargs,
+    detect_adherence_issues,
     format_agent_context,
 )
+from memguard.ingestion.tool_result import ToolResult
 from memguard.api.server import handle_request
 from memguard.cli.memctl import main as memctl_main
 from memguard.service import MemGuardService
@@ -242,6 +244,61 @@ class FakeStructuredIntentConversation(FakePreferenceRepairConversation):
                             )
                         )
                     ],
+                ),
+            )
+        )
+
+
+class FakeStructuredIntentAfterRepairConversation(FakePreferenceRepairConversation):
+    def run(self):
+        self.run_count += 1
+        if self.run_count == 1:
+            self.callback(
+                fake_event(
+                    "MessageEvent",
+                    id="fake-no-tool-before-repair",
+                    source="agent",
+                    llm_message=SimpleNamespace(
+                        role="assistant",
+                        content=[text("暂时没有执行搜索。")],
+                    ),
+                )
+            )
+            return
+        self.callback(
+            fake_event(
+                "MessageEvent",
+                id="fake-structured-after-repair",
+                source="agent",
+                llm_message=SimpleNamespace(
+                    role="assistant",
+                    content=[
+                        text(
+                            json.dumps(
+                                {
+                                    "command": "rg -n 'format_agent_context' .",
+                                    "is_input": False,
+                                    "timeout": 10,
+                                    "security_risk": "LOW",
+                                }
+                            )
+                        )
+                    ],
+                ),
+            )
+        )
+
+
+class FakeIncompleteProceduralAnswerConversation(FakeConversation):
+    def run(self):
+        self.callback(
+            fake_event(
+                "MessageEvent",
+                id="fake-incomplete-procedural-answer",
+                source="agent",
+                llm_message=SimpleNamespace(
+                    role="assistant",
+                    content=[text("已经定位到 service.py 文件。")],
                 ),
             )
         )
@@ -546,6 +603,152 @@ def test_runner_recovers_strict_read_only_structured_tool_intent(tmp_path):
         )
     finally:
         service.close()
+
+
+def test_runner_recovers_structured_intent_emitted_after_bounded_repair(tmp_path):
+    service = make_service(tmp_path)
+    service.ingest_interaction(
+        interaction_event(
+            "以后搜索项目代码优先使用 rg。",
+            "evt-after-repair-history",
+            1,
+            session_id="session-after-repair-history",
+        )
+    )
+
+    def recovery_executor(argv, **kwargs):
+        return SimpleNamespace(
+            returncode=0,
+            stdout="memguard/integrations/openhands_runner.py:1",
+            stderr="",
+        )
+
+    def conversation_factory(**kwargs):
+        return FakeStructuredIntentAfterRepairConversation(kwargs["callback"])
+
+    try:
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id="session-after-repair",
+            workspace=tmp_path / "workspace",
+            state_dir=tmp_path / "state",
+            conversation_factory=conversation_factory,
+            structured_intent_executor=recovery_executor,
+        )
+
+        result = runner.run("请查找 format_agent_context 的定义位置。")
+
+        assert result["adherence"]["repair_attempted"] is True
+        assert result["structured_intent_recovery"]["attempted"] is True
+        assert result["structured_intent_recovery"]["executed"] is True
+        assert result["adherence"]["remaining_issues"] == []
+    finally:
+        service.close()
+
+
+def test_runner_adds_verified_procedural_result_when_model_answer_is_incomplete(
+    tmp_path,
+):
+    service = make_service(tmp_path)
+    service.ingest_tool_result(
+        ToolResult(
+            command="find memguard -name service.py",
+            cwd=".",
+            exit_code=0,
+            stdout="memguard/service.py",
+            tool_name="terminal",
+            state_before="查找服务文件",
+            state_after="定位成功",
+            lesson="后续同类任务复用已验证路径",
+        ),
+        source_uri="openhands://procedural-history/tool",
+    )
+
+    def conversation_factory(**kwargs):
+        return FakeIncompleteProceduralAnswerConversation(kwargs["callback"])
+
+    try:
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id="session-procedural-fallback",
+            workspace=tmp_path / "workspace",
+            state_dir=tmp_path / "state",
+            conversation_factory=conversation_factory,
+        )
+
+        result = runner.run("请定位名为 service.py 的文件。")
+
+        assert result["procedural_memory_fallback"]["applied"] is True
+        assert result["procedural_memory_fallback"]["evidence"] == (
+            "memguard/service.py"
+        )
+        events = service.meta.list_agent_events(
+            session_id="session-procedural-fallback"
+        )
+        fallback = next(
+            event
+            for event in events
+            if event["tool_args"].get("execution_origin")
+            == "procedural_memory_fallback"
+        )
+        assert "memguard/service.py" in fallback["content"]
+        assert fallback["role"] == "assistant"
+    finally:
+        service.close()
+
+
+def test_adherence_requires_successful_preferred_tool_after_policy_denial():
+    stages = {
+        "planning": {"memories": []},
+        "tool_selection": {
+            "memories": [
+                {
+                    "preference_topic": "code_search_tool",
+                    "preference_value": "rg",
+                }
+            ]
+        },
+        "response_generation": {"memories": []},
+    }
+    events = [
+        {
+            "event_type": "policy_decision",
+            "exit_code": 2,
+            "tool_args": {
+                "decision": "deny",
+                "policy_category": "preference_enforcement",
+            },
+        },
+        {
+            "event_type": "tool_call",
+            "tool_name": "terminal",
+            "tool_args": {"command": "ls | grep service.py"},
+        },
+        {
+            "event_type": "policy_decision",
+            "exit_code": 0,
+            "tool_args": {"decision": "allow"},
+        },
+        {
+            "event_type": "tool_call",
+            "tool_name": "terminal",
+            "tool_args": {"command": "rg -n service.py .py"},
+        },
+        {
+            "event_type": "tool_result",
+            "tool_name": "terminal",
+            "exit_code": 2,
+            "tool_result": "No such file or directory",
+        },
+    ]
+
+    assert detect_adherence_issues(stages, events) == [
+        {
+            "topic": "code_search_tool",
+            "expected_value": "rg",
+            "reason": "未观察到成功执行的当前偏好工具命令",
+        }
+    ]
 
 
 def test_structured_intent_recovery_rejects_shell_and_workspace_escape():

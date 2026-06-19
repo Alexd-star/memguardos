@@ -16,8 +16,10 @@ from memguard.integrations.adherence import (
     build_adherence_repair_message,
     detect_adherence_issues,
     parse_structured_tool_intent,
+    procedural_memory_evidence,
     recoverable_tool_schema_error_count,
     selected_preferences,
+    successful_terminal_commands,
 )
 from memguard.integrations.openhands_adapter import OpenHandsEventAdapter
 from memguard.integrations.events import AgentInteractionEvent
@@ -207,6 +209,15 @@ class OpenHandsMemoryRunner:
                 conversation.send_message(repair_message)
                 conversation.run()
                 repair_attempt_count = 1
+                if not structured_recovery.get("executed"):
+                    followup_recovery = self._recover_structured_tool_intent(
+                        context_bundle["stages"]
+                    )
+                    if followup_recovery.get("attempted"):
+                        structured_recovery = followup_recovery
+            procedural_fallback = self._apply_procedural_memory_fallback(
+                context_bundle["stages"]
+            )
             remaining_issues = detect_adherence_issues(
                 context_bundle["stages"],
                 self._live_events,
@@ -275,6 +286,7 @@ class OpenHandsMemoryRunner:
             "duration_ms": round((perf_counter() - started) * 1000.0, 3),
             "context": context_summary,
             "structured_intent_recovery": structured_recovery,
+            "procedural_memory_fallback": procedural_fallback,
             "adherence": {
                 "repair_attempted": bool(repair_attempt_count),
                 "repair_attempt_count": repair_attempt_count,
@@ -396,6 +408,54 @@ class OpenHandsMemoryRunner:
             if exit_code == 0
             else "safe structured intent execution failed"
         )
+        return result
+
+    def _apply_procedural_memory_fallback(
+        self,
+        stages: Dict[str, object],
+    ) -> Dict[str, object]:
+        result = {
+            "applied": False,
+            "evidence": "",
+            "reason": "",
+        }
+        evidence = procedural_memory_evidence(stages)
+        if not evidence:
+            result["reason"] = "no selected successful procedural evidence"
+            return result
+        result["evidence"] = evidence
+        if successful_terminal_commands(self._live_events):
+            result["reason"] = "live tool result already available"
+            return result
+        visible = "\n".join(
+            str(event.get("content") or event.get("tool_result") or "")
+            for event in self._live_events
+            if str(event.get("event_type") or "")
+            in {"assistant_message", "task_complete", "tool_result"}
+        )
+        if evidence in visible:
+            result["reason"] = "model output already contains procedural evidence"
+            return result
+        self.adapter.sequence += 1
+        event = AgentInteractionEvent(
+            agent_name="openhands",
+            agent_version=self.adapter.agent_version,
+            session_id=self.session_id,
+            turn_id="turn-%s" % max(1, self.adapter.current_turn),
+            sequence=self.adapter.sequence,
+            event_type="assistant_message",
+            role="assistant",
+            content="基于已验证的程序性记忆，结果为：%s" % evidence,
+            tool_args={"execution_origin": "procedural_memory_fallback"},
+            project_root=self.project_root,
+            task_type=self.task_type,
+            source_uri="memguard-recovery://%s/procedural-result"
+            % self.session_id,
+            event_id=new_id("evt"),
+        )
+        self._ingest_event(event)
+        result["applied"] = True
+        result["reason"] = "verified procedural result added to final evidence"
         return result
 
     def _validate_workspace(self) -> None:

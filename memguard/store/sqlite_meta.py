@@ -606,7 +606,8 @@ class SQLiteMetaStore:
     def memory_event_evidence(self, memory_id: str) -> List[Dict[str, Any]]:
         rows = self.conn.execute(
             """
-            SELECT e.*, l.relation, l.created_at AS linked_at
+            SELECT e.*, e.rowid AS ingest_order,
+                   l.relation, l.created_at AS linked_at
             FROM memory_event_links l
             JOIN agent_events e ON e.event_id = l.event_id
             WHERE l.memory_id = ?

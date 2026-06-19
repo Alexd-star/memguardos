@@ -369,3 +369,41 @@ def test_explicit_preference_wins_over_promoted_implicit_preference_at_same_scop
         )
     finally:
         service.close()
+
+
+def test_latest_explicit_preference_uses_event_ingest_order_when_timestamps_tie(
+    tmp_path,
+    monkeypatch,
+):
+    fixed_time = "2026-06-20T00:00:00+00:00"
+    monkeypatch.setattr("memguard.store.sqlite_meta.utc_now", lambda: fixed_time)
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        service.ingest_interaction(
+            event(
+                "以前搜索代码优先使用 grep。",
+                event_id="evt-tied-old",
+                timestamp=fixed_time,
+            )
+        )
+        service.ingest_interaction(
+            event(
+                "更新偏好：以后不要用 grep，改为优先使用 rg。",
+                event_id="evt-tied-new",
+                session_id="session-b",
+                timestamp=fixed_time,
+            )
+        )
+
+        selected = service.select_preferences(
+            agent_name="openhands",
+            session_id="session-new",
+            project_root="",
+            task_type="code_search",
+        )
+
+        assert selected["selected"][0]["value"] == "rg"
+        assert selected["excluded"][0]["value"] == "grep"
+        assert selected["excluded"][0]["reason"] == "older_version"
+    finally:
+        service.close()

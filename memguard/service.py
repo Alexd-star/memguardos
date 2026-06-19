@@ -354,6 +354,7 @@ class MemGuardService:
             for row in self.meta.list_memories(include_deleted=False)
             if row.get("type") in {"preference", "sensitive_policy"} and row.get("preference_topic")
         ]
+        event_order_cache = {}
         applicable = []
         excluded = []
         for row in candidates:
@@ -369,8 +370,25 @@ class MemGuardService:
             item["preference_explicit"] = bool(item.get("preference_explicit"))
             item["topic"] = item.get("preference_topic")
             item["value"] = item.get("preference_value")
+            memory_id = str(item.get("memory_id") or "")
+            if memory_id not in event_order_cache:
+                evidence = self.meta.memory_event_evidence(memory_id)
+                event_order_cache[memory_id] = max(
+                    (
+                        (
+                            str(event.get("timestamp") or ""),
+                            int(event.get("ingest_order") or 0),
+                            int(event.get("sequence") or 0),
+                            str(event.get("event_id") or ""),
+                        )
+                        for event in evidence
+                    ),
+                    default=("", 0, 0, ""),
+                )
+            item["_event_order"] = event_order_cache[memory_id]
             if not matches:
                 item["reason"] = "scope_not_applicable"
+                item.pop("_event_order", None)
                 excluded.append(item)
                 continue
             item["_scope_rank"] = scope_rank.get(scope, 0)
@@ -386,12 +404,14 @@ class MemGuardService:
                 key=lambda row: (
                     int(row["_scope_rank"]),
                     1 if row["preference_explicit"] else 0,
+                    row["_event_order"],
                     str(row.get("updated_at") or ""),
                 ),
                 reverse=True,
             )
             chosen = ordered[0]
             chosen.pop("_scope_rank", None)
+            chosen.pop("_event_order", None)
             chosen["selection_reason"] = "highest applicable scope, then explicit evidence, then latest version"
             selected.append(chosen)
             for row in ordered[1:]:
@@ -402,6 +422,7 @@ class MemGuardService:
                 else:
                     reason = "older_version"
                 row.pop("_scope_rank", None)
+                row.pop("_event_order", None)
                 row["reason"] = reason
                 excluded.append(row)
 

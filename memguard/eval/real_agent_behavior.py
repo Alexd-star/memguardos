@@ -87,6 +87,7 @@ def evaluate_real_agent_run(
     other_policy_block_count = 0
     structured_intent_recovery_count = 0
     successful_structured_recovery_count = 0
+    procedural_memory_fallback_count = 0
     task_errors = []
     pending_policy = {}
     for raw_event in evaluated_events:
@@ -140,6 +141,11 @@ def evaluate_real_agent_run(
                 _visible_text(event.get("tool_result") or event.get("content") or "")
             )
         elif event_type in {"assistant_message", "task_complete"}:
+            if (
+                str(dict(event.get("tool_args") or {}).get("execution_origin") or "")
+                == "procedural_memory_fallback"
+            ):
+                procedural_memory_fallback_count += 1
             outputs.append(_visible_text(event.get("content") or ""))
         elif event_type == "task_error":
             task_errors.append(str(event.get("content") or event.get("error") or ""))
@@ -245,6 +251,7 @@ def evaluate_real_agent_run(
             "task_error_count": len(task_errors),
             "recovered_task_error_count": recovered_task_error_count,
             "structured_intent_recovery_count": structured_intent_recovery_count,
+            "procedural_memory_fallback_count": procedural_memory_fallback_count,
         },
         "error_classification": error_classes,
         "recovered_error_classification": (

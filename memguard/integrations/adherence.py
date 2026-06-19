@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, Optional
 import json
+import re
 import shlex
 
 
@@ -11,7 +12,7 @@ def detect_adherence_issues(
     events: list[Dict[str, object]],
 ) -> list[Dict[str, str]]:
     preferences = selected_preferences(stages)
-    commands = terminal_commands(events)
+    commands = successful_terminal_commands(events)
     issues = []
     preferred_search = preferences.get("code_search_tool", "")
     if preferred_search and not any(
@@ -21,7 +22,7 @@ def detect_adherence_issues(
             {
                 "topic": "code_search_tool",
                 "expected_value": preferred_search,
-                "reason": "未观察到符合当前工具偏好的实际命令",
+                "reason": "未观察到成功执行的当前偏好工具命令",
             }
         )
     if preferences.get("response_order") == "command_then_explanation":
@@ -100,16 +101,26 @@ def successful_terminal_commands(
 ) -> list[str]:
     commands = []
     pending = []
+    pending_policy = {}
     for event in events:
         event_type = str(event.get("event_type") or "")
-        if event_type == "tool_call":
+        if event_type == "policy_decision":
+            policy = dict(event.get("tool_args") or {})
+            denied = (
+                str(policy.get("decision") or "").lower() == "deny"
+                or int(event.get("exit_code") or 0) == 2
+            )
+            pending_policy = {"denied": denied}
+        elif event_type == "tool_call":
             if str(event.get("tool_name") or "") not in {"", "terminal"}:
+                pending_policy = {}
                 continue
             command = " ".join(
                 str(dict(event.get("tool_args") or {}).get("command") or "").split()
             )
-            if command:
+            if command and not pending_policy.get("denied"):
                 pending.append(command)
+            pending_policy = {}
         elif event_type == "tool_result" and pending:
             if int(event.get("exit_code") or 0) == 0:
                 commands.append(pending.pop(0))
@@ -130,6 +141,28 @@ def final_visible_output(events: list[Dict[str, object]]) -> str:
         ):
             outputs.append(str(event.get("tool_result") or ""))
     return outputs[-1] if outputs else ""
+
+
+def procedural_memory_evidence(stages: Dict[str, object]) -> str:
+    for stage in ("planning", "tool_selection", "response_generation"):
+        result = dict(stages.get(stage) or {})
+        subtypes = {
+            str(memory.get("subtype") or "")
+            for memory in result.get("memories") or []
+        }
+        if "procedural_trace" not in subtypes:
+            continue
+        context = str(result.get("context") or "")
+        matches = re.findall(
+            r"Tool result:\s*command=.*?\s+status=success\b.*?"
+            r"stdout_summary=(.*?)\s+stderr_summary=",
+            context,
+        )
+        for value in matches:
+            evidence = " ".join(value.split()).strip()
+            if evidence:
+                return evidence[:1000]
+    return ""
 
 
 def command_executable(command: str) -> str:
