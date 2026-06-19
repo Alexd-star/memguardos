@@ -7,7 +7,9 @@ import json
 import os
 import shlex
 import sys
+from time import perf_counter
 
+from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.openhands_adapter import OpenHandsEventAdapter
 from memguard.models import new_id, utc_now
 
@@ -62,6 +64,8 @@ class OpenHandsMemoryRunner:
         self._event_results = []
         self._event_types = Counter()
         self._unknown_events = Counter()
+        self._tool_commands: Dict[str, str] = {}
+        self._procedural_memories = []
 
     def prepare_context(self, task: str) -> Dict[str, object]:
         clean_task = str(task).strip()
@@ -111,8 +115,44 @@ class OpenHandsMemoryRunner:
         result = self.service.ingest_interaction(event)
         self._event_results.append(result)
         self._event_types[event.event_type] += 1
+        if not result.get("stored"):
+            return
+        if event.event_type == "tool_call":
+            command = str(event.tool_args.get("command") or "").strip()
+            if command:
+                self._tool_commands[event.turn_id] = command
+        elif event.event_type == "tool_result":
+            command = self._tool_commands.get(event.turn_id, "")
+            if command:
+                memory_result = self.service.ingest_tool_result(
+                    ToolResult(
+                        command=command,
+                        cwd=self.project_root,
+                        exit_code=int(event.exit_code or 0),
+                        stdout=event.tool_result if int(event.exit_code or 0) == 0 else "",
+                        stderr=event.tool_result if int(event.exit_code or 0) != 0 else "",
+                        tool_name=event.tool_name,
+                        state_before="Agent 正在执行当前用户任务",
+                        state_after=(
+                            "工具调用成功"
+                            if int(event.exit_code or 0) == 0
+                            else "工具调用失败"
+                        ),
+                        lesson=(
+                            "该命令已在当前 openKylin Agent 工作区验证"
+                            if int(event.exit_code or 0) == 0
+                            else "后续同类任务应根据错误输出修正命令后再执行"
+                        ),
+                    ),
+                    source_uri=event.source_uri,
+                )
+                if memory_result.get("stored"):
+                    self._procedural_memories.append(
+                        memory_result["record"].memory_id
+                    )
 
     def run(self, task: str) -> Dict[str, object]:
+        started = perf_counter()
         self._validate_workspace()
         self.workspace.mkdir(parents=True, exist_ok=True)
         context_bundle = self.prepare_context(task)
@@ -141,17 +181,59 @@ class OpenHandsMemoryRunner:
             if not item.get("remember_allowed") or item.get("sensitivity", {}).get("level") == "high"
         )
         task_errors = self._event_types["task_error"]
+        context_summary = {
+            "trace_id": context_bundle["trace_id"],
+            "stage_budgets": {
+                stage: dict(result.get("budget") or {})
+                for stage, result in context_bundle["stages"].items()
+            },
+            "selected_memory_ids": {
+                stage: [
+                    str(item.get("memory_id") or "")
+                    for item in result.get("memories") or []
+                ]
+                for stage, result in context_bundle["stages"].items()
+            },
+            "selected_topics": {
+                stage: [
+                    str(item.get("preference_topic") or "")
+                    for item in result.get("memories") or []
+                    if item.get("preference_topic")
+                ]
+                for stage, result in context_bundle["stages"].items()
+            },
+            "selected_values": {
+                stage: [
+                    str(item.get("preference_value") or "")
+                    for item in result.get("memories") or []
+                    if item.get("preference_value")
+                ]
+                for stage, result in context_bundle["stages"].items()
+            },
+            "selected_subtypes": {
+                stage: [
+                    str(item.get("subtype") or "")
+                    for item in result.get("memories") or []
+                    if item.get("subtype")
+                ]
+                for stage, result in context_bundle["stages"].items()
+            },
+        }
         return {
             "ok": blocked == 0 and task_errors == 0,
             "session_id": self.session_id,
             "trace_id": context_bundle["trace_id"],
             "context_file": context_bundle["context_file"],
+            "duration_ms": round((perf_counter() - started) * 1000.0, 3),
+            "context": context_summary,
             "event_summary": {
                 "stored": stored,
                 "duplicate": duplicate,
                 "blocked": blocked,
                 "tool_calls": self._event_types["tool_call"],
                 "tool_results": self._event_types["tool_result"],
+                "procedural_memories": len(self._procedural_memories),
+                "procedural_memory_ids": list(self._procedural_memories),
                 "task_errors": task_errors,
                 "event_types": dict(self._event_types),
                 "unknown_event_types": dict(self._unknown_events),

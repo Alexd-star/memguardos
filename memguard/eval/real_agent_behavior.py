@@ -15,6 +15,10 @@ def evaluate_real_agent_run(
     workspace: Optional[Path] = None,
 ) -> Dict[str, object]:
     selected_topics = set(str(item) for item in context.get("selected_topics") or [])
+    selected_subtypes = set(
+        str(item) for item in context.get("selected_subtypes") or []
+    )
+    selected_values = set(str(item) for item in context.get("selected_values") or [])
     memory_assertions = dict(case.get("memory_assertions") or {})
     expected_topics = set(
         str(item) for item in memory_assertions.get("expected_topics") or []
@@ -24,6 +28,15 @@ def evaluate_real_agent_run(
     )
     retained_topics = set(
         str(item) for item in memory_assertions.get("retained_topics") or []
+    )
+    expected_subtypes = set(
+        str(item) for item in memory_assertions.get("expected_subtypes") or []
+    )
+    expected_values = set(
+        str(item) for item in memory_assertions.get("expected_values") or []
+    )
+    forbidden_values = set(
+        str(item) for item in memory_assertions.get("forbidden_values") or []
     )
     memory_failures = []
     if not expected_topics.issubset(selected_topics):
@@ -40,6 +53,21 @@ def evaluate_real_agent_run(
         memory_failures.append(
             "retained topics missing: %s"
             % sorted(retained_topics - selected_topics)
+        )
+    if not expected_subtypes.issubset(selected_subtypes):
+        memory_failures.append(
+            "expected subtypes missing: %s"
+            % sorted(expected_subtypes - selected_subtypes)
+        )
+    if not expected_values.issubset(selected_values):
+        memory_failures.append(
+            "expected values missing: %s"
+            % sorted(expected_values - selected_values)
+        )
+    if forbidden_values & selected_values:
+        memory_failures.append(
+            "forbidden polluted values selected: %s"
+            % sorted(forbidden_values & selected_values)
         )
 
     commands = []
@@ -120,6 +148,8 @@ def evaluate_real_agent_run(
             "passed": memory_passed,
             "context_selected": expected_topics.issubset(selected_topics),
             "selected_topics": sorted(selected_topics),
+            "selected_subtypes": sorted(selected_subtypes),
+            "selected_values": sorted(selected_values),
             "failures": memory_failures,
         },
         "agent_behavior": {

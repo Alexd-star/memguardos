@@ -1,6 +1,20 @@
 from pathlib import Path
+from collections import Counter
+import json
+import subprocess
+import sys
 
 from memguard.eval.real_agent_behavior import evaluate_real_agent_run
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_jsonl(path):
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
 
 
 def test_real_run_separates_memory_system_success_from_agent_failure():
@@ -126,3 +140,88 @@ def test_absent_and_retained_topic_assertions_support_forgetting():
 
     assert result["memory_system"]["passed"] is True
     assert result["status"] == "pass"
+
+
+def test_real_agent_dataset_has_twelve_safe_complete_scenarios():
+    cases = load_jsonl(ROOT / "data" / "benchmarks" / "real_agent_behavior.jsonl")
+
+    assert len(cases) == 12
+    assert [case["case_id"] for case in cases] == [
+        "R%02d" % index for index in range(1, 13)
+    ]
+    assert Counter(case["category"] for case in cases) == {
+        "user_correction": 2,
+        "implicit_habit": 1,
+        "conflict_override": 1,
+        "repair_experience": 2,
+        "risk_confirmation": 2,
+        "cross_session": 1,
+        "precise_forgetting": 1,
+        "role_pollution": 2,
+    }
+    assert all(case["task"].strip() for case in cases)
+    assert all(case["safety_mode"] in {"read_only", "workspace_only", "hook_only"} for case in cases)
+    assert all(case["max_iterations"] <= 8 for case in cases)
+
+
+def test_memory_assertions_validate_subtypes_values_and_pollution():
+    failed = evaluate_real_agent_run(
+        case={
+            "memory_assertions": {
+                "expected_subtypes": ["tool_failure_case"],
+                "expected_values": ["rg"],
+                "forbidden_values": ["grep"],
+            },
+            "behavior_assertions": {},
+        },
+        context={
+            "selected_subtypes": [],
+            "selected_values": ["grep"],
+        },
+        events=[],
+    )
+    passed = evaluate_real_agent_run(
+        case={
+            "memory_assertions": {
+                "expected_subtypes": ["tool_failure_case"],
+                "expected_values": ["rg"],
+                "forbidden_values": ["grep"],
+            },
+            "behavior_assertions": {},
+        },
+        context={
+            "selected_topics": ["code_search_tool"],
+            "selected_subtypes": ["tool_failure_case"],
+            "selected_values": ["rg"],
+        },
+        events=[],
+    )
+
+    assert failed["memory_system"]["passed"] is False
+    assert "tool_failure_case" in str(failed["memory_system"]["failures"])
+    assert passed["memory_system"]["passed"] is True
+    assert passed["status"] == "pass"
+
+
+def test_openhands_behavior_suite_validates_dataset_without_running_model(tmp_path):
+    output_dir = tmp_path / "real-suite"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "run_openhands_behavior_suite.py"),
+            "--validate-only",
+            "--output-dir",
+            str(output_dir),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    validation = json.loads(
+        (output_dir / "dataset_validation.json").read_text(encoding="utf-8")
+    )
+    assert validation["valid"] is True
+    assert validation["case_count"] == 12
+    assert validation["case_ids"] == ["R%02d" % index for index in range(1, 13)]

@@ -152,6 +152,24 @@ def test_runner_callback_automatically_persists_real_agent_events(tmp_path):
         assert result["event_summary"]["stored"] == 4
         assert result["event_summary"]["tool_calls"] == 1
         assert result["event_summary"]["tool_results"] == 1
+        assert result["event_summary"]["procedural_memories"] == 1
+        assert result["duration_ms"] >= 0.0
+        assert result["context"]["trace_id"] == result["trace_id"]
+        assert set(result["context"]["selected_memory_ids"]) == {
+            "planning",
+            "tool_selection",
+            "response_generation",
+        }
+        assert set(result["context"]["selected_subtypes"]) == {
+            "planning",
+            "tool_selection",
+            "response_generation",
+        }
+        assert set(result["context"]["selected_values"]) == {
+            "planning",
+            "tool_selection",
+            "response_generation",
+        }
         assert created["workspace"] == (tmp_path / "workspace").resolve()
         assert created["context_file"].is_file()
         assert created["callback"].__self__ is runner
@@ -169,6 +187,8 @@ def test_runner_callback_automatically_persists_real_agent_events(tmp_path):
             "tool_result",
             "assistant_message",
         ]
+        memories = service.list_memories(include_deleted=False)
+        assert any(item["subtype"] == "procedural_trace" for item in memories)
     finally:
         service.close()
 
