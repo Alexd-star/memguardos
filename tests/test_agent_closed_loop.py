@@ -8,6 +8,7 @@ from memguard.integrations.openhands_runner import (
     OpenHandsMemoryRunner,
     build_openhands_llm_kwargs,
     detect_adherence_issues,
+    recover_misrouted_preferred_tool_intent,
     format_agent_context,
     repair_failed_preferred_tool_intent,
 )
@@ -311,6 +312,37 @@ class FakeStructuredIntentAfterRepairConversation(FakePreferenceRepairConversati
                         )
                     ],
                 ),
+            )
+        )
+
+
+class FakeMisroutedFunctionToolConversation(FakePreferenceRepairConversation):
+    def run(self):
+        self.run_count += 1
+        self.callback(
+            fake_event(
+                "ActionEvent",
+                id="fake-misrouted-action",
+                source="agent",
+                tool_name="function_name",
+                tool_call_id="call-misrouted",
+                tool_call=SimpleNamespace(
+                    arguments=json.dumps(
+                        {
+                            "command": "rg -n 'OpenHandsMemoryRunner' .",
+                            "security_risk": "LOW",
+                        }
+                    )
+                ),
+                thought=[text("错误地把 terminal 参数发给 function_name")],
+            )
+        )
+        self.callback(
+            fake_event(
+                "ConversationErrorEvent",
+                id="fake-misrouted-error",
+                source="environment",
+                error="Tool 'function_name' not found. Available: ['terminal', 'finish', 'think']",
             )
         )
 
@@ -716,6 +748,52 @@ def test_runner_recovers_structured_intent_emitted_after_bounded_repair(tmp_path
         service.close()
 
 
+def test_runner_recovers_safe_search_command_misrouted_to_unknown_tool(tmp_path):
+    service = make_service(tmp_path)
+    service.ingest_interaction(
+        interaction_event(
+            "以后搜索项目代码优先使用 rg。",
+            "evt-misrouted-tool-history",
+            1,
+            session_id="session-misrouted-tool-history",
+        )
+    )
+    executions = []
+
+    def recovery_executor(argv, **kwargs):
+        executions.append((argv, kwargs))
+        return SimpleNamespace(
+            returncode=0,
+            stdout="memguard/integrations/openhands_runner.py:33",
+            stderr="",
+        )
+
+    def conversation_factory(**kwargs):
+        return FakeMisroutedFunctionToolConversation(kwargs["callback"])
+
+    try:
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id="session-misrouted-tool",
+            workspace=tmp_path / "workspace",
+            state_dir=tmp_path / "state",
+            conversation_factory=conversation_factory,
+            structured_intent_executor=recovery_executor,
+        )
+
+        result = runner.run("请查找 OpenHandsMemoryRunner 的定义位置。")
+
+        assert result["ok"] is True
+        assert result["structured_intent_recovery"]["attempted"] is True
+        assert result["structured_intent_recovery"]["executed"] is True
+        assert executions[0][0] == ["rg", "-n", "OpenHandsMemoryRunner", "."]
+        assert result["event_summary"]["task_errors"] == 1
+        assert result["event_summary"]["recovered_task_errors"] == 1
+        assert result["adherence"]["remaining_issues"] == []
+    finally:
+        service.close()
+
+
 def test_runner_resets_per_run_metrics_when_instance_is_reused(tmp_path):
     service = make_service(tmp_path)
 
@@ -920,6 +998,42 @@ def test_structured_intent_recovery_rejects_shell_and_workspace_escape():
     assert (
         parse_structured_tool_intent(
             '{"command":"/tmp/rg -n token ."}',
+            preferred_tool="rg",
+        )
+        is None
+    )
+
+
+def test_misrouted_tool_recovery_rejects_unsafe_or_wrong_preference():
+    events = [
+        {
+            "event_type": "tool_call",
+            "tool_name": "function_name",
+            "tool_args": {"command": "rg -n token .; cat /etc/shadow"},
+        },
+        {
+            "event_type": "tool_call",
+            "tool_name": "function_name",
+            "tool_args": {"command": "grep -R token ."},
+        },
+        {
+            "event_type": "tool_call",
+            "tool_name": "function_name",
+            "tool_args": {"command": "rg -n OpenHandsMemoryRunner ."},
+        },
+    ]
+
+    assert recover_misrouted_preferred_tool_intent(
+        events,
+        preferred_tool="rg",
+    ) == {
+        "command": "rg -n OpenHandsMemoryRunner .",
+        "argv": ["rg", "-n", "OpenHandsMemoryRunner", "."],
+        "timeout": 10,
+    }
+    assert (
+        recover_misrouted_preferred_tool_intent(
+            events[:2],
             preferred_tool="rg",
         )
         is None

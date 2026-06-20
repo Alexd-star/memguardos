@@ -307,6 +307,31 @@ def repair_failed_preferred_tool_intent(
     return None
 
 
+def recover_misrouted_preferred_tool_intent(
+    events: list[Dict[str, object]],
+    *,
+    preferred_tool: str,
+) -> Optional[Dict[str, object]]:
+    """Recover safe search commands sent to a non-terminal OpenHands tool name."""
+    for event in reversed(events):
+        if str(event.get("event_type") or "") != "tool_call":
+            continue
+        if str(event.get("tool_name") or "") in {"", "terminal"}:
+            continue
+        command = " ".join(
+            str(dict(event.get("tool_args") or {}).get("command") or "").split()
+        )
+        if not command:
+            continue
+        intent = parse_structured_tool_intent(
+            json.dumps({"command": command}),
+            preferred_tool=preferred_tool,
+        )
+        if intent is not None:
+            return intent
+    return None
+
+
 def _canonical_search_command(
     command: str,
     preferred_tool: str,
