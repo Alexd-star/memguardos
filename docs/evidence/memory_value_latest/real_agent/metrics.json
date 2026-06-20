@@ -2,17 +2,12 @@
   "case_count": 12,
   "completed_case_count": 12,
   "status_distribution": {
-    "memory_pass_agent_fail": 3,
-    "pass": 9
+    "pass": 12
   },
   "memory_system_pass_rate": 1.0,
-  "agent_behavior_pass_rate": 0.75,
+  "agent_behavior_pass_rate": 1.0,
   "unclassified_failure_count": 0,
-  "failed_case_ids": [
-    "R02",
-    "R04",
-    "R12"
-  ],
+  "failed_case_ids": [],
   "runtime": {
     "required_version": "1.28.1",
     "python_version": "3.12.2",

@@ -763,7 +763,7 @@
             "evt-d13-1"
           ],
           "memory_ids": [
-            "mem_2f2d3fad83e44678"
+            "mem_f43007ae2c0841f7"
           ],
           "observation_count": 1,
           "context_usage_count": 0
@@ -774,17 +774,17 @@
           "explanation": "The caller declared that no external Agent persistence copy is retained."
         },
         "forgotten_memory_ids": [
-          "mem_2f2d3fad83e44678"
+          "mem_f43007ae2c0841f7"
         ],
         "scrubbed_event_count": 1,
         "deleted_observation_count": 1,
         "compact": true,
         "verification": {
-          "verification_session_id": "forget-verify-session_b078395660984e4f",
+          "verification_session_id": "forget-verify-session_e0234b0181554c6a",
           "selected_memory_ids_by_stage": {
             "planning": [],
             "tool_selection": [
-              "mem_35d070f9ed0e467b"
+              "mem_41174b7c972649fe"
             ],
             "response_generation": []
           },
@@ -864,7 +864,7 @@
             "evt-d14-1"
           ],
           "memory_ids": [
-            "mem_b151854971b246c1"
+            "mem_d61421c6a44b4f94"
           ],
           "observation_count": 1,
           "context_usage_count": 0
@@ -875,20 +875,20 @@
           "explanation": "The caller declared that no external Agent persistence copy is retained."
         },
         "forgotten_memory_ids": [
-          "mem_b151854971b246c1"
+          "mem_d61421c6a44b4f94"
         ],
         "scrubbed_event_count": 1,
         "deleted_observation_count": 1,
         "compact": true,
         "verification": {
-          "verification_session_id": "forget-verify-session_6f78efe923244c53",
+          "verification_session_id": "forget-verify-session_07ec527fa0e64444",
           "selected_memory_ids_by_stage": {
             "planning": [],
             "tool_selection": [
-              "mem_82e03e9421754f70"
+              "mem_6ff0671191ae4baa"
             ],
             "response_generation": [
-              "mem_82e03e9421754f70"
+              "mem_6ff0671191ae4baa"
             ]
           },
           "all_stages_absent": true,

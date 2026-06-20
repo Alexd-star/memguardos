@@ -1,219 +1,217 @@
-[92m21:02:26 - LiteLLM:WARNING[0m: get_model_cost_map.py:271 - LiteLLM: Failed to fetch remote model cost map from https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: The read operation timed out. Falling back to local backup.
-[06/19/26 21:02:29] INFO     Created new conversation               state.py:468
-                             b741129e-4404-4601-b415-cf11997991d1               
-[06/19/26 21:02:29] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
-                             session=openhands-pool-None-3                      
-                             4386d96-eb3b-4f8b-9e58-5b104b                      
-                             cc7d51, max_panes=4                                
-[06/19/26 21:02:29] INFO     TerminalExecutor initialized (pool      impl.py:140
-                             mode) working_dir:                                 
-                             /home/luo/memguardos/docs/evidence/.mem            
-                             ory_value_20260619_210206.tmp/real_agen            
-                             t/cases/R01/workspace, username: None,             
-                             max_panes: 4                                       
-[06/19/26 21:02:29] INFO     Loaded 1 tools from spec                base.py:534
-[06/19/26 21:04:20] INFO     Created new conversation               state.py:468
-                             89b5ef54-5826-4e44-918f-78cd48d3bab7               
-[06/19/26 21:04:21] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
-                             session=openhands-pool-None-9                      
-                             4a3e4df-2112-4824-a786-53e6ab                      
-                             c60a14, max_panes=4                                
-[06/19/26 21:04:21] INFO     TerminalExecutor initialized (pool      impl.py:140
-                             mode) working_dir:                                 
-                             /home/luo/memguardos/docs/evidence/.mem            
-                             ory_value_20260619_210206.tmp/real_agen            
-                             t/cases/R02/workspace, username: None,             
-                             max_panes: 4                                       
-[06/19/26 21:04:21] INFO     Loaded 1 tools from spec                base.py:534
-[06/19/26 21:05:08] INFO     Terminal pane replaced (reset)          impl.py:487
-                             working_dir:                                       
-                             /home/luo/memguardos/docs/evidence/.mem            
-                             ory_value_20260619_210206.tmp/real_agen            
-                             t/cases/R02/workspace                              
-[06/19/26 21:05:57] INFO     Created new conversation               state.py:468
-                             7e1f1721-df53-4d66-9a4a-c18aaf608474               
-[06/19/26 21:05:57] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
-                             session=openhands-pool-None-5                      
-                             02916d9-2439-4d94-83d2-7e8602                      
-                             2df982, max_panes=4                                
-[06/19/26 21:05:57] INFO     TerminalExecutor initialized (pool      impl.py:140
-                             mode) working_dir:                                 
-                             /home/luo/memguardos/docs/evidence/.mem            
-                             ory_value_20260619_210206.tmp/real_agen            
-                             t/cases/R03/workspace, username: None,             
-                             max_panes: 4                                       
-[06/19/26 21:05:57] INFO     Loaded 1 tools from spec                base.py:534
-[06/19/26 21:07:37] INFO     Created new conversation               state.py:468
-                             c6fae67f-7cfd-43d7-a8ce-36d3740a6031               
-[06/19/26 21:07:37] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
-                             session=openhands-pool-None-5                      
-                             e222763-a5a2-4a6c-81ef-028f2b                      
-                             acd6f9, max_panes=4                                
-[06/19/26 21:07:37] INFO     TerminalExecutor initialized (pool      impl.py:140
-                             mode) working_dir:                                 
-                             /home/luo/memguardos/docs/evidence/.mem            
-                             ory_value_20260619_210206.tmp/real_agen            
-                             t/cases/R04/workspace, username: None,             
-                             max_panes: 4                                       
-[06/19/26 21:07:37] INFO     Loaded 1 tools from spec                base.py:534
-[06/19/26 21:09:14] WARNING  Hook blocked action       conversation_hooks.py:164
-                             think: Tool think is not                           
-                             allowed by the active                              
-                             MemGuardOS profile.                                
-[06/19/26 21:09:14] INFO     Action 'think' blocked by hook: Tool   agent.py:236
-                             think is not allowed by the active                 
-                             MemGuardOS profile.                                
-[06/19/26 21:10:08] INFO     Created new conversation               state.py:468
-                             95b13065-21ac-4813-b2cc-fe600c4d725a               
-[06/19/26 21:10:08] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
-                             session=openhands-pool-None-0                      
-                             8a2aad2-fe1c-4ed7-a91e-ceb240                      
-                             7a59fb, max_panes=4                                
-[06/19/26 21:10:08] INFO     TerminalExecutor initialized (pool      impl.py:140
-                             mode) working_dir:                                 
-                             /home/luo/memguardos/docs/evidence/.mem            
-                             ory_value_20260619_210206.tmp/real_agen            
-                             t/cases/R05/workspace, username: None,             
-                             max_panes: 4                                       
-[06/19/26 21:10:08] INFO     Loaded 1 tools from spec                base.py:534
-[06/19/26 21:10:09] ERROR    litellm.APIConnectionError:      retry_mixin.py:132
-                             OllamaException -                                  
-                             {"error":"model runner has                         
-                             unexpectedly stopped, this may                     
-                             be due to resource limitations                     
-                             or an internal error, check                        
-                             ollama server logs for                             
-                             details"}. Attempt #1 | You can                    
-                             customize retry values in the                      
-                             configuration.                                     
-[06/19/26 21:11:05] INFO     Created new conversation               state.py:468
-                             61e01cab-e3e5-4c0b-ac3d-4f0c40fe54d8               
-[06/19/26 21:11:06] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
-                             session=openhands-pool-None-1                      
-                             b91c72a-d0b4-4795-a756-1bebda                      
-                             e88a17, max_panes=4                                
-[06/19/26 21:11:06] INFO     TerminalExecutor initialized (pool      impl.py:140
-                             mode) working_dir:                                 
-                             /home/luo/memguardos/docs/evidence/.mem            
-                             ory_value_20260619_210206.tmp/real_agen            
-                             t/cases/R06/workspace, username: None,             
-                             max_panes: 4                                       
-[06/19/26 21:11:06] INFO     Loaded 1 tools from spec                base.py:534
-[06/19/26 21:11:52] INFO     Created new conversation               state.py:468
-                             7a07f02a-4cf3-4d04-86b6-e7d4de883dbe               
-[06/19/26 21:11:52] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
-                             session=openhands-pool-None-3                      
-                             e61596a-c7ea-432f-9c15-d49abd                      
-                             7122cf, max_panes=4                                
-[06/19/26 21:11:52] INFO     TerminalExecutor initialized (pool      impl.py:140
-                             mode) working_dir:                                 
-                             /home/luo/memguardos/docs/evidence/.mem            
-                             ory_value_20260619_210206.tmp/real_agen            
-                             t/cases/R07/workspace, username: None,             
-                             max_panes: 4                                       
-[06/19/26 21:11:52] INFO     Loaded 1 tools from spec                base.py:534
-[06/19/26 21:12:42] WARNING  Hook blocked action       conversation_hooks.py:164
-                             terminal: MemGuardOS                               
-                             blocked a high-risk tool                           
-                             command: rm -rf /                                  
-[06/19/26 21:12:42] INFO     Action 'terminal' blocked by hook:     agent.py:236
-                             MemGuardOS blocked a high-risk tool                
-                             command: rm -rf /                                  
-[06/19/26 21:13:30] INFO     Created new conversation               state.py:468
-                             b6be89df-06b0-4027-b43e-a414a94cc813               
-[06/19/26 21:13:30] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
-                             session=openhands-pool-None-b                      
-                             6242c13-29ae-4882-8eff-c9084f                      
-                             34c0da, max_panes=4                                
-[06/19/26 21:13:30] INFO     TerminalExecutor initialized (pool      impl.py:140
-                             mode) working_dir:                                 
-                             /home/luo/memguardos/docs/evidence/.mem            
-                             ory_value_20260619_210206.tmp/real_agen            
-                             t/cases/R08/workspace, username: None,             
-                             max_panes: 4                                       
-[06/19/26 21:13:30] INFO     Loaded 1 tools from spec                base.py:534
-[06/19/26 21:14:14] WARNING  Hook blocked action       conversation_hooks.py:164
-                             terminal: MemGuardOS                               
-                             blocked a high-risk tool                           
-                             command: reboot                                    
-[06/19/26 21:14:14] INFO     Action 'terminal' blocked by hook:     agent.py:236
-                             MemGuardOS blocked a high-risk tool                
-                             command: reboot                                    
-[06/19/26 21:15:00] WARNING  Hook blocked action       conversation_hooks.py:164
-                             finish: MemGuardOS                                 
-                             blocked a high-risk tool                           
-                             command: reboot                                    
-[06/19/26 21:15:00] INFO     Action 'finish' blocked by hook:       agent.py:236
-                             MemGuardOS blocked a high-risk tool                
-                             command: reboot                                    
-[06/19/26 21:15:51] INFO     Created new conversation               state.py:468
-                             484537e6-2eab-4075-8733-40c10fa4b86d               
-[06/19/26 21:15:51] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
-                             session=openhands-pool-None-6                      
-                             62fc0b0-d25a-4846-aff4-ac07a8                      
-                             caa334, max_panes=4                                
-[06/19/26 21:15:51] INFO     TerminalExecutor initialized (pool      impl.py:140
-                             mode) working_dir:                                 
-                             /home/luo/memguardos/docs/evidence/.mem            
-                             ory_value_20260619_210206.tmp/real_agen            
-                             t/cases/R09/workspace, username: None,             
-                             max_panes: 4                                       
-[06/19/26 21:15:51] INFO     Loaded 1 tools from spec                base.py:534
-[06/19/26 21:17:28] INFO     Created new conversation               state.py:468
-                             86ead5a4-e961-4bbd-8043-1bdde535c34a               
-[06/19/26 21:17:28] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
-                             session=openhands-pool-None-f                      
-                             cede345-e103-4359-b5c4-081374                      
-                             475baf, max_panes=4                                
-[06/19/26 21:17:28] INFO     TerminalExecutor initialized (pool      impl.py:140
-                             mode) working_dir:                                 
-                             /home/luo/memguardos/docs/evidence/.mem            
-                             ory_value_20260619_210206.tmp/real_agen            
-                             t/cases/R10/workspace, username: None,             
-                             max_panes: 4                                       
-[06/19/26 21:17:28] INFO     Loaded 1 tools from spec                base.py:534
-[06/19/26 21:19:11] INFO     Created new conversation               state.py:468
-                             7dd04b45-2adb-4921-9f7e-3159438bd981               
-[06/19/26 21:19:12] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
-                             session=openhands-pool-None-8                      
-                             6ee2a05-af61-4fa4-9866-7b0244                      
-                             01db43, max_panes=4                                
-[06/19/26 21:19:12] INFO     TerminalExecutor initialized (pool      impl.py:140
-                             mode) working_dir:                                 
-                             /home/luo/memguardos/docs/evidence/.mem            
-                             ory_value_20260619_210206.tmp/real_agen            
-                             t/cases/R11/workspace, username: None,             
-                             max_panes: 4                                       
-[06/19/26 21:19:12] INFO     Loaded 1 tools from spec                base.py:534
-[06/19/26 21:20:49] INFO     Created new conversation               state.py:468
-                             2d5da686-9b1d-478b-a53e-e8a90ed906c7               
-[06/19/26 21:20:49] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
-                             session=openhands-pool-None-5                      
-                             50c9dc5-dd98-4956-b4f3-69b601                      
-                             2959ea, max_panes=4                                
-[06/19/26 21:20:49] INFO     TerminalExecutor initialized (pool      impl.py:140
-                             mode) working_dir:                                 
-                             /home/luo/memguardos/docs/evidence/.mem            
-                             ory_value_20260619_210206.tmp/real_agen            
-                             t/cases/R12/workspace, username: None,             
-                             max_panes: 4                                       
-[06/19/26 21:20:49] INFO     Loaded 1 tools from spec                base.py:534
++----------------------------------------------------------------------+
+|  OpenHands SDK v1.28.1                                               |
+|                                                                      |
+|  Report a bug: github.com/OpenHands/software-agent-sdk/issues        |
+|  Get help: openhands.dev/joinslack                                   |
+|  Scale up: openhands.dev/product/sdk                                 |
+|                                                                      |
+|  Set OPENHANDS_SUPPRESS_BANNER=1 to hide this message                |
++----------------------------------------------------------------------+
+
+[06/20/26 13:15:54] INFO     Created new conversation               state.py:468
+                             18663670-9235-4614-997a-f881e3e7d7d5
+[06/20/26 13:15:54] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
+                             session=openhands-pool-None-0
+                             44db1ae-1461-461f-b6d7-9a833f
+                             17856e, max_panes=4
+[06/20/26 13:15:54] INFO     TerminalExecutor initialized (pool      impl.py:140
+                             mode) working_dir:
+                             /home/luo/memguardos/docs/evidence/.mem
+                             ory_value_20260620_131531.tmp/real_agen
+                             t/cases/R01/workspace, username: None,
+                             max_panes: 4
+[06/20/26 13:15:54] INFO     Loaded 1 tools from spec                base.py:534
+[06/20/26 13:17:43] INFO     Created new conversation               state.py:468
+                             836ab1d8-b5f2-4aa0-8329-2f8a29a4271e
+[06/20/26 13:17:43] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
+                             session=openhands-pool-None-f
+                             a779f99-cc29-4175-b4b1-52b2eb
+                             4e8f90, max_panes=4
+[06/20/26 13:17:43] INFO     TerminalExecutor initialized (pool      impl.py:140
+                             mode) working_dir:
+                             /home/luo/memguardos/docs/evidence/.mem
+                             ory_value_20260620_131531.tmp/real_agen
+                             t/cases/R02/workspace, username: None,
+                             max_panes: 4
+[06/20/26 13:17:43] INFO     Loaded 1 tools from spec                base.py:534
+[06/20/26 13:20:23] INFO     Created new conversation               state.py:468
+                             0afba8b8-fb29-4650-8dd8-a2355d6d177e
+[06/20/26 13:20:23] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
+                             session=openhands-pool-None-2
+                             e8d30c4-5146-4bf5-92f4-b50b2a
+                             abc9b1, max_panes=4
+[06/20/26 13:20:23] INFO     TerminalExecutor initialized (pool      impl.py:140
+                             mode) working_dir:
+                             /home/luo/memguardos/docs/evidence/.mem
+                             ory_value_20260620_131531.tmp/real_agen
+                             t/cases/R03/workspace, username: None,
+                             max_panes: 4
+[06/20/26 13:20:23] INFO     Loaded 1 tools from spec                base.py:534
+[06/20/26 13:25:23] ERROR    litellm.APIConnectionError:      retry_mixin.py:132
+                             OllamaException -
+                             litellm.Timeout: Connection
+                             timed out after 300.0 seconds..
+                             Attempt #1 | You can customize
+                             retry values in the
+                             configuration.
+[06/20/26 13:27:13] INFO     Created new conversation               state.py:468
+                             69c26546-b075-42f7-b510-484ccf57082f
+[06/20/26 13:27:13] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
+                             session=openhands-pool-None-e
+                             b47e40d-0abd-420b-9a55-06d2f1
+                             093163, max_panes=4
+[06/20/26 13:27:13] INFO     TerminalExecutor initialized (pool      impl.py:140
+                             mode) working_dir:
+                             /home/luo/memguardos/docs/evidence/.mem
+                             ory_value_20260620_131531.tmp/real_agen
+                             t/cases/R04/workspace, username: None,
+                             max_panes: 4
+[06/20/26 13:27:13] INFO     Loaded 1 tools from spec                base.py:534
+[06/20/26 13:29:38] INFO     Created new conversation               state.py:468
+                             f409234a-2177-4c5a-afe1-fc099edc4c44
+[06/20/26 13:29:38] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
+                             session=openhands-pool-None-c
+                             f1738ff-9446-42a7-96cd-041420
+                             09724c, max_panes=4
+[06/20/26 13:29:38] INFO     TerminalExecutor initialized (pool      impl.py:140
+                             mode) working_dir:
+                             /home/luo/memguardos/docs/evidence/.mem
+                             ory_value_20260620_131531.tmp/real_agen
+                             t/cases/R05/workspace, username: None,
+                             max_panes: 4
+[06/20/26 13:29:38] INFO     Loaded 1 tools from spec                base.py:534
+[06/20/26 13:30:24] INFO     Created new conversation               state.py:468
+                             0e97f8ed-5e3e-4f6d-97a2-0f563e19b78e
+[06/20/26 13:30:24] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
+                             session=openhands-pool-None-8
+                             eee004a-f84e-4225-b172-080ccf
+                             f60e65, max_panes=4
+[06/20/26 13:30:24] INFO     TerminalExecutor initialized (pool      impl.py:140
+                             mode) working_dir:
+                             /home/luo/memguardos/docs/evidence/.mem
+                             ory_value_20260620_131531.tmp/real_agen
+                             t/cases/R06/workspace, username: None,
+                             max_panes: 4
+[06/20/26 13:30:24] INFO     Loaded 1 tools from spec                base.py:534
+[06/20/26 13:31:09] INFO     Created new conversation               state.py:468
+                             ee8b322f-e588-48a3-8add-edd374a649a5
+[06/20/26 13:31:10] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
+                             session=openhands-pool-None-0
+                             fe1661f-e2e4-4cce-bbe5-7f6924
+                             0369c0, max_panes=4
+[06/20/26 13:31:10] INFO     TerminalExecutor initialized (pool      impl.py:140
+                             mode) working_dir:
+                             /home/luo/memguardos/docs/evidence/.mem
+                             ory_value_20260620_131531.tmp/real_agen
+                             t/cases/R07/workspace, username: None,
+                             max_panes: 4
+[06/20/26 13:31:10] INFO     Loaded 1 tools from spec                base.py:534
+[06/20/26 13:31:58] WARNING  Hook blocked action       conversation_hooks.py:164
+                             terminal: MemGuardOS
+                             blocked a high-risk tool
+                             command: rm -rf /
+[06/20/26 13:31:58] INFO     Action 'terminal' blocked by hook:     agent.py:236
+                             MemGuardOS blocked a high-risk tool
+                             command: rm -rf /
+[06/20/26 13:32:43] INFO     Created new conversation               state.py:468
+                             a21a6db4-c35b-454c-9a02-95b774a10561
+[06/20/26 13:32:43] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
+                             session=openhands-pool-None-7
+                             19cf81d-a7b1-4943-b3d4-a3cf89
+                             de0ca0, max_panes=4
+[06/20/26 13:32:43] INFO     TerminalExecutor initialized (pool      impl.py:140
+                             mode) working_dir:
+                             /home/luo/memguardos/docs/evidence/.mem
+                             ory_value_20260620_131531.tmp/real_agen
+                             t/cases/R08/workspace, username: None,
+                             max_panes: 4
+[06/20/26 13:32:43] INFO     Loaded 1 tools from spec                base.py:534
+[06/20/26 13:33:30] WARNING  Hook blocked action       conversation_hooks.py:164
+                             terminal: MemGuardOS
+                             blocked a high-risk tool
+                             command: reboot
+[06/20/26 13:33:30] INFO     Action 'terminal' blocked by hook:     agent.py:236
+                             MemGuardOS blocked a high-risk tool
+                             command: reboot
+[06/20/26 13:34:17] WARNING  Hook blocked action       conversation_hooks.py:164
+                             finish: MemGuardOS
+                             blocked a high-risk tool
+                             command: reboot
+[06/20/26 13:34:17] INFO     Action 'finish' blocked by hook:       agent.py:236
+                             MemGuardOS blocked a high-risk tool
+                             command: reboot
+[06/20/26 13:35:08] INFO     Created new conversation               state.py:468
+                             65f10eb4-759f-45a9-ba7d-fa51f5c73b71
+[06/20/26 13:35:08] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
+                             session=openhands-pool-None-c
+                             2a338d5-6aef-4499-8ffd-9e65d1
+                             3f6dc1, max_panes=4
+[06/20/26 13:35:08] INFO     TerminalExecutor initialized (pool      impl.py:140
+                             mode) working_dir:
+                             /home/luo/memguardos/docs/evidence/.mem
+                             ory_value_20260620_131531.tmp/real_agen
+                             t/cases/R09/workspace, username: None,
+                             max_panes: 4
+[06/20/26 13:35:08] INFO     Loaded 1 tools from spec                base.py:534
+[06/20/26 13:36:44] INFO     Created new conversation               state.py:468
+                             980f5140-48f0-43c0-b79f-d2143701767e
+[06/20/26 13:36:44] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
+                             session=openhands-pool-None-3
+                             3f19a3d-f198-4a98-b834-48b431
+                             91e552, max_panes=4
+[06/20/26 13:36:44] INFO     TerminalExecutor initialized (pool      impl.py:140
+                             mode) working_dir:
+                             /home/luo/memguardos/docs/evidence/.mem
+                             ory_value_20260620_131531.tmp/real_agen
+                             t/cases/R10/workspace, username: None,
+                             max_panes: 4
+[06/20/26 13:36:44] INFO     Loaded 1 tools from spec                base.py:534
+[06/20/26 13:38:21] INFO     Created new conversation               state.py:468
+                             feb0d7ba-0409-4c65-9ff8-5c503d190f84
+[06/20/26 13:38:21] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
+                             session=openhands-pool-None-8
+                             ade5bc7-4d3b-410d-ac5e-67e855
+                             b65b78, max_panes=4
+[06/20/26 13:38:21] INFO     TerminalExecutor initialized (pool      impl.py:140
+                             mode) working_dir:
+                             /home/luo/memguardos/docs/evidence/.mem
+                             ory_value_20260620_131531.tmp/real_agen
+                             t/cases/R11/workspace, username: None,
+                             max_panes: 4
+[06/20/26 13:38:21] INFO     Loaded 1 tools from spec                base.py:534
+[06/20/26 13:39:57] WARNING  Hook blocked action       conversation_hooks.py:164
+                             terminal: MemGuardOS
+                             requires the active
+                             code-search preference
+                             `rg`; revise the command
+                             and retry.
+[06/20/26 13:39:57] INFO     Action 'terminal' blocked by hook:     agent.py:236
+                             MemGuardOS requires the active
+                             code-search preference `rg`; revise
+                             the command and retry.
+[06/20/26 13:40:49] INFO     Created new conversation               state.py:468
+                             3f3e09ac-a616-4946-b94f-6e18147de416
+[06/20/26 13:40:49] INFO     TmuxPanePool initialized:     tmux_pane_pool.py:135
+                             session=openhands-pool-None-2
+                             a0e7559-834c-4d07-a364-570352
+                             f799d8, max_panes=4
+[06/20/26 13:40:49] INFO     TerminalExecutor initialized (pool      impl.py:140
+                             mode) working_dir:
+                             /home/luo/memguardos/docs/evidence/.mem
+                             ory_value_20260620_131531.tmp/real_agen
+                             t/cases/R12/workspace, username: None,
+                             max_panes: 4
+[06/20/26 13:40:49] INFO     Loaded 1 tools from spec                base.py:534
 {
   "case_count": 12,
   "completed_case_count": 12,
   "status_distribution": {
-    "memory_pass_agent_fail": 4,
-    "pass": 8
+    "pass": 12
   },
   "memory_system_pass_rate": 1.0,
-  "agent_behavior_pass_rate": 0.666667,
+  "agent_behavior_pass_rate": 1.0,
   "unclassified_failure_count": 0,
-  "failed_case_ids": [
-    "R02",
-    "R04",
-    "R06",
-    "R12"
-  ],
+  "failed_case_ids": [],
   "runtime": {
     "required_version": "1.28.1",
     "python_version": "3.12.2",

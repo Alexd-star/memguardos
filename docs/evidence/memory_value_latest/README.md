@@ -1,5 +1,11 @@
 # MemGuardOS 智能体记忆价值证据
 
-本目录记录 16 组确定性配对实验和 12 组 openKylin 真实 OpenHands 会话。
-真实会话使用 OpenHands SDK 1.28.1、Ollama 与 qwen3:1.7b；全部失败均保留并归因。
-记忆系统层与 Agent 行为层分别统计，Prompt token 减少率以完整历史回放为基线。
+- 采集时间：20260620_131531
+- 操作系统：openKylin
+- OpenHands 模型：ollama/qwen3:1.7b
+- 确定性实验：16 组
+- 真实 OpenHands 场景：12 组
+
+`deterministic/` 保存可复现配对评测；`real_agent/` 保存真实 OpenHands
+会话、上下文、工具事件、工作区前后清单和逐案例判定。真实失败不会被删除，
+记忆系统层与 Agent 行为层分别统计。

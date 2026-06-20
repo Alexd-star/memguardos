@@ -110,10 +110,10 @@ Agent 交互记忆专项 benchmark 共 200 条，组成如下：
 
 ## 6. 自动化测试
 
-新增记忆价值配对评测、真实行为判定、Hook 策略事件和程序性记忆自动沉淀后，本地全量测试为 `171 passed, 1 skipped`，最新 openKylin 全量测试为：
+新增记忆价值配对评测、真实行为判定、偏好合规守卫和程序性记忆自动沉淀后，本地全量测试为 `194 passed, 1 skipped`，最新 openKylin 全量测试为：
 
 ```text
-171 passed
+195 passed
 ```
 
 其中新增测试覆盖：
@@ -129,7 +129,7 @@ Agent 交互记忆专项 benchmark 共 200 条，组成如下：
 - Agent Web 治理接口；
 - 200 条专项 benchmark。
 
-openKylin 已完成真实 runner、systemd bridge、专项 benchmark、精准遗忘、审计链和完整 pytest 证据采集。新增的 16 组确定性配对实验和 12 组真实行为实验见 `docs/真实Agent记忆价值评测报告.md`；其中记忆系统层 12/12、Agent 行为层 9/12，三个失败均保留。
+openKylin 已完成真实 runner、systemd bridge、专项 benchmark、精准遗忘、审计链和完整 pytest 证据采集。新增的 16 组确定性配对实验和 12 组真实行为实验见 `docs/真实Agent记忆价值评测报告.md`；其中记忆系统层与 Agent 行为层均为 12/12，原始尝试、策略拒绝与恢复来源均保留。
 
 ## 7. 证据文件说明
 

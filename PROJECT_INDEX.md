@@ -63,6 +63,7 @@ MemGuardOS 是面向 Linux/openKylin 的智能体记忆提取与精准遗忘系�
 | `memguard/eval/memory_value.py` | Agent 记忆价值配对指标。 | 三组任务结果与工具轨迹。 | 完成率、工具准确率、轮数、token、错误和重复尝试变化。 | service、Agent benchmark |
 | `memguard/eval/real_agent_behavior.py` | 真实 Agent 行为判定与归因。 | OpenHands 上下文、live session 事件和工作区结果。 | 记忆系统层、Agent 行为层、错误分类和聚合指标。 | openhands_runner |
 | `memguard/integrations/openhands_runner.py` | 运行真实 OpenHands 会话并注入记忆。 | 任务、namespace、会话、模型配置。 | 真实 Agent 结果、标准事件和上下文证据。 | OpenHands SDK、context_injector |
+| `memguard/integrations/adherence.py` | 检查用户偏好是否转化为成功工具调用和回答格式，并解析严格只读恢复意图。 | 三阶段记忆、标准 Agent 事件、当前工具偏好。 | 合规问题、修复提示、安全规范化命令和程序性证据。 | openhands_runner、OpenHands Hook |
 | `memguard/integrations/interaction_extractor.py` | 提取用户偏好、纠正和反馈。 | 标准 Agent 事件。 | 带证据和作用域的偏好记忆。 | habit_aggregator、service |
 | `memguard/integrations/context_injector.py` | 构建三阶段 Agent 上下文。 | 任务、Agent、会话、阶段、token 预算。 | 规划、工具选择或结果生成上下文。 | retrieval、service |
 | `scripts/memguard_agent_bridge.py` | systemd Agent 队列桥。 | 受控 JSON 任务。 | runner 结果与规范化事件。 | `memguard-agent@.service` |
@@ -142,7 +143,7 @@ python scripts/smoke_submission_archive.py
 ```
 
 openKylin 环境还应运行 `scripts/openkylin_verify.sh`、`scripts/collect_openkylin_evidence.sh`、Kylin SDK 探针、UKUI/Peony smoke、BPF LSM 安全测试和 `.deb` 安装复验。
-真实 Agent 验证还应运行 `scripts/install_agent_extras_openkylin.sh`、`scripts/run_openhands_memguard_demo.py`、`scripts/collect_agent_evidence.sh` 和 `scripts/evaluate_agent_interactions.py`。记忆价值复验使用 `scripts/evaluate_memory_value.py`、`scripts/run_openhands_behavior_suite.py` 和 `scripts/collect_memory_value_evidence.sh`。
+真实 Agent 验证还应运行 `scripts/install_agent_extras_openkylin.sh`、`scripts/run_openhands_memguard_demo.py`、`scripts/collect_agent_evidence.sh` 和 `scripts/evaluate_agent_interactions.py`。记忆价值复验使用 `scripts/evaluate_memory_value.py`、`scripts/run_openhands_behavior_suite.py` 和 `scripts/collect_memory_value_evidence.sh`；证据内容发生受控更新后使用 `scripts/refresh_evidence_manifest.py` 原子刷新 SHA256 清单和 manifest。
 
 ## 14. 后续维护建议
 
