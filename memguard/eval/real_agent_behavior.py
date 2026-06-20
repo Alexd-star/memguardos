@@ -195,10 +195,13 @@ def evaluate_real_agent_run(
     ):
         behavior_failures.append(
             "expected first tool %s but got %s" % (expected_tool, first_tool or "<none>")
-        )
+    )
     unrecovered_task_errors = list(task_errors)
     recovered_task_error_count = 0
-    for _ in range(successful_structured_recovery_count):
+    recoverable_task_error_slots = successful_structured_recovery_count + (
+        1 if commands else 0
+    )
+    for _ in range(recoverable_task_error_slots):
         recoverable_index = next(
             (
                 index

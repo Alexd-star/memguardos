@@ -270,6 +270,33 @@ def parse_structured_tool_intent(
     }
 
 
+def parse_inline_search_intent(
+    content: str,
+    *,
+    preferred_tool: str,
+) -> Optional[Dict[str, object]]:
+    candidates = []
+    text = str(content or "")
+    candidates.extend(match.group(1).strip() for match in re.finditer(r"`([^`\n]+)`", text))
+    for line in text.splitlines():
+        line = line.strip()
+        if preferred_tool and preferred_tool in line:
+            candidates.append(line)
+    for candidate in candidates:
+        cleaned = candidate.strip()
+        if cleaned.startswith("$"):
+            cleaned = cleaned[1:].strip()
+        if not cleaned.startswith(preferred_tool + " "):
+            continue
+        intent = parse_structured_tool_intent(
+            json.dumps({"command": cleaned}),
+            preferred_tool=preferred_tool,
+        )
+        if intent is not None:
+            return intent
+    return None
+
+
 def repair_failed_preferred_tool_intent(
     events: list[Dict[str, object]],
     *,

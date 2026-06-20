@@ -16,6 +16,7 @@ from memguard.integrations.adherence import (
     build_adherence_repair_message,
     command_executable,
     detect_adherence_issues,
+    parse_inline_search_intent,
     parse_structured_tool_intent,
     procedural_memory_evidence,
     recover_misrouted_preferred_tool_intent,
@@ -236,9 +237,13 @@ class OpenHandsMemoryRunner:
             if not item.get("remember_allowed") or item.get("sensitivity", {}).get("level") == "high"
         )
         task_errors = self._event_types["task_error"]
+        recoverable_task_error_slots = 1 if (
+            structured_recovery.get("executed")
+            or successful_terminal_commands(self._live_events)
+        ) else 0
         recovered_task_errors = min(
             recoverable_tool_schema_error_count(self._live_events),
-            1 if structured_recovery.get("executed") else 0,
+            recoverable_task_error_slots,
         )
         context_summary = {
             "trace_id": context_bundle["trace_id"],
@@ -350,6 +355,12 @@ class OpenHandsMemoryRunner:
             if str(event.get("event_type") or "") != "assistant_message":
                 continue
             intent = parse_structured_tool_intent(
+                str(event.get("content") or ""),
+                preferred_tool=preferred_tool,
+            )
+            if intent is not None:
+                break
+            intent = parse_inline_search_intent(
                 str(event.get("content") or ""),
                 preferred_tool=preferred_tool,
             )

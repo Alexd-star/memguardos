@@ -277,6 +277,38 @@ def test_successful_structured_intent_recovery_preserves_but_recovers_tool_schem
     assert "agent_error" not in result["error_classification"]
 
 
+def test_successful_tool_result_recovers_final_answer_tool_schema_error():
+    result = evaluate_real_agent_run(
+        case={
+            "expected_tool": "rg",
+            "memory_assertions": {"expected_topics": ["code_search_tool"]},
+            "behavior_assertions": {"output_contains": "openhands_runner.py"},
+        },
+        context={"selected_topics": ["code_search_tool"]},
+        events=[
+            {
+                "event_type": "tool_call",
+                "tool_name": "terminal",
+                "tool_args": {"command": "rg -n OpenHandsMemoryRunner ."},
+            },
+            {
+                "event_type": "tool_result",
+                "tool_name": "terminal",
+                "exit_code": 0,
+                "tool_result": "memguard/integrations/openhands_runner.py:33",
+            },
+            {
+                "event_type": "task_error",
+                "content": "Tool 'function_name' not found.",
+            },
+        ],
+    )
+
+    assert result["status"] == "pass"
+    assert result["metrics"]["recovered_task_error_count"] == 1
+    assert "agent_error" not in result["error_classification"]
+
+
 def test_structured_intent_success_does_not_hide_max_iteration_error():
     result = evaluate_real_agent_run(
         case={

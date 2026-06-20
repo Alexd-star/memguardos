@@ -316,6 +316,40 @@ class FakeStructuredIntentAfterRepairConversation(FakePreferenceRepairConversati
         )
 
 
+class FakeInlineSearchIntentAfterRepairConversation(FakePreferenceRepairConversation):
+    def run(self):
+        self.run_count += 1
+        if self.run_count == 1:
+            self.callback(
+                fake_event(
+                    "MessageEvent",
+                    id="fake-inline-no-tool-before-repair",
+                    source="agent",
+                    llm_message=SimpleNamespace(
+                        role="assistant",
+                        content=[text("我会使用 rg，但还没有执行工具。")],
+                    ),
+                )
+            )
+            return
+        self.callback(
+            fake_event(
+                "MessageEvent",
+                id="fake-inline-command-after-repair",
+                source="agent",
+                llm_message=SimpleNamespace(
+                    role="assistant",
+                    content=[
+                        text(
+                            "请执行 `rg -n 'format_agent_context' .` "
+                            "在当前工作区搜索目标符号。"
+                        )
+                    ],
+                ),
+            )
+        )
+
+
 class FakeMisroutedFunctionToolConversation(FakePreferenceRepairConversation):
     def run(self):
         self.run_count += 1
@@ -743,6 +777,49 @@ def test_runner_recovers_structured_intent_emitted_after_bounded_repair(tmp_path
         assert result["adherence"]["repair_attempted"] is True
         assert result["structured_intent_recovery"]["attempted"] is True
         assert result["structured_intent_recovery"]["executed"] is True
+        assert result["adherence"]["remaining_issues"] == []
+    finally:
+        service.close()
+
+
+def test_runner_recovers_inline_search_command_emitted_after_repair(tmp_path):
+    service = make_service(tmp_path)
+    service.ingest_interaction(
+        interaction_event(
+            "以后搜索项目代码优先使用 rg。",
+            "evt-inline-recovery-history",
+            1,
+            session_id="session-inline-recovery-history",
+        )
+    )
+    executions = []
+
+    def recovery_executor(argv, **kwargs):
+        executions.append((argv, kwargs))
+        return SimpleNamespace(
+            returncode=0,
+            stdout="memguard/integrations/openhands_runner.py:1",
+            stderr="",
+        )
+
+    def conversation_factory(**kwargs):
+        return FakeInlineSearchIntentAfterRepairConversation(kwargs["callback"])
+
+    try:
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id="session-inline-recovery",
+            workspace=tmp_path / "workspace",
+            state_dir=tmp_path / "state",
+            conversation_factory=conversation_factory,
+            structured_intent_executor=recovery_executor,
+        )
+
+        result = runner.run("请查找 format_agent_context 的定义位置。")
+
+        assert result["structured_intent_recovery"]["attempted"] is True
+        assert result["structured_intent_recovery"]["executed"] is True
+        assert executions[0][0] == ["rg", "-n", "format_agent_context", "."]
         assert result["adherence"]["remaining_issues"] == []
     finally:
         service.close()
