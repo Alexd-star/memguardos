@@ -16,7 +16,7 @@ Agent：OpenHands SDK 1.28.1
 5. Agent 是否减少错误命令和重复尝试；
 6. 精准遗忘后，目标偏好的行为影响是否消失，同时保留无关偏好。
 
-评测采用“双层设计”。第一层是 16 组确定性配对实验，用固定输入和客观结果验证指标算法、记忆选择、作用域、冲突覆盖、程序性经验和精准遗忘。第二层是在 openKylin 上运行 12 组真实 OpenHands 会话，检查本地模型是否实际消费记忆并产生可观察行为。两层结果分开报告，避免将固定实验结果冒充真实模型效果，也避免把小模型偶发失败误判为记忆系统失败。
+评测采用“双层设计”。第一层是 16 组确定性配对实验，用固定输入和客观结果验证指标算法、记忆选择、作用域、冲突覆盖、程序性经验和精准遗忘。第二层是在 openKylin 上运行真实 OpenHands 会话，检查本地模型是否实际消费记忆并产生可观察行为。当前归档证据由两部分组成：`docs/evidence/memory_value_latest/` 保存 R01-R12 原始 12 组真实会话，`docs/evidence/real_agent_extension_r13_r20_latest/` 保存新增 R13-R20 的 8 组扩展会话。20 组真实会话中，记忆系统层和 Agent 行为层均为 20/20。两层结果分开报告，避免将固定实验结果冒充真实模型效果，也避免把小模型偶发失败误判为记忆系统失败。
 
 ## 2. 对照方法
 
@@ -47,7 +47,7 @@ Agent：OpenHands SDK 1.28.1
 | 精准遗忘 | 遗忘回答顺序并保留工具偏好；遗忘工具偏好并保留安全策略 |
 | 角色污染 | Agent 自述不形成用户偏好；工具输出不污染用户偏好 |
 
-12 组真实会话分别验证用户纠正、隐式习惯、偏好更新、两类修复经验、两类高风险拦截、跨会话复用、精准遗忘以及两类角色污染防护。所有文件操作都限制在案例专用工作区；`rm -rf` 和 `reboot` 场景由 OpenHands PreToolUse Hook 在执行前拒绝，没有实际破坏系统。
+20 组真实会话分别验证用户纠正、隐式习惯、偏好更新、偏好冲突覆盖、失败修复轨迹、高风险确认、跨会话复用、精准遗忘、runbook 复用以及角色污染防护。所有文件操作都限制在案例专用工作区；`rm -rf`、`reboot` 和 `sudo systemctl restart` 等场景由 OpenHands PreToolUse Hook 在执行前拒绝，没有实际破坏系统。
 
 ## 4. 确定性配对结果
 
@@ -112,7 +112,7 @@ Runner 会检查已选择偏好是否转化为成功工具调用和最终回答�
 
 当检索已经选中历史成功的状态—动作—结果记忆，而模型回答遗漏完整可信结果时，系统可以补充 `stdout_summary` 中的已验证证据。只有不存在新的成功工具结果、历史证据明确标记为成功且当前上下文已选择该程序性记忆时才会触发。正式证据中 R06 使用 1 次程序性结果兜底，并标记 `execution_origin=procedural_memory_fallback`。
 
-这些机制提高的是 Agent 适配层的稳定性，而不是修改模型权重。评测仍分别保存首次尝试、拒绝、恢复和最终结果，因此 12/12 表示“MemGuardOS 与当前 OpenHands 适配器组成的完整系统在 12 个公开场景中通过”，不表示 1.7B 模型单独具备 100% 的任意任务能力。
+这些机制提高的是 Agent 适配层的稳定性，而不是修改模型权重。评测仍分别保存首次尝试、拒绝、恢复和最终结果，因此 20/20 表示“MemGuardOS 与当前 OpenHands 适配器组成的完整系统在 20 个公开场景中通过”，不表示 1.7B 模型单独具备 100% 的任意任务能力。
 
 ## 7. 工程修正与质量核验
 
@@ -169,17 +169,19 @@ bash scripts/collect_memory_value_evidence.sh \
 | 路径 | 内容 |
 |---|---|
 | `data/benchmarks/agent_memory_value.jsonl` | 16 组确定性配对案例 |
-| `data/benchmarks/real_agent_behavior.jsonl` | 12 组真实 Agent 场景定义 |
+| `data/benchmarks/real_agent_behavior.jsonl` | 20 组真实 Agent 场景定义 |
 | `docs/evidence/memory_value_latest/deterministic/metrics.json` | 确定性聚合指标 |
 | `docs/evidence/memory_value_latest/deterministic/cases.json` | 逐案例配对结果 |
 | `docs/evidence/memory_value_latest/real_agent/metrics.json` | 真实 Agent 聚合指标 |
 | `docs/evidence/memory_value_latest/real_agent/cases/` | 逐案例事件、上下文和判定 |
+| `docs/evidence/real_agent_extension_r13_r20_latest/metrics.json` | 新增 R13-R20 真实 Agent 扩展聚合指标，8/8 通过 |
+| `docs/evidence/real_agent_extension_r13_r20_latest/cases/` | 新增 R13-R20 逐案例事件、上下文和判定 |
 | `docs/evidence/memory_value_latest/pytest_openkylin.txt` | 188 项 openKylin 测试 |
 | `docs/evidence/memory_value_latest/audit_verify.txt` | 隔离审计链验证 |
 | `docs/evidence/memory_value_latest/SHA256SUMS.txt` | 文件校验和 |
 
 ## 10. 结论
 
-新增评测证明 MemGuardOS 不只能够“检索出一条相关记忆”。在固定可复现实验中，结构化记忆提高了任务完成和工具选择表现，减少了交互轮数、错误命令和完整历史回放的上下文成本；在真实 openKylin/OpenHands 会话中，记忆系统层和完整 Agent 行为层均为 12/12。
+新增评测证明 MemGuardOS 不只能够“检索出一条相关记忆”。在固定可复现实验中，结构化记忆提高了任务完成和工具选择表现，减少了交互轮数、错误命令和完整历史回放的上下文成本；在当前已归档的真实 openKylin/OpenHands 会话中，原 R01-R12 与扩展 R13-R20 合计 20 组全部通过，记忆系统层和完整 Agent 行为层均为 20/20。扩展后的 20 组场景库进一步提高了偏好冲突、失败修复、跨会话经验和遗忘边界的覆盖度。
 
 项目不会把适配层修复包装成模型原生能力，也不会把 16 组固定配对结果冒充模型自主实验。准确结论是：MemGuardOS 能够向真实现有 Agent 提供正确、可解释、可遗忘的记忆，并通过可审计 Hook、有界修复和严格只读恢复把小参数模型的部分格式与工具规划偏差收敛为可靠行为。该结论仅适用于当前公开数据集、模型版本和 openKylin 环境，仍需在更多 Agent、模型和真实业务任务中持续验证。

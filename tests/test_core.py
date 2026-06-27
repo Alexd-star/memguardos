@@ -941,6 +941,29 @@ def test_manual_config_ingestion_reports_quality_skips(tmp_path):
         service.close()
 
 
+def test_memory_seed_extraction_types_and_subtypes_are_all_correct():
+    extractor = HybridMemoryExtractor()
+    seed_path = Path("data/benchmarks/memory_seed.jsonl")
+    misses = []
+    for line_number, line in enumerate(seed_path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        decision = extractor.extract(row["text"], row.get("source_kind", "manual"))
+        if decision.memory_type != row["expected_type"] or decision.subtype != row["expected_subtype"]:
+            misses.append(
+                {
+                    "line": line_number,
+                    "label": row.get("label"),
+                    "expected": [row["expected_type"], row["expected_subtype"]],
+                    "actual": [decision.memory_type, decision.subtype],
+                    "signals": decision.signals,
+                }
+            )
+
+    assert misses == []
+
+
 def test_shell_history_ingestion_as_user_behavior(tmp_path):
     service = make_service(tmp_path)
     history = tmp_path / ".bash_history"

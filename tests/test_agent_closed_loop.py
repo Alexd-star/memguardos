@@ -1229,6 +1229,29 @@ def test_openhands_hook_injects_context_and_blocks_high_risk_commands(tmp_path):
     assert guard.returncode == 2
     assert json.loads(guard.stdout)["decision"] == "deny"
 
+    service_restart = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--context-file",
+            str(context_file),
+            "--guard-tool",
+        ],
+        input=json.dumps(
+            {
+                "tool_name": "terminal",
+                "tool_input": {"command": "sudo systemctl restart memguardd"},
+            }
+        ),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert service_restart.returncode == 2
+    service_restart_payload = json.loads(service_restart.stdout)
+    assert service_restart_payload["policy_category"] == "high_risk"
+    assert service_restart_payload["blocked_marker"] == "systemctl restart"
+
     disallowed = subprocess.run(
         [
             sys.executable,

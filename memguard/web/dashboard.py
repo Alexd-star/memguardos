@@ -417,6 +417,28 @@ def _dashboard_html() -> str:
           <div class="panel health"><strong>Kylin SDK</strong><span id="sdkBadge" class="badge">待检查</span></div>
           <div class="panel health"><strong>OS 资源</strong><span id="osBadge" class="badge">待检查</span></div>
         </div>
+        <div class="grid three" style="margin-top:12px">
+          <div class="panel emphasis">
+            <div class="item-title">交付就绪度</div>
+            <p class="muted">面向本机管理员的交付判断：审计链可校验、检索后端可用、OS 资源可见、诊断包可导出时，系统可以进入演示或验收流程。</p>
+            <div class="progress"><span id="readinessProgress"></span></div>
+            <div id="readinessText" class="muted" style="margin-top:8px">等待状态刷新</div>
+          </div>
+          <div class="panel">
+            <div class="item-title">一键验收路径</div>
+            <div class="list">
+              <div class="item"><div class="item-title">1. 刷新状态</div><div class="muted">查看审计链、检索后端、SDK 和 OS 资源红黄绿状态。</div></div>
+              <div class="item"><div class="item-title">2. 写入并检索</div><div class="muted">写入一条 Agent 偏好，立即检索并构建 RAG 上下文。</div></div>
+              <div class="item"><div class="item-title">3. 预览遗忘</div><div class="muted">先 dry-run 查看候选，再确认 compact 和审计记录。</div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="item-title">风险处置建议</div>
+            <div id="riskAdvice" class="list">
+              <div class="item"><div class="muted">刷新后会根据审计链、检索后端、SDK 和 OS 资源状态给出本机处置建议。</div></div>
+            </div>
+          </div>
+        </div>
         <div class="grid two" style="margin-top:12px">
           <div class="panel emphasis">
             <div class="item-title">系统能力概览</div>
@@ -752,8 +774,28 @@ def _dashboard_html() -> str:
       badge('sdkBadge', sdkAvailable ? 'ok' : 'warn', sdkLabel);
       const runtime = diag.runtime_status || {};
       badge('osBadge', runtime.cgroup_v2 ? 'ok' : 'warn', runtime.cgroup_v2 ? 'cgroup v2' : '部分可用');
+      renderDeliveryReadiness(diag, retrieval, runtime, sdkAvailable);
       document.getElementById('lastUpdated').textContent = '最后刷新：' + new Date().toLocaleTimeString();
       renderStatusSummary(status, diag);
+    }
+    function renderDeliveryReadiness(diag, retrieval, runtime, sdkAvailable) {
+      const checks = [
+        {name:'审计链', ok: Boolean(diag.audit_chain && diag.audit_chain.ok), advice:'审计链异常时先运行“校验审计链”，必要时核对 namespace 和备份。'},
+        {name:'检索后端', ok: Boolean(retrieval.requested_backend || retrieval.last_backend_used), advice:'检索后端未知时运行“检索后端”，确认 FTS/hash/graph 或 Kylin 后端状态。'},
+        {name:'OS 资源', ok: Boolean(runtime.platform || runtime.cgroup_v2), advice:'OS 资源不可见时检查 systemd/cgroup 运行环境，普通 Windows 本机属于部分可用。'},
+        {name:'诊断导出', ok: true, advice:'导出诊断包后可作为验收、交付复核和现场排查附件。'}
+      ];
+      if (!sdkAvailable) {
+        checks.push({name:'端侧 SDK', ok:true, advice:'Kylin SDK 不可用时保持稳定 fallback；openKylin 复验环境可运行 sdk-status 探针。'});
+      }
+      const passed = checks.filter(item => item.ok).length;
+      const score = Math.round((passed / checks.length) * 100);
+      document.getElementById('readinessProgress').style.width = score + '%';
+      document.getElementById('readinessText').textContent = '当前就绪度 ' + score + '% · ' + passed + '/' + checks.length + ' 项满足';
+      const advice = checks.filter(item => !item.ok).concat(checks.filter(item => item.ok).slice(0, 1));
+      document.getElementById('riskAdvice').innerHTML = advice.map(item =>
+        '<div class="item"><div class="item-title">' + esc(item.name) + '</div><div class="muted">' + esc(item.advice) + '</div></div>'
+      ).join('');
     }
     async function ingest(event) {
       await withBusy(event, async () => {

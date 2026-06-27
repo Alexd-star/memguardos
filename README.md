@@ -36,7 +36,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 |---|---:|
 | 本地功能分支单元测试 | 194 passed, 1 skipped |
 | openKylin 全量测试 | 195 passed |
-| openKylin 真实 Agent | OpenHands 1.28.1；12 组真实会话中记忆系统层与 Agent 行为层均为 12/12 |
+| openKylin 真实 Agent | OpenHands 1.28.1；原 12 组真实会话 12/12，新增 R13-R20 真实会话 8/8；合计 20 组均有证据 |
 | 本地 1k 负载 P95 | 0.429 ms |
 | openKylin 1k 负载 P95 | 8.904 ms |
 | openKylin 10k 负载 P95 | 10.105 ms |
@@ -50,7 +50,9 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | benchmark 用例/种子总数 | 217 |
 | Agent 交互记忆专项 benchmark | 200 条，各项指标 1.0000，openKylin P95 113.97 ms |
 | 记忆价值确定性配对实验 | 16/16 系统验证通过；任务完成率 0.75→1.00；Prompt token 较完整历史减少 61.1264% |
-| 真实 Agent 记忆价值实验 | 12/12 完整运行；记忆系统层与 Agent 行为层均为 1.0000；未归因失败为 0 |
+| 真实 Agent 记忆价值实验 | 原 12/12 + 新增 8/8 完整运行；记忆系统层与 Agent 行为层均为 1.0000；未归因失败为 0 |
+
+真实 Agent 场景库已从 12 组扩展到 20 组，新增覆盖偏好冲突覆盖、失败修复轨迹、高风险确认、跨会话 runbook 复用和精准遗忘边界。新增 R13-R20 已在 openKylin 上完成独立复跑，证据位于 [docs/evidence/real_agent_extension_r13_r20_latest/](docs/evidence/real_agent_extension_r13_r20_latest/)；原 12 组仍保留在 [docs/evidence/memory_value_latest/](docs/evidence/memory_value_latest/) 中，二者共同构成 20 组真实 OpenHands 证据。
 
 通用 openKylin 证据位于 [docs/evidence/latest/](docs/evidence/latest/)，真实 Agent 专项证据位于 [docs/evidence/agent_latest/](docs/evidence/agent_latest/)，记忆价值双层评测证据位于 [docs/evidence/memory_value_latest/](docs/evidence/memory_value_latest/)，并发优化与消融证据位于 [docs/evidence/performance_latest/](docs/evidence/performance_latest/)。评测汇总见 [docs/测试报告.md](docs/测试报告.md)、[docs/真实Agent闭环测试报告.md](docs/真实Agent闭环测试报告.md)、[docs/真实Agent记忆价值评测报告.md](docs/真实Agent记忆价值评测报告.md) 和 [docs/评委证据包索引.md](docs/评委证据包索引.md)。
 
@@ -353,9 +355,10 @@ dist/memguardos_full_repository_<时间戳>_manifest.json
 - UKUI/Peony：Peony 右键菜单插件已在 openKylin 桌面右键菜单中可见验证；菜单动作会把选中文件写成 OS event，并对小于 1 MB 的文本类文件执行 `peony_file` 导入，形成“右键扫描 -> 记忆写入 -> 检索 -> 审计链”的闭环。UKUI 控制中心入口“MemGuardOS 记忆安全”已升级为本机运维面板，包含运行环境检查、审计链校验、端侧向量能力检查、诊断报告和本地控制台入口。
 - Web 控制台：用于本地运维、调试和评审操作，默认绑定 `127.0.0.1`，不作为公网 SaaS 管理台。
 - 用户行为：主链路采集用户与 OpenHands Agent 的消息、反馈、工具调用和工具结果；shell、配置、OS 事件和 auditd 是补充来源，不宣称全量桌面行为捕获。
-- 真实 Agent：12 组 openKylin/OpenHands 会话中，记忆系统层与 Agent 行为层均为 12/12。系统保留模型原始尝试，并通过偏好 Hook、有界合规修复、严格只读结构化意图恢复和程序性结果兜底提高小模型稳定性；该结果仅代表当前公开场景，不扩展为任意 Agent 任务均稳定完成。
+- 真实 Agent：原 12 组 openKylin/OpenHands 会话和新增 R13-R20 8 组扩展会话均已完成归档，记忆系统层与 Agent 行为层合计 20/20。系统保留模型原始尝试，并通过偏好 Hook、有界合规修复、严格只读结构化意图恢复和程序性结果兜底提高小模型稳定性；该结果仅代表当前公开场景，不扩展为任意 Agent 任务均稳定完成。
 - 交互遗忘：保证 MemGuardOS 管理的事件、记忆、索引、图谱和段文件边界；OpenHands 原始会话、shell history、模型服务日志和外部备份需使用各自删除机制。
 - 外部 LLM：默认不依赖外部 API；只有显式选择 provider 时才调用本地命令或兼容远程端点。
+- 真实 Agent 场景库：代码库中的可复现 OpenHands 场景定义已扩展到 20 组；原始记忆价值证据包归档 R01-R12，扩展证据包归档 R13-R20。答辩或提交时应说明这两份证据目录共同组成 20 组真实运行证据。
 
 ## 许可证
 

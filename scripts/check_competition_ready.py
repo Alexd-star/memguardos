@@ -169,6 +169,11 @@ def main() -> int:
         default="docs/evidence/memory_value_latest",
         help="Agent memory-value paired and real OpenHands evidence directory",
     )
+    parser.add_argument(
+        "--real-agent-extension-evidence-dir",
+        default="docs/evidence/real_agent_extension_r13_r20_latest",
+        help="Additional real OpenHands R13-R20 evidence directory",
+    )
     parser.add_argument("--output", default="", help="Optional JSON report path")
     parser.add_argument("--markdown", default="", help="Optional Markdown report path")
     parser.add_argument("--allow-missing-openkylin", action="store_true", help="Downgrade missing openKylin evidence files to P1 warnings")
@@ -178,6 +183,9 @@ def main() -> int:
     evidence_dir = _resolve(args.evidence_dir)
     performance_evidence_dir = _resolve(args.performance_evidence_dir)
     memory_value_evidence_dir = _resolve(args.memory_value_evidence_dir)
+    real_agent_extension_evidence_dir = _resolve(
+        args.real_agent_extension_evidence_dir
+    )
     checks = []
     checks.extend(check_docs())
     checks.extend(check_sources())
@@ -185,6 +193,12 @@ def main() -> int:
     checks.extend(check_openkylin_evidence(evidence_dir, allow_missing=args.allow_missing_openkylin))
     checks.extend(check_performance_evidence(performance_evidence_dir, severity="P0"))
     checks.extend(check_memory_value_evidence(memory_value_evidence_dir, severity="P0"))
+    checks.extend(
+        check_real_agent_extension_evidence(
+            real_agent_extension_evidence_dir,
+            severity="P0",
+        )
+    )
     checks.extend(check_repository_hygiene())
 
     failed = [item for item in checks if not item.ok and item.severity == "P0"]
@@ -631,8 +645,8 @@ def check_memory_value_evidence(
     checks.append(
         Check(
             "Agent记忆价值证据",
-            "12 组真实 OpenHands 案例",
-            real_case_count == 12 and completed_count == 12,
+            "至少 12 组真实 OpenHands 案例",
+            real_case_count >= 12 and completed_count == real_case_count,
             "case_count=%s completed=%s" % (real_case_count, completed_count),
             severity=severity,
         )
@@ -687,6 +701,69 @@ def check_memory_value_evidence(
                 name,
                 path.exists() and path.stat().st_size > 0,
                 "存在且非空" if path.exists() and path.stat().st_size > 0 else "缺失或为空",
+                severity=severity,
+            )
+        )
+    return checks
+
+
+def check_real_agent_extension_evidence(
+    evidence_dir: Path,
+    severity: str,
+) -> List[Check]:
+    checks = [
+        Check(
+            "真实Agent扩展证据",
+            "R13-R20 证据目录",
+            evidence_dir.exists(),
+            _display_path(evidence_dir),
+            severity=severity,
+        )
+    ]
+    metrics = _load_evidence_json(evidence_dir / "metrics.json")
+    case_count = int(metrics.get("case_count", 0)) if metrics else 0
+    completed_count = int(metrics.get("completed_case_count", 0)) if metrics else 0
+    memory_rate = (
+        float(metrics.get("memory_system_pass_rate", 0.0)) if metrics else 0.0
+    )
+    behavior_rate = (
+        float(metrics.get("agent_behavior_pass_rate", 0.0)) if metrics else 0.0
+    )
+    unclassified = (
+        int(metrics.get("unclassified_failure_count", -1)) if metrics else -1
+    )
+    checks.append(
+        Check(
+            "真实Agent扩展证据",
+            "R13-R20 新增 8 组真实 OpenHands 案例",
+            case_count == 8
+            and completed_count == 8
+            and memory_rate == 1.0
+            and behavior_rate == 1.0
+            and unclassified == 0,
+            (
+                "case_count=%s completed=%s memory=%.4f behavior=%.4f "
+                "unclassified=%s"
+            )
+            % (
+                case_count,
+                completed_count,
+                memory_rate,
+                behavior_rate,
+                unclassified,
+            ),
+            severity=severity,
+        )
+    )
+    for name in ("manifest.json", "SHA256SUMS.txt"):
+        path = evidence_dir / name
+        ok = path.exists() and path.stat().st_size > 0
+        checks.append(
+            Check(
+                "真实Agent扩展证据",
+                name,
+                ok,
+                "存在且非空" if ok else "缺失或为空",
                 severity=severity,
             )
         )

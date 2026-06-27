@@ -53,6 +53,16 @@ run_capture "python_environment" "${PYTHON_BIN}" -c \
   "import json,platform,sys; print(json.dumps({'python':sys.version,'platform':platform.platform()}, ensure_ascii=False, indent=2))"
 run_capture "openhands_environment" "${AGENT_PYTHON}" -c \
   "import json; from memguard.integrations.openhands_adapter import detect_openhands_runtime; print(json.dumps(detect_openhands_runtime(), ensure_ascii=False, indent=2))"
+REAL_CASE_COUNT="$("${PYTHON_BIN}" - <<'PY'
+from pathlib import Path
+
+path = Path("data/benchmarks/real_agent_behavior.jsonl")
+if not path.exists():
+    print("unknown")
+else:
+    print(sum(1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip()))
+PY
+)"
 
 if command -v ollama >/dev/null 2>&1; then
   run_capture "ollama_version" ollama --version
@@ -101,7 +111,7 @@ cat >"${TMP_DIR}/README.md" <<EOF
 - 操作系统：openKylin
 - OpenHands 模型：${MODEL}
 - 确定性实验：16 组
-- 真实 OpenHands 场景：12 组
+- 真实 OpenHands 场景：${REAL_CASE_COUNT} 组
 
 \`deterministic/\` 保存可复现配对评测；\`real_agent/\` 保存真实 OpenHands
 会话、上下文、工具事件、工作区前后清单和逐案例判定。真实失败不会被删除，

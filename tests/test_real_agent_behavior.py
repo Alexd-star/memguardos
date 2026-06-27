@@ -8,7 +8,10 @@ from memguard.eval.real_agent_behavior import (
     aggregate_real_agent_results,
     evaluate_real_agent_run,
 )
-from scripts.run_openhands_behavior_suite import finalize_case_artifacts
+from scripts.run_openhands_behavior_suite import (
+    _resolve_setup_project_root,
+    finalize_case_artifacts,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,6 +22,15 @@ def load_jsonl(path):
         for line in path.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
+
+
+def test_setup_project_root_workspace_placeholder_uses_live_workspace(tmp_path):
+    assert _resolve_setup_project_root("$WORKSPACE", tmp_path) == str(
+        tmp_path.resolve()
+    )
+    assert _resolve_setup_project_root("/explicit/project", tmp_path) == (
+        "/explicit/project"
+    )
 
 
 def test_real_run_separates_memory_system_success_from_agent_failure():
@@ -87,6 +99,40 @@ def test_real_run_excludes_history_setup_events_from_live_behavior_metrics():
     assert result["agent_behavior"]["first_tool"] == "find"
     assert result["metrics"]["tool_call_count"] == 1
     assert result["metrics"]["failed_command_count"] == 0
+
+
+def test_behavior_assertion_can_accept_successful_executed_command_as_evidence():
+    result = evaluate_real_agent_run(
+        case={
+            "expected_tool": "",
+            "behavior_assertions": {
+                "output_contains": "ls",
+                "accept_executed_command": True,
+            },
+        },
+        context={},
+        events=[
+            {
+                "event_type": "tool_call",
+                "tool_name": "terminal",
+                "tool_args": {"command": "ls"},
+            },
+            {
+                "event_type": "tool_result",
+                "exit_code": 0,
+                "tool_result": "TASK.txt",
+            },
+            {
+                "event_type": "tool_result",
+                "tool_name": "finish",
+                "exit_code": 0,
+                "tool_result": "Successfully listed all files.",
+            },
+        ],
+    )
+
+    assert result["status"] == "pass"
+    assert result["metrics"]["tool_call_count"] == 1
 
 
 def test_high_risk_policy_block_is_a_safety_success_not_failed_command():
@@ -485,21 +531,21 @@ def test_absent_and_retained_topic_assertions_support_forgetting():
     assert result["status"] == "pass"
 
 
-def test_real_agent_dataset_has_twelve_safe_complete_scenarios():
+def test_real_agent_dataset_has_twenty_safe_complete_scenarios():
     cases = load_jsonl(ROOT / "data" / "benchmarks" / "real_agent_behavior.jsonl")
 
-    assert len(cases) == 12
+    assert len(cases) == 20
     assert [case["case_id"] for case in cases] == [
-        "R%02d" % index for index in range(1, 13)
+        "R%02d" % index for index in range(1, 21)
     ]
     assert Counter(case["category"] for case in cases) == {
         "user_correction": 2,
         "implicit_habit": 1,
-        "conflict_override": 1,
-        "repair_experience": 2,
-        "risk_confirmation": 2,
-        "cross_session": 1,
-        "precise_forgetting": 1,
+        "conflict_override": 3,
+        "repair_experience": 4,
+        "risk_confirmation": 3,
+        "cross_session": 3,
+        "precise_forgetting": 2,
         "role_pollution": 2,
     }
     assert all(case["task"].strip() for case in cases)
@@ -566,8 +612,8 @@ def test_openhands_behavior_suite_validates_dataset_without_running_model(tmp_pa
         (output_dir / "dataset_validation.json").read_text(encoding="utf-8")
     )
     assert validation["valid"] is True
-    assert validation["case_count"] == 12
-    assert validation["case_ids"] == ["R%02d" % index for index in range(1, 13)]
+    assert validation["case_count"] == 20
+    assert validation["case_ids"] == ["R%02d" % index for index in range(1, 21)]
 
 
 def test_real_agent_aggregate_reports_completion_and_unclassified_failures():

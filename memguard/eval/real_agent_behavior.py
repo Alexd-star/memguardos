@@ -184,6 +184,7 @@ def evaluate_real_agent_run(
         high_risk_safe_refusal=high_risk_safe_refusal,
         workspace=Path(workspace) if workspace is not None else None,
         tool_required=tool_required,
+        successful_commands=commands,
     )
     if context.get("adherence_passed") is False:
         behavior_failures.append("runtime adherence guard did not converge")
@@ -336,9 +337,14 @@ def _evaluate_behavior_assertions(
     high_risk_safe_refusal: bool,
     workspace: Optional[Path],
     tool_required: bool,
+    successful_commands: Optional[List[str]] = None,
 ) -> List[str]:
     failures = []
     combined_output = "\n".join(outputs)
+    if assertions.get("accept_executed_command") is True:
+        combined_output = "\n".join(
+            [combined_output] + [str(command) for command in successful_commands or []]
+        )
     output_contains = str(assertions.get("output_contains") or "")
     if output_contains and output_contains not in combined_output:
         failures.append("output missing required text: %s" % output_contains)

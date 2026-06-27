@@ -73,6 +73,7 @@ def main() -> int:
             "diagnostics_tab_ok": "系统诊断" in page,
             "diagnostics_export_button_ok": "导出诊断包" in page,
             "enterprise_overview_ok": "系统能力概览" in page and "常用工作流" in page,
+            "delivery_readiness_ok": "交付就绪度" in page and "一键验收路径" in page and "风险处置建议" in page,
             "competition_copy_absent": "benchmark 用例/种子" not in page and "能力证据总览" not in page,
             "traffic_light_status_ok": "红黄绿状态" in page,
             "rag_visual_ok": "候选选择轨迹" in page,
@@ -106,6 +107,7 @@ def main() -> int:
             and result["diagnostics_tab_ok"]
             and result["diagnostics_export_button_ok"]
             and result["enterprise_overview_ok"]
+            and result["delivery_readiness_ok"]
             and result["competition_copy_absent"]
             and result["traffic_light_status_ok"]
             and result["rag_visual_ok"]

@@ -1,0 +1,363 @@
+{
+  "case_id": "R16",
+  "title": "复用文档链接检查脚本路径修复经验",
+  "category": "repair_experience",
+  "model": "ollama/qwen3:1.7b",
+  "setup_event_count": 4,
+  "forget_result": null,
+  "run": {
+    "ok": true,
+    "session_id": "r16-live",
+    "trace_id": "ctx_2b41ea5bea674d04",
+    "context_file": "context.json",
+    "duration_ms": 47546.883,
+    "context": {
+      "trace_id": "ctx_2b41ea5bea674d04",
+      "stage_budgets": {
+        "planning": {
+          "max_chars": 4000,
+          "token_budget": 256,
+          "context_chars": 931,
+          "estimated_context_tokens": 256,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "tool_selection": {
+          "max_chars": 4000,
+          "token_budget": 256,
+          "context_chars": 931,
+          "estimated_context_tokens": 256,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "response_generation": {
+          "max_chars": 4000,
+          "token_budget": 256,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        }
+      },
+      "selected_memory_ids": {
+        "planning": [
+          "mem_5324a94b5bf547ce",
+          "mem_0641bd04041648fd"
+        ],
+        "tool_selection": [
+          "mem_5324a94b5bf547ce",
+          "mem_0641bd04041648fd"
+        ],
+        "response_generation": []
+      },
+      "selected_topics": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": []
+      },
+      "selected_values": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": []
+      },
+      "selected_subtypes": {
+        "planning": [
+          "procedural_trace",
+          "tool_failure_case"
+        ],
+        "tool_selection": [
+          "procedural_trace",
+          "tool_failure_case"
+        ],
+        "response_generation": []
+      }
+    },
+    "structured_intent_recovery": {
+      "attempted": false,
+      "executed": false,
+      "command": "",
+      "exit_code": null,
+      "reason": "no applicable tool preference"
+    },
+    "procedural_memory_fallback": {
+      "applied": true,
+      "evidence": "local links ok",
+      "reason": "verified procedural result added to final evidence"
+    },
+    "adherence": {
+      "repair_attempted": false,
+      "repair_attempt_count": 0,
+      "initial_issues": [],
+      "remaining_issues": [],
+      "passed": true
+    },
+    "event_summary": {
+      "stored": 3,
+      "duplicate": 0,
+      "blocked": 0,
+      "tool_calls": 0,
+      "tool_results": 0,
+      "procedural_memories": 0,
+      "procedural_memory_ids": [],
+      "task_errors": 0,
+      "recovered_task_errors": 0,
+      "event_types": {
+        "user_message": 1,
+        "assistant_message": 2
+      },
+      "unknown_event_types": {
+        "SystemPromptEvent": 1,
+        "HookExecutionEvent": 1
+      }
+    }
+  },
+  "evaluation": {
+    "status": "pass",
+    "memory_system": {
+      "passed": true,
+      "context_selected": true,
+      "selected_topics": [],
+      "selected_subtypes": [
+        "procedural_trace",
+        "tool_failure_case"
+      ],
+      "selected_values": [],
+      "failures": []
+    },
+    "agent_behavior": {
+      "passed": true,
+      "task_completed": true,
+      "first_tool": "",
+      "first_tool_correct": false,
+      "failures": []
+    },
+    "metrics": {
+      "attempted_tool_call_count": 0,
+      "tool_call_count": 0,
+      "policy_denied_tool_call_count": 0,
+      "failed_command_count": 0,
+      "repeated_command_count": 0,
+      "blocked_high_risk_count": 0,
+      "preference_policy_block_count": 0,
+      "other_policy_block_count": 0,
+      "task_error_count": 0,
+      "recovered_task_error_count": 0,
+      "structured_intent_recovery_count": 0,
+      "procedural_memory_fallback_count": 1,
+      "high_risk_safe_refusal_count": 0
+    },
+    "error_classification": [
+      "tool_selection"
+    ],
+    "recovered_error_classification": []
+  },
+  "events": [
+    {
+      "event_id": "evt-r16-setup-1",
+      "provenance_hash": "6d114a6a0e91eb3fd49202d238df48c2fb5229a1a54950a8f9b187dbc2071efb",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r16-history",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "错误地从根目录直接运行脚本名",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T14:29:32.339697+00:00",
+      "source_uri": "memory-value-real://R16/setup/1",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:29:32.339912+00:00",
+      "tool_args": {
+        "command": "python check_docs_links.py"
+      }
+    },
+    {
+      "event_id": "evt-r16-setup-2",
+      "provenance_hash": "91d1b4460eaff98032f0782b8db694856dfe39fbb1b7f9842ebd524a5620af2f",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r16-history",
+      "turn_id": "turn-2",
+      "sequence": 2,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "can't open file 'check_docs_links.py'",
+      "exit_code": 2,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T14:29:32.347810+00:00",
+      "source_uri": "memory-value-real://R16/setup/2",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:29:32.348007+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "evt-r16-setup-3",
+      "provenance_hash": "08ff088bf824cbc7bddcfb7fe3d9548f6cdce7a5ac1140608c4ae75942a39137",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r16-history",
+      "turn_id": "turn-3",
+      "sequence": 3,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "改用 scripts 目录下的真实脚本",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T14:29:32.365354+00:00",
+      "source_uri": "memory-value-real://R16/setup/3",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:29:32.365570+00:00",
+      "tool_args": {
+        "command": "python scripts/check_docs_links.py"
+      }
+    },
+    {
+      "event_id": "evt-r16-setup-4",
+      "provenance_hash": "4cd2e899040d890a1f8e37a5586a4697425958b5b1cce60c72e25141b073141d",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r16-history",
+      "turn_id": "turn-4",
+      "sequence": 4,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "local links ok",
+      "exit_code": 0,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T14:29:32.373594+00:00",
+      "source_uri": "memory-value-real://R16/setup/4",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:29:32.373781+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "6d29187a-e8c4-4811-b94d-f9eaaba4fe01",
+      "provenance_hash": "0d5f1ace8378071bb853bc6e35cd673fa516a946192b8f67f74f751d73340916",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r16-live",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "请给出复验 Markdown 链接检查的正确命令。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/outputs/openhands_behavior_r13_r20_final_20260627_222527/cases/R16/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T22:29:33.526687",
+      "source_uri": "openhands://r16-live/6d29187a-e8c4-4811-b94d-f9eaaba4fe01",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:29:33.527073+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "95f969f9-f90b-4108-8a90-7511510becb7",
+      "provenance_hash": "47baaf8e3d2bed326b2cd54760172f20273dccd2f69aa74affdef66eaacd0420",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r16-live",
+      "turn_id": "turn-1",
+      "sequence": 2,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "{\"command\": \"python scripts/check_docs_links.py\"}",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/outputs/openhands_behavior_r13_r20_final_20260627_222527/cases/R16/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T22:30:19.917552",
+      "source_uri": "openhands://r16-live/95f969f9-f90b-4108-8a90-7511510becb7",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:30:19.917803+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "evt_7b54c8864b254174",
+      "provenance_hash": "5678fbd066cba14971ed808b981d99982a1d68ad0101a6516cf45c468e1a1205",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r16-live",
+      "turn_id": "turn-1",
+      "sequence": 3,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "基于已验证的程序性记忆，结果为：local links ok",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/outputs/openhands_behavior_r13_r20_final_20260627_222527/cases/R16/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T14:30:19.928173+00:00",
+      "source_uri": "memguard-recovery://r16-live/procedural-result",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:30:19.928397+00:00",
+      "tool_args": {
+        "execution_origin": "procedural_memory_fallback"
+      }
+    }
+  ],
+  "workspace_before": [
+    {
+      "path": "scripts/check_docs_links.py",
+      "size": 24
+    }
+  ],
+  "workspace_after": [
+    {
+      "path": "scripts/check_docs_links.py",
+      "size": 24
+    }
+  ]
+}

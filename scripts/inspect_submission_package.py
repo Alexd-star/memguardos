@@ -76,6 +76,9 @@ REQUIRED_PATHS = {
     "docs/evidence/memory_value_latest/real_agent/metrics.json",
     "docs/evidence/memory_value_latest/manifest.json",
     "docs/evidence/memory_value_latest/SHA256SUMS.txt",
+    "docs/evidence/real_agent_extension_r13_r20_latest/metrics.json",
+    "docs/evidence/real_agent_extension_r13_r20_latest/manifest.json",
+    "docs/evidence/real_agent_extension_r13_r20_latest/SHA256SUMS.txt",
     "docs/真实Agent记忆价值评测报告.md",
 } | FORMAL_DOCS
 
@@ -293,20 +296,32 @@ def check_evidence_content(package: Path, name_set: set[str]) -> list[dict[str, 
                 }
             )
         else:
-            real_rules = [
-                ("case_count", 12),
-                ("completed_case_count", 12),
-                ("unclassified_failure_count", 0),
-            ]
-            for key, expected in real_rules:
-                if memory_value_real.get(key) != expected:
-                    failures.append(
-                        {
-                            "path": "docs/evidence/memory_value_latest/real_agent/metrics.json",
-                            "reason": "%s must equal %s" % (key, expected),
-                            "actual": memory_value_real.get(key),
-                        }
-                    )
+            case_count = memory_value_real.get("case_count")
+            completed_count = memory_value_real.get("completed_case_count")
+            if not isinstance(case_count, int) or case_count < 12:
+                failures.append(
+                    {
+                        "path": "docs/evidence/memory_value_latest/real_agent/metrics.json",
+                        "reason": "case_count must be at least 12",
+                        "actual": case_count,
+                    }
+                )
+            if completed_count != case_count:
+                failures.append(
+                    {
+                        "path": "docs/evidence/memory_value_latest/real_agent/metrics.json",
+                        "reason": "completed_case_count must equal case_count",
+                        "actual": completed_count,
+                    }
+                )
+            if memory_value_real.get("unclassified_failure_count") != 0:
+                failures.append(
+                    {
+                        "path": "docs/evidence/memory_value_latest/real_agent/metrics.json",
+                        "reason": "unclassified_failure_count must equal 0",
+                        "actual": memory_value_real.get("unclassified_failure_count"),
+                    }
+                )
             memory_rate = memory_value_real.get("memory_system_pass_rate")
             if not isinstance(memory_rate, (int, float)) or memory_rate < 0.75:
                 failures.append(
@@ -316,6 +331,34 @@ def check_evidence_content(package: Path, name_set: set[str]) -> list[dict[str, 
                         "actual": memory_rate,
                     }
                 )
+
+        real_extension = _json_from_text(
+            text("docs/evidence/real_agent_extension_r13_r20_latest/metrics.json")
+        )
+        if not real_extension:
+            failures.append(
+                {
+                    "path": "docs/evidence/real_agent_extension_r13_r20_latest/metrics.json",
+                    "reason": "cannot parse R13-R20 real Agent extension metrics",
+                }
+            )
+        else:
+            extension_rules = {
+                "case_count": 8,
+                "completed_case_count": 8,
+                "memory_system_pass_rate": 1.0,
+                "agent_behavior_pass_rate": 1.0,
+                "unclassified_failure_count": 0,
+            }
+            for key, expected in extension_rules.items():
+                if real_extension.get(key) != expected:
+                    failures.append(
+                        {
+                            "path": "docs/evidence/real_agent_extension_r13_r20_latest/metrics.json",
+                            "reason": "%s must equal %s" % (key, expected),
+                            "actual": real_extension.get(key),
+                        }
+                    )
 
         sdk_probe = _json_from_capture(text("docs/evidence/latest/sdk_embedding_probe.txt"))
         if not sdk_probe:

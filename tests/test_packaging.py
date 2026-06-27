@@ -12,6 +12,7 @@ from scripts.check_competition_ready import (
     check_memory_value_evidence,
     check_openkylin_metrics,
     check_performance_evidence,
+    check_real_agent_extension_evidence,
 )
 
 
@@ -268,6 +269,8 @@ def sample_submission_body(name: str) -> str:
         return '{"case_count":16,"system_validation":{"passed":16,"failed":0},"failures":[]}\n'
     if name == "docs/evidence/memory_value_latest/real_agent/metrics.json":
         return '{"case_count":12,"completed_case_count":12,"unclassified_failure_count":0,"memory_system_pass_rate":0.916667,"agent_behavior_pass_rate":0.75}\n'
+    if name == "docs/evidence/real_agent_extension_r13_r20_latest/metrics.json":
+        return '{"case_count":8,"completed_case_count":8,"unclassified_failure_count":0,"memory_system_pass_rate":1.0,"agent_behavior_pass_rate":1.0}\n'
     if name == "docs/evidence/latest/sdk_embedding_probe.txt":
         return '$ memctl sdk-status --probe-embedding\n\n{"embedding":{"inference_ready":true,"embedding_probe":{"dim":768}}}\n'
     if name == "docs/evidence/latest/eval_result_openkylin_10k.json":
@@ -494,7 +497,7 @@ def test_competition_ready_requires_complete_memory_value_evidence(tmp_path):
     by_name = {item.name: item for item in checks}
 
     assert by_name["16 组确定性配对实验"].ok is True
-    assert by_name["12 组真实 OpenHands 案例"].ok is True
+    assert by_name["至少 12 组真实 OpenHands 案例"].ok is True
     assert by_name["真实案例失败均已归因"].ok is True
     assert by_name["真实记忆系统层通过率"].ok is True
 
@@ -517,3 +520,33 @@ def test_competition_ready_rejects_incomplete_memory_value_evidence(tmp_path):
     checks = check_memory_value_evidence(evidence, severity="P0")
 
     assert any(not item.ok for item in checks)
+
+
+def test_competition_ready_accepts_real_agent_extension_evidence(tmp_path):
+    evidence = tmp_path / "real_agent_extension"
+    evidence.mkdir()
+    (evidence / "metrics.json").write_text(
+        json.dumps(
+            {
+                "case_count": 8,
+                "completed_case_count": 8,
+                "memory_system_pass_rate": 1.0,
+                "agent_behavior_pass_rate": 1.0,
+                "unclassified_failure_count": 0,
+                "failed_case_ids": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (evidence / "manifest.json").write_text(
+        '{"file_count": 1, "files": []}',
+        encoding="utf-8",
+    )
+    (evidence / "SHA256SUMS.txt").write_text("evidence hashes\n", encoding="utf-8")
+
+    checks = check_real_agent_extension_evidence(evidence, severity="P0")
+    by_name = {item.name: item for item in checks}
+
+    assert by_name["R13-R20 新增 8 组真实 OpenHands 案例"].ok is True
+    assert by_name["manifest.json"].ok is True
+    assert by_name["SHA256SUMS.txt"].ok is True

@@ -41,10 +41,10 @@ def load_cases(path: Path):
 
 def validate_cases(cases):
     errors = []
-    expected_ids = ["R%02d" % index for index in range(1, 13)]
+    expected_ids = ["R%02d" % index for index in range(1, len(cases) + 1)]
     case_ids = [str(case.get("case_id") or "") for case in cases]
     if case_ids != expected_ids:
-        errors.append("case ids must be R01 through R12 in order")
+        errors.append("case ids must be contiguous R01 through R%02d in order" % len(cases))
     for case in cases:
         case_id = str(case.get("case_id") or "<missing>")
         for field in (
@@ -100,13 +100,14 @@ def prepare_workspace(workspace: Path, fixture):
             raise FileNotFoundError("workspace fixture source missing: %s" % source)
 
 
-def ingest_setup_events(service, case):
+def ingest_setup_events(service, case, workspace: Path | None = None):
     last_commands = {}
     stored = []
     for sequence, raw in enumerate(case.get("setup_events") or [], start=1):
         item = dict(raw)
         session_id = str(item.get("session_id") or "%s-history" % case["case_id"])
         tool_args = dict(item.get("tool_args") or {})
+        project_root = _resolve_setup_project_root(item.get("project_root"), workspace)
         event = AgentInteractionEvent(
             agent_name=str(item.get("agent_name") or "openhands"),
             agent_version=str(item.get("agent_version") or "1.28.1"),
@@ -120,7 +121,7 @@ def ingest_setup_events(service, case):
             tool_args=tool_args,
             tool_result=str(item.get("tool_result") or ""),
             exit_code=item.get("exit_code"),
-            project_root=str(item.get("project_root") or ""),
+            project_root=project_root,
             task_type=str(item.get("task_type") or "code_assistance"),
             source_uri="memory-value-real://%s/setup/%s"
             % (case["case_id"], sequence),
@@ -134,7 +135,7 @@ def ingest_setup_events(service, case):
             service.ingest_tool_result(
                 ToolResult(
                     command=last_commands.get(session_id, ""),
-                    cwd=str(item.get("project_root") or ""),
+                    cwd=project_root,
                     exit_code=exit_code,
                     stdout=event.tool_result if exit_code == 0 else "",
                     stderr=event.tool_result if exit_code != 0 else "",
@@ -173,7 +174,7 @@ def run_case(case, output_dir: Path, args):
         db_path=state_dir / "memory.sqlite3",
     )
     try:
-        setup_results = ingest_setup_events(service, case)
+        setup_results = ingest_setup_events(service, case, workspace=workspace)
         forget_result = None
         forget_action = dict(case.get("forget_action") or {})
         if forget_action:
@@ -326,6 +327,13 @@ def _safe_workspace_path(workspace: Path, relative_path: str) -> Path:
     target = (root / relative_path).resolve()
     target.relative_to(root)
     return target
+
+
+def _resolve_setup_project_root(value: object, workspace: Path | None) -> str:
+    text = str(value or "").strip()
+    if text in {"$WORKSPACE", "{workspace}", "<workspace>"}:
+        return str(workspace.resolve()) if workspace is not None else ""
+    return text
 
 
 def build_parser():

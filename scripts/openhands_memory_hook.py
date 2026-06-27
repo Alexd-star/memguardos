@@ -17,6 +17,17 @@ HIGH_RISK_MARKERS = (
     "reboot",
 )
 
+HIGH_RISK_COMMAND_PATTERNS = (
+    (
+        re.compile(
+            r"(?:^|[;&|]\s*)(?:sudo\s+)?(?:env\s+)?(?:command\s+)?"
+            r"systemctl\s+(?:restart|stop|disable|mask|kill|poweroff)\b",
+            re.IGNORECASE,
+        ),
+        "systemctl restart",
+    ),
+)
+
 
 def selected_preferences(payload):
     preferences = {}
@@ -64,6 +75,18 @@ def violates_code_search_preference(command, preferred_tool):
     return False
 
 
+def high_risk_marker(tool_input):
+    serialized = json.dumps(tool_input, ensure_ascii=False).lower()
+    blocked_marker = next((marker for marker in HIGH_RISK_MARKERS if marker in serialized), "")
+    if blocked_marker:
+        return blocked_marker
+    command = " ".join(str((tool_input or {}).get("command") or "").split())
+    for pattern, marker in HIGH_RISK_COMMAND_PATTERNS:
+        if pattern.search(command):
+            return marker
+    return ""
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--context-file", required=True)
@@ -97,8 +120,7 @@ def main() -> int:
             observed_tool=tool_name,
         )
     tool_input = hook_input.get("tool_input") or {}
-    serialized = json.dumps(tool_input, ensure_ascii=False).lower()
-    blocked_marker = next((marker for marker in HIGH_RISK_MARKERS if marker in serialized), "")
+    blocked_marker = high_risk_marker(tool_input)
     if blocked_marker:
         return deny(
             "MemGuardOS blocked a high-risk tool command: %s" % blocked_marker,
