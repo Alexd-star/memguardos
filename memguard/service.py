@@ -17,6 +17,7 @@ from memguard.config import (
 from memguard.extraction.entity import extract_entities, extract_relations
 from memguard.extraction.semantic import HybridMemoryExtractor
 from memguard.forgetting.planner import ForgetPlanner
+from memguard.governance.trust import assess_memory_source
 from memguard.ingestion.behavior import BehaviorEvent, load_shell_history
 from memguard.ingestion.config import config_entry_to_memory_text, load_config_entries, validate_config_entry
 from memguard.ingestion.quality import assess_text_quality
@@ -93,6 +94,7 @@ class MemGuardService:
             sensitivity.redacted = True
 
         extraction = self.extractor.extract(stored_text, source_kind)
+        governance = assess_memory_source(stored_text, source_kind, source_uri)
         memory_type = extraction.memory_type
         subtype = extraction.subtype
         record = make_memory(
@@ -104,6 +106,10 @@ class MemGuardService:
             scope=self.namespace,
             tier=tier or self._default_tier(memory_type, source_kind),
             sensitivity=sensitivity,
+            trust_level=governance.trust_level,
+            trust_score=governance.trust_score,
+            governance_state=governance.governance_state,
+            governance_reason=governance.reason,
         )
         record.confidence = min(record.confidence, quality.score, extraction.confidence)
         self._enrich_graph(record)
@@ -122,9 +128,17 @@ class MemGuardService:
                 "labels": record.sensitivity.labels,
                 "quality": quality.to_dict(),
                 "extraction": extraction.to_dict(),
+                "governance": governance.to_dict(),
             },
         )
-        return {"stored": True, "record": record, "quality": quality.to_dict(), "extraction": extraction.to_dict()}
+        return {
+            "stored": True,
+            "quarantined": governance.quarantined,
+            "record": record,
+            "quality": quality.to_dict(),
+            "extraction": extraction.to_dict(),
+            "governance": governance.to_dict(),
+        }
 
     def ingest_tool_result(self, tool_result: ToolResult, source_uri: str = "tool_result") -> Dict[str, object]:
         return self.ingest_text(
@@ -778,6 +792,10 @@ class MemGuardService:
             preference_session_id=previous.preference_session_id,
             project_root=previous.project_root,
             task_type=previous.task_type,
+            trust_level=previous.trust_level,
+            trust_score=previous.trust_score,
+            governance_state=previous.governance_state,
+            governance_reason=previous.governance_reason,
         ).finalize_hash()
         self._enrich_graph(record)
         self.store.append(record)
@@ -797,8 +815,109 @@ class MemGuardService:
         )
         return {"updated": True, "record": record, "quality": quality.to_dict(), "extraction": extraction.to_dict()}
 
-    def list_memories(self, include_deleted: bool = False, tier: Optional[str] = None) -> List[Dict[str, object]]:
-        return self.meta.list_memories(include_deleted=include_deleted, tier=tier)
+    def list_memories(
+        self,
+        include_deleted: bool = False,
+        tier: Optional[str] = None,
+        governance_state: Optional[str] = "active",
+    ) -> List[Dict[str, object]]:
+        return self.meta.list_memories(
+            include_deleted=include_deleted,
+            tier=tier,
+            governance_state=governance_state,
+        )
+
+    def list_quarantined_memories(self, limit: int = 100) -> List[Dict[str, object]]:
+        records = self.meta.list_memories(
+            include_deleted=False,
+            limit=max(1, min(int(limit), 1000)),
+            governance_state="quarantined",
+        )
+        self._audit("governance_list_quarantine", None, {"count": len(records), "limit": limit})
+        return records
+
+    def review_quarantined_memory(
+        self,
+        memory_id: str,
+        decision: str,
+        reviewer: str,
+        reason: str,
+    ) -> Dict[str, object]:
+        decision = str(decision or "").strip().lower()
+        reviewer = str(reviewer or "").strip()
+        reason = str(reason or "").strip()
+        if decision not in {"approve", "reject"}:
+            raise ValueError("governance decision must be approve or reject")
+        if not reviewer:
+            raise ValueError("governance reviewer is required")
+        if not reason:
+            raise ValueError("governance review reason is required")
+        row = self.meta.get_memory(memory_id)
+        if row is None or row.get("deleted"):
+            return {"reviewed": False, "reason": "memory_not_found", "memory_id": memory_id}
+        if row.get("governance_state") != "quarantined":
+            return {
+                "reviewed": False,
+                "reason": "memory_not_quarantined",
+                "memory_id": memory_id,
+                "governance_state": row.get("governance_state"),
+            }
+        previous = self.store.get_latest(memory_id)
+        if previous is None:
+            return {"reviewed": False, "reason": "segment_record_not_found", "memory_id": memory_id}
+
+        if decision == "reject":
+            previous.governance_state = "rejected"
+            previous.governance_reason = reason
+            previous.trust_level = "rejected"
+            previous.trust_score = 0.0
+            tombstone = self.store.tombstone(previous, "governance rejection: " + reason)
+            self.meta.mark_deleted(memory_id, superseded_by=tombstone.version.version_id)
+            self.meta.set_governance_state(memory_id, "rejected", "rejected", 0.0, reason)
+            self._audit(
+                "governance_reject",
+                memory_id,
+                {"reviewer": reviewer, "reason": reason, "source_uri": row.get("source_uri")},
+            )
+            return {"reviewed": True, "memory_id": memory_id, "governance_state": "rejected"}
+
+        new_version_id = new_id("ver")
+        previous.invalidate(superseded_by=new_version_id)
+        self.store.append(previous)
+        self.meta.invalidate_memory(memory_id, superseded_by=new_version_id, valid_to=previous.temporal.valid_to)
+        payload = previous.to_dict()
+        now = utc_now()
+        payload["version"] = {
+            "version_id": new_version_id,
+            "parent_version_id": previous.version.version_id,
+            "op": "governance_approve",
+        }
+        payload["audit"] = {"created_by": reviewer, "created_at": now, "hash": ""}
+        payload["temporal"] = {"valid_from": now, "valid_to": None, "superseded_by": None}
+        payload["trust_level"] = "reviewed"
+        payload["trust_score"] = 0.85
+        payload["governance_state"] = "active"
+        payload["governance_reason"] = reason
+        payload["deleted"] = False
+        approved = MemoryRecord.from_dict(payload).finalize_hash()
+        self.store.append(approved)
+        self.meta.upsert_memory(approved)
+        self._audit(
+            "governance_approve",
+            memory_id,
+            {
+                "reviewer": reviewer,
+                "reason": reason,
+                "source_uri": row.get("source_uri"),
+                "version_id": new_version_id,
+            },
+        )
+        return {
+            "reviewed": True,
+            "memory_id": memory_id,
+            "governance_state": "active",
+            "record": approved,
+        }
 
     def promote_memory(self, memory_id: str, tier: str) -> Dict[str, object]:
         if tier not in {"working", "session", "long_term"}:
@@ -837,6 +956,10 @@ class MemGuardService:
             preference_session_id=record.preference_session_id,
             project_root=record.project_root,
             task_type=record.task_type,
+            trust_level=record.trust_level,
+            trust_score=record.trust_score,
+            governance_state=record.governance_state,
+            governance_reason=record.governance_reason,
         ).finalize_hash()
         self.store.append(promoted)
         self.meta.upsert_memory(promoted)
@@ -871,7 +994,7 @@ class MemGuardService:
 
     def memory_policy_status(self, eviction_limit: int = 10) -> Dict[str, object]:
         live_records = self.meta.list_memories(include_deleted=False)
-        meta_records = self.meta.list_memories(include_deleted=True)
+        meta_records = self.meta.list_memories(include_deleted=True, governance_state=None)
         segment_records = self.store.scan()
         tier_order = ["working", "session", "long_term"]
         tiers: Dict[str, Dict[str, object]] = {
@@ -1104,6 +1227,10 @@ class MemGuardService:
             preference_session_id=target.preference_session_id,
             project_root=target.project_root,
             task_type=target.task_type,
+            trust_level=target.trust_level,
+            trust_score=target.trust_score,
+            governance_state=target.governance_state,
+            governance_reason=target.governance_reason,
             deleted=False,
         )
         self.store.append(record)
@@ -2035,8 +2162,16 @@ class MemGuardService:
             "db_bytes": db_path.stat().st_size if db_path.exists() else 0,
             "uses_custom_paths": store_path != expected_store or db_path != expected_db,
         }
-        status["record_count"] = len(self.meta.list_memories(include_deleted=True))
+        status["record_count"] = len(
+            self.meta.list_memories(include_deleted=True, governance_state=None)
+        )
         status["live_record_count"] = len(self.meta.list_memories(include_deleted=False))
+        status["quarantined_record_count"] = len(
+            self.meta.list_memories(
+                include_deleted=False,
+                governance_state="quarantined",
+            )
+        )
         status["audit_event_count"] = len(self.meta.list_audit(limit=1000000))
         self._audit(
             "namespace_status",
@@ -2045,6 +2180,7 @@ class MemGuardService:
                 "namespace_home": status["namespace_home"],
                 "record_count": status["record_count"],
                 "live_record_count": status["live_record_count"],
+                "quarantined_record_count": status["quarantined_record_count"],
             },
         )
         return status

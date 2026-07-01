@@ -95,6 +95,10 @@ class AppendOnlyMemoryStore:
             preference_session_id=record.preference_session_id,
             project_root=record.project_root,
             task_type=record.task_type,
+            trust_level=record.trust_level,
+            trust_score=record.trust_score,
+            governance_state=record.governance_state,
+            governance_reason=record.governance_reason,
             deleted=True,
         )
         record.invalidate(valid_to=tomb.temporal.valid_from, superseded_by=tombstone_version_id)

@@ -52,6 +52,10 @@ class SQLiteMetaStore:
                 preference_session_id TEXT NOT NULL DEFAULT '',
                 project_root TEXT NOT NULL DEFAULT '',
                 task_type TEXT NOT NULL DEFAULT '',
+                trust_level TEXT NOT NULL DEFAULT 'trusted',
+                trust_score REAL NOT NULL DEFAULT 1.0,
+                governance_state TEXT NOT NULL DEFAULT 'active',
+                governance_reason TEXT NOT NULL DEFAULT '',
                 deleted INTEGER NOT NULL DEFAULT 0,
                 updated_at TEXT NOT NULL
             )
@@ -71,6 +75,10 @@ class SQLiteMetaStore:
         self._ensure_column("memory", "preference_session_id", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("memory", "project_root", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("memory", "task_type", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory", "trust_level", "TEXT NOT NULL DEFAULT 'trusted'")
+        self._ensure_column("memory", "trust_score", "REAL NOT NULL DEFAULT 1.0")
+        self._ensure_column("memory", "governance_state", "TEXT NOT NULL DEFAULT 'active'")
+        self._ensure_column("memory", "governance_reason", "TEXT NOT NULL DEFAULT ''")
         self.conn.execute(
             """
             CREATE TABLE IF NOT EXISTS audit (
@@ -199,6 +207,7 @@ class SQLiteMetaStore:
             self._fts_enabled = False
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_live_updated ON memory(deleted, updated_at DESC)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_tier_live ON memory(tier, deleted, updated_at DESC)")
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_governance ON memory(governance_state, deleted, updated_at DESC)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_entity_entity ON memory_entity(entity, memory_id)")
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_agent_events_session_sequence "
@@ -226,9 +235,10 @@ class SQLiteMetaStore:
                 sensitivity_level, sensitivity_labels, sensitivity_redacted, version_id,
                 valid_from, valid_to, superseded_by, preference_topic, preference_value,
                 preference_scope, preference_explicit, agent_name, preference_session_id,
-                project_root, task_type, deleted, updated_at, subtype
+                project_root, task_type, trust_level, trust_score, governance_state,
+                governance_reason, deleted, updated_at, subtype
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(memory_id) DO UPDATE SET
                 type=excluded.type,
                 subtype=excluded.subtype,
@@ -253,6 +263,10 @@ class SQLiteMetaStore:
                 preference_session_id=excluded.preference_session_id,
                 project_root=excluded.project_root,
                 task_type=excluded.task_type,
+                trust_level=excluded.trust_level,
+                trust_score=excluded.trust_score,
+                governance_state=excluded.governance_state,
+                governance_reason=excluded.governance_reason,
                 deleted=excluded.deleted,
                 updated_at=excluded.updated_at
             """,
@@ -280,6 +294,10 @@ class SQLiteMetaStore:
                 record.preference_session_id,
                 record.project_root,
                 record.task_type,
+                record.trust_level,
+                record.trust_score,
+                record.governance_state,
+                record.governance_reason,
                 1 if record.deleted else 0,
                 utc_now(),
                 record.subtype,
@@ -287,12 +305,16 @@ class SQLiteMetaStore:
         )
         if self._fts_enabled:
             self.conn.execute("DELETE FROM memory_fts WHERE memory_id = ?", (record.memory_id,))
-            if not record.deleted:
+            if not record.deleted and record.governance_state == "active":
                 self.conn.execute(
                     "INSERT INTO memory_fts(memory_id, content, summary, type) VALUES (?, ?, ?, ?)",
                     (record.memory_id, record.content, record.summary + " " + record.subtype, record.type),
                 )
-        self._upsert_graph(record)
+        if not record.deleted and record.governance_state == "active":
+            self._upsert_graph(record)
+        else:
+            self.conn.execute("DELETE FROM memory_entity WHERE memory_id = ?", (record.memory_id,))
+            self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (record.memory_id,))
         self.conn.commit()
 
     def update_tier(self, memory_id: str, tier: str) -> None:
@@ -326,7 +348,7 @@ class SQLiteMetaStore:
         self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (memory_id,))
         self.conn.commit()
 
-    def list_memories(self, include_deleted: bool = False, tier: Optional[str] = None, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    def list_memories(self, include_deleted: bool = False, tier: Optional[str] = None, limit: Optional[int] = None, governance_state: Optional[str] = "active") -> List[Dict[str, Any]]:
         sql = "SELECT * FROM memory"
         clauses = []
         params = []
@@ -335,6 +357,9 @@ class SQLiteMetaStore:
         if tier:
             clauses.append("tier = ?")
             params.append(tier)
+        if governance_state:
+            clauses.append("governance_state = ?")
+            params.append(governance_state)
         if clauses:
             sql += " WHERE " + " AND ".join(clauses)
         sql += " ORDER BY updated_at DESC"
@@ -352,7 +377,7 @@ class SQLiteMetaStore:
         if effective_limit == 0:
             return []
         excluded = list(dict.fromkeys(str(memory_id) for memory_id in (exclude_ids or []) if memory_id))
-        sql = "SELECT * FROM memory WHERE deleted = 0"
+        sql = "SELECT * FROM memory WHERE deleted = 0 AND governance_state = 'active'"
         params: List[Any] = []
         if excluded:
             placeholders = ",".join("?" for _ in excluded)
@@ -365,6 +390,21 @@ class SQLiteMetaStore:
     def get_memory(self, memory_id: str) -> Optional[Dict[str, Any]]:
         row = self.conn.execute("SELECT * FROM memory WHERE memory_id = ?", (memory_id,)).fetchone()
         return dict(row) if row else None
+
+    def set_governance_state(
+        self,
+        memory_id: str,
+        state: str,
+        trust_level: str,
+        trust_score: float,
+        reason: str,
+    ) -> None:
+        self.conn.execute(
+            "UPDATE memory SET governance_state = ?, trust_level = ?, trust_score = ?, "
+            "governance_reason = ?, updated_at = ? WHERE memory_id = ?",
+            (state, trust_level, float(trust_score), reason, utc_now(), memory_id),
+        )
+        self.conn.commit()
 
     def insert_agent_event(self, event: Any) -> Dict[str, Any]:
         cursor = self.conn.execute(
@@ -768,7 +808,7 @@ class SQLiteMetaStore:
                         SELECT m.*, bm25(memory_fts) AS rank
                         FROM memory_fts
                         JOIN memory m ON m.memory_id = memory_fts.memory_id
-                        WHERE memory_fts MATCH ? AND m.deleted = 0
+                        WHERE memory_fts MATCH ? AND m.deleted = 0 AND m.governance_state = 'active'
                         ORDER BY rank
                         LIMIT ?
                         """,
@@ -782,7 +822,8 @@ class SQLiteMetaStore:
         rows = self.conn.execute(
             """
             SELECT *, 0.0 AS rank FROM memory
-            WHERE deleted = 0 AND (content LIKE ? OR summary LIKE ? OR type LIKE ?)
+            WHERE deleted = 0 AND governance_state = 'active'
+              AND (content LIKE ? OR summary LIKE ? OR type LIKE ?)
             LIMIT ?
             """,
             (pattern, pattern, pattern, limit),
@@ -794,7 +835,7 @@ class SQLiteMetaStore:
             """
             SELECT
                 COUNT(*) AS total_count,
-                SUM(CASE WHEN deleted = 0 THEN 1 ELSE 0 END) AS live_count,
+                SUM(CASE WHEN deleted = 0 AND governance_state = 'active' THEN 1 ELSE 0 END) AS live_count,
                 COALESCE(MAX(updated_at), '') AS max_updated_at
             FROM memory
             """
@@ -815,7 +856,7 @@ class SQLiteMetaStore:
                 + CASE WHEN m.subtype IN ('fact', 'workflow', 'procedure') THEN 1 ELSE 0 END AS graph_rank
             FROM memory_entity me
             JOIN memory m ON m.memory_id = me.memory_id
-            WHERE m.deleted = 0 AND me.entity LIKE ?
+            WHERE m.deleted = 0 AND m.governance_state = 'active' AND me.entity LIKE ?
             ORDER BY graph_rank DESC, m.updated_at ASC
             LIMIT ?
             """,
@@ -830,7 +871,7 @@ class SQLiteMetaStore:
             FROM memory_entity seed
             JOIN memory_entity me ON me.entity = seed.entity AND me.memory_id != seed.memory_id
             JOIN memory m ON m.memory_id = me.memory_id
-            WHERE seed.memory_id = ? AND m.deleted = 0
+            WHERE seed.memory_id = ? AND m.deleted = 0 AND m.governance_state = 'active'
             ORDER BY m.updated_at DESC
             LIMIT ?
             """,

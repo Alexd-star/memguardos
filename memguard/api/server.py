@@ -70,6 +70,16 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
     if command == "memory_policy":
         eviction_limit = _int_param(request, "eviction_limit", 10, minimum=1, maximum=100)
         return {"ok": True, "result": service.memory_policy_status(eviction_limit=eviction_limit)}
+    if command == "governance_list":
+        limit = _int_param(request, "limit", 100, minimum=1, maximum=1000)
+        return {"ok": True, "result": _jsonable(service.list_quarantined_memories(limit=limit))}
+    if command == "governance_review":
+        memory_id = _string_param(request, "memory_id", "", max_chars=128)
+        decision = _string_param(request, "decision", "", max_chars=16)
+        reviewer = _string_param(request, "reviewer", "", max_chars=256)
+        reason = _string_param(request, "reason", "", max_chars=2048)
+        result = service.review_quarantined_memory(memory_id, decision, reviewer, reason)
+        return {"ok": bool(result.get("reviewed")), "result": _jsonable(result)}
     if command == "temporal_status":
         limit = _int_param(request, "limit", 20, minimum=1, maximum=100)
         return {"ok": True, "result": service.temporal_status(limit=limit)}

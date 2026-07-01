@@ -83,6 +83,10 @@ class MemoryRecord:
     preference_session_id: str = ""
     project_root: str = ""
     task_type: str = ""
+    trust_level: str = "trusted"
+    trust_score: float = 1.0
+    governance_state: str = "active"
+    governance_reason: str = ""
     deleted: bool = False
 
     def finalize_hash(self) -> "MemoryRecord":
@@ -135,6 +139,10 @@ class MemoryRecord:
             preference_session_id=data.get("preference_session_id", ""),
             project_root=data.get("project_root", ""),
             task_type=data.get("task_type", ""),
+            trust_level=data.get("trust_level", "trusted"),
+            trust_score=float(data.get("trust_score", 1.0)),
+            governance_state=data.get("governance_state", "active"),
+            governance_reason=data.get("governance_reason", ""),
             deleted=bool(data.get("deleted", False)),
         )
 
@@ -160,6 +168,10 @@ def make_memory(
     preference_session_id: str = "",
     project_root: str = "",
     task_type: str = "",
+    trust_level: str = "trusted",
+    trust_score: float = 1.0,
+    governance_state: str = "active",
+    governance_reason: str = "",
 ) -> MemoryRecord:
     clean_summary = summary or content[:160]
     record = MemoryRecord(
@@ -181,5 +193,9 @@ def make_memory(
         preference_session_id=preference_session_id,
         project_root=project_root,
         task_type=task_type,
+        trust_level=trust_level,
+        trust_score=trust_score,
+        governance_state=governance_state,
+        governance_reason=governance_reason,
     )
     return record.finalize_hash()

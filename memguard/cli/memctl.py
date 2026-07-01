@@ -81,6 +81,16 @@ def build_parser() -> argparse.ArgumentParser:
     temporal = sub.add_parser("temporal-status", help="Show temporal validity windows for active and superseded memories")
     temporal.add_argument("--limit", type=int, default=20)
 
+    governance = sub.add_parser("governance", help="List and review quarantined memory sources")
+    governance_sub = governance.add_subparsers(dest="governance_command", required=True)
+    governance_list = governance_sub.add_parser("list", help="List quarantined memories")
+    governance_list.add_argument("--limit", type=int, default=100)
+    governance_review = governance_sub.add_parser("review", help="Approve or reject one quarantined memory")
+    governance_review.add_argument("memory_id")
+    governance_review.add_argument("decision", choices=["approve", "reject"])
+    governance_review.add_argument("--reviewer", required=True)
+    governance_review.add_argument("--reason", required=True)
+
     versions = sub.add_parser("versions", help="List all versions of a memory")
     versions.add_argument("memory_id")
 
@@ -404,6 +414,27 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "temporal-status":
             print(json.dumps(service.temporal_status(limit=args.limit), ensure_ascii=False, indent=2))
             return 0
+
+        if args.command == "governance":
+            if args.governance_command == "list":
+                print(json.dumps(service.list_quarantined_memories(limit=args.limit), ensure_ascii=False, indent=2))
+                return 0
+            result = service.review_quarantined_memory(
+                args.memory_id,
+                decision=args.decision,
+                reviewer=args.reviewer,
+                reason=args.reason,
+            )
+            printable = dict(result)
+            if printable.get("record"):
+                record = printable["record"]
+                printable["record"] = {
+                    "memory_id": record.memory_id,
+                    "version_id": record.version.version_id,
+                    "governance_state": record.governance_state,
+                }
+            print(json.dumps(printable, ensure_ascii=False, indent=2))
+            return 0 if result.get("reviewed") else 2
 
         if args.command == "update":
             result = service.update_memory(args.memory_id, args.text, reason=args.reason)
