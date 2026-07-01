@@ -951,8 +951,12 @@ def test_runner_recovers_bare_pytest_when_test_runner_preference_is_selected(tmp
         assert result["structured_intent_recovery"]["command"] == (
             "python -m pytest tests/test_core.py"
         )
+        project_python = Path.cwd() / ".venv" / "bin" / "python"
+        expected_python = (
+            str(project_python.resolve()) if project_python.exists() else sys.executable
+        )
         assert executions[0][0] == [
-            sys.executable,
+            expected_python,
             "-m",
             "pytest",
             "tests/test_core.py",
