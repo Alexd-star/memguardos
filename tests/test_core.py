@@ -1367,18 +1367,11 @@ def test_local_api_handler_and_unix_socket(tmp_path):
         socket_path = tmp_path / "memguard.sock"
         thread = threading.Thread(target=serve_unix_socket, args=(socket_path, service, lambda: stop["value"]), daemon=True)
         thread.start()
-        for _ in range(50):
-            if socket_path.exists():
-                break
-            time.sleep(0.02)
-        assert socket_path.exists()
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
-            client.connect(str(socket_path))
+        with _connect_unix_socket(socket_path) as client:
             client.sendall(json.dumps({"command": "health"}).encode("utf-8") + b"\n")
             response = client.recv(4096).decode("utf-8")
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+        with _connect_unix_socket(socket_path) as client:
             client.settimeout(3)
-            client.connect(str(socket_path))
             client.sendall(b'{"command":"health","padding":"' + (b"x" * (1024 * 1024 + 1)) + b'"}\n')
             oversized_response = client.recv(4096).decode("utf-8")
         stop["value"] = True
@@ -1389,6 +1382,21 @@ def test_local_api_handler_and_unix_socket(tmp_path):
         assert oversized["error"] == "payload_too_large"
     finally:
         service.close()
+
+
+def _connect_unix_socket(socket_path: Path, timeout_s: float = 2.0) -> socket.socket:
+    deadline = time.time() + timeout_s
+    last_error = None
+    while time.time() < deadline:
+        client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            client.connect(str(socket_path))
+            return client
+        except OSError as exc:
+            last_error = exc
+            client.close()
+            time.sleep(0.02)
+    raise AssertionError("unix socket did not accept connections: %s" % last_error)
 
 
 def test_local_api_internal_errors_are_auditable_without_leaking_details(tmp_path):
