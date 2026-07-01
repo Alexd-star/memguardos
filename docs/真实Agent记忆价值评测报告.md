@@ -16,7 +16,7 @@ Agent：OpenHands SDK 1.28.1
 5. Agent 是否减少错误命令和重复尝试；
 6. 精准遗忘后，目标偏好的行为影响是否消失，同时保留无关偏好。
 
-评测采用“双层设计”。第一层是 16 组确定性配对实验，用固定输入和客观结果验证指标算法、记忆选择、作用域、冲突覆盖、程序性经验和精准遗忘。第二层是在 openKylin 上运行真实 OpenHands 会话，检查本地模型是否实际消费记忆并产生可观察行为。当前归档证据由两部分组成：`docs/evidence/memory_value_latest/` 保存 R01-R12 原始 12 组真实会话，`docs/evidence/real_agent_extension_r13_r20_latest/` 保存新增 R13-R20 的 8 组扩展会话。20 组真实会话中，记忆系统层和 Agent 行为层均为 28/28。两层结果分开报告，避免将固定实验结果冒充真实模型效果，也避免把小模型偶发失败误判为记忆系统失败。
+评测采用“双层设计”。第一层是 16 组确定性配对实验，用固定输入和客观结果验证指标算法、记忆选择、作用域、冲突覆盖、程序性经验和精准遗忘。第二层是在 openKylin 上运行真实 OpenHands 会话，检查本地模型是否实际消费记忆并产生可观察行为。当前归档证据由三部分组成：`docs/evidence/memory_value_latest/` 保存 R01-R12 原始 12 组真实会话，`docs/evidence/real_agent_extension_r13_r20_latest/` 保存新增 R13-R20 的 8 组扩展会话，`docs/evidence/real_agent_holdout_latest/` 保存新增 8 组 holdout 留出盲测。28 组真实会话中，记忆系统层和 Agent 行为层均为 28/28。两层结果分开报告，避免将固定实验结果冒充真实模型效果，也避免把小模型偶发失败误判为记忆系统失败。
 
 ## 2. 对照方法
 
@@ -47,7 +47,7 @@ Agent：OpenHands SDK 1.28.1
 | 精准遗忘 | 遗忘回答顺序并保留工具偏好；遗忘工具偏好并保留安全策略 |
 | 角色污染 | Agent 自述不形成用户偏好；工具输出不污染用户偏好 |
 
-20 组真实会话分别验证用户纠正、隐式习惯、偏好更新、偏好冲突覆盖、失败修复轨迹、高风险确认、跨会话复用、精准遗忘、runbook 复用以及角色污染防护。所有文件操作都限制在案例专用工作区；`rm -rf`、`reboot` 和 `sudo systemctl restart` 等场景由 OpenHands PreToolUse Hook 在执行前拒绝，没有实际破坏系统。
+28 组真实会话分别验证用户纠正、隐式习惯、偏好更新、偏好冲突覆盖、失败修复轨迹、高风险确认、跨会话复用、精准遗忘、runbook 复用、角色污染防护和留出盲测。所有文件操作都限制在案例专用工作区；`rm -rf`、`reboot` 和 `sudo systemctl restart` 等场景由 OpenHands PreToolUse Hook 在执行前拒绝，没有实际破坏系统。
 
 ## 4. 确定性配对结果
 
@@ -169,7 +169,7 @@ bash scripts/collect_memory_value_evidence.sh \
 | 路径 | 内容 |
 |---|---|
 | `data/benchmarks/agent_memory_value.jsonl` | 16 组确定性配对案例 |
-| `data/benchmarks/real_agent_behavior.jsonl` | 20 组真实 Agent 场景定义 |
+| `data/benchmarks/real_agent_behavior.jsonl` | 28 组真实 Agent 场景定义 |
 | `docs/evidence/memory_value_latest/deterministic/metrics.json` | 确定性聚合指标 |
 | `docs/evidence/memory_value_latest/deterministic/cases.json` | 逐案例配对结果 |
 | `docs/evidence/memory_value_latest/real_agent/metrics.json` | 真实 Agent 聚合指标 |

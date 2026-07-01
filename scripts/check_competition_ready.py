@@ -66,6 +66,8 @@ REQUIRED_DOCS = [
     "docs/演示视频脚本.md",
     "docs/供应链与SBOM说明.md",
     "docs/安全扫描报告.md",
+    "docs/外部标准基准说明.md",
+    "docs/安全与遗忘保证边界.md",
 ]
 
 REQUIRED_SOURCE_PATHS = [
@@ -100,7 +102,18 @@ REQUIRED_SOURCE_PATHS = [
     "scripts/web_dashboard_smoke.py",
     "scripts/generate_sbom.py",
     "scripts/run_security_scan.py",
+    "scripts/run_resource_control.py",
+    "scripts/fetch_longmemeval_v2.py",
+    "scripts/run_longmemeval_v2.py",
+    "scripts/backup_memguard.py",
+    "scripts/restore_memguard.py",
+    "scripts/check_slo.py",
+    "scripts/sign_release.py",
     "scripts/verify_ukui_plugins.sh",
+    "memguard/eval/resource_control.py",
+    "memguard/integrations/longmemeval_v2.py",
+    "memguard/governance/trust.py",
+    "config/nginx/memguardos.conf",
     "native/bpf_lsm/memguard_lsm.bpf.c",
     "native/ukui/peony-memguard/memguard_peony_plugin.cpp",
     "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp",

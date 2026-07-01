@@ -34,7 +34,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地功能分支单元测试 | 222 passed, 1 skipped |
+| 本地功能分支单元测试 | 242 passed, 1 skipped |
 | openKylin 全量测试 | 223 passed |
 | openKylin 真实 Agent | OpenHands 1.28.1；原 12 组真实会话 12/12，新增 R13-R20 扩展 8/8，新增 holdout 留出盲测 8/8；合计 28 组均有证据 |
 | 本地 1k 负载 P95 | 0.429 ms |
@@ -69,12 +69,15 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | 混合检索 | SQLite FTS、稳定 hash-vector、图谱关联、跨语言技术词扩展、冲突处理；摘要层、实体关系层、原文 chunk 层的层次图谱检索 | `memguard/retrieval/`、`memctl hierarchical-graph-search` |
 | RAG 上下文 | 检索、脱敏、排序、token 预算估算、上下文包、来源分布、选择轨迹、过滤策略和 provider-neutral prompt | `memctl build-context`、`memctl build-prompt` |
 | 精准遗忘 | 自然语言候选、按 Agent/会话/轮次/主题/时间范围定位、dry-run、确认删除、事件载荷清理、tombstone、FTS/图谱清理、compact、明文探针验证 | `memctl forget`、`memctl agent forget`、`verify-forget` |
+| 来源信誉治理 | 外部网页、远程抓取和提示注入类内容默认进入隔离区；审批通过后才进入检索、图谱和 RAG 上下文；拒绝会写 tombstone 和审计 | `memctl governance`、`memguard/governance/trust.py` |
 | 敏感治理 | PII、凭据、私钥、银行卡、中文地址、OS 高风险路径、自定义正则、自然语言敏感规则 | `memguard/sensitivity/` |
 | 多会话隔离 | namespace 独立段文件、SQLite、敏感规则、审计链；systemd 模板服务配合 cgroup | `memctl --namespace`、`memguardd@.service` |
 | OS 集成 | systemd、cgroup、journald、auditd、BPF LSM 可选强制拦截、JSON denylist 策略生成、Peony 右键菜单可见验证、Peony 文本文件扫描导入闭环、UKUI 控制中心可见验证 | `scripts/`、`native/` |
 | Agent API | 本地 Unix socket JSON API，支持 health、ingest、search、batch_search、build_context、forget、audit 等 | `memguard/api/server.py` |
 | Kylin SDK 适配 | Kylin embedding/vector SDK 探测，embedding 可选重排后端，默认保留稳定 fallback | `memctl sdk-status`、`memguard/retrieval/kylin_sdk.py` |
-| 本地控制台 | localhost Web 控制台，覆盖 Agent 治理总览、交互时间线、偏好证据、三阶段上下文、交互遗忘、审计和系统诊断 | `memctl web`、`memguard/web/dashboard.py` |
+| 本地控制台 | localhost Web 控制台，覆盖 Agent 治理总览、交互时间线、偏好证据、三阶段上下文、交互遗忘、审计和系统诊断；支持 viewer/operator/admin 角色 token、health/readiness 和拒绝审计 | `memctl web`、`memguard/web/dashboard.py` |
+| 外部基准适配 | LongMemEval-V2 官方 schema 适配，提供 `insert()`/`query()` 兼容后端、上游 revision 记录和检索层/答案层指标隔离 | `memguard/integrations/longmemeval_v2.py`、`scripts/run_longmemeval_v2.py` |
+| 企业交付能力 | 严格记忆开关资源对照、SLO 门禁、可校验备份恢复、release attestation、Nginx HTTPS 反向代理模板和遗忘边界声明 | `scripts/run_resource_control.py`、`scripts/check_slo.py`、`scripts/backup_memguard.py`、`config/nginx/memguardos.conf` |
 
 ## 系统架构
 
@@ -261,6 +264,8 @@ python -m memguard.eval.run_eval --latency-size 10000 --latency-queries 150 --ou
 | Peony/UKUI 桌面集成 | [docs/Peony与UKUI桌面集成实现说明.md](docs/Peony与UKUI桌面集成实现说明.md)，Peony smoke 见 `scripts/peony_file_scan_smoke.sh` |
 | Kylin SDK 适配 | [docs/麒麟SDK集成证据.md](docs/麒麟SDK集成证据.md) |
 | 安全与精准遗忘 | [docs/安全设计说明书.md](docs/安全设计说明书.md) |
+| 遗忘保证边界与企业安全制品 | [docs/安全与遗忘保证边界.md](docs/安全与遗忘保证边界.md) |
+| 外部标准基准适配 | [docs/外部标准基准说明.md](docs/外部标准基准说明.md) |
 | 真实 OpenHands Agent 接入 | [docs/真实Agent接入使用说明.md](docs/真实Agent接入使用说明.md)、[docs/真实Agent闭环测试报告.md](docs/真实Agent闭环测试报告.md)、[docs/真实Agent记忆价值评测报告.md](docs/真实Agent记忆价值评测报告.md) |
 
 ## 项目结构
@@ -307,9 +312,12 @@ memguardos/
 python scripts/release_preflight.py
 python scripts/generate_sbom.py
 python scripts/package_submission.py
+python scripts/sign_release.py dist/<submission.zip> --output-dir dist/attestation
 ```
 
 `release_preflight.py` 会顺序执行编译检查、ruff、单元测试、文档链接检查、Web 控制台 smoke、竞赛就绪自检，并在未指定 `--skip-package` 时生成提交包。`generate_sbom.py` 会刷新 `docs/sbom.json` 和 `docs/供应链与SBOM说明.md`，用于记录核心源码、脚本、原生增强和 benchmark 数据的哈希。它们属于工程自检工具，提交包会包含生成后的 SBOM 交付件。
+
+`sign_release.py` 会生成 SHA256SUMS 和 release attestation；如果本机存在可用 minisign 或 GPG 签名密钥，会生成真实签名，否则明确标记 `not_configured`，只声明校验和，不伪造签名。
 
 生成后可单独审计提交包内容：
 
@@ -360,7 +368,7 @@ dist/memguardos_full_repository_<时间戳>_manifest.json
 - 真实 Agent：原 12 组 openKylin/OpenHands 会话和新增 R13-R20 8 组扩展会话均已完成归档，记忆系统层与 Agent 行为层合计 28/28。系统保留模型原始尝试，并通过偏好 Hook、有界合规修复、严格只读结构化意图恢复和程序性结果兜底提高小模型稳定性；该结果仅代表当前公开场景，不扩展为任意 Agent 任务均稳定完成。
 - 交互遗忘：保证 MemGuardOS 管理的事件、记忆、索引、图谱和段文件边界；OpenHands 原始会话、shell history、模型服务日志和外部备份需使用各自删除机制。
 - 外部 LLM：默认不依赖外部 API；只有显式选择 provider 时才调用本地命令或兼容远程端点。
-- 真实 Agent 场景库：代码库中的可复现 OpenHands 场景定义已扩展到 20 组；原始记忆价值证据包归档 R01-R12，扩展证据包归档 R13-R20。答辩或提交时应说明这两份证据目录共同组成 20 组真实运行证据。
+- 真实 Agent 场景库：代码库中的可复现 OpenHands 场景定义已扩展到 28 组；原始记忆价值证据包归档 R01-R12，扩展证据包归档 R13-R20，holdout 留出证据包归档 H01-H08。答辩或提交时应说明三份证据目录共同组成 28 组真实运行证据。
 
 ## 许可证
 
