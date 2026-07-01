@@ -2,7 +2,7 @@
   "schema": "memguardos-sbom-v1",
   "name": "memguardos",
   "version": "0.1.0",
-  "generated_at": "2026-07-01T09:06:18+00:00",
+  "generated_at": "2026-07-01T12:24:02+00:00",
   "source": {
     "root": "project-root",
     "license": "MIT License",
@@ -43,14 +43,14 @@
     {
       "path": "README.md",
       "present": true,
-      "sha256": "58f33f6198923421057c12a1a56b38bab5e2897a3b55876528af0c5f096867c0",
-      "bytes": 23635
+      "sha256": "75e784419c173dcfa01203248d7dceb1f58c84c0bd6235b7bb370ebeba022a28",
+      "bytes": 23820
     },
     {
       "path": "memguard/service.py",
       "present": true,
-      "sha256": "4822ab7045e5f32a5d887df96a7652e87e0f9dc6cb6d93866f7dda4112f5f38f",
-      "bytes": 98559
+      "sha256": "df171af69fe681878754fe77acbf3ce29112d42726356985c49e603a949591d1",
+      "bytes": 98664
     },
     {
       "path": "memguard/api/server.py",
@@ -61,8 +61,8 @@
     {
       "path": "memguard/web/dashboard.py",
       "present": true,
-      "sha256": "0e184ca79a8be95db0b506ec9941f31ad6494bf346a787176f8808e5687c6fc9",
-      "bytes": 51882
+      "sha256": "aca97b5bc2f3667949be9b098792362e8ba834abba3da04d3db213c5cd8902fb",
+      "bytes": 56796
     },
     {
       "path": "memguard/integrations/openhands_adapter.py",
@@ -73,8 +73,8 @@
     {
       "path": "memguard/integrations/openhands_runner.py",
       "present": true,
-      "sha256": "5f3d17bc4fbc80fd6269c4a3b9caab5329a1a9e811b513a3cb3b3fd54e377ee8",
-      "bytes": 27855
+      "sha256": "7f27865d54750b876f25baeaee53f3e258f4af60a5d696c652ae5583adc19f33",
+      "bytes": 30180
     },
     {
       "path": "memguard/retrieval/hybrid.py",
@@ -121,8 +121,8 @@
     {
       "path": "memguard/eval/real_agent_behavior.py",
       "present": true,
-      "sha256": "8487de6ca4a2a6ed2759c3fcbb9a62f63bf9d2d33558ee3678566acc640e43f9",
-      "bytes": 18099
+      "sha256": "20c8ed071ad8d089d94441c905d32478d07a69d621d82aad510b21ee52661c4b",
+      "bytes": 18508
     },
     {
       "path": "scripts/run_openhands_behavior_suite.py",
@@ -187,8 +187,8 @@
     {
       "path": "data/benchmarks/real_agent_behavior_holdout.jsonl",
       "present": true,
-      "sha256": "94a985700ee93a69596598c81919024e1b784bb2e51fc27151325a330c314d63",
-      "bytes": 8108
+      "sha256": "f6b2a890ade32f956972eb6e7952ff95f51af2c1071b9f9b9c120b513bcc12b2",
+      "bytes": 8194
     }
   ],
   "security_notes": [

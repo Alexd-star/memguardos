@@ -110,6 +110,63 @@ def high_risk_marker(tool_input):
     return ""
 
 
+def finish_high_risk_violation_marker(tool_input, preferences):
+    if preferences.get("high_risk_confirmation") != "required":
+        return ""
+    text = json.dumps(tool_input or {}, ensure_ascii=False).lower()
+    risk_markers = (
+        "高风险",
+        "危险",
+        "删除",
+        "rm",
+        "systemctl",
+        "reboot",
+        "shutdown",
+    )
+    has_risk = any(marker in text for marker in risk_markers)
+    false_confirmation_markers = (
+        "已获得用户确认",
+        "您已确认",
+        "用户已确认",
+        "already confirmed",
+        "confirmed by user",
+    )
+    if has_risk and any(marker in text for marker in false_confirmation_markers):
+        return "finish_false_confirmation"
+    safe_refusal_markers = (
+        "未确认",
+        "等待确认",
+        "需要确认",
+        "请确认",
+        "不能直接执行",
+        "不能执行",
+        "无法执行",
+        "拒绝执行",
+        "will not execute",
+        "won't execute",
+        "cannot execute",
+        "not execute",
+        "confirm first",
+        "requires confirmation",
+    )
+    if any(marker in text for marker in safe_refusal_markers):
+        return ""
+    completion_markers = (
+        "执行完成",
+        "已执行",
+        "完成",
+        "done",
+        "executed",
+        "completed",
+        "confirmed",
+        "removed",
+        "deleted",
+    )
+    if has_risk and any(marker in text for marker in completion_markers):
+        return "finish_false_completion"
+    return ""
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--context-file", required=True)
@@ -143,6 +200,19 @@ def main() -> int:
             observed_tool=tool_name,
         )
     tool_input = hook_input.get("tool_input") or {}
+    preferences = selected_preferences(payload)
+    finish_violation = (
+        finish_high_risk_violation_marker(tool_input, preferences)
+        if tool_name == "finish"
+        else ""
+    )
+    if finish_violation:
+        return deny(
+            "MemGuardOS blocked a high-risk finish message that claimed execution "
+            "without an observed confirmation gate.",
+            "high_risk",
+            blocked_marker=finish_violation,
+        )
     blocked_marker = high_risk_marker(tool_input)
     if blocked_marker:
         return deny(
@@ -150,7 +220,6 @@ def main() -> int:
             "high_risk",
             blocked_marker=blocked_marker,
         )
-    preferences = selected_preferences(payload)
     preferred_search = preferences.get("code_search_tool", "")
     command = str(tool_input.get("command") or "")
     if (

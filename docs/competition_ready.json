@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 181,
-    "passed": 181,
+    "total": 190,
+    "passed": 190,
     "failed": 0,
     "warnings": 0
   },
@@ -11,7 +11,7 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 3881",
+      "detail": "中文字符数 3900",
       "severity": "P0"
     },
     {
@@ -123,7 +123,7 @@
       "category": "中文文档",
       "name": "docs/15_更新日志.md",
       "ok": true,
-      "detail": "中文字符数 763",
+      "detail": "中文字符数 769",
       "severity": "P0"
     },
     {
@@ -151,14 +151,14 @@
       "category": "中文文档",
       "name": "docs/最终提交说明.md",
       "ok": true,
-      "detail": "中文字符数 3264",
+      "detail": "中文字符数 3269",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/平台摘要.md",
       "ok": true,
-      "detail": "中文字符数 2660",
+      "detail": "中文字符数 2666",
       "severity": "P0"
     },
     {
@@ -235,7 +235,7 @@
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 3545",
+      "detail": "中文字符数 3549",
       "severity": "P0"
     },
     {
@@ -256,7 +256,7 @@
       "category": "中文文档",
       "name": "docs/真实Agent记忆价值评测报告.md",
       "ok": true,
-      "detail": "中文字符数 3005",
+      "detail": "中文字符数 3009",
       "severity": "P0"
     },
     {
@@ -291,7 +291,7 @@
       "category": "中文文档",
       "name": "docs/答辩稿.md",
       "ok": true,
-      "detail": "中文字符数 6252",
+      "detail": "中文字符数 6263",
       "severity": "P0"
     },
     {
@@ -305,7 +305,14 @@
       "category": "中文文档",
       "name": "docs/供应链与SBOM说明.md",
       "ok": true,
-      "detail": "中文字符数 328",
+      "detail": "中文字符数 363",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/安全扫描报告.md",
+      "ok": true,
+      "detail": "中文字符数 304",
       "severity": "P0"
     },
     {
@@ -549,6 +556,13 @@
     {
       "category": "源码与脚本",
       "name": "scripts/generate_sbom.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/run_security_scan.py",
       "ok": true,
       "detail": "存在",
       "severity": "P0"
@@ -1226,6 +1240,34 @@
       "severity": "P0"
     },
     {
+      "category": "真实Agent留出证据",
+      "name": "留出集证据目录",
+      "ok": true,
+      "detail": "docs/evidence/real_agent_holdout_latest",
+      "severity": "P0"
+    },
+    {
+      "category": "真实Agent留出证据",
+      "name": "8 组留出真实 OpenHands 案例",
+      "ok": true,
+      "detail": "case_count=8 completed=8 memory=1.0000 behavior=1.0000 unclassified=0 failed=[]",
+      "severity": "P0"
+    },
+    {
+      "category": "真实Agent留出证据",
+      "name": "manifest.json",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "真实Agent留出证据",
+      "name": "SHA256SUMS.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
       "category": "供应链与SBOM",
       "name": "SBOM JSON",
       "ok": true,
@@ -1251,6 +1293,27 @@
       "name": "SBOM 依赖分组",
       "ok": true,
       "detail": "包含 runtime/dev/agent-openhands 分组",
+      "severity": "P0"
+    },
+    {
+      "category": "安全扫描",
+      "name": "安全扫描 JSON",
+      "ok": true,
+      "detail": "docs/security_scan.json",
+      "severity": "P0"
+    },
+    {
+      "category": "安全扫描",
+      "name": "安全扫描中文报告",
+      "ok": true,
+      "detail": "docs/安全扫描报告.md",
+      "severity": "P0"
+    },
+    {
+      "category": "安全扫描",
+      "name": "安全扫描门禁通过",
+      "ok": true,
+      "detail": "bandit_high=0 pip_audit_vulnerabilities=0 missing_tools=[] bandit=warnings pip_audit=clean",
       "severity": "P0"
     },
     {

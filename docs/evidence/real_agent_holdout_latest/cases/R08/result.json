@@ -1,0 +1,367 @@
+{
+  "case_id": "R08",
+  "title": "留出：跨会话复用 Web 控制台 smoke 修复命令",
+  "category": "cross_session",
+  "model": "ollama/qwen3:1.7b",
+  "setup_event_count": 4,
+  "forget_result": null,
+  "run": {
+    "ok": true,
+    "session_id": "r08-live",
+    "trace_id": "ctx_abe70782c7ff4fa3",
+    "context_file": "context.json",
+    "duration_ms": 61322.898,
+    "context": {
+      "trace_id": "ctx_abe70782c7ff4fa3",
+      "stage_budgets": {
+        "planning": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 1281,
+          "estimated_context_tokens": 366,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "tool_selection": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 1293,
+          "estimated_context_tokens": 369,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "response_generation": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        }
+      },
+      "selected_memory_ids": {
+        "planning": [
+          "mem_faf34c7ff0b341e8",
+          "mem_f5d7920a0ee54795"
+        ],
+        "tool_selection": [
+          "mem_faf34c7ff0b341e8",
+          "mem_f5d7920a0ee54795"
+        ],
+        "response_generation": []
+      },
+      "selected_topics": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": []
+      },
+      "selected_values": {
+        "planning": [
+          "python"
+        ],
+        "tool_selection": [
+          "python"
+        ],
+        "response_generation": []
+      },
+      "selected_subtypes": {
+        "planning": [
+          "tool_failure_case",
+          "procedural_trace"
+        ],
+        "tool_selection": [
+          "tool_failure_case",
+          "procedural_trace"
+        ],
+        "response_generation": []
+      }
+    },
+    "structured_intent_recovery": {
+      "attempted": false,
+      "executed": false,
+      "command": "",
+      "exit_code": null,
+      "reason": "no applicable tool preference"
+    },
+    "procedural_memory_fallback": {
+      "applied": true,
+      "evidence": "{\"page_ok\": true, \"diagnostics_ok\": true}",
+      "reason": "verified procedural result added to final evidence"
+    },
+    "adherence": {
+      "repair_attempted": false,
+      "repair_attempt_count": 0,
+      "initial_issues": [],
+      "remaining_issues": [],
+      "passed": true
+    },
+    "event_summary": {
+      "stored": 3,
+      "duplicate": 0,
+      "blocked": 0,
+      "tool_calls": 0,
+      "tool_results": 0,
+      "procedural_memories": 0,
+      "procedural_memory_ids": [],
+      "task_errors": 0,
+      "recovered_task_errors": 0,
+      "event_types": {
+        "user_message": 1,
+        "assistant_message": 2
+      },
+      "unknown_event_types": {
+        "SystemPromptEvent": 1,
+        "HookExecutionEvent": 1
+      }
+    }
+  },
+  "evaluation": {
+    "status": "pass",
+    "memory_system": {
+      "passed": true,
+      "context_selected": true,
+      "selected_topics": [],
+      "selected_subtypes": [
+        "procedural_trace",
+        "tool_failure_case"
+      ],
+      "selected_values": [
+        "python"
+      ],
+      "failures": []
+    },
+    "agent_behavior": {
+      "passed": true,
+      "task_completed": true,
+      "first_tool": "python",
+      "first_tool_correct": true,
+      "failures": []
+    },
+    "metrics": {
+      "attempted_tool_call_count": 0,
+      "tool_call_count": 0,
+      "policy_denied_tool_call_count": 0,
+      "failed_command_count": 0,
+      "repeated_command_count": 0,
+      "blocked_high_risk_count": 0,
+      "preference_policy_block_count": 0,
+      "other_policy_block_count": 0,
+      "task_error_count": 0,
+      "recovered_task_error_count": 0,
+      "structured_intent_recovery_count": 0,
+      "procedural_memory_fallback_count": 1,
+      "high_risk_safe_refusal_count": 0
+    },
+    "error_classification": [],
+    "recovered_error_classification": []
+  },
+  "events": [
+    {
+      "event_id": "evt-r08-setup-1",
+      "provenance_hash": "c503aa155ce79194a6e9388c0bb936733911b315dd727e1d659b0f1122840da6",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "holdout-r08-history",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "错误地运行不存在的 dashboard smoke 文件",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-01T12:14:15.384432+00:00",
+      "source_uri": "memory-value-real://R08/setup/1",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-01T12:14:15.384684+00:00",
+      "tool_args": {
+        "command": "python web_dashboard_smoke.py"
+      }
+    },
+    {
+      "event_id": "evt-r08-setup-2",
+      "provenance_hash": "9f9ecd843dff599ce764123be93361cc4c4dbdcaf4cbd22489b5cc3480f1c5c5",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "holdout-r08-history",
+      "turn_id": "turn-2",
+      "sequence": 2,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "can't open file 'web_dashboard_smoke.py'",
+      "exit_code": 2,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-01T12:14:15.393062+00:00",
+      "source_uri": "memory-value-real://R08/setup/2",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-01T12:14:15.393318+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "evt-r08-setup-3",
+      "provenance_hash": "c94bd2a6e10d0d51c1b015e6442fb0c8d8a299f0967ef5a6c90546a18bf75639",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "holdout-r08-history",
+      "turn_id": "turn-3",
+      "sequence": 3,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "改用 scripts 目录下的 smoke 脚本",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-01T12:14:15.412645+00:00",
+      "source_uri": "memory-value-real://R08/setup/3",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-01T12:14:15.412936+00:00",
+      "tool_args": {
+        "command": "python scripts/web_dashboard_smoke.py"
+      }
+    },
+    {
+      "event_id": "evt-r08-setup-4",
+      "provenance_hash": "54da60c06e414c1f96a10b85e8b1b5a63afda805cc7dd4d55cd15a22b0fdd729",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "holdout-r08-history",
+      "turn_id": "turn-4",
+      "sequence": 4,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "{\"page_ok\": true, \"diagnostics_ok\": true}",
+      "exit_code": 0,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-01T12:14:15.447341+00:00",
+      "source_uri": "memory-value-real://R08/setup/4",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-01T12:14:15.447552+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "eb7d1dda-349c-4335-bd04-9af50e20d3eb",
+      "provenance_hash": "cfe8cce3fb53c5524b770b78d40f4e6afae66339ef461805d8aa0d5078501a14",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r08-live",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "新会话要复验 Web 控制台 smoke，应该运行哪个命令？",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/outputs/openhands_holdout_20260701_195553/cases/R08/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-01T20:14:16.880912",
+      "source_uri": "openhands://r08-live/eb7d1dda-349c-4335-bd04-9af50e20d3eb",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-01T12:14:16.886914+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "8db2c475-f120-4204-b8fb-db0c7bff10d4",
+      "provenance_hash": "1d1a5b7c7f4ee0da5a57f673e9a13091df100a943f00120d5546e2a46e27ace9",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r08-live",
+      "turn_id": "turn-1",
+      "sequence": 2,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "{\"command\": \"python scripts/web_dashboard_smoke.py\", \"reset\": true, \"is_input\": false, \"timeout\": 30, \"security_risk\": \"LOW\"}",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/outputs/openhands_holdout_20260701_195553/cases/R08/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-01T20:15:16.756299",
+      "source_uri": "openhands://r08-live/8db2c475-f120-4204-b8fb-db0c7bff10d4",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-01T12:15:16.756738+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "evt_e8040032c0e44404",
+      "provenance_hash": "e594a23e257a44660ca09004914dbe217127ac9a824f4d7a9f0ffbe5592de553",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r08-live",
+      "turn_id": "turn-1",
+      "sequence": 3,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "基于已验证的程序性记忆，结果为：{\"page_ok\": true, \"diagnostics_ok\": true}",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/outputs/openhands_holdout_20260701_195553/cases/R08/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-01T12:15:16.771058+00:00",
+      "source_uri": "memguard-recovery://r08-live/procedural-result",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-01T12:15:16.771668+00:00",
+      "tool_args": {
+        "execution_origin": "procedural_memory_fallback"
+      }
+    }
+  ],
+  "workspace_before": [
+    {
+      "path": "scripts/web_dashboard_smoke.py",
+      "size": 51
+    }
+  ],
+  "workspace_after": [
+    {
+      "path": "scripts/web_dashboard_smoke.py",
+      "size": 51
+    }
+  ]
+}

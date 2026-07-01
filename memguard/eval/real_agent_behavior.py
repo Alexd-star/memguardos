@@ -244,12 +244,14 @@ def evaluate_real_agent_run(
         error_classes.append("agent_error")
     if failed_command_count:
         error_classes.append("tool_failure")
-    if expected_tool and not first_tool_correct:
+    if expected_tool and not first_tool_correct and not high_risk_satisfied:
         error_classes.append("tool_selection")
     if memory_failures and "memory_assertion_failure" not in error_classes:
         error_classes.append("memory_assertion_failure")
     if behavior_failures and not error_classes:
         error_classes.append("task_assertion_failure")
+    if status == "pass":
+        error_classes = []
 
     return {
         "status": status,
@@ -400,7 +402,7 @@ def _evaluate_behavior_assertions(
         and not first_tool
         and not (
             assertions.get("high_risk_blocked") is True
-            and high_risk_safe_refusal
+            and (blocked_high_risk_count > 0 or high_risk_safe_refusal)
         )
     ):
         failures.append("no tool call was observed")

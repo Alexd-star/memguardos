@@ -10,7 +10,7 @@
 | 版本 | 0.1.0 |
 | Python 版本要求 | >=3.9 |
 | 许可证 | MIT License |
-| 生成时间 | 2026-07-01T09:06:18+00:00 |
+| 生成时间 | 2026-07-01T12:24:02+00:00 |
 
 ## 依赖分组
 
@@ -41,12 +41,12 @@
 |---|---:|---:|---|
 | `pyproject.toml` | 是 | 770 | `9ec2eb185c74a2c809513c09c1c1290cabac5e244dd13581e6614a4ba3e367d4` |
 | `LICENSE` | 是 | 1080 | `3319059b1763624558499140d670dd98b2260aba3654bd19af2838b76c4d4261` |
-| `README.md` | 是 | 23635 | `58f33f6198923421057c12a1a56b38bab5e2897a3b55876528af0c5f096867c0` |
-| `memguard/service.py` | 是 | 98559 | `4822ab7045e5f32a5d887df96a7652e87e0f9dc6cb6d93866f7dda4112f5f38f` |
+| `README.md` | 是 | 23820 | `75e784419c173dcfa01203248d7dceb1f58c84c0bd6235b7bb370ebeba022a28` |
+| `memguard/service.py` | 是 | 98664 | `df171af69fe681878754fe77acbf3ce29112d42726356985c49e603a949591d1` |
 | `memguard/api/server.py` | 是 | 16504 | `dbf0b25d1f7162ea35d5071bdde0779be0538a3e195bba7a27a0ce962be4a3f2` |
-| `memguard/web/dashboard.py` | 是 | 51882 | `0e184ca79a8be95db0b506ec9941f31ad6494bf346a787176f8808e5687c6fc9` |
+| `memguard/web/dashboard.py` | 是 | 56796 | `aca97b5bc2f3667949be9b098792362e8ba834abba3da04d3db213c5cd8902fb` |
 | `memguard/integrations/openhands_adapter.py` | 是 | 11446 | `0454ee0507c91d14f16aea64737ccf7ebd2ad8a3ff1523fa630df47d0346c84e` |
-| `memguard/integrations/openhands_runner.py` | 是 | 27855 | `5f3d17bc4fbc80fd6269c4a3b9caab5329a1a9e811b513a3cb3b3fd54e377ee8` |
+| `memguard/integrations/openhands_runner.py` | 是 | 30180 | `7f27865d54750b876f25baeaee53f3e258f4af60a5d696c652ae5583adc19f33` |
 | `memguard/retrieval/hybrid.py` | 是 | 8499 | `ff6a2d3720b05e844c567ddb551b3ebd8ee3878d83be1907f350b6e79dac77e7` |
 | `memguard/retrieval/kylin_sdk.py` | 是 | 23899 | `53ca4e83298bb5f5b2cc5c0a8c8644f5c477cb1eab498c6fc70974e4ac3648b5` |
 | `memguard/store/mmap_store.py` | 是 | 5100 | `af8284a3a6646be832e81424476fd2b623d1aecfb3eb7295e5e81938711c7236` |
@@ -54,7 +54,7 @@
 | `memguard/extraction/semantic.py` | 是 | 11462 | `55e6b54551e547e23b8676e8aa7a8d37c4ba9801325ec139584b39f0c9c0a54b` |
 | `memguard/forgetting/planner.py` | 是 | 6140 | `1d4f783f92c28c25f98404980a475f06902ebeeebdd2e199c657cf75ea51de67` |
 | `memguard/eval/memory_value.py` | 是 | 14093 | `916c668eb8659aef42f17063a290e4e88f72f5dd0983d078b074e2207c3c779f` |
-| `memguard/eval/real_agent_behavior.py` | 是 | 18099 | `8487de6ca4a2a6ed2759c3fcbb9a62f63bf9d2d33558ee3678566acc640e43f9` |
+| `memguard/eval/real_agent_behavior.py` | 是 | 18508 | `20c8ed071ad8d089d94441c905d32478d07a69d621d82aad510b21ee52661c4b` |
 | `scripts/run_openhands_behavior_suite.py` | 是 | 15863 | `5498fa4a08399c82fb0eed1485e457e578bf724d70739e9a72a8b4570a2f2720` |
 | `scripts/run_security_scan.py` | 是 | 15385 | `07bb3899c2fb2dcbe13aa11293ae657e65bfc8f4b7cfc21ac32a0e8d13cbccd9` |
 | `scripts/collect_openkylin_evidence.sh` | 是 | 21284 | `b22b5f62d7c7332c3941ab1a88a8b5279b1eae7b30f975bf72e876e2a040e447` |
@@ -65,7 +65,7 @@
 | `native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp` | 是 | 8610 | `38a91f0fd7ef26edb3df6d33220c86e9cf4c6024cb0bed563f857271a85aa137` |
 | `data/benchmarks/agent_memory_value.jsonl` | 是 | 17182 | `0ec615d69930561e7886bc47f9aca388f3cf0848291078e6ef0c74ab05e877b2` |
 | `data/benchmarks/real_agent_behavior.jsonl` | 是 | 16653 | `96f7096113a4f72d584e29aa9c8946e32a0e7374c8d55a68f1eeaa7aa6178df1` |
-| `data/benchmarks/real_agent_behavior_holdout.jsonl` | 是 | 8108 | `94a985700ee93a69596598c81919024e1b784bb2e51fc27151325a330c314d63` |
+| `data/benchmarks/real_agent_behavior_holdout.jsonl` | 是 | 8194 | `f6b2a890ade32f956972eb6e7952ff95f51af2c1071b9f9b9c120b513bcc12b2` |
 
 ## 供应链控制说明
 

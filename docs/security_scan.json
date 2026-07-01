@@ -1,7 +1,7 @@
 {
   "schema": "memguardos-security-scan-v1",
   "ok": true,
-  "elapsed_s": 2.339,
+  "elapsed_s": 2.881,
   "policy": {
     "bandit_high_severity_allowed": 0,
     "pip_audit_known_vulnerabilities_allowed": 0,
@@ -373,27 +373,11 @@
         },
         {
           "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 141,
+          "line_number": 147,
           "severity": "LOW",
           "confidence": "MEDIUM",
           "test_id": "B107",
           "issue_text": "Possible hardcoded password: ''"
-        },
-        {
-          "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 152,
-          "severity": "LOW",
-          "confidence": "MEDIUM",
-          "test_id": "B107",
-          "issue_text": "Possible hardcoded password: ''"
-        },
-        {
-          "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 154,
-          "severity": "MEDIUM",
-          "confidence": "HIGH",
-          "test_id": "B310",
-          "issue_text": "Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected."
         },
         {
           "filename": "scripts\\web_dashboard_smoke.py",
@@ -405,15 +389,7 @@
         },
         {
           "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 162,
-          "severity": "LOW",
-          "confidence": "MEDIUM",
-          "test_id": "B107",
-          "issue_text": "Possible hardcoded password: ''"
-        },
-        {
-          "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 165,
+          "line_number": 160,
           "severity": "MEDIUM",
           "confidence": "HIGH",
           "test_id": "B310",
@@ -421,7 +397,7 @@
         },
         {
           "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 171,
+          "line_number": 164,
           "severity": "LOW",
           "confidence": "MEDIUM",
           "test_id": "B107",
@@ -429,7 +405,31 @@
         },
         {
           "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 174,
+          "line_number": 168,
+          "severity": "LOW",
+          "confidence": "MEDIUM",
+          "test_id": "B107",
+          "issue_text": "Possible hardcoded password: ''"
+        },
+        {
+          "filename": "scripts\\web_dashboard_smoke.py",
+          "line_number": 171,
+          "severity": "MEDIUM",
+          "confidence": "HIGH",
+          "test_id": "B310",
+          "issue_text": "Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected."
+        },
+        {
+          "filename": "scripts\\web_dashboard_smoke.py",
+          "line_number": 177,
+          "severity": "LOW",
+          "confidence": "MEDIUM",
+          "test_id": "B107",
+          "issue_text": "Possible hardcoded password: ''"
+        },
+        {
+          "filename": "scripts\\web_dashboard_smoke.py",
+          "line_number": 180,
           "severity": "MEDIUM",
           "confidence": "HIGH",
           "test_id": "B310",

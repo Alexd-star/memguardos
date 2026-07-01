@@ -1210,6 +1210,33 @@ def test_failed_rg_repair_drops_files_mode_and_preserves_only_query():
     }
 
 
+def test_failed_rg_repair_recovers_missing_binary_attempt():
+    repaired = repair_failed_preferred_tool_intent(
+        [
+            {
+                "event_type": "tool_call",
+                "tool_name": "terminal",
+                "tool_args": {
+                    "command": "rg -n 'detect_openhands_runtime' .",
+                },
+            },
+            {
+                "event_type": "tool_result",
+                "tool_name": "terminal",
+                "exit_code": 127,
+                "tool_result": "bash: rg: 未找到命令",
+            },
+        ],
+        preferred_tool="rg",
+    )
+
+    assert repaired == {
+        "command": "rg -n detect_openhands_runtime .",
+        "argv": ["rg", "-n", "detect_openhands_runtime", "."],
+        "timeout": 10,
+    }
+
+
 def test_structured_intent_recovery_rejects_shell_and_workspace_escape():
     from memguard.integrations.openhands_runner import parse_structured_tool_intent
 
@@ -1633,6 +1660,111 @@ def test_openhands_hook_blocks_bare_pytest_when_test_runner_preference_is_active
     assert denied_payload["expected_value"] == "python -m pytest"
     assert allowed.returncode == 0
     assert json.loads(allowed.stdout)["decision"] == "allow"
+
+
+def test_openhands_hook_blocks_false_high_risk_finish_completion(tmp_path):
+    context_file = tmp_path / "context.json"
+    context_file.write_text(
+        json.dumps(
+            {
+                "additional_context": "使用已筛选记忆。",
+                "allowed_tools": ["terminal", "finish"],
+                "stages": {
+                    "planning": {
+                        "memories": [
+                            {
+                                "preference_topic": "high_risk_confirmation",
+                                "preference_value": "required",
+                            }
+                        ]
+                    },
+                    "tool_selection": {"memories": []},
+                    "response_generation": {"memories": []},
+                },
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    script = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
+
+    denied = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--context-file",
+            str(context_file),
+            "--guard-tool",
+        ],
+        input=json.dumps(
+            {
+                "tool_name": "finish",
+                "tool_input": {
+                    "message": "高风险删除操作执行完成。"
+                },
+            },
+            ensure_ascii=False,
+        ),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    denied_false_confirmation = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--context-file",
+            str(context_file),
+            "--guard-tool",
+        ],
+        input=json.dumps(
+            {
+                "tool_name": "finish",
+                "tool_input": {
+                    "message": (
+                        "您已确认执行删除操作。"
+                        "请确认是否要删除当前目录下的所有文件和子目录。"
+                    )
+                },
+            },
+            ensure_ascii=False,
+        ),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    allowed_refusal = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--context-file",
+            str(context_file),
+            "--guard-tool",
+        ],
+        input=json.dumps(
+            {
+                "tool_name": "finish",
+                "tool_input": {
+                    "message": "该操作属于高风险删除操作，未确认前不能直接执行。"
+                },
+            },
+            ensure_ascii=False,
+        ),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    denied_payload = json.loads(denied.stdout)
+    assert denied.returncode == 2
+    assert denied_payload["policy_category"] == "high_risk"
+    assert denied_payload["blocked_marker"] == "finish_false_completion"
+    false_confirmation_payload = json.loads(denied_false_confirmation.stdout)
+    assert denied_false_confirmation.returncode == 2
+    assert false_confirmation_payload["policy_category"] == "high_risk"
+    assert false_confirmation_payload["blocked_marker"] == "finish_false_confirmation"
+    assert allowed_refusal.returncode == 0
+    assert json.loads(allowed_refusal.stdout)["decision"] == "allow"
 
 
 def interaction_event(content, event_id, sequence, session_id="session-forget-a"):

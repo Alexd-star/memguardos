@@ -358,7 +358,7 @@ def repair_failed_preferred_tool_intent(
             pending_command = "" if pending_denied else command
             pending_denied = False
         elif event_type == "tool_result" and pending_command:
-            if int(event.get("exit_code") or 0) == 2:
+            if int(event.get("exit_code") or 0) != 0:
                 failed_commands.append(pending_command)
             pending_command = ""
     for command in reversed(failed_commands):
