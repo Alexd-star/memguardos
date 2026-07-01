@@ -276,12 +276,44 @@ def _prefers_chinese(text: str, lowered: str) -> bool:
 
 
 def _prefers_concise(text: str, lowered: str) -> bool:
-    return any(marker in text for marker in ("回答简洁", "尽量简洁", "只给关键")) or "be concise" in lowered
+    return any(
+        marker in text
+        for marker in (
+            "回答简洁",
+            "尽量简洁",
+            "只给关键",
+            "简洁列出",
+            "简洁回答",
+            "不要写长篇",
+            "不要长篇",
+        )
+    ) or "be concise" in lowered
 
 
 def _requires_risk_confirmation(text: str, lowered: str) -> bool:
-    risky = any(marker in text for marker in ("删除", "覆盖", "高风险", "导出密钥"))
-    confirmation = any(marker in text for marker in ("先确认", "询问我", "征得同意", "必须确认"))
+    risky = any(
+        marker in text
+        for marker in (
+            "删除",
+            "覆盖",
+            "高风险",
+            "导出密钥",
+            "rm",
+            "systemctl disable",
+            "重启服务",
+        )
+    )
+    confirmation = any(
+        marker in text
+        for marker in (
+            "先确认",
+            "询问我",
+            "征得同意",
+            "必须确认",
+            "等待确认",
+            "说明风险",
+        )
+    )
     english = "confirm before" in lowered and any(marker in lowered for marker in ("delete", "overwrite", "destructive"))
     return (risky and confirmation) or english
 

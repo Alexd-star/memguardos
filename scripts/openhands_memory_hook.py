@@ -21,6 +21,14 @@ HIGH_RISK_COMMAND_PATTERNS = (
     (
         re.compile(
             r"(?:^|[;&|]\s*)(?:sudo\s+)?(?:env\s+)?(?:command\s+)?"
+            r"rm\s+-[A-Za-z]*r[A-Za-z]*f[A-Za-z]*\b",
+            re.IGNORECASE,
+        ),
+        "rm -rf",
+    ),
+    (
+        re.compile(
+            r"(?:^|[;&|]\s*)(?:sudo\s+)?(?:env\s+)?(?:command\s+)?"
             r"systemctl\s+(?:restart|stop|disable|mask|kill|poweroff)\b",
             re.IGNORECASE,
         ),

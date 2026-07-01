@@ -492,7 +492,7 @@ def _canonical_pytest_command(
 def _pytest_python_executable(workspace: Path) -> str:
     explicit = str(os.environ.get("MEMGUARD_PYTEST_PYTHON") or "").strip()
     if explicit and Path(explicit).exists():
-        return str(Path(explicit).resolve())
+        return str(Path(explicit).absolute())
     roots = [Path.cwd()]
     workspace_root = Path(workspace).resolve()
     roots.extend([workspace_root, *workspace_root.parents])
@@ -507,7 +507,7 @@ def _pytest_python_executable(workspace: Path) -> str:
             root / ".venv" / "Scripts" / "python.exe",
         ):
             if candidate.exists():
-                return str(candidate.resolve())
+                return str(candidate.absolute())
     return sys.executable
 
 

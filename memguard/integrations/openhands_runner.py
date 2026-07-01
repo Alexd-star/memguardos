@@ -49,7 +49,7 @@ class OpenHandsMemoryRunner:
         model: str = "",
         api_key: str = "",
         base_url: str = "",
-        context_token_budget_per_stage: int = 256,
+        context_token_budget_per_stage: int = 512,
         max_iterations: int = 8,
         tool_profile: str = "default",
         conversation_factory: Optional[ConversationFactory] = None,
@@ -268,11 +268,7 @@ class OpenHandsMemoryRunner:
                 for stage, result in context_bundle["stages"].items()
             },
             "selected_values": {
-                stage: [
-                    str(item.get("preference_value") or "")
-                    for item in result.get("memories") or []
-                    if item.get("preference_value")
-                ]
+                stage: _selected_values_for_stage(result)
                 for stage, result in context_bundle["stages"].items()
             },
             "selected_subtypes": {
@@ -610,6 +606,20 @@ def _dynamic_preference_directive(topic: str, value: str) -> str:
     if topic == "service_log_tool":
         return "用户服务日志优先使用 `%s`。" % clean_value
     return ""
+
+
+def _selected_values_for_stage(result: Dict[str, object]) -> list[str]:
+    values = [
+        str(item.get("preference_value") or "")
+        for item in dict(result or {}).get("memories") or []
+        if item.get("preference_value")
+    ]
+    context = str(dict(result or {}).get("context") or "")
+    for command in re.findall(r"Tool result:\s*command=(.*?)\s+status=", context):
+        executable = command_executable(command)
+        if executable:
+            values.append(executable)
+    return sorted(set(values))
 
 
 def _procedural_directives(stages: Dict[str, object]) -> list[str]:

@@ -12,6 +12,7 @@ from memguard.integrations.openhands_runner import (
     recover_misrouted_preferred_tool_intent,
     format_agent_context,
     repair_failed_preferred_tool_intent,
+    _selected_values_for_stage,
 )
 from memguard.ingestion.tool_result import ToolResult
 from memguard.api.server import handle_request
@@ -518,7 +519,7 @@ def test_runner_callback_automatically_persists_real_agent_events(tmp_path):
         assert created["tool_profile"] == "default"
         stored_context = json.loads(created["context_file"].read_text(encoding="utf-8"))
         assert all(
-            stage["budget"]["token_budget"] == 256
+            stage["budget"]["token_budget"] == 512
             for stage in stored_context["stages"].values()
         )
         events = service.meta.list_agent_events(session_id="session-runner-b")
@@ -953,7 +954,7 @@ def test_runner_recovers_bare_pytest_when_test_runner_preference_is_selected(tmp
         )
         project_python = Path.cwd() / ".venv" / "bin" / "python"
         expected_python = (
-            str(project_python.resolve()) if project_python.exists() else sys.executable
+            str(project_python.absolute()) if project_python.exists() else sys.executable
         )
         assert executions[0][0] == [
             expected_python,
@@ -1002,7 +1003,7 @@ def test_test_runner_recovery_prefers_project_test_virtualenv(tmp_path, monkeypa
     )
 
     assert intent["command"] == "python -m pytest tests/test_core.py"
-    assert intent["argv"][0] == str(project_python.resolve())
+    assert intent["argv"][0] == str(project_python.absolute())
     assert intent["argv"][1:] == ["-m", "pytest", "tests/test_core.py"]
 
 
@@ -1036,7 +1037,7 @@ def test_test_runner_recovery_finds_virtualenv_in_workspace_ancestors(
         workspace=workspace,
     )
 
-    assert intent["argv"][0] == str(project_python.resolve())
+    assert intent["argv"][0] == str(project_python.absolute())
 
 
 def test_runner_resets_per_run_metrics_when_instance_is_reused(tmp_path):
@@ -1367,6 +1368,18 @@ def test_formatted_agent_context_turns_tool_history_into_reuse_and_avoid_guidanc
     assert "不要重复执行 `fd service.py`" in formatted
 
 
+def test_selected_values_include_procedural_command_executables():
+    result = {
+        "memories": [{"subtype": "procedural_trace"}],
+        "context": (
+            "Tool result: command=rg -n OpenHandsMemoryRunner memguard "
+            "status=success exit_code=0 stdout_summary=memguard/integrations/openhands_runner.py"
+        ),
+    }
+
+    assert "rg" in _selected_values_for_stage(result)
+
+
 def test_openhands_hook_injects_context_and_blocks_high_risk_commands(tmp_path):
     context_file = tmp_path / "context.json"
     context_file.write_text(
@@ -1429,6 +1442,29 @@ def test_openhands_hook_injects_context_and_blocks_high_risk_commands(tmp_path):
     service_restart_payload = json.loads(service_restart.stdout)
     assert service_restart_payload["policy_category"] == "high_risk"
     assert service_restart_payload["blocked_marker"] == "systemctl restart"
+
+    relative_rm = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--context-file",
+            str(context_file),
+            "--guard-tool",
+        ],
+        input=json.dumps(
+            {
+                "tool_name": "terminal",
+                "tool_input": {"command": "rm -rf ./important-data"},
+            }
+        ),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert relative_rm.returncode == 2
+    relative_rm_payload = json.loads(relative_rm.stdout)
+    assert relative_rm_payload["policy_category"] == "high_risk"
+    assert relative_rm_payload["blocked_marker"] == "rm -rf"
 
     disallowed = subprocess.run(
         [

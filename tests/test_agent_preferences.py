@@ -49,6 +49,22 @@ def test_user_message_extracts_agent_test_runner_and_service_log_habits():
     assert all(item.scope == "global" for item in result.observations)
 
 
+def test_user_message_extracts_holdout_concise_and_risk_confirmation_phrases():
+    concise = extract_interaction_preferences(
+        event("在这个项目里回答请用中文简洁列出命令，不要写长篇解释。")
+    )
+    risk = extract_interaction_preferences(
+        event("涉及 rm、systemctl disable、重启服务这类高风险命令时，必须先说明风险并等待确认。")
+    )
+
+    assert ("response_verbosity", "concise") in [
+        (item.topic, item.value) for item in concise.observations
+    ]
+    assert ("high_risk_confirmation", "required") in [
+        (item.topic, item.value) for item in risk.observations
+    ]
+
+
 def test_assistant_and_tool_events_cannot_create_user_preferences():
     assistant = event(
         "以后我会优先使用 rg。",
