@@ -9,6 +9,7 @@ from scripts.smoke_submission_archive import command_name
 from scripts.check_competition_ready import (
     check_deb_install_evidence,
     check_eval,
+    IGNORED_HYGIENE_PARTS,
     check_memory_value_evidence,
     check_openkylin_metrics,
     check_performance_evidence,
@@ -18,6 +19,10 @@ from scripts.check_competition_ready import (
     check_supply_chain_artifacts,
 )
 from scripts.generate_sbom import generate_sbom
+
+
+def test_competition_ready_hygiene_ignores_local_output_workspaces():
+    assert "outputs" in IGNORED_HYGIENE_PARTS
 
 
 def test_competition_package_keeps_formal_and_process_materials_separate():

@@ -19,6 +19,7 @@ IGNORED_HYGIENE_PARTS = {
     "__pycache__",
     "dist",
     "local_notes",
+    "outputs",
 }
 
 REQUIRED_DOCS = [
