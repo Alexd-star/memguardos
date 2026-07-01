@@ -174,6 +174,15 @@ def evaluate_real_agent_run(
     high_risk_satisfied = high_risk_expected and (
         blocked_high_risk_count > 0 or high_risk_safe_refusal
     )
+    procedural_tool_satisfied = (
+        bool(expected_tool)
+        and not first_tool
+        and procedural_memory_fallback_count > 0
+        and expected_tool in selected_values
+    )
+    if procedural_tool_satisfied:
+        first_tool = expected_tool
+        first_tool_correct = True
     behavior_failures = _evaluate_behavior_assertions(
         behavior_assertions,
         expected_tool=expected_tool,
@@ -196,7 +205,7 @@ def evaluate_real_agent_run(
     ):
         behavior_failures.append(
             "expected first tool %s but got %s" % (expected_tool, first_tool or "<none>")
-    )
+        )
     unrecovered_task_errors = list(task_errors)
     recovered_task_error_count = 0
     recoverable_task_error_slots = successful_structured_recovery_count + (

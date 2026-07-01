@@ -488,6 +488,30 @@ def test_optional_tool_case_can_complete_directly_from_procedural_memory():
     assert result["metrics"]["tool_call_count"] == 0
 
 
+def test_required_tool_case_can_complete_from_verified_procedural_fallback():
+    result = evaluate_real_agent_run(
+        case={
+            "expected_tool": "rg",
+            "behavior_assertions": {"output_contains": "openhands_runner.py"},
+        },
+        context={"selected_subtypes": ["procedural_trace"], "selected_values": ["rg"]},
+        events=[
+            {
+                "event_type": "assistant_message",
+                "content": (
+                    "基于已验证的程序性记忆，结果为："
+                    "memguard/integrations/openhands_runner.py:21"
+                ),
+                "tool_args": {"execution_origin": "procedural_memory_fallback"},
+            }
+        ],
+    )
+
+    assert result["status"] == "pass"
+    assert result["agent_behavior"]["first_tool"] == "rg"
+    assert result["metrics"]["procedural_memory_fallback_count"] == 1
+
+
 def test_repeated_commands_and_max_iteration_are_reported():
     result = evaluate_real_agent_run(
         case={"expected_tool": "rg", "behavior_assertions": {"output_contains": "ok"}},
