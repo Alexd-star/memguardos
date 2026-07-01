@@ -1907,9 +1907,15 @@ class MemGuardService:
     def forget(self, request: str, confirm: bool = False, compact: bool = False) -> Dict[str, object]:
         records = self.meta.list_memories(include_deleted=False)
         candidates = self.forget_planner.candidates(request, records)
+        external_residue = self._managed_forget_residue(confirm=confirm)
         if not confirm:
             self._audit("forget_dry_run", None, {"request": request, "candidate_count": len(candidates)})
-            return {"confirmed": False, "request": request, "candidates": candidates}
+            return {
+                "confirmed": False,
+                "request": request,
+                "candidates": candidates,
+                "external_residue": external_residue,
+            }
 
         forgotten = []
         for candidate in candidates:
@@ -1927,7 +1933,39 @@ class MemGuardService:
             None,
             {"request": request, "forgotten": forgotten, "compact": compact},
         )
-        return {"confirmed": True, "request": request, "forgotten": forgotten}
+        return {
+            "confirmed": True,
+            "request": request,
+            "forgotten": forgotten,
+            "external_residue": external_residue,
+        }
+
+    def _managed_forget_residue(self, confirm: bool) -> Dict[str, object]:
+        return {
+            "scope": "confirmed_boundary_notice" if confirm else "dry_run_boundary_notice",
+            "managed_store_boundary": True,
+            "covered": [
+                "memguardos_sqlite_metadata",
+                "memguardos_fts_index",
+                "memguardos_graph_index",
+                "memguardos_mmap_segment_after_compact",
+                "memguardos_search_cache",
+            ],
+            "not_covered": [
+                "external_agent_logs",
+                "llm_provider_logs",
+                "terminal_history",
+                "vm_snapshots",
+                "filesystem_backups",
+                "block_device_forensic_recovery",
+            ],
+            "requires_separate_cleanup": True,
+            "explanation": (
+                "MemGuardOS forget removes governed records from MemGuardOS-managed metadata, indexes, graph "
+                "and compacted segment storage. External Agent persistence, provider logs, VM snapshots, backups "
+                "and media-level sanitization are outside this logical forgetting boundary."
+            ),
+        }
 
     def forget_agent_interactions(
         self,
