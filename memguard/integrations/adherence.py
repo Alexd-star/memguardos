@@ -484,21 +484,30 @@ def _canonical_pytest_command(
     command_parts = ["python", "-m", "pytest"] + paths
     return {
         "command": shlex.join(command_parts),
-        "argv": [_pytest_python_executable(), "-m", "pytest"] + paths,
+        "argv": [_pytest_python_executable(root), "-m", "pytest"] + paths,
         "timeout": 30,
     }
 
 
-def _pytest_python_executable() -> str:
+def _pytest_python_executable(workspace: Path) -> str:
     explicit = str(os.environ.get("MEMGUARD_PYTEST_PYTHON") or "").strip()
     if explicit and Path(explicit).exists():
         return str(Path(explicit).resolve())
-    for candidate in (
-        Path.cwd() / ".venv" / "bin" / "python",
-        Path.cwd() / ".venv" / "Scripts" / "python.exe",
-    ):
-        if candidate.exists():
-            return str(candidate.resolve())
+    roots = [Path.cwd()]
+    workspace_root = Path(workspace).resolve()
+    roots.extend([workspace_root, *workspace_root.parents])
+    seen = set()
+    for root in roots:
+        key = str(root)
+        if key in seen:
+            continue
+        seen.add(key)
+        for candidate in (
+            root / ".venv" / "bin" / "python",
+            root / ".venv" / "Scripts" / "python.exe",
+        ):
+            if candidate.exists():
+                return str(candidate.resolve())
     return sys.executable
 
 

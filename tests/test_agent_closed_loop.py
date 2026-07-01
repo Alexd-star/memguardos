@@ -1006,6 +1006,39 @@ def test_test_runner_recovery_prefers_project_test_virtualenv(tmp_path, monkeypa
     assert intent["argv"][1:] == ["-m", "pytest", "tests/test_core.py"]
 
 
+def test_test_runner_recovery_finds_virtualenv_in_workspace_ancestors(
+    tmp_path,
+    monkeypatch,
+):
+    project = tmp_path / "project"
+    project_python = project / ".venv" / "bin" / "python"
+    project_python.parent.mkdir(parents=True)
+    project_python.write_text("# fake python\n", encoding="utf-8")
+    workspace = project / "outputs" / "suite" / "cases" / "R01" / "workspace"
+    (workspace / "tests").mkdir(parents=True)
+    (workspace / "tests" / "test_core.py").write_text(
+        "def test_placeholder():\n    assert True\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    events = [
+        {
+            "event_type": "tool_call",
+            "tool_name": "terminal",
+            "tool_args": {"command": "pytest tests/test_core.py"},
+        },
+        {"event_type": "tool_result", "exit_code": 127},
+    ]
+
+    intent = recover_failed_test_runner_intent(
+        events,
+        preferred_command="python -m pytest",
+        workspace=workspace,
+    )
+
+    assert intent["argv"][0] == str(project_python.resolve())
+
+
 def test_runner_resets_per_run_metrics_when_instance_is_reused(tmp_path):
     service = make_service(tmp_path)
 
