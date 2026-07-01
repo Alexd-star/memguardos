@@ -12,7 +12,7 @@
 - 行为评测新增尝试调用、策略拒绝、实际执行、恢复错误、结构化恢复和程序性兜底等分项指标；Runner 合规状态未收敛时不能仅凭猜中输出判为通过。
 - 偏好版本选择在 `updated_at` 平局时改用 Agent 事件时间与 SQLite 插入序号判定新旧，D05 冲突案例连续复跑 10 次均通过。
 - 证据采集支持无 Git 元数据的 openKylin 同步树；新增 `refresh_evidence_manifest.py`，跨平台原子重建 SHA256 清单和 manifest。
-- 最新本地测试为 `222 passed, 1 skipped`；openKylin 为 `223 passed`。
+- 最新本地测试为 `244 passed, 1 skipped`；最新同 HEAD openKylin 为 `245 passed`。
 - 16 组确定性配对实验全部通过；原 12 组真实 OpenHands 会话与新增 R13-R20 扩展会话合计 28 组均已归档（含 8 组 holdout 留出盲测），记忆系统层与 Agent 行为层均为 `28/28`，未归因失败为 `0`。
 
 ## v0.1.0-performance - 2026-06-19

@@ -74,7 +74,7 @@ MemGuardOS 是面向 Linux/openKylin 的智能体记忆提取与精准遗忘系�
 
 ## 6. 数据文件说明
 
-`data/demo/` 保存演示输入，包括用户配置、工具执行结果、Linux 工作流文本和 BPF LSM 策略示例。`data/benchmarks/` 保存评测 JSONL，包括通用记忆种子、检索、精准遗忘、敏感检测、配置质量、冲突处理、图谱检索、程序性记忆、`agent_interactions.jsonl` 交互抽取专项、`agent_memory_value.jsonl` 的 16 组配对实验和 `real_agent_behavior.jsonl` 的 20 组真实 Agent 场景定义。不得将可识别个人身份的真实交互、真实凭据或私人日志直接放入该目录。
+`data/demo/` 保存演示输入，包括用户配置、工具执行结果、Linux 工作流文本和 BPF LSM 策略示例。`data/benchmarks/` 保存评测 JSONL，包括通用记忆种子、检索、精准遗忘、敏感检测、配置质量、冲突处理、图谱检索、程序性记忆、`agent_interactions.jsonl` 交互抽取专项、`agent_memory_value.jsonl` 的 16 组配对实验，以及基础、扩展和 holdout 合计 28 组真实 Agent 场景定义。不得将可识别个人身份的真实交互、真实凭据或私人日志直接放入该目录。
 
 ## 7. 文档文件说明
 
