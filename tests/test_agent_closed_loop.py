@@ -8,6 +8,7 @@ from memguard.integrations.openhands_runner import (
     OpenHandsMemoryRunner,
     build_openhands_llm_kwargs,
     detect_adherence_issues,
+    recover_failed_test_runner_intent,
     recover_misrouted_preferred_tool_intent,
     format_agent_context,
     repair_failed_preferred_tool_intent,
@@ -964,6 +965,41 @@ def test_runner_recovers_bare_pytest_when_test_runner_preference_is_selected(tmp
         )
     finally:
         service.close()
+
+
+def test_test_runner_recovery_prefers_project_test_virtualenv(tmp_path, monkeypatch):
+    project_python = tmp_path / ".venv" / "bin" / "python"
+    project_python.parent.mkdir(parents=True)
+    project_python.write_text("# fake python\n", encoding="utf-8")
+    workspace = tmp_path / "workspace"
+    (workspace / "tests").mkdir(parents=True)
+    (workspace / "tests" / "test_core.py").write_text(
+        "def test_placeholder():\n    assert True\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    events = [
+        {
+            "event_type": "tool_call",
+            "tool_name": "terminal",
+            "tool_args": {"command": "pytest tests/test_core.py"},
+        },
+        {
+            "event_type": "tool_result",
+            "exit_code": 127,
+            "tool_result": "pytest: command not found",
+        },
+    ]
+
+    intent = recover_failed_test_runner_intent(
+        events,
+        preferred_command="python -m pytest",
+        workspace=workspace,
+    )
+
+    assert intent["command"] == "python -m pytest tests/test_core.py"
+    assert intent["argv"][0] == str(project_python.resolve())
+    assert intent["argv"][1:] == ["-m", "pytest", "tests/test_core.py"]
 
 
 def test_runner_resets_per_run_metrics_when_instance_is_reused(tmp_path):

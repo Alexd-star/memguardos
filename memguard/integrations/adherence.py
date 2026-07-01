@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, Optional
 import json
+import os
 import re
 import shlex
 import sys
@@ -483,9 +484,22 @@ def _canonical_pytest_command(
     command_parts = ["python", "-m", "pytest"] + paths
     return {
         "command": shlex.join(command_parts),
-        "argv": [sys.executable, "-m", "pytest"] + paths,
+        "argv": [_pytest_python_executable(), "-m", "pytest"] + paths,
         "timeout": 30,
     }
+
+
+def _pytest_python_executable() -> str:
+    explicit = str(os.environ.get("MEMGUARD_PYTEST_PYTHON") or "").strip()
+    if explicit and Path(explicit).exists():
+        return str(Path(explicit).resolve())
+    for candidate in (
+        Path.cwd() / ".venv" / "bin" / "python",
+        Path.cwd() / ".venv" / "Scripts" / "python.exe",
+    ):
+        if candidate.exists():
+            return str(candidate.resolve())
+    return sys.executable
 
 
 def _dedupe_preserve_order(values: list[str]) -> list[str]:
