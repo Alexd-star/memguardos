@@ -13,6 +13,8 @@ from scripts.check_competition_ready import (
     check_openkylin_metrics,
     check_performance_evidence,
     check_real_agent_extension_evidence,
+    check_real_agent_holdout_evidence,
+    check_security_scan_artifacts,
     check_supply_chain_artifacts,
 )
 from scripts.generate_sbom import generate_sbom
@@ -70,11 +72,17 @@ def test_competition_package_requires_memory_value_code_data_and_evidence():
         "scripts/collect_memory_value_evidence.sh",
         "data/benchmarks/agent_memory_value.jsonl",
         "data/benchmarks/real_agent_behavior.jsonl",
+        "data/benchmarks/real_agent_behavior_holdout.jsonl",
         "docs/真实Agent记忆价值评测报告.md",
         "docs/evidence/memory_value_latest/deterministic/metrics.json",
         "docs/evidence/memory_value_latest/real_agent/metrics.json",
         "docs/evidence/memory_value_latest/manifest.json",
         "docs/evidence/memory_value_latest/SHA256SUMS.txt",
+        "docs/evidence/real_agent_holdout_latest/metrics.json",
+        "docs/evidence/real_agent_holdout_latest/manifest.json",
+        "docs/evidence/real_agent_holdout_latest/SHA256SUMS.txt",
+        "docs/security_scan.json",
+        "docs/安全扫描报告.md",
     }
 
     assert required.issubset(REQUIRED_PATHS)
@@ -94,6 +102,8 @@ def test_generate_sbom_records_project_dependencies_and_core_artifacts(tmp_path)
     assert sbom["dependencies"]["runtime"] == []
     assert "pytest>=8" in sbom["dependencies"]["optional"]["dev"]
     assert "openhands-sdk==1.28.1" in sbom["dependencies"]["optional"]["agent-openhands"]
+    assert "bandit>=1.7" in sbom["dependencies"]["optional"]["security"]
+    assert "pip-audit>=2.7" in sbom["dependencies"]["optional"]["security"]
     artifact_paths = {item["path"] for item in sbom["artifacts"]}
     assert "memguard/service.py" in artifact_paths
     assert "scripts/run_openhands_behavior_suite.py" in artifact_paths
@@ -116,6 +126,37 @@ def test_competition_ready_requires_supply_chain_artifacts(tmp_path):
     assert by_name["SBOM 中文说明"].ok is True
     assert by_name["SBOM 关键源码覆盖"].ok is True
     assert by_name["SBOM 依赖分组"].ok is True
+
+
+def test_competition_ready_requires_clean_security_scan_artifacts(tmp_path):
+    report_path = tmp_path / "security_scan.json"
+    markdown_path = tmp_path / "安全扫描报告.md"
+    report_path.write_text(
+        json.dumps(
+            {
+                "schema": "memguardos-security-scan-v1",
+                "ok": True,
+                "summary": {
+                    "bandit_high_count": 0,
+                    "pip_audit_vulnerability_count": 0,
+                    "missing_tools": [],
+                },
+                "tools": {
+                    "bandit": {"status": "clean"},
+                    "pip_audit": {"status": "clean"},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    markdown_path.write_text("# MemGuardOS 安全扫描报告\n", encoding="utf-8")
+
+    checks = check_security_scan_artifacts(report_path, markdown_path)
+    by_name = {item.name: item for item in checks}
+
+    assert by_name["安全扫描 JSON"].ok is True
+    assert by_name["安全扫描中文报告"].ok is True
+    assert by_name["安全扫描门禁通过"].ok is True
 
 
 def test_memory_value_collector_supports_synchronized_tree_without_git_head():
@@ -311,6 +352,12 @@ def sample_submission_body(name: str) -> str:
         return '{"case_count":12,"completed_case_count":12,"unclassified_failure_count":0,"memory_system_pass_rate":0.916667,"agent_behavior_pass_rate":0.75}\n'
     if name == "docs/evidence/real_agent_extension_r13_r20_latest/metrics.json":
         return '{"case_count":8,"completed_case_count":8,"unclassified_failure_count":0,"memory_system_pass_rate":1.0,"agent_behavior_pass_rate":1.0}\n'
+    if name == "docs/evidence/real_agent_holdout_latest/metrics.json":
+        return '{"case_count":8,"completed_case_count":8,"unclassified_failure_count":0,"memory_system_pass_rate":1.0,"agent_behavior_pass_rate":1.0,"failed_case_ids":[]}\n'
+    if name == "docs/security_scan.json":
+        return '{"schema":"memguardos-security-scan-v1","ok":true,"summary":{"bandit_high_count":0,"pip_audit_vulnerability_count":0,"missing_tools":[]},"tools":{"bandit":{"status":"warnings"},"pip_audit":{"status":"clean"}}}\n'
+    if name == "docs/安全扫描报告.md":
+        return "# MemGuardOS 安全扫描报告\n"
     if name == "docs/evidence/latest/sdk_embedding_probe.txt":
         return '$ memctl sdk-status --probe-embedding\n\n{"embedding":{"inference_ready":true,"embedding_probe":{"dim":768}}}\n'
     if name == "docs/evidence/latest/eval_result_openkylin_10k.json":
@@ -588,5 +635,36 @@ def test_competition_ready_accepts_real_agent_extension_evidence(tmp_path):
     by_name = {item.name: item for item in checks}
 
     assert by_name["R13-R20 新增 8 组真实 OpenHands 案例"].ok is True
+    assert by_name["manifest.json"].ok is True
+    assert by_name["SHA256SUMS.txt"].ok is True
+
+
+def test_competition_ready_accepts_real_agent_holdout_evidence(tmp_path):
+    evidence = tmp_path / "real_agent_holdout"
+    evidence.mkdir()
+    (evidence / "metrics.json").write_text(
+        json.dumps(
+            {
+                "case_count": 8,
+                "completed_case_count": 8,
+                "status_distribution": {"pass": 8},
+                "memory_system_pass_rate": 1.0,
+                "agent_behavior_pass_rate": 1.0,
+                "unclassified_failure_count": 0,
+                "failed_case_ids": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (evidence / "manifest.json").write_text(
+        '{"file_count": 1, "files": []}',
+        encoding="utf-8",
+    )
+    (evidence / "SHA256SUMS.txt").write_text("evidence hashes\n", encoding="utf-8")
+
+    checks = check_real_agent_holdout_evidence(evidence, severity="P0")
+    by_name = {item.name: item for item in checks}
+
+    assert by_name["8 组留出真实 OpenHands 案例"].ok is True
     assert by_name["manifest.json"].ok is True
     assert by_name["SHA256SUMS.txt"].ok is True

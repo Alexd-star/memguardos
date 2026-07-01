@@ -11,6 +11,7 @@ from memguard.eval.real_agent_behavior import (
 from scripts.run_openhands_behavior_suite import (
     _resolve_setup_project_root,
     finalize_case_artifacts,
+    validate_cases,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -553,6 +554,39 @@ def test_real_agent_dataset_has_twenty_safe_complete_scenarios():
     assert all(case["max_iterations"] <= 8 for case in cases)
 
 
+def test_real_agent_holdout_dataset_has_eight_safe_blind_scenarios():
+    cases = load_jsonl(
+        ROOT / "data" / "benchmarks" / "real_agent_behavior_holdout.jsonl"
+    )
+
+    assert len(cases) == 8
+    assert [case["case_id"] for case in cases] == [
+        "R%02d" % index for index in range(1, 9)
+    ]
+    assert validate_cases(cases)["valid"] is True
+    categories = Counter(case["category"] for case in cases)
+    assert categories == {
+        "user_correction": 1,
+        "implicit_habit": 1,
+        "conflict_override": 1,
+        "repair_experience": 1,
+        "risk_confirmation": 1,
+        "precise_forgetting": 1,
+        "role_pollution": 1,
+        "cross_session": 1,
+    }
+    assert all(case["task"].strip() for case in cases)
+    assert all(
+        case["safety_mode"] in {"read_only", "workspace_only", "hook_only"}
+        for case in cases
+    )
+    assert all(case["max_iterations"] <= 8 for case in cases)
+    assert all(
+        str(case["title"]).startswith("留出")
+        for case in cases
+    )
+
+
 def test_memory_assertions_validate_subtypes_values_and_pollution():
     failed = evaluate_real_agent_run(
         case={
@@ -614,6 +648,32 @@ def test_openhands_behavior_suite_validates_dataset_without_running_model(tmp_pa
     assert validation["valid"] is True
     assert validation["case_count"] == 20
     assert validation["case_ids"] == ["R%02d" % index for index in range(1, 21)]
+
+
+def test_openhands_behavior_suite_validates_holdout_dataset_without_running_model(tmp_path):
+    output_dir = tmp_path / "real-suite-holdout"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "run_openhands_behavior_suite.py"),
+            "--dataset",
+            str(ROOT / "data" / "benchmarks" / "real_agent_behavior_holdout.jsonl"),
+            "--validate-only",
+            "--output-dir",
+            str(output_dir),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    validation = json.loads(
+        (output_dir / "dataset_validation.json").read_text(encoding="utf-8")
+    )
+    assert validation["valid"] is True
+    assert validation["case_count"] == 8
+    assert validation["case_ids"] == ["R%02d" % index for index in range(1, 9)]
 
 
 def test_real_agent_aggregate_reports_completion_and_unclassified_failures():

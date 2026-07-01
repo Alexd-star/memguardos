@@ -15,6 +15,7 @@ memguardd = "memguard.daemon:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6"]
+security = ["bandit>=1.7", "pip-audit>=2.7"]
 agent-openhands = [
     "openhands-sdk==1.28.1",
     "openhands-tools==1.28.1",

@@ -459,6 +459,26 @@ def _dashboard_html() -> str:
             </div>
           </div>
         </div>
+        <div class="grid two" style="margin-top:12px">
+          <div class="panel">
+            <div class="item-title">治理闭环</div>
+            <p class="muted">控制台按“采集交互、抽取偏好、构建上下文、确认遗忘、导出诊断”的顺序组织能力，管理员可以从首页直接判断系统是否完成一次可复验的本机 Agent 记忆治理流程。</p>
+            <div class="list">
+              <div class="item"><div class="item-title">采集与抽取</div><div class="muted">写入用户和 Agent 交互文本，查看抽取依据、敏感标签和质量提示。</div></div>
+              <div class="item"><div class="item-title">检索与注入</div><div class="muted">通过混合检索和 RAG 上下文页确认哪些记忆进入生成前上下文。</div></div>
+              <div class="item"><div class="item-title">遗忘与审计</div><div class="muted">先预览影响范围，再二次确认删除，并用审计链复验操作事实。</div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="item-title">今日工作流</div>
+            <p class="muted">建议每次演示或验收前按以下顺序执行，能减少遗漏并保留完整诊断材料。</p>
+            <div class="list">
+              <div class="item"><div class="item-title">1. 刷新状态</div><div class="muted">确认红黄绿状态、存储目录、实时记忆和审计事件数量。</div></div>
+              <div class="item"><div class="item-title">2. 运行一条真实偏好</div><div class="muted">写入“以后搜索代码优先使用 rg”一类交互，再查看 Agent 三阶段上下文。</div></div>
+              <div class="item"><div class="item-title">3. 导出诊断包</div><div class="muted">在执行遗忘或复验后导出 JSON，保留 doctor、策略、审计和检索状态。</div></div>
+            </div>
+          </div>
+        </div>
         <div class="toolbar"><button class="primary" onclick="refresh(event)">刷新状态</button><button class="secondary" onclick="diagnostics(event)">运行诊断</button><button class="secondary" onclick="exportDiagnostics(event)">导出诊断包</button></div>
         <div class="grid two">
           <div class="panel"><div class="item-title">状态摘要</div><div id="statusCards" class="list"></div></div>
@@ -508,6 +528,16 @@ def _dashboard_html() -> str:
           <div class="actions"><button class="primary" onclick="loadAgentOverview(event)">刷新 Agent 状态</button><button class="secondary" onclick="exportDiagnostics(event)">导出诊断包</button></div>
         </div>
         <div id="agentMetrics" class="grid four" style="margin-top:12px"></div>
+        <div class="panel" style="margin-top:12px">
+          <div class="item-title">记忆价值指标</div>
+          <p class="muted">本页把记忆价值拆成可解释的操作指标：工具选择命中、重复尝试减少、高风险确认、跨会话复用和遗忘后残留。实时数值来自 Agent 事件、稳定偏好和三阶段上下文，详细证据见下方 JSON。</p>
+          <div class="grid four">
+            <div class="item"><div class="item-title">工具选择命中</div><div class="muted">偏好记忆帮助 Agent 选择 rg、journalctl、pytest 等用户确认过的工具。</div></div>
+            <div class="item"><div class="item-title">重复尝试</div><div class="muted">程序性记忆记录失败命令和修复命令，减少跨会话重复踩坑。</div></div>
+            <div class="item"><div class="item-title">安全确认</div><div class="muted">高风险命令进入确认或拒绝路径，不把危险操作当普通偏好执行。</div></div>
+            <div class="item"><div class="item-title">遗忘残留</div><div class="muted">受管事件载荷被擦除后只保留哈希和审计事实，外部 Agent 副本单独提示。</div></div>
+          </div>
+        </div>
         <div class="grid two" style="margin-top:12px">
           <div class="panel"><div class="item-title">交互事件时间线</div><div id="agentTimeline" class="timeline" style="margin-top:12px"></div></div>
           <div class="panel"><div class="item-title">偏好与证据</div><div id="agentPreferences" class="list" style="margin-top:12px"></div></div>
@@ -528,9 +558,16 @@ def _dashboard_html() -> str:
         <h2>精准遗忘</h2>
         <p class="lead">先 dry-run 查看候选，再二次确认执行。候选会以卡片形式列出匹配关键词和删除风险，避免把不可逆操作藏在长 JSON 里。</p>
         <div class="panel">
+          <div class="item-title">遗忘二次确认</div>
+          <p class="muted">精准遗忘默认先做影响范围预览，只列出候选记忆、匹配关键词和删除后果。只有点击确认按钮后，系统才写入 tombstone、压缩段文件并清理可访问索引。</p>
           <label>自然语言请求</label><input id="forgetRequest" value="忘掉 temporary project codename">
           <div class="actions"><button class="secondary" onclick="forget(event, false)">Dry-run</button><button class="danger" onclick="forget(event, true)">确认遗忘并 compact</button></div>
           <p class="warning">确认遗忘会写入 tombstone 并清理可访问索引。</p>
+        </div>
+        <div class="grid three" style="margin-top:12px">
+          <div class="item"><div class="item-title">影响范围预览</div><div class="muted">展示候选、分数和关键词，帮助判断是否误删。</div></div>
+          <div class="item"><div class="item-title">确认后执行</div><div class="muted">确认操作会修改本地存储和索引，适合在审计链正常时执行。</div></div>
+          <div class="item"><div class="item-title">遗忘后复检</div><div class="muted">遗忘后建议重新检索和校验审计链，确认敏感载荷不可访问。</div></div>
         </div>
         <div id="forgetCards" class="list" style="margin-top:12px"></div>
         <pre id="forgetOut"></pre>
@@ -552,6 +589,15 @@ def _dashboard_html() -> str:
             <button class="secondary" onclick="exportDiagnostics(event)">导出诊断包</button>
           </div>
           <p class="muted">诊断输出用于本机管理员定位审计、检索和冷热分层状态。敏感内容会按核心链路的脱敏规则处理。</p>
+        </div>
+        <div class="panel" style="margin-top:12px">
+          <div class="item-title">诊断包内容清单</div>
+          <div class="grid four">
+            <div class="item"><div class="item-title">doctor</div><div class="muted">本机快速诊断、namespace 和运行模式。</div></div>
+            <div class="item"><div class="item-title">检索与策略</div><div class="muted">retrieval、memory-policy、temporal 与冷热层状态。</div></div>
+            <div class="item"><div class="item-title">OS 与 SDK</div><div class="muted">cgroup、Kylin SDK 可探测状态和后端 fallback 信息。</div></div>
+            <div class="item"><div class="item-title">审计链</div><div class="muted">verify-audit 结果和最近审计事件，便于交付复核。</div></div>
+          </div>
         </div>
         <pre id="diagnosticsOut"></pre>
       </section>

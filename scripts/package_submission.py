@@ -91,6 +91,8 @@ FORMAL_DOCS = {
     "docs/演示视频脚本.md",
     "docs/sbom.json",
     "docs/供应链与SBOM说明.md",
+    "docs/security_scan.json",
+    "docs/安全扫描报告.md",
     "docs/交付文档/MemGuardOS中文操作手册.md",
     "docs/交付文档/MemGuardOS中文操作手册.docx",
     "docs/交付文档/MemGuardOS中文操作手册.pdf",

@@ -10,7 +10,7 @@
 | 版本 | 0.1.0 |
 | Python 版本要求 | >=3.9 |
 | 许可证 | MIT License |
-| 生成时间 | 2026-07-01T08:35:19+00:00 |
+| 生成时间 | 2026-07-01T09:06:18+00:00 |
 
 ## 依赖分组
 
@@ -30,11 +30,16 @@
 - `openhands-tools==1.28.1`
 - `browser-use==0.11.13`
 
+### 安全扫描依赖
+
+- `bandit>=1.7`
+- `pip-audit>=2.7`
+
 ## 核心交付物哈希
 
 | 路径 | 是否存在 | 字节数 | SHA-256 |
 |---|---:|---:|---|
-| `pyproject.toml` | 是 | 725 | `fdf246a06dafdeb24ebad678b08f987c3294aa98a1c18288380cd694e949eff5` |
+| `pyproject.toml` | 是 | 770 | `9ec2eb185c74a2c809513c09c1c1290cabac5e244dd13581e6614a4ba3e367d4` |
 | `LICENSE` | 是 | 1080 | `3319059b1763624558499140d670dd98b2260aba3654bd19af2838b76c4d4261` |
 | `README.md` | 是 | 23635 | `58f33f6198923421057c12a1a56b38bab5e2897a3b55876528af0c5f096867c0` |
 | `memguard/service.py` | 是 | 98559 | `4822ab7045e5f32a5d887df96a7652e87e0f9dc6cb6d93866f7dda4112f5f38f` |
@@ -51,6 +56,7 @@
 | `memguard/eval/memory_value.py` | 是 | 14093 | `916c668eb8659aef42f17063a290e4e88f72f5dd0983d078b074e2207c3c779f` |
 | `memguard/eval/real_agent_behavior.py` | 是 | 18099 | `8487de6ca4a2a6ed2759c3fcbb9a62f63bf9d2d33558ee3678566acc640e43f9` |
 | `scripts/run_openhands_behavior_suite.py` | 是 | 15863 | `5498fa4a08399c82fb0eed1485e457e578bf724d70739e9a72a8b4570a2f2720` |
+| `scripts/run_security_scan.py` | 是 | 15385 | `07bb3899c2fb2dcbe13aa11293ae657e65bfc8f4b7cfc21ac32a0e8d13cbccd9` |
 | `scripts/collect_openkylin_evidence.sh` | 是 | 21284 | `b22b5f62d7c7332c3941ab1a88a8b5279b1eae7b30f975bf72e876e2a040e447` |
 | `scripts/collect_memory_value_evidence.sh` | 是 | 5453 | `19653b5d5ee75b5b58e5e5d49326b3fdac13aaf6bf8d4677d5f1a6e3bc961599` |
 | `scripts/build_deb.sh` | 是 | 5878 | `d2745d89d0a7e1ab3c88868c945a8b7ee3dcb9fd2dfb550ae5d0b1c984848130` |
@@ -59,11 +65,13 @@
 | `native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp` | 是 | 8610 | `38a91f0fd7ef26edb3df6d33220c86e9cf4c6024cb0bed563f857271a85aa137` |
 | `data/benchmarks/agent_memory_value.jsonl` | 是 | 17182 | `0ec615d69930561e7886bc47f9aca388f3cf0848291078e6ef0c74ab05e877b2` |
 | `data/benchmarks/real_agent_behavior.jsonl` | 是 | 16653 | `96f7096113a4f72d584e29aa9c8946e32a0e7374c8d55a68f1eeaa7aa6178df1` |
+| `data/benchmarks/real_agent_behavior_holdout.jsonl` | 是 | 8108 | `94a985700ee93a69596598c81919024e1b784bb2e51fc27151325a330c314d63` |
 
 ## 供应链控制说明
 
 - 默认运行时依赖为空，核心功能仅依赖 Python 标准库，降低供应链攻击面。
 - OpenHands 真实 Agent 适配依赖被放入可选依赖组 agent-openhands，不进入默认安装路径。
+- Bandit 与 pip-audit 被放入可选依赖组 security，用于发布前源码安全扫描和依赖漏洞审计。
 - 交付包同时保留 manifest、SHA-256 清单、审计链和 openKylin 证据，用于复验构建与运行结果。
 - SBOM 记录核心源码、脚本、原生增强和 benchmark 数据的哈希，便于提交前后比对。
 

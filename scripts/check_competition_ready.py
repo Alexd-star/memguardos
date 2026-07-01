@@ -65,6 +65,7 @@ REQUIRED_DOCS = [
     "docs/答辩稿.md",
     "docs/演示视频脚本.md",
     "docs/供应链与SBOM说明.md",
+    "docs/安全扫描报告.md",
 ]
 
 REQUIRED_SOURCE_PATHS = [
@@ -98,6 +99,7 @@ REQUIRED_SOURCE_PATHS = [
     "scripts/package_submission.py",
     "scripts/web_dashboard_smoke.py",
     "scripts/generate_sbom.py",
+    "scripts/run_security_scan.py",
     "scripts/verify_ukui_plugins.sh",
     "native/bpf_lsm/memguard_lsm.bpf.c",
     "native/ukui/peony-memguard/memguard_peony_plugin.cpp",
@@ -176,6 +178,11 @@ def main() -> int:
         default="docs/evidence/real_agent_extension_r13_r20_latest",
         help="Additional real OpenHands R13-R20 evidence directory",
     )
+    parser.add_argument(
+        "--real-agent-holdout-evidence-dir",
+        default="docs/evidence/real_agent_holdout_latest",
+        help="Held-out real OpenHands evidence directory",
+    )
     parser.add_argument("--output", default="", help="Optional JSON report path")
     parser.add_argument("--markdown", default="", help="Optional Markdown report path")
     parser.add_argument("--allow-missing-openkylin", action="store_true", help="Downgrade missing openKylin evidence files to P1 warnings")
@@ -188,6 +195,7 @@ def main() -> int:
     real_agent_extension_evidence_dir = _resolve(
         args.real_agent_extension_evidence_dir
     )
+    real_agent_holdout_evidence_dir = _resolve(args.real_agent_holdout_evidence_dir)
     checks = []
     checks.extend(check_docs())
     checks.extend(check_sources())
@@ -202,9 +210,21 @@ def main() -> int:
         )
     )
     checks.extend(
+        check_real_agent_holdout_evidence(
+            real_agent_holdout_evidence_dir,
+            severity="P0",
+        )
+    )
+    checks.extend(
         check_supply_chain_artifacts(
             ROOT / "docs/sbom.json",
             ROOT / "docs/供应链与SBOM说明.md",
+        )
+    )
+    checks.extend(
+        check_security_scan_artifacts(
+            ROOT / "docs/security_scan.json",
+            ROOT / "docs/安全扫描报告.md",
         )
     )
     checks.extend(check_repository_hygiene())
@@ -778,6 +798,72 @@ def check_real_agent_extension_evidence(
     return checks
 
 
+def check_real_agent_holdout_evidence(
+    evidence_dir: Path,
+    severity: str,
+) -> List[Check]:
+    checks = [
+        Check(
+            "真实Agent留出证据",
+            "留出集证据目录",
+            evidence_dir.exists(),
+            _display_path(evidence_dir),
+            severity=severity,
+        )
+    ]
+    metrics = _load_evidence_json(evidence_dir / "metrics.json")
+    case_count = int(metrics.get("case_count", 0)) if metrics else 0
+    completed_count = int(metrics.get("completed_case_count", 0)) if metrics else 0
+    memory_rate = (
+        float(metrics.get("memory_system_pass_rate", 0.0)) if metrics else 0.0
+    )
+    behavior_rate = (
+        float(metrics.get("agent_behavior_pass_rate", 0.0)) if metrics else 0.0
+    )
+    unclassified = (
+        int(metrics.get("unclassified_failure_count", -1)) if metrics else -1
+    )
+    failed_ids = metrics.get("failed_case_ids", ["<missing>"]) if metrics else ["<missing>"]
+    checks.append(
+        Check(
+            "真实Agent留出证据",
+            "8 组留出真实 OpenHands 案例",
+            case_count == 8
+            and completed_count == 8
+            and memory_rate == 1.0
+            and behavior_rate == 1.0
+            and unclassified == 0
+            and failed_ids == [],
+            (
+                "case_count=%s completed=%s memory=%.4f behavior=%.4f "
+                "unclassified=%s failed=%s"
+            )
+            % (
+                case_count,
+                completed_count,
+                memory_rate,
+                behavior_rate,
+                unclassified,
+                failed_ids,
+            ),
+            severity=severity,
+        )
+    )
+    for name in ("manifest.json", "SHA256SUMS.txt"):
+        path = evidence_dir / name
+        ok = path.exists() and path.stat().st_size > 0
+        checks.append(
+            Check(
+                "真实Agent留出证据",
+                name,
+                ok,
+                "存在且非空" if ok else "缺失或为空",
+                severity=severity,
+            )
+        )
+    return checks
+
+
 def check_deb_install_evidence(evidence_dir: Path, severity: str) -> List[Check]:
     checks: List[Check] = []
     install_text = _read_text_if_exists(evidence_dir / "deb_apt_install_maintenance.txt")
@@ -971,7 +1057,10 @@ def check_supply_chain_artifacts(sbom_path: Path, markdown_path: Path) -> List[C
         and isinstance(optional, dict)
         and "dev" in optional
         and "agent-openhands" in optional
+        and "security" in optional
         and "openhands-sdk==1.28.1" in optional.get("agent-openhands", [])
+        and "bandit>=1.7" in optional.get("security", [])
+        and "pip-audit>=2.7" in optional.get("security", [])
     )
     checks.append(
         Check(
@@ -979,6 +1068,66 @@ def check_supply_chain_artifacts(sbom_path: Path, markdown_path: Path) -> List[C
             "SBOM 依赖分组",
             dependency_ok,
             "包含 runtime/dev/agent-openhands 分组" if dependency_ok else "依赖分组不完整",
+        )
+    )
+    return checks
+
+
+def check_security_scan_artifacts(report_path: Path, markdown_path: Path) -> List[Check]:
+    checks: List[Check] = []
+    checks.append(
+        Check(
+            "安全扫描",
+            "安全扫描 JSON",
+            report_path.exists() and report_path.stat().st_size > 0,
+            _display_path(report_path) if report_path.exists() else "文件不存在",
+        )
+    )
+    markdown_text = _read_text_if_exists(markdown_path)
+    checks.append(
+        Check(
+            "安全扫描",
+            "安全扫描中文报告",
+            markdown_path.exists() and "MemGuardOS 安全扫描报告" in markdown_text,
+            _display_path(markdown_path) if markdown_path.exists() else "文件不存在",
+        )
+    )
+    report = _load_evidence_json(report_path)
+    if report is None:
+        checks.append(Check("安全扫描", "安全扫描门禁通过", False, "security_scan.json 不存在或无法解析"))
+        return checks
+    summary = report.get("summary", {}) if isinstance(report, dict) else {}
+    tools = report.get("tools", {}) if isinstance(report, dict) else {}
+    bandit_status = _nested_get(tools, ["bandit", "status"]) if isinstance(tools, dict) else None
+    pip_status = _nested_get(tools, ["pip_audit", "status"]) if isinstance(tools, dict) else None
+    missing_tools = summary.get("missing_tools", []) if isinstance(summary, dict) else []
+    bandit_high = int(summary.get("bandit_high_count", -1)) if isinstance(summary, dict) else -1
+    vulnerabilities = int(summary.get("pip_audit_vulnerability_count", -1)) if isinstance(summary, dict) else -1
+    ok = (
+        report.get("schema") == "memguardos-security-scan-v1"
+        and report.get("ok") is True
+        and bandit_high == 0
+        and vulnerabilities == 0
+        and missing_tools == []
+        and bandit_status in {"clean", "warnings"}
+        and pip_status == "clean"
+    )
+    checks.append(
+        Check(
+            "安全扫描",
+            "安全扫描门禁通过",
+            ok,
+            (
+                "bandit_high=%s pip_audit_vulnerabilities=%s "
+                "missing_tools=%s bandit=%s pip_audit=%s"
+            )
+            % (
+                bandit_high,
+                vulnerabilities,
+                missing_tools,
+                bandit_status,
+                pip_status,
+            ),
         )
     )
     return checks

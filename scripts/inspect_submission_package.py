@@ -46,6 +46,7 @@ REQUIRED_PATHS = {
     "data/benchmarks/agent_interactions.jsonl",
     "data/benchmarks/agent_memory_value.jsonl",
     "data/benchmarks/real_agent_behavior.jsonl",
+    "data/benchmarks/real_agent_behavior_holdout.jsonl",
     "scripts/peony_file_scan_smoke.sh",
     "native/bpf_lsm/memguard_lsm.bpf.c",
     "native/ukui/peony-memguard/memguard_peony_plugin.cpp",
@@ -80,9 +81,14 @@ REQUIRED_PATHS = {
     "docs/evidence/real_agent_extension_r13_r20_latest/metrics.json",
     "docs/evidence/real_agent_extension_r13_r20_latest/manifest.json",
     "docs/evidence/real_agent_extension_r13_r20_latest/SHA256SUMS.txt",
+    "docs/evidence/real_agent_holdout_latest/metrics.json",
+    "docs/evidence/real_agent_holdout_latest/manifest.json",
+    "docs/evidence/real_agent_holdout_latest/SHA256SUMS.txt",
     "docs/真实Agent记忆价值评测报告.md",
     "docs/sbom.json",
     "docs/供应链与SBOM说明.md",
+    "docs/security_scan.json",
+    "docs/安全扫描报告.md",
 } | FORMAL_DOCS
 
 FORBIDDEN_EXACT = {
@@ -362,6 +368,80 @@ def check_evidence_content(package: Path, name_set: set[str]) -> list[dict[str, 
                             "actual": real_extension.get(key),
                         }
                     )
+
+        real_holdout = _json_from_text(
+            text("docs/evidence/real_agent_holdout_latest/metrics.json")
+        )
+        if not real_holdout:
+            failures.append(
+                {
+                    "path": "docs/evidence/real_agent_holdout_latest/metrics.json",
+                    "reason": "cannot parse held-out real Agent metrics",
+                }
+            )
+        else:
+            holdout_rules = {
+                "case_count": 8,
+                "completed_case_count": 8,
+                "memory_system_pass_rate": 1.0,
+                "agent_behavior_pass_rate": 1.0,
+                "unclassified_failure_count": 0,
+            }
+            for key, expected in holdout_rules.items():
+                if real_holdout.get(key) != expected:
+                    failures.append(
+                        {
+                            "path": "docs/evidence/real_agent_holdout_latest/metrics.json",
+                            "reason": "%s must equal %s" % (key, expected),
+                            "actual": real_holdout.get(key),
+                        }
+                    )
+            if real_holdout.get("failed_case_ids") != []:
+                failures.append(
+                    {
+                        "path": "docs/evidence/real_agent_holdout_latest/metrics.json",
+                        "reason": "failed_case_ids must be empty",
+                        "actual": real_holdout.get("failed_case_ids"),
+                    }
+                )
+
+        security_scan = _json_from_text(text("docs/security_scan.json"))
+        if not security_scan:
+            failures.append(
+                {
+                    "path": "docs/security_scan.json",
+                    "reason": "cannot parse security scan JSON",
+                }
+            )
+        else:
+            security_summary = security_scan.get("summary", {})
+            security_tools = security_scan.get("tools", {})
+            rules = [
+                ("schema", security_scan.get("schema"), "memguardos-security-scan-v1"),
+                ("ok", security_scan.get("ok"), True),
+                ("bandit_high_count", _nested_get(security_summary, ["bandit_high_count"]), 0),
+                ("pip_audit_vulnerability_count", _nested_get(security_summary, ["pip_audit_vulnerability_count"]), 0),
+                ("missing_tools", _nested_get(security_summary, ["missing_tools"]), []),
+                ("pip_audit.status", _nested_get(security_tools, ["pip_audit", "status"]), "clean"),
+            ]
+            for label, actual, expected in rules:
+                if actual != expected:
+                    failures.append(
+                        {
+                            "path": "docs/security_scan.json",
+                            "reason": "%s must equal %s" % (label, expected),
+                            "actual": actual,
+                        }
+                    )
+            bandit_status = _nested_get(security_tools, ["bandit", "status"])
+            if bandit_status not in {"clean", "warnings"}:
+                failures.append(
+                    {
+                        "path": "docs/security_scan.json",
+                        "reason": "bandit.status must equal clean or warnings",
+                        "actual": bandit_status,
+                    }
+                )
 
         sdk_probe = _json_from_capture(text("docs/evidence/latest/sdk_embedding_probe.txt"))
         if not sdk_probe:

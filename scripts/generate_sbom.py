@@ -31,6 +31,7 @@ CORE_ARTIFACTS = [
     "memguard/eval/memory_value.py",
     "memguard/eval/real_agent_behavior.py",
     "scripts/run_openhands_behavior_suite.py",
+    "scripts/run_security_scan.py",
     "scripts/collect_openkylin_evidence.sh",
     "scripts/collect_memory_value_evidence.sh",
     "scripts/build_deb.sh",
@@ -39,6 +40,7 @@ CORE_ARTIFACTS = [
     "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp",
     "data/benchmarks/agent_memory_value.jsonl",
     "data/benchmarks/real_agent_behavior.jsonl",
+    "data/benchmarks/real_agent_behavior_holdout.jsonl",
 ]
 
 
@@ -65,6 +67,7 @@ def generate_sbom(
         "security_notes": [
             "默认运行时依赖为空，核心功能仅依赖 Python 标准库，降低供应链攻击面。",
             "OpenHands 真实 Agent 适配依赖被放入可选依赖组 agent-openhands，不进入默认安装路径。",
+            "Bandit 与 pip-audit 被放入可选依赖组 security，用于发布前源码安全扫描和依赖漏洞审计。",
             "交付包同时保留 manifest、SHA-256 清单、审计链和 openKylin 证据，用于复验构建与运行结果。",
             "SBOM 记录核心源码、脚本、原生增强和 benchmark 数据的哈希，便于提交前后比对。",
         ],
@@ -197,6 +200,9 @@ def _to_markdown(sbom: dict[str, Any]) -> str:
         lines.append(f"- `{item}`")
     lines.extend(["", "### OpenHands 适配依赖", ""])
     for item in optional.get("agent-openhands", []):
+        lines.append(f"- `{item}`")
+    lines.extend(["", "### 安全扫描依赖", ""])
+    for item in optional.get("security", []):
         lines.append(f"- `{item}`")
     lines.extend(
         [
