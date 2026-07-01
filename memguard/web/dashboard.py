@@ -15,7 +15,7 @@ def run_dashboard(
     service: MemGuardService,
     host: str = "127.0.0.1",
     port: int = 8765,
-    auth_token: str = "",
+    auth_token: str | dict[str, str] = "",
 ) -> None:
     """Run a dependency-free local dashboard for local operation and inspection."""
 
@@ -23,7 +23,7 @@ def run_dashboard(
         store_path = service.store.path
         db_path = service.meta.path
         namespace = service.namespace
-        dashboard_auth_token = auth_token
+        dashboard_auth_tokens = _normalize_auth_tokens(auth_token)
 
     server = ThreadingHTTPServer((host, port), Handler)
     print("MemGuardOS dashboard listening on http://%s:%s" % (host, port), flush=True)
@@ -37,7 +37,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
     store_path: object
     db_path: object
     namespace: str
-    dashboard_auth_token: str = ""
+    dashboard_auth_tokens: dict[str, str] = {}
 
     server_version = "MemGuardOSDashboard/0.1"
 
@@ -46,8 +46,13 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/":
             self._send_html(_dashboard_html())
             return
-        if parsed.path.startswith("/api/") and not self._authorized():
-            self._send_json({"ok": False, "error": "unauthorized"}, status=401)
+        if parsed.path == "/healthz":
+            self._send_json({"ok": True, "status": "alive"})
+            return
+        if parsed.path == "/readyz":
+            self._send_json({"ok": True, "status": "ready", "namespace": self.namespace})
+            return
+        if parsed.path.startswith("/api/") and not self._require_role("viewer"):
             return
         if parsed.path == "/api/status":
             self._send_api({"command": "namespace_status"})
@@ -117,6 +122,11 @@ class _DashboardHandler(BaseHTTPRequestHandler):
             limit = _safe_int(params.get("limit", ["20"])[0], 20)
             self._send_api({"command": "audit", "limit": limit})
             return
+        if parsed.path == "/api/governance":
+            params = parse_qs(parsed.query)
+            limit = _safe_int(params.get("limit", ["100"])[0], 100)
+            self._send_api({"command": "governance_list", "limit": limit})
+            return
         if parsed.path == "/api/explain-extraction":
             params = parse_qs(parsed.query)
             text = params.get("text", [""])[0]
@@ -135,14 +145,13 @@ class _DashboardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path.startswith("/api/") and not self._authorized():
-            self._send_json({"ok": False, "error": "unauthorized"}, status=401)
-            return
         payload, payload_error = self._read_json()
         if payload_error:
             self._send_json({"ok": False, "error": payload_error}, status=413 if payload_error == "payload_too_large" else 400)
             return
         if parsed.path == "/api/ingest":
+            if not self._require_role("operator"):
+                return
             self._send_api(
                 {
                     "command": "ingest",
@@ -154,6 +163,8 @@ class _DashboardHandler(BaseHTTPRequestHandler):
             )
             return
         if parsed.path == "/api/forget":
+            if not self._require_role("admin" if bool(payload.get("confirm", False)) else "operator"):
+                return
             self._send_api(
                 {
                     "command": "forget",
@@ -164,6 +175,8 @@ class _DashboardHandler(BaseHTTPRequestHandler):
             )
             return
         if parsed.path == "/api/agent-forget":
+            if not self._require_role("admin" if bool(payload.get("confirm", False)) else "operator"):
+                return
             self._send_api(
                 {
                     "command": "forget_agent_interactions",
@@ -174,15 +187,46 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                 }
             )
             return
+        if parsed.path == "/api/governance-review":
+            if not self._require_role("admin"):
+                return
+            self._send_api(
+                {
+                    "command": "governance_review",
+                    "memory_id": str(payload.get("memory_id", "")),
+                    "decision": str(payload.get("decision", "")),
+                    "reviewer": str(payload.get("reviewer", "")),
+                    "reason": str(payload.get("reason", "")),
+                }
+            )
+            return
         self.send_error(404, "not found")
 
     def log_message(self, format: str, *args: Any) -> None:
         return
 
-    def _authorized(self) -> bool:
-        if not self.dashboard_auth_token:
+    def _require_role(self, required_role: str) -> bool:
+        allowed, actual_role, reason = _authorize_role(
+            self.headers.get("Authorization", ""),
+            self.dashboard_auth_tokens,
+            required_role,
+        )
+        if allowed:
             return True
-        return hmac.compare_digest(_request_token(self.headers.get("Authorization", "")), self.dashboard_auth_token)
+        self._audit_authorization_denied(reason, required_role, actual_role)
+        if reason == "insufficient_role":
+            self._send_json(
+                {
+                    "ok": False,
+                    "error": "forbidden",
+                    "required_role": required_role,
+                    "actual_role": actual_role,
+                },
+                status=403,
+            )
+            return False
+        self._send_json({"ok": False, "error": "unauthorized"}, status=401)
+        return False
 
     def _read_json(self) -> tuple[dict[str, Any], str]:
         length = _safe_int(self.headers.get("Content-Length", "0"), 0)
@@ -201,17 +245,31 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         return data, ""
 
     def _send_api(self, request: dict[str, Any]) -> None:
-        token = _request_token(self.headers.get("Authorization", ""))
         service = self._service()
         try:
-            response = handle_request(
-                service,
-                {**request, "token": token},
-                auth_token=self.dashboard_auth_token or None,
-            )
+            response = handle_request(service, request, auth_token=None)
         finally:
             service.close()
         self._send_json(response, status=200 if response.get("ok") else 400)
+
+    def _audit_authorization_denied(self, reason: str, required_role: str, actual_role: str) -> None:
+        service = self._service()
+        try:
+            audit = getattr(service, "_audit", None)
+            if callable(audit):
+                audit(
+                    "web_authorization_denied",
+                    None,
+                    {
+                        "path": urlparse(self.path).path,
+                        "method": self.command,
+                        "reason": reason,
+                        "required_role": required_role,
+                        "actual_role": actual_role,
+                    },
+                )
+        finally:
+            service.close()
 
     def _send_json(self, payload: dict[str, Any], status: int = 200) -> None:
         raw = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
@@ -296,6 +354,41 @@ def _request_token(header: str) -> str:
     if header.startswith(prefix):
         return header[len(prefix) :].strip()
     return ""
+
+
+_ROLE_RANK = {"viewer": 1, "operator": 2, "admin": 3}
+
+
+def _normalize_auth_tokens(auth_token: str | dict[str, str]) -> dict[str, str]:
+    if isinstance(auth_token, dict):
+        return {
+            role: str(token)
+            for role, token in auth_token.items()
+            if role in _ROLE_RANK and str(token)
+        }
+    token = str(auth_token)
+    return {"admin": token} if token else {}
+
+
+def _authorize_role(header: str, tokens: dict[str, str], required_role: str) -> tuple[bool, str, str]:
+    if not tokens:
+        return True, "admin", ""
+    request_token = _request_token(header)
+    if not request_token:
+        return False, "anonymous", "missing_token"
+    actual_role = ""
+    actual_rank = 0
+    for role, expected in tokens.items():
+        matched = hmac.compare_digest(request_token, expected)
+        if matched and _ROLE_RANK[role] > actual_rank:
+            actual_role = role
+            actual_rank = _ROLE_RANK[role]
+    if not actual_role:
+        return False, "unknown", "invalid_token"
+    required_rank = _ROLE_RANK.get(required_role, _ROLE_RANK["admin"])
+    if actual_rank < required_rank:
+        return False, actual_role, "insufficient_role"
+    return True, actual_role, ""
 
 
 def _dashboard_html() -> str:
