@@ -84,6 +84,27 @@ def test_slo_gate_reports_pass_and_actionable_failures():
     assert any(item["metric"] == "success_rate" for item in failing["failed"])
 
 
+def test_slo_gate_accepts_resource_control_report_schema():
+    resource_report = {
+        "protocol": {"same_workload": True},
+        "enabled": {
+            "task_success_rate": 1.0,
+            "p95_latency_ms": 12.5,
+            "p99_latency_ms": 20.0,
+            "peak_rss_kb": 131072,
+            "mean_cpu_percent": 9.0,
+        },
+    }
+
+    result = evaluate_slo(resource_report)
+
+    assert result["ok"] is True
+    p95 = next(item for item in result["checks"] if item["metric"] == "latency.p95_ms")
+    rss = next(item for item in result["checks"] if item["metric"] == "resources.peak_rss_mb")
+    assert p95["actual"] == 12.5
+    assert rss["actual"] == 128.0
+
+
 def test_sign_release_never_fakes_cryptographic_signature(tmp_path):
     artifact = tmp_path / "submission.zip"
     artifact.write_text("release payload", encoding="utf-8")

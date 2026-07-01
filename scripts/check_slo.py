@@ -18,9 +18,7 @@ DEFAULT_THRESHOLDS = {
 
 def evaluate_slo(report: dict[str, Any], thresholds: dict[str, float | bool] | None = None) -> dict[str, Any]:
     thresholds = {**DEFAULT_THRESHOLDS, **(thresholds or {})}
-    enabled = (report.get("results") or {}).get("memguardos_enabled") or {}
-    latency = enabled.get("latency") or {}
-    resources = enabled.get("resources") or {}
+    enabled, latency, resources = _enabled_metrics(report)
     protocol = report.get("protocol") or {}
     checks = [
         _check_equal("same_workload", bool(protocol.get("same_workload")), bool(thresholds["same_workload"])),
@@ -40,6 +38,32 @@ def evaluate_slo(report: dict[str, Any], thresholds: dict[str, float | bool] | N
             for check in failed
         ],
     }
+
+
+def _enabled_metrics(report: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    if "enabled" in report:
+        enabled = report.get("enabled") or {}
+        latency = {
+            "p95_ms": enabled.get("p95_latency_ms"),
+            "p99_ms": enabled.get("p99_latency_ms"),
+        }
+        resources = {
+            "peak_rss_mb": _kb_to_mb(enabled.get("peak_rss_kb")),
+            "mean_cpu_percent": enabled.get("mean_cpu_percent"),
+        }
+        normalized = {
+            "success_rate": enabled.get("task_success_rate"),
+        }
+        return normalized, latency, resources
+    enabled = (report.get("results") or {}).get("memguardos_enabled") or {}
+    return enabled, enabled.get("latency") or {}, enabled.get("resources") or {}
+
+
+def _kb_to_mb(value: object) -> float:
+    try:
+        return float(value) / 1024.0
+    except (TypeError, ValueError):
+        return float("inf")
 
 
 def _check_equal(metric: str, actual: bool, expected: bool) -> dict[str, object]:
