@@ -42,6 +42,7 @@ REQUIRED_PATHS = {
     "scripts/evaluate_memory_value.py",
     "scripts/run_openhands_behavior_suite.py",
     "scripts/collect_memory_value_evidence.sh",
+    "scripts/generate_sbom.py",
     "data/benchmarks/agent_interactions.jsonl",
     "data/benchmarks/agent_memory_value.jsonl",
     "data/benchmarks/real_agent_behavior.jsonl",
@@ -80,6 +81,8 @@ REQUIRED_PATHS = {
     "docs/evidence/real_agent_extension_r13_r20_latest/manifest.json",
     "docs/evidence/real_agent_extension_r13_r20_latest/SHA256SUMS.txt",
     "docs/真实Agent记忆价值评测报告.md",
+    "docs/sbom.json",
+    "docs/供应链与SBOM说明.md",
 } | FORMAL_DOCS
 
 FORBIDDEN_EXACT = {

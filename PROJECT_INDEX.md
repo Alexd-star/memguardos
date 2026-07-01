@@ -78,7 +78,7 @@ MemGuardOS 是面向 Linux/openKylin 的智能体记忆提取与精准遗忘系�
 
 ## 7. 文档文件说明
 
-正式中文文档集中在 `docs/` 根目录、`docs/交付文档/` 和 `项目全流程导师资料包/`。其中 `docs/项目介绍总览.md`、`docs/概要设计说明书.md`、`docs/详细设计说明书.md`、`docs/真实Agent接入使用说明.md`、`docs/真实Agent闭环测试报告.md`、`docs/真实Agent记忆价值评测报告.md`、`docs/测试报告.md`、`docs/赛题符合性说明.md` 面向正式评审；`docs/evidence/latest/` 是通用 openKylin 证据，`docs/evidence/agent_latest/` 是真实 Agent 基础闭环证据，`docs/evidence/memory_value_latest/` 是 16+12 组记忆价值证据；`项目全流程导师资料包/` 面向参赛者本人从零理解、验收和答辩训练。
+正式中文文档集中在 `docs/` 根目录、`docs/交付文档/` 和 `项目全流程导师资料包/`。其中 `docs/项目介绍总览.md`、`docs/概要设计说明书.md`、`docs/详细设计说明书.md`、`docs/真实Agent接入使用说明.md`、`docs/真实Agent闭环测试报告.md`、`docs/真实Agent记忆价值评测报告.md`、`docs/测试报告.md`、`docs/赛题符合性说明.md` 面向正式评审；`docs/供应链与SBOM说明.md` 和 `docs/sbom.json` 用于说明依赖分组、核心文件哈希和供应链交付边界；`docs/evidence/latest/` 是通用 openKylin 证据，`docs/evidence/agent_latest/` 是真实 Agent 基础闭环证据，`docs/evidence/memory_value_latest/` 是 16+12 组记忆价值证据；`项目全流程导师资料包/` 面向参赛者本人从零理解、验收和答辩训练。
 
 编号文档 `docs/01_项目简介.md` 到 `docs/17_项目交付说明.md` 是本次补齐的维护型中文文档体系，用于把项目介绍、用户操作、部署运维、开发者说明、架构、代码结构、算法、接口、数据、配置、测试、FAQ、更新日志、历史文件和交付边界统一串起来。
 

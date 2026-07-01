@@ -64,6 +64,7 @@ REQUIRED_DOCS = [
     "docs/答辩提纲.md",
     "docs/答辩稿.md",
     "docs/演示视频脚本.md",
+    "docs/供应链与SBOM说明.md",
 ]
 
 REQUIRED_SOURCE_PATHS = [
@@ -96,6 +97,7 @@ REQUIRED_SOURCE_PATHS = [
     "scripts/generate_bpf_lsm_policy.py",
     "scripts/package_submission.py",
     "scripts/web_dashboard_smoke.py",
+    "scripts/generate_sbom.py",
     "scripts/verify_ukui_plugins.sh",
     "native/bpf_lsm/memguard_lsm.bpf.c",
     "native/ukui/peony-memguard/memguard_peony_plugin.cpp",
@@ -197,6 +199,12 @@ def main() -> int:
         check_real_agent_extension_evidence(
             real_agent_extension_evidence_dir,
             severity="P0",
+        )
+    )
+    checks.extend(
+        check_supply_chain_artifacts(
+            ROOT / "docs/sbom.json",
+            ROOT / "docs/供应链与SBOM说明.md",
         )
     )
     checks.extend(check_repository_hygiene())
@@ -898,6 +906,81 @@ def check_repository_hygiene() -> List[Check]:
         Check("工程卫生", "许可证", (ROOT / "LICENSE").exists(), "LICENSE 存在" if (ROOT / "LICENSE").exists() else "LICENSE 缺失"),
         Check("工程卫生", "提交包脚本", (ROOT / "scripts/package_submission.py").exists(), "可生成竞赛提交包"),
     ]
+    return checks
+
+
+def check_supply_chain_artifacts(sbom_path: Path, markdown_path: Path) -> List[Check]:
+    checks: List[Check] = []
+    checks.append(
+        Check(
+            "供应链与SBOM",
+            "SBOM JSON",
+            sbom_path.exists() and sbom_path.stat().st_size > 0,
+            _display_path(sbom_path) if sbom_path.exists() else "文件不存在",
+        )
+    )
+    markdown_text = _read_text_if_exists(markdown_path)
+    checks.append(
+        Check(
+            "供应链与SBOM",
+            "SBOM 中文说明",
+            markdown_path.exists() and "软件物料清单" in markdown_text,
+            _display_path(markdown_path) if markdown_path.exists() else "文件不存在",
+        )
+    )
+    sbom = _load_evidence_json(sbom_path)
+    if sbom is None:
+        checks.extend(
+            [
+                Check("供应链与SBOM", "SBOM 关键源码覆盖", False, "SBOM JSON 无法解析"),
+                Check("供应链与SBOM", "SBOM 依赖分组", False, "SBOM JSON 无法解析"),
+            ]
+        )
+        return checks
+    artifacts = {
+        str(item.get("path")): item
+        for item in sbom.get("artifacts", [])
+        if isinstance(item, dict)
+    }
+    required_artifacts = {
+        "memguard/service.py",
+        "scripts/run_openhands_behavior_suite.py",
+        "native/bpf_lsm/memguard_lsm.bpf.c",
+    }
+    missing_artifacts = sorted(
+        rel
+        for rel in required_artifacts
+        if not artifacts.get(rel, {}).get("present")
+        or not artifacts.get(rel, {}).get("sha256")
+    )
+    checks.append(
+        Check(
+            "供应链与SBOM",
+            "SBOM 关键源码覆盖",
+            not missing_artifacts,
+            "覆盖核心服务、真实 Agent runner 和 BPF LSM"
+            if not missing_artifacts
+            else "缺失：%s" % "、".join(missing_artifacts),
+        )
+    )
+    dependencies = sbom.get("dependencies", {})
+    optional = dependencies.get("optional", {}) if isinstance(dependencies, dict) else {}
+    runtime = dependencies.get("runtime") if isinstance(dependencies, dict) else None
+    dependency_ok = (
+        isinstance(runtime, list)
+        and isinstance(optional, dict)
+        and "dev" in optional
+        and "agent-openhands" in optional
+        and "openhands-sdk==1.28.1" in optional.get("agent-openhands", [])
+    )
+    checks.append(
+        Check(
+            "供应链与SBOM",
+            "SBOM 依赖分组",
+            dependency_ok,
+            "包含 runtime/dev/agent-openhands 分组" if dependency_ok else "依赖分组不完整",
+        )
+    )
     return checks
 
 

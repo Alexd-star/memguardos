@@ -13,7 +13,9 @@ from scripts.check_competition_ready import (
     check_openkylin_metrics,
     check_performance_evidence,
     check_real_agent_extension_evidence,
+    check_supply_chain_artifacts,
 )
+from scripts.generate_sbom import generate_sbom
 
 
 def test_competition_package_keeps_formal_and_process_materials_separate():
@@ -76,6 +78,44 @@ def test_competition_package_requires_memory_value_code_data_and_evidence():
     }
 
     assert required.issubset(REQUIRED_PATHS)
+
+
+def test_generate_sbom_records_project_dependencies_and_core_artifacts(tmp_path):
+    sbom_path = tmp_path / "sbom.json"
+    markdown_path = tmp_path / "sbom.md"
+
+    sbom = generate_sbom(sbom_path=sbom_path, markdown_path=markdown_path)
+
+    assert sbom_path.exists()
+    assert markdown_path.exists()
+    assert sbom["name"] == "memguardos"
+    assert sbom["version"] == "0.1.0"
+    assert sbom["schema"] == "memguardos-sbom-v1"
+    assert sbom["dependencies"]["runtime"] == []
+    assert "pytest>=8" in sbom["dependencies"]["optional"]["dev"]
+    assert "openhands-sdk==1.28.1" in sbom["dependencies"]["optional"]["agent-openhands"]
+    artifact_paths = {item["path"] for item in sbom["artifacts"]}
+    assert "memguard/service.py" in artifact_paths
+    assert "scripts/run_openhands_behavior_suite.py" in artifact_paths
+    assert "native/bpf_lsm/memguard_lsm.bpf.c" in artifact_paths
+    markdown = markdown_path.read_text(encoding="utf-8")
+    assert "MemGuardOS 软件物料清单" in markdown
+    assert "运行时依赖" in markdown
+    assert "OpenHands 适配依赖" in markdown
+
+
+def test_competition_ready_requires_supply_chain_artifacts(tmp_path):
+    sbom_path = tmp_path / "sbom.json"
+    markdown_path = tmp_path / "sbom.md"
+    generate_sbom(sbom_path=sbom_path, markdown_path=markdown_path)
+
+    checks = check_supply_chain_artifacts(sbom_path, markdown_path)
+    by_name = {item.name: item for item in checks}
+
+    assert by_name["SBOM JSON"].ok is True
+    assert by_name["SBOM 中文说明"].ok is True
+    assert by_name["SBOM 关键源码覆盖"].ok is True
+    assert by_name["SBOM 依赖分组"].ok is True
 
 
 def test_memory_value_collector_supports_synchronized_tree_without_git_head():

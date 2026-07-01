@@ -34,7 +34,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地功能分支单元测试 | 194 passed, 1 skipped |
+| 本地功能分支单元测试 | 200 passed, 1 skipped |
 | openKylin 全量测试 | 195 passed |
 | openKylin 真实 Agent | OpenHands 1.28.1；原 12 组真实会话 12/12，新增 R13-R20 真实会话 8/8；合计 20 组均有证据 |
 | 本地 1k 负载 P95 | 0.429 ms |
@@ -297,6 +297,7 @@ memguardos/
 | 对接 Agent 或 API | [docs/09_接口文档.md](docs/09_接口文档.md) |
 | 查看数据、配置、测试和 FAQ | [docs/10_数据说明.md](docs/10_数据说明.md)、[docs/11_配置说明.md](docs/11_配置说明.md)、[docs/13_测试说明.md](docs/13_测试说明.md)、[docs/14_常见问题FAQ.md](docs/14_常见问题FAQ.md) |
 | 了解版本、历史和交付 | [docs/15_更新日志.md](docs/15_更新日志.md)、[docs/16_历史文件说明.md](docs/16_历史文件说明.md)、[docs/17_项目交付说明.md](docs/17_项目交付说明.md) |
+| 检查供应链与核心文件哈希 | [docs/供应链与SBOM说明.md](docs/供应链与SBOM说明.md)、[docs/sbom.json](docs/sbom.json) |
 
 ## 正式提交材料
 
@@ -304,10 +305,11 @@ memguardos/
 
 ```bash
 python scripts/release_preflight.py
+python scripts/generate_sbom.py
 python scripts/package_submission.py
 ```
 
-`release_preflight.py` 会顺序执行编译检查、ruff、单元测试、文档链接检查、Web 控制台 smoke、竞赛就绪自检，并在未指定 `--skip-package` 时生成提交包。它属于工程自检工具，不会放入正式竞赛提交包主体。
+`release_preflight.py` 会顺序执行编译检查、ruff、单元测试、文档链接检查、Web 控制台 smoke、竞赛就绪自检，并在未指定 `--skip-package` 时生成提交包。`generate_sbom.py` 会刷新 `docs/sbom.json` 和 `docs/供应链与SBOM说明.md`，用于记录核心源码、脚本、原生增强和 benchmark 数据的哈希。它们属于工程自检工具，提交包会包含生成后的 SBOM 交付件。
 
 生成后可单独审计提交包内容：
 
