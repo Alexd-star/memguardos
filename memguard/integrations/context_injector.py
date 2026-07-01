@@ -34,12 +34,19 @@ STAGE_SUBTYPES: Dict[str, Set[str]] = {
 
 STAGE_PREFERENCE_TOPICS: Dict[str, Set[str]] = {
     "planning": set(),
-    "tool_selection": {"code_search_tool", "high_risk_confirmation"},
+    "tool_selection": {
+        "code_search_tool",
+        "high_risk_confirmation",
+        "service_log_tool",
+        "test_runner_command",
+    },
     "response_generation": {
         "high_risk_confirmation",
         "response_language",
         "response_order",
         "response_verbosity",
+        "service_log_tool",
+        "test_runner_command",
     },
 }
 

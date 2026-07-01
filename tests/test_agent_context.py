@@ -91,6 +91,51 @@ def test_agent_context_filters_memories_by_stage(tmp_path):
         service.close()
 
 
+def test_agent_context_selects_test_runner_and_service_log_preferences(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        service.ingest_interaction(
+            user_event(
+                "以后运行 Python 测试时优先使用 python -m pytest，不要直接用 pytest。",
+                "evt-test-runner",
+            )
+        )
+        service.ingest_interaction(
+            user_event(
+                "排查用户服务日志时先看 journalctl --user -u memguard-agent@luo.service。",
+                "evt-service-log",
+                sequence=2,
+            )
+        )
+
+        tool = service.build_agent_context(
+            "复验核心模块测试并排查 Agent 用户服务日志",
+            stage="tool_selection",
+            agent_name="openhands",
+            session_id="session-a",
+            project_root="/work/demo",
+            task_type="code_assistance",
+        )
+        response = service.build_agent_context(
+            "请给出复验核心模块测试的命令",
+            stage="response_generation",
+            agent_name="openhands",
+            session_id="session-a",
+            project_root="/work/demo",
+            task_type="code_assistance",
+        )
+
+        assert {
+            item.get("preference_topic") for item in tool["memories"]
+        } >= {"test_runner_command", "service_log_tool"}
+        assert any(
+            item.get("preference_value") == "python -m pytest"
+            for item in response["memories"]
+        )
+    finally:
+        service.close()
+
+
 def test_agent_context_explains_sources_and_filter_reasons(tmp_path):
     service = seeded_service(tmp_path)
     try:

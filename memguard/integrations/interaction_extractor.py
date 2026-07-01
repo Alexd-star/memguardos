@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import List
+import re
 
 from memguard.integrations.events import AgentInteractionEvent
 
@@ -59,6 +60,29 @@ def extract_interaction_preferences(event: AgentInteractionEvent) -> Interaction
                 "grep",
                 scope=_scope_for_text(text, lowered),
                 explicit=_explicit_tool_preference(text, lowered),
+            )
+        )
+
+    if _prefers_python_pytest(text, lowered):
+        observations.append(
+            _observation(
+                event,
+                "test_runner_command",
+                "python -m pytest",
+                scope=_scope_for_text(text, lowered),
+                explicit=_explicit_command_preference(text, lowered),
+            )
+        )
+
+    service_log_command = _preferred_service_log_command(text)
+    if service_log_command:
+        observations.append(
+            _observation(
+                event,
+                "service_log_tool",
+                service_log_command,
+                scope=_scope_for_text(text, lowered),
+                explicit=_explicit_command_preference(text, lowered),
             )
         )
 
@@ -161,10 +185,71 @@ def _prefers_grep(text: str, lowered: str) -> bool:
     )
 
 
+def _prefers_python_pytest(text: str, lowered: str) -> bool:
+    return bool(re.search(r"\bpython\s+-m\s+pytest\b", lowered)) and (
+        any(
+            marker in text
+            for marker in (
+                "以后",
+                "优先",
+                "默认",
+                "不要直接",
+                "别直接",
+                "请使用",
+                "请用",
+                "必须",
+            )
+        )
+        or any(
+            marker in lowered
+            for marker in (
+                "prefer",
+                "always",
+                "by default",
+                "use python -m pytest",
+                "run tests with python -m pytest",
+            )
+        )
+    )
+
+
+def _preferred_service_log_command(text: str) -> str:
+    match = re.search(
+        r"\bjournalctl\s+--user\s+-u\s+([A-Za-z0-9_.@-]+(?:\.service)?)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return ""
+    unit = match.group(1).strip("，。；;,")
+    if not unit:
+        return ""
+    return "journalctl --user -u %s" % unit
+
+
 def _explicit_tool_preference(text: str, lowered: str) -> bool:
     return any(marker in text for marker in ("以后", "默认", "优先", "首选", "每次", "总是", "本轮", "本次会话")) or any(
         marker in lowered for marker in ("prefer", "always", "by default")
     )
+
+
+def _explicit_command_preference(text: str, lowered: str) -> bool:
+    return any(
+        marker in text
+        for marker in (
+            "以后",
+            "默认",
+            "优先",
+            "首选",
+            "必须",
+            "请使用",
+            "请用",
+            "先看",
+            "先查",
+            "继续先",
+            "还是用",
+        )
+    ) or any(marker in lowered for marker in ("prefer", "always", "by default"))
 
 
 def _scope_for_text(text: str, lowered: str) -> str:

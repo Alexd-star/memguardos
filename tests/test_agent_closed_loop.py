@@ -381,6 +381,43 @@ class FakeMisroutedFunctionToolConversation(FakePreferenceRepairConversation):
         )
 
 
+class FakeFailedBarePytestConversation(FakePreferenceRepairConversation):
+    def run(self):
+        self.run_count += 1
+        self.callback(
+            fake_event(
+                "ActionEvent",
+                id="fake-bare-pytest-action",
+                source="agent",
+                tool_name="terminal",
+                tool_call_id="call-pytest",
+                tool_call=SimpleNamespace(
+                    arguments=json.dumps(
+                        {
+                            "command": "pytest tests/test_core.py",
+                            "security_risk": "LOW",
+                        }
+                    )
+                ),
+                thought=[text("错误地直接调用 pytest")],
+            )
+        )
+        self.callback(
+            fake_event(
+                "ObservationEvent",
+                id="fake-bare-pytest-result",
+                source="environment",
+                tool_name="terminal",
+                tool_call_id="call-pytest",
+                observation=SimpleNamespace(
+                    content=[text("bash: pytest: command not found")],
+                    is_error=True,
+                    exit_code=127,
+                ),
+            )
+        )
+
+
 class FakeIncompleteProceduralAnswerConversation(FakeConversation):
     def run(self):
         self.callback(
@@ -871,6 +908,64 @@ def test_runner_recovers_safe_search_command_misrouted_to_unknown_tool(tmp_path)
         service.close()
 
 
+def test_runner_recovers_bare_pytest_when_test_runner_preference_is_selected(tmp_path):
+    service = make_service(tmp_path)
+    service.ingest_interaction(
+        interaction_event(
+            "以后运行 Python 测试时优先使用 python -m pytest，不要直接用 pytest。",
+            "evt-test-runner-history",
+            1,
+            session_id="session-test-runner-history",
+        )
+    )
+    workspace = tmp_path / "workspace"
+    (workspace / "tests").mkdir(parents=True)
+    (workspace / "tests" / "test_core.py").write_text(
+        "def test_placeholder():\n    assert True\n",
+        encoding="utf-8",
+    )
+    executions = []
+
+    def recovery_executor(argv, **kwargs):
+        executions.append((argv, kwargs))
+        return SimpleNamespace(returncode=0, stdout="1 passed", stderr="")
+
+    def conversation_factory(**kwargs):
+        return FakeFailedBarePytestConversation(kwargs["callback"])
+
+    try:
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id="session-test-runner",
+            workspace=workspace,
+            state_dir=tmp_path / "state",
+            conversation_factory=conversation_factory,
+            structured_intent_executor=recovery_executor,
+        )
+
+        result = runner.run("请复验核心模块测试。")
+
+        assert result["structured_intent_recovery"]["attempted"] is True
+        assert result["structured_intent_recovery"]["executed"] is True
+        assert result["structured_intent_recovery"]["command"] == (
+            "python -m pytest tests/test_core.py"
+        )
+        assert executions[0][0] == [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/test_core.py",
+        ]
+        events = service.meta.list_agent_events(session_id="session-test-runner")
+        assert any(
+            event["event_type"] == "assistant_message"
+            and "python -m pytest tests/test_core.py" in event["content"]
+            for event in events
+        )
+    finally:
+        service.close()
+
+
 def test_runner_resets_per_run_metrics_when_instance_is_reused(tmp_path):
     service = make_service(tmp_path)
 
@@ -1145,6 +1240,14 @@ def test_formatted_agent_context_turns_structured_preferences_into_clear_directi
                     "preference_topic": "high_risk_confirmation",
                     "preference_value": "required",
                 },
+                {
+                    "preference_topic": "test_runner_command",
+                    "preference_value": "python -m pytest",
+                },
+                {
+                    "preference_topic": "service_log_tool",
+                    "preference_value": "journalctl --user -u memguard-agent@luo.service",
+                },
             ],
         },
         "response_generation": {
@@ -1163,6 +1266,8 @@ def test_formatted_agent_context_turns_structured_preferences_into_clear_directi
     assert "代码搜索必须优先使用 `rg`" in formatted
     assert "`rg -n '关键词' .`" in formatted
     assert "高风险操作必须先获得用户确认" in formatted
+    assert "Python 测试必须优先使用 `python -m pytest`" in formatted
+    assert "用户服务日志优先使用 `journalctl --user -u memguard-agent@luo.service`" in formatted
     assert "最终回答必须先给命令或结论，再解释原因" in formatted
 
 
@@ -1340,6 +1445,83 @@ def test_openhands_hook_enforces_selected_code_search_preference(tmp_path):
     assert denied_payload["policy_category"] == "preference_enforcement"
     assert denied_payload["preference_topic"] == "code_search_tool"
     assert denied_payload["expected_value"] == "rg"
+    assert allowed.returncode == 0
+    assert json.loads(allowed.stdout)["decision"] == "allow"
+
+
+def test_openhands_hook_blocks_bare_pytest_when_test_runner_preference_is_active(
+    tmp_path,
+):
+    context_file = tmp_path / "context.json"
+    context_file.write_text(
+        json.dumps(
+            {
+                "additional_context": "使用已筛选记忆。",
+                "allowed_tools": ["terminal", "finish"],
+                "stages": {
+                    "planning": {"memories": []},
+                    "tool_selection": {
+                        "memories": [
+                            {
+                                "preference_topic": "test_runner_command",
+                                "preference_value": "python -m pytest",
+                            }
+                        ]
+                    },
+                    "response_generation": {"memories": []},
+                },
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    script = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
+
+    denied = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--context-file",
+            str(context_file),
+            "--guard-tool",
+        ],
+        input=json.dumps(
+            {
+                "tool_name": "terminal",
+                "tool_input": {"command": "pytest tests/test_core.py"},
+            }
+        ),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    allowed = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--context-file",
+            str(context_file),
+            "--guard-tool",
+        ],
+        input=json.dumps(
+            {
+                "tool_name": "terminal",
+                "tool_input": {
+                    "command": "python -m pytest tests/test_core.py"
+                },
+            }
+        ),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    denied_payload = json.loads(denied.stdout)
+    assert denied.returncode == 2
+    assert denied_payload["decision"] == "deny"
+    assert denied_payload["policy_category"] == "preference_enforcement"
+    assert denied_payload["preference_topic"] == "test_runner_command"
+    assert denied_payload["expected_value"] == "python -m pytest"
     assert allowed.returncode == 0
     assert json.loads(allowed.stdout)["decision"] == "allow"
 

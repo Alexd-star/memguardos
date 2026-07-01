@@ -5,6 +5,7 @@ from typing import Dict, Optional
 import json
 import re
 import shlex
+import sys
 
 
 def detect_adherence_issues(
@@ -25,9 +26,31 @@ def detect_adherence_issues(
                 "reason": "未观察到成功执行的当前偏好工具命令",
             }
         )
+    final_output = final_visible_output(events)
+    preferred_test_runner = preferences.get("test_runner_command", "")
+    if preferred_test_runner and not any(
+        command.startswith(preferred_test_runner) for command in commands
+    ) and preferred_test_runner not in final_output:
+        issues.append(
+            {
+                "topic": "test_runner_command",
+                "expected_value": preferred_test_runner,
+                "reason": "未观察到用户偏好的 Python 测试入口",
+            }
+        )
+    preferred_service_log = preferences.get("service_log_tool", "")
+    if preferred_service_log and not any(
+        command.startswith(preferred_service_log) for command in commands
+    ) and preferred_service_log not in final_output:
+        issues.append(
+            {
+                "topic": "service_log_tool",
+                "expected_value": preferred_service_log,
+                "reason": "未观察到用户偏好的服务日志命令",
+            }
+        )
     if preferences.get("response_order") == "command_then_explanation":
         successful_commands = successful_terminal_commands(events)
-        final_output = final_visible_output(events)
         if successful_commands and not any(
             command in final_output
             or command_executable(command) in final_output
@@ -65,6 +88,16 @@ def build_adherence_repair_message(
             lines.append(
                 "- 重新给出最终回答，第一行先写命令 `%s`，然后用中文简要解释。"
                 % command
+            )
+        elif issue["topic"] == "test_runner_command":
+            lines.append(
+                "- Python 测试入口必须使用 `%s`。请直接给出或执行该入口，"
+                "不要使用裸 `pytest`。" % issue["expected_value"]
+            )
+        elif issue["topic"] == "service_log_tool":
+            lines.append(
+                "- 用户服务日志排查必须优先使用 `%s`。请直接给出或执行该命令。"
+                % issue["expected_value"]
             )
     return "\n".join(lines)
 
@@ -334,6 +367,46 @@ def repair_failed_preferred_tool_intent(
     return None
 
 
+def recover_failed_test_runner_intent(
+    events: list[Dict[str, object]],
+    *,
+    preferred_command: str,
+    workspace: Path,
+) -> Optional[Dict[str, object]]:
+    if " ".join(str(preferred_command or "").split()) != "python -m pytest":
+        return None
+    failed_commands = []
+    pending_command = ""
+    pending_denied = False
+    for event in events:
+        event_type = str(event.get("event_type") or "")
+        if event_type == "policy_decision":
+            policy = dict(event.get("tool_args") or {})
+            pending_denied = (
+                str(policy.get("decision") or "").lower() == "deny"
+                or int(event.get("exit_code") or 0) == 2
+            )
+        elif event_type == "tool_call":
+            if str(event.get("tool_name") or "") not in {"", "terminal"}:
+                pending_command = ""
+                pending_denied = False
+                continue
+            command = " ".join(
+                str(dict(event.get("tool_args") or {}).get("command") or "").split()
+            )
+            pending_command = "" if pending_denied else command
+            pending_denied = False
+        elif event_type == "tool_result" and pending_command:
+            if int(event.get("exit_code") or 0) != 0:
+                failed_commands.append(pending_command)
+            pending_command = ""
+    for command in reversed(failed_commands):
+        recovered = _canonical_pytest_command(command, workspace=workspace)
+        if recovered is not None:
+            return recovered
+    return None
+
+
 def recover_misrouted_preferred_tool_intent(
     events: list[Dict[str, object]],
     *,
@@ -357,6 +430,73 @@ def recover_misrouted_preferred_tool_intent(
         if intent is not None:
             return intent
     return None
+
+
+def _canonical_pytest_command(
+    command: str,
+    *,
+    workspace: Path,
+) -> Optional[Dict[str, object]]:
+    if any(marker in command for marker in (";", "|", ">", "<", "`", "\n", "\r")):
+        return None
+    try:
+        argv = shlex.split(command)
+    except ValueError:
+        return None
+    if not argv:
+        return None
+    rest = []
+    executable = command_executable(command)
+    if executable == "pytest":
+        rest = argv[1:]
+    elif executable in {"python", "python3"} and len(argv) >= 3 and argv[1:3] == [
+        "-m",
+        "pytest",
+    ]:
+        rest = argv[3:]
+    else:
+        return None
+
+    root = Path(workspace).resolve()
+    paths = []
+    for argument in rest:
+        if argument.startswith("-"):
+            continue
+        candidate = Path(argument)
+        if candidate.is_absolute() or ".." in candidate.parts:
+            continue
+        resolved = (root / candidate).resolve()
+        try:
+            resolved.relative_to(root)
+        except ValueError:
+            continue
+        if resolved.exists():
+            paths.append(str(candidate).replace("\\", "/").rstrip("/") or ".")
+
+    if not paths:
+        tests_dir = root / "tests"
+        if tests_dir.is_dir():
+            paths = ["tests"]
+        else:
+            paths = ["."]
+    paths = _dedupe_preserve_order(paths)
+    command_parts = ["python", "-m", "pytest"] + paths
+    return {
+        "command": shlex.join(command_parts),
+        "argv": [sys.executable, "-m", "pytest"] + paths,
+        "timeout": 30,
+    }
+
+
+def _dedupe_preserve_order(values: list[str]) -> list[str]:
+    seen = set()
+    result = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
 
 
 def _canonical_search_command(

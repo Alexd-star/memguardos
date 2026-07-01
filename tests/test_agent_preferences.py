@@ -33,6 +33,22 @@ def test_user_message_is_split_into_independent_explicit_preferences():
     assert all(item.scope == "global" for item in result.observations)
 
 
+def test_user_message_extracts_agent_test_runner_and_service_log_habits():
+    result = extract_interaction_preferences(
+        event(
+            "以后运行 Python 测试时优先使用 python -m pytest；"
+            "排查用户服务日志时先看 journalctl --user -u memguard-agent@luo.service。"
+        )
+    )
+
+    assert [(item.topic, item.value) for item in result.observations] == [
+        ("test_runner_command", "python -m pytest"),
+        ("service_log_tool", "journalctl --user -u memguard-agent@luo.service"),
+    ]
+    assert all(item.explicit for item in result.observations)
+    assert all(item.scope == "global" for item in result.observations)
+
+
 def test_assistant_and_tool_events_cannot_create_user_preferences():
     assistant = event(
         "以后我会优先使用 rg。",
@@ -84,6 +100,23 @@ def test_service_automatically_stores_and_links_explicit_preferences(tmp_path):
         assert duplicate["duplicate"] is True
         assert duplicate["memory_ids"] == []
         assert len(service.meta.list_memories()) == 2
+    finally:
+        service.close()
+
+
+def test_service_stores_agent_command_habits_as_tool_preferences(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        result = service.ingest_interaction(
+            event("以后运行 Python 测试时优先使用 python -m pytest，不要直接用 pytest。")
+        )
+
+        assert result["stored"] is True
+        assert len(result["memory_ids"]) == 1
+        memory = service.meta.get_memory(result["memory_ids"][0])
+        assert memory["subtype"] == "tool_preference"
+        assert memory["preference_topic"] == "test_runner_command"
+        assert memory["preference_value"] == "python -m pytest"
     finally:
         service.close()
 

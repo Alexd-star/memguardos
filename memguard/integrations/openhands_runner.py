@@ -19,6 +19,7 @@ from memguard.integrations.adherence import (
     parse_inline_search_intent,
     parse_structured_tool_intent,
     procedural_memory_evidence,
+    recover_failed_test_runner_intent,
     recover_misrouted_preferred_tool_intent,
     repair_failed_preferred_tool_intent,
     recoverable_tool_schema_error_count,
@@ -334,6 +335,7 @@ class OpenHandsMemoryRunner:
     ) -> Dict[str, object]:
         preferences = selected_preferences(stages)
         preferred_tool = preferences.get("code_search_tool", "")
+        preferred_test_runner = preferences.get("test_runner_command", "")
         result: Dict[str, object] = {
             "attempted": False,
             "executed": False,
@@ -341,40 +343,53 @@ class OpenHandsMemoryRunner:
             "exit_code": None,
             "reason": "",
         }
-        if not preferred_tool:
+        if not preferred_tool and not preferred_test_runner:
             result["reason"] = "no applicable tool preference"
             return result
-        if any(
-            command_executable(command) == preferred_tool
-            for command in successful_terminal_commands(self._live_events)
-        ):
-            result["reason"] = "successful preferred tool already available"
-            return result
         intent = None
-        for event in reversed(self._live_events):
-            if str(event.get("event_type") or "") != "assistant_message":
-                continue
-            intent = parse_structured_tool_intent(
-                str(event.get("content") or ""),
-                preferred_tool=preferred_tool,
-            )
-            if intent is not None:
-                break
-            intent = parse_inline_search_intent(
-                str(event.get("content") or ""),
-                preferred_tool=preferred_tool,
-            )
-            if intent is not None:
-                break
-        if intent is None:
-            intent = recover_misrouted_preferred_tool_intent(
+        if preferred_tool:
+            if any(
+                command_executable(command) == preferred_tool
+                for command in successful_terminal_commands(self._live_events)
+            ):
+                result["reason"] = "successful preferred tool already available"
+                return result
+            for event in reversed(self._live_events):
+                if str(event.get("event_type") or "") != "assistant_message":
+                    continue
+                intent = parse_structured_tool_intent(
+                    str(event.get("content") or ""),
+                    preferred_tool=preferred_tool,
+                )
+                if intent is not None:
+                    break
+                intent = parse_inline_search_intent(
+                    str(event.get("content") or ""),
+                    preferred_tool=preferred_tool,
+                )
+                if intent is not None:
+                    break
+            if intent is None:
+                intent = recover_misrouted_preferred_tool_intent(
+                    self._live_events,
+                    preferred_tool=preferred_tool,
+                )
+            if intent is None:
+                intent = repair_failed_preferred_tool_intent(
+                    self._live_events,
+                    preferred_tool=preferred_tool,
+                )
+        if intent is None and preferred_test_runner:
+            if any(
+                command.startswith(preferred_test_runner)
+                for command in successful_terminal_commands(self._live_events)
+            ):
+                result["reason"] = "successful preferred tool already available"
+                return result
+            intent = recover_failed_test_runner_intent(
                 self._live_events,
-                preferred_tool=preferred_tool,
-            )
-        if intent is None:
-            intent = repair_failed_preferred_tool_intent(
-                self._live_events,
-                preferred_tool=preferred_tool,
+                preferred_command=preferred_test_runner,
+                workspace=self.workspace,
             )
         if intent is None:
             result["reason"] = "no safe structured tool intent"
@@ -442,6 +457,19 @@ class OpenHandsMemoryRunner:
             **common,
         )
         self._ingest_event(result_event)
+        if exit_code == 0:
+            self.adapter.sequence += 1
+            visible_event = AgentInteractionEvent(
+                sequence=self.adapter.sequence,
+                event_type="assistant_message",
+                role="assistant",
+                content="基于已验证的用户偏好，已执行命令：%s" % intent["command"],
+                tool_args={"execution_origin": "structured_intent_recovery"},
+                source_uri="memguard-recovery://%s/visible-command" % self.session_id,
+                event_id=new_id("evt"),
+                **common,
+            )
+            self._ingest_event(visible_event)
         result["executed"] = exit_code == 0
         result["exit_code"] = exit_code
         result["reason"] = (
@@ -566,11 +594,22 @@ def _preference_directives(stages: Dict[str, object]) -> list[str]:
                 str(memory.get("preference_topic") or ""),
                 str(memory.get("preference_value") or ""),
             )
-            directive = mappings.get(key)
+            directive = mappings.get(key) or _dynamic_preference_directive(*key)
             if directive and directive not in seen:
                 seen.add(directive)
                 directives.append(directive)
     return directives
+
+
+def _dynamic_preference_directive(topic: str, value: str) -> str:
+    clean_value = " ".join(str(value or "").replace("`", "").split())
+    if not clean_value:
+        return ""
+    if topic == "test_runner_command":
+        return "Python 测试必须优先使用 `%s`，不要直接调用裸 `pytest`。" % clean_value
+    if topic == "service_log_tool":
+        return "用户服务日志优先使用 `%s`。" % clean_value
+    return ""
 
 
 def _procedural_directives(stages: Dict[str, object]) -> list[str]:

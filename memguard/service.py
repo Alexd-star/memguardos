@@ -538,6 +538,8 @@ class MemGuardService:
     ) -> MemoryRecord:
         subtype = {
             "code_search_tool": "tool_preference",
+            "service_log_tool": "tool_preference",
+            "test_runner_command": "tool_preference",
             "response_order": "output_style",
             "response_language": "output_style",
             "response_verbosity": "output_style",

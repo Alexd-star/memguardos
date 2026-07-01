@@ -75,6 +75,21 @@ def violates_code_search_preference(command, preferred_tool):
     return False
 
 
+def violates_test_runner_preference(command, preferred_command):
+    normalized = " ".join(str(command).strip().split())
+    if not normalized:
+        return False
+    if preferred_command != "python -m pytest":
+        return False
+    return bool(
+        re.search(
+            r"(^|(?:\|\||&&|[|;])\s*)(?:sudo\s+)?"
+            r"(?:env\s+)?(?:command\s+)?pytest\b",
+            normalized,
+        )
+    )
+
+
 def high_risk_marker(tool_input):
     serialized = json.dumps(tool_input, ensure_ascii=False).lower()
     blocked_marker = next((marker for marker in HIGH_RISK_MARKERS if marker in serialized), "")
@@ -141,6 +156,20 @@ def main() -> int:
             "preference_enforcement",
             preference_topic="code_search_tool",
             expected_value=preferred_search,
+            observed_command=command,
+        )
+    preferred_test_runner = preferences.get("test_runner_command", "")
+    if (
+        tool_name == "terminal"
+        and preferred_test_runner
+        and violates_test_runner_preference(command, preferred_test_runner)
+    ):
+        return deny(
+            "MemGuardOS requires the active Python test runner preference `%s`; "
+            "revise the command and retry." % preferred_test_runner,
+            "preference_enforcement",
+            preference_topic="test_runner_command",
+            expected_value=preferred_test_runner,
             observed_command=command,
         )
     print(json.dumps({"decision": "allow", "continue": True}, ensure_ascii=False))
