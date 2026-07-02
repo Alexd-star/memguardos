@@ -476,6 +476,49 @@ def test_conflict_resolution_topic_rules_cover_tool_and_risk_preferences(tmp_pat
     assert preference_topic({"summary": "以后 Linux 命令回答要简洁，只给命令和风险。"}) == "linux_command_response"
 
 
+def test_high_risk_confirmation_policy_is_not_quarantined_by_cover_verb(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        result = service.ingest_text("以后执行删除、覆盖、密钥导出等高风险操作前必须先让我确认。", source_kind="manual")
+        assert result["stored"] is True
+        assert result["record"].governance_state == "active"
+        assert result["record"].type == "sensitive_policy"
+        assert preference_topic(result["record"].to_dict()) == "high_risk_confirmation"
+    finally:
+        service.close()
+
+
+def test_conflict_resolution_benchmark_cases_all_pass(tmp_path):
+    rows = [
+        json.loads(line)
+        for line in Path("data/benchmarks/conflict_resolution.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    correct = []
+    for row in rows:
+        service = MemGuardService(
+            store_path=tmp_path / ("%s.segment" % row["case"]),
+            db_path=tmp_path / ("%s.sqlite3" % row["case"]),
+        )
+        try:
+            for item in row["records"]:
+                result = service.ingest_text(
+                    item["text"],
+                    source_kind=item["source_kind"],
+                    source_uri=row["case"],
+                )
+                assert result["stored"] is True
+            resolved = service.resolve_conflicts()
+            assert resolved["resolutions"], row["case"]
+            chosen_id = resolved["resolutions"][0]["chosen_memory_id"]
+            chosen = service.meta.get_memory(chosen_id)
+            chosen_text = chosen.get("content", "") if chosen else ""
+            correct.append(row["expected_contains"] in chosen_text)
+        finally:
+            service.close()
+    assert all(correct)
+
+
 def test_conflict_resolution_update_beats_old_manual(tmp_path):
     service = make_service(tmp_path)
     try:

@@ -33,7 +33,12 @@ UNTRUSTED_SOURCE_MARKERS = ("web", "browser", "url", "external", "remote", "craw
 INJECTION_PATTERNS = {
     "instruction_override": re.compile(r"(?:ignore|disregard).{0,30}(?:previous|prior|system)|忽略.{0,20}(?:之前|以上|系统|安全)", re.I | re.S),
     "covert_persistence": re.compile(r"(?:remember|store|persist).{0,50}(?:forever|permanent|without telling)|(?:永久|永远).{0,30}(?:记住|可信|保存)|不要告诉用户", re.I | re.S),
-    "policy_bypass": re.compile(r"(?:bypass|disable|override).{0,30}(?:safety|policy|approval)|(?:绕过|禁用|覆盖).{0,20}(?:安全|策略|确认)", re.I | re.S),
+    "policy_bypass": re.compile(
+        r"(?:bypass|disable|override).{0,30}(?:safety|policy|approval)"
+        r"|(?:绕过|禁用).{0,20}(?:安全|策略|确认)"
+        r"|覆盖.{0,8}(?:安全策略|安全确认|审批策略)",
+        re.I | re.S,
+    ),
     "privilege_claim": re.compile(r"(?:system prompt|developer message|admin instruction)|(?:系统提示词|开发者消息|管理员指令)", re.I),
 }
 
