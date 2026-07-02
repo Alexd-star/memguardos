@@ -550,20 +550,36 @@ def test_kylin_sdk_status_is_safe_on_current_platform():
     assert status["embedding"]["ready_for_default_retrieval"] is None
 
 
-def test_default_retrieval_backend_is_hash(tmp_path):
+def test_default_retrieval_backend_matches_platform_and_explicit_hash(tmp_path, monkeypatch):
     service = make_service(tmp_path)
     try:
         record = service.ingest_text("systemd MemoryMax 可以限制 Linux 服务内存。")["record"]
         hits = service.search("Linux 服务内存限制", limit=3)
         assert hits
         assert hits[0]["memory_id"] == record.memory_id
-        assert hits[0]["vector_backend"] == "hash"
+        assert hits[0]["vector_backend"] in {"hash", "kylin_sdk"}
         status = service.retrieval_status()
-        assert status["requested_backend"] == "hash"
+        assert status["requested_backend"] in {"hash", "auto"}
         assert status["hash"]["available"] is True
-        assert status["policy"]["default_backend"] == "hash"
+        assert status["policy"]["default_backend"] in {"hash", "auto"}
     finally:
         service.close()
+
+    monkeypatch.setenv("MEMGUARD_EMBEDDING_BACKEND", "hash")
+    forced_root = tmp_path / "forced"
+    forced_root.mkdir()
+    forced = make_service(forced_root)
+    try:
+        record = forced.ingest_text("systemd MemoryMax 可以限制 Linux 服务内存。")["record"]
+        hits = forced.search("Linux 服务内存限制", limit=3)
+        assert hits
+        assert hits[0]["memory_id"] == record.memory_id
+        assert hits[0]["vector_backend"] == "hash"
+        status = forced.retrieval_status()
+        assert status["requested_backend"] == "hash"
+        assert status["policy"]["default_backend"] == "hash"
+    finally:
+        forced.close()
 
 
 def test_search_cache_uses_store_revision_and_invalidates_after_write(tmp_path, monkeypatch):
