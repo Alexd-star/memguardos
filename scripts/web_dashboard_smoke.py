@@ -69,19 +69,20 @@ def main() -> int:
         invalid_json_status, invalid_json = _http_post_raw(base + "/api/ingest", b"{", "application/json", auth_token=auth_token)
         large_status, large_body = _http_post_raw(base + "/api/ingest", b"x" * 262145, "application/json", auth_token=auth_token)
         result = {
-            "page_ok": page_status == 200 and "MemGuardOS 控制台" in page,
-            "diagnostics_tab_ok": "系统诊断" in page,
-            "diagnostics_export_button_ok": "导出诊断包" in page,
-            "enterprise_overview_ok": "系统能力概览" in page and "常用工作流" in page,
-            "delivery_readiness_ok": "交付就绪度" in page and "一键验收路径" in page and "风险处置建议" in page,
-            "product_workbench_ok": "治理闭环" in page and "今日工作流" in page and "诊断包内容清单" in page,
+            "page_ok": page_status == 200 and "MemGuardOS 记忆安全中心" in page,
+            "diagnostics_tab_ok": "系统维护" in page and "管理员视图" in page,
+            "diagnostics_export_button_ok": "导出系统报告" in page,
+            "enterprise_overview_ok": "能力概览" in page and "常用工作流" in page,
+            "delivery_readiness_ok": "系统健康度" in page and "推荐操作路径" in page and "风险处置建议" in page,
+            "product_workbench_ok": "治理闭环" in page and "今日工作流" in page and "系统报告内容清单" in page,
             "memory_value_visual_ok": "记忆价值指标" in page and "重复尝试" in page and "工具选择命中" in page,
             "forget_confirmation_copy_ok": "遗忘二次确认" in page and "影响范围预览" in page,
-            "competition_copy_absent": "benchmark 用例/种子" not in page and "能力证据总览" not in page,
+            "competition_copy_absent": "benchmark 用例/种子" not in page and "能力证据总览" not in page and "演示" not in page and "验收" not in page,
             "traffic_light_status_ok": "红黄绿状态" in page,
             "rag_visual_ok": "候选选择轨迹" in page,
             "forget_candidate_visual_ok": "候选会以卡片形式列出" in page,
             "agent_workspace_ok": "Agent 交互治理" in page and "三阶段上下文对比" in page,
+            "role_split_ok": "普通用户" in page and "个人工作台" in page and "系统维护" in page and "高级信息" in page,
             "token_session_storage_ok": "sessionStorage" in page and "localStorage" not in page,
             "html_security_headers_ok": _security_headers_ok(page_headers, expect_csp=True),
             "json_security_headers_ok": json_status == 200 and _security_headers_ok(json_headers, expect_csp=False),
@@ -119,6 +120,7 @@ def main() -> int:
             and result["rag_visual_ok"]
             and result["forget_candidate_visual_ok"]
             and result["agent_workspace_ok"]
+            and result["role_split_ok"]
             and result["token_session_storage_ok"]
             and result["html_security_headers_ok"]
             and result["json_security_headers_ok"]

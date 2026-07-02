@@ -257,6 +257,8 @@ def test_peony_plugin_uses_preview_confirmation_contract():
     assert "导入所选文件" in source
     assert "--ingest" not in source
     assert "selectionUris.first" not in source
+    assert "/tmp/memguardos_peony_plugin.log" not in source
+    assert "QTextStream out(&log)" not in source
 
 
 def test_ukui_control_center_uses_structured_native_product_ui():
@@ -266,10 +268,20 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "QTabWidget" in source
     assert "QTreeWidget" in source
     assert "QJsonDocument" in source
-    assert "技术详情" in source
+    assert "高级信息" in source
+    assert "技术详情" not in source
+    assert "命令与诊断技术详情" not in source
     assert "操作结果" in source
     assert "操作历史" in source
     assert "资源快照" in source
+    assert "QProgressBar" in source
+    assert "QScrollArea" in source
+    assert "服务健康" in source
+    assert "任务入口" in source
+    assert "采集 → 抽取 → 上下文 → 遗忘" in source
+    assert "服务运行" in source
+    assert "桌面集成" in source
+    assert "setStatusBadge" in source
     assert "管理员授权" in source
     assert "appendHistory" in source
     assert "renderResourceSnapshot" in source
@@ -277,6 +289,9 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "停止服务" in source
     assert "重启服务" in source
     assert "查看服务日志" in source
+    assert "系统维护" in source
+    assert "导出系统报告" in source
+    assert "检查内核保护状态" in source
     assert "native-action" in source
     assert "setStyleSheet" not in source
     assert "QPalette" in source

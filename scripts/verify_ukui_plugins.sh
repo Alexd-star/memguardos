@@ -20,7 +20,7 @@ for item in "$PEONY_BUILT" "$UKCC_BUILT" "$PEONY_INSTALLED" "$UKCC_INSTALLED"; d
     ls -l "$item"
     file "$item" || true
     ldd "$item" 2>/dev/null | grep -E 'not found|peony|ukcc|Qt5|libc' || true
-    strings "$item" | grep -E 'MemGuardOS|memguardos|发送到|记忆安全|运行环境检查|校验审计链|端侧向量|诊断报告|本地控制台' || true
+    strings "$item" | grep -E 'MemGuardOS|memguardos|记忆安全|检查记忆内容|校验审计链|端侧向量|系统维护|系统报告|本地控制台' || true
   else
     echo "missing"
   fi
@@ -36,9 +36,9 @@ echo "## manual visible checks"
 cat <<'EOF'
 1. Run: peony -q 2>/dev/null || killall peony
 2. Open Peony file manager and right-click a local file.
-3. Confirm the menu item "发送到 MemGuardOS 记忆安全扫描" is visible.
-4. Click the menu item and confirm notify-send shows a MemGuardOS message.
+3. Confirm the menu item "使用 MemGuardOS 检查记忆内容" is visible.
+4. Click the menu item, review the file preview dialog, select safe text files, and confirm the result dialog.
 5. Open UKUI control center, security category, and confirm "MemGuardOS 记忆安全" is visible.
-6. Click "运行环境检查", "校验审计链", "检查端侧向量能力", and "导出诊断报告"; confirm command output appears.
+6. Confirm the tabs "总览", "服务与安全", and "系统维护" are visible. Use "重新检查状态", "校验审计链", "检查端侧向量能力", and "导出系统报告"; confirm operation history and advanced information update.
 7. Click "打开本地控制台"; confirm http://127.0.0.1:8765 opens.
 EOF

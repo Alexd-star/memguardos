@@ -8,6 +8,7 @@
 
 class QLabel;
 class QJsonObject;
+class QProgressBar;
 class QPushButton;
 class QTextEdit;
 class QToolButton;
@@ -38,6 +39,15 @@ private:
     QLabel *sdkState_ = nullptr;
     QLabel *auditState_ = nullptr;
     QLabel *resultSummary_ = nullptr;
+    QLabel *serviceStatusIcon_ = nullptr;
+    QLabel *serviceStatusLabel_ = nullptr;
+    QLabel *auditStatusIcon_ = nullptr;
+    QLabel *auditStatusLabel_ = nullptr;
+    QLabel *sdkStatusIcon_ = nullptr;
+    QLabel *sdkStatusLabel_ = nullptr;
+    QLabel *desktopStatusIcon_ = nullptr;
+    QLabel *desktopStatusLabel_ = nullptr;
+    QProgressBar *readinessBar_ = nullptr;
     QTreeWidget *components_ = nullptr;
     QTreeWidget *resourceSnapshot_ = nullptr;
     QTreeWidget *operationHistory_ = nullptr;
@@ -53,6 +63,7 @@ private:
     void runProgram(const QString &program, const QStringList &arguments, const QString &purpose);
     void renderStatus(const QJsonObject &payload);
     void renderResourceSnapshot(const QJsonObject &resources);
+    void setStatusBadge(QLabel *icon, QLabel *label, const QString &level, const QString &text);
     void appendHistory(const QString &operation, bool ok, const QString &message);
     void exportDiagnostics(const QString &text);
     void openDashboard();

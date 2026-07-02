@@ -18,7 +18,6 @@
 #include <QProgressDialog>
 #include <QPushButton>
 #include <QTableWidget>
-#include <QTextStream>
 #include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -130,12 +129,6 @@ QList<QAction *> MemGuardPeonyPlugin::menuActions(
     const QStringList &selectionUris)
 {
     QList<QAction *> actions;
-    QFile log(QStringLiteral("/tmp/memguardos_peony_plugin.log"));
-    if (log.open(QIODevice::Append | QIODevice::Text)) {
-        QTextStream out(&log);
-        out << "menuActions enabled=" << enabled_ << " types=" << static_cast<int>(types)
-            << " uri=" << uri << " selections=" << selectionUris.join(QStringLiteral(",")) << "\n";
-    }
     const bool supportedMenu = types.testFlag(Peony::MenuPluginInterface::DirectoryView)
         || types.testFlag(Peony::MenuPluginInterface::DesktopWindow) || !selectionUris.isEmpty();
     if (!enabled_ || !supportedMenu)
