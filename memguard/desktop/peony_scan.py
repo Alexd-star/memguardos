@@ -170,4 +170,17 @@ def _maybe_notify(report: Dict[str, object], notify: bool) -> None:
         body = "已记录文件选择事件；目录、大文件或非文本文件未读取内容。"
     else:
         body = "扫描完成，请查看 JSON 报告。"
-    subprocess.run(["notify-send", title, body], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    notify_desktop(title, body)
+
+
+def notify_desktop(title: str, body: str) -> bool:
+    executable = shutil.which("notify-send")
+    if not executable:
+        return False
+    completed = subprocess.run(
+        [executable, "--app-name=MemGuardOS", title, body],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return completed.returncode == 0

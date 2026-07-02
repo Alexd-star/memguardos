@@ -7,6 +7,7 @@ from pathlib import Path
 
 from memguard.config import list_namespaces
 from memguard.desktop.peony_scan import scan_peony_file
+from memguard.desktop.scan_manifest import apply_scan_manifest, create_scan_manifest
 from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.replay import load_event_file, load_event_jsonl
 from memguard.llm.adapter import LLMAdapterError, generate_answer
@@ -180,6 +181,16 @@ def build_parser() -> argparse.ArgumentParser:
     scan_file.add_argument("--ingest", action="store_true", help="Record OS event and import safe text files")
     scan_file.add_argument("--notify", action="store_true", help="Send a desktop notification when notify-send is available")
     scan_file.add_argument("--max-bytes", type=int, default=1024 * 1024, help="Maximum text file size for direct import")
+    scan_files = desktop_sub.add_parser("scan-files", help="Create a read-only preview manifest for Peony-selected files")
+    scan_files.add_argument("--file", action="append", required=True, help="Selected file path; repeat for multiple files")
+    scan_files.add_argument("--max-files", type=int, default=100)
+    scan_files.add_argument("--max-file-bytes", type=int, default=1024 * 1024)
+    scan_files.add_argument("--max-total-bytes", type=int, default=10 * 1024 * 1024)
+    scan_files.add_argument("--ttl", type=int, default=300, help="Manifest lifetime in seconds")
+    apply_scan = desktop_sub.add_parser("apply-scan", help="Import explicitly selected safe files from a preview manifest")
+    apply_scan.add_argument("--manifest", required=True, help="Manifest path returned by scan-files")
+    apply_scan.add_argument("--select", action="append", required=True, help="Confirmed safe file path; repeat for multiple files")
+    apply_scan.add_argument("--notify", action="store_true", help="Send one batch completion notification")
 
     patterns = sub.add_parser("patterns", help="List or add custom sensitive patterns")
     pattern_sub = patterns.add_subparsers(dest="pattern_command", required=True)
@@ -269,6 +280,31 @@ def main(argv: list[str] | None = None) -> int:
                     )
                 )
                 return 0
+            if args.desktop_command == "scan-files":
+                print(
+                    json.dumps(
+                        create_scan_manifest(
+                            args.file,
+                            service,
+                            ttl_seconds=args.ttl,
+                            max_files=args.max_files,
+                            max_file_bytes=args.max_file_bytes,
+                            max_total_bytes=args.max_total_bytes,
+                        ),
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                )
+                return 0
+            if args.desktop_command == "apply-scan":
+                result = apply_scan_manifest(
+                    args.manifest,
+                    args.select,
+                    service,
+                    notify=args.notify,
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0 if result.get("ok") else 2
 
         if args.command == "agent":
             if args.agent_command == "ingest-event":

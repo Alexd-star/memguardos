@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QAction>
+#include <QJsonObject>
 #include <QStringList>
 #include <peony-qt/menu-plugin-iface.h>
 
@@ -25,5 +26,8 @@ private:
     bool enabled_ = true;
     QStringList lastSelection_;
     QString fallbackUri_;
-    void sendSelectionToMemGuard() const;
+    void sendSelectionToMemGuard();
+    void runPreview(const QStringList &arguments);
+    void showPreviewDialog(const QJsonObject &preview);
+    void runApply(const QStringList &arguments);
 };

@@ -2,8 +2,10 @@ import json
 from pathlib import Path
 
 from memguard.cli.memctl import main as memctl_main
+from memguard.desktop.scan_manifest import apply_scan_manifest, create_scan_manifest
 from memguard.os_guard import openkylin_native
 from memguard.os_guard.service_control import service_resource_status
+from memguard.service import MemGuardService
 
 
 def test_openkylin_status_cli_has_native_operational_schema(tmp_path, monkeypatch, capsys):
@@ -138,3 +140,118 @@ def test_native_resource_status_uses_service_probe(monkeypatch):
     assert result["control_group"] == "/system.slice/memguardd.service"
     assert result["memory"]["cgroup_memory_current"] == "2048"
     assert result["cpu"]["cpu_max"] == "200000 100000"
+
+
+def test_scan_manifest_preserves_order_and_blocks_sensitive_items(tmp_path, monkeypatch):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+    safe = tmp_path / "safe.md"
+    secret = tmp_path / ".env"
+    safe.write_text("以后回答 openKylin 问题时先给命令。\n", encoding="utf-8")
+    secret.write_text("OPENAI_API_KEY=sk-test-example1234567890\n", encoding="utf-8")
+    service = MemGuardService()
+    try:
+        result = create_scan_manifest([safe, secret], service, store_dir=tmp_path / "pending")
+    finally:
+        service.close()
+
+    assert result["schema"] == "memguardos-desktop-scan-manifest-v1"
+    assert [item["path"] for item in result["items"]] == [str(safe.resolve()), str(secret.resolve())]
+    assert result["items"][0]["selectable"] is True
+    assert result["items"][1]["selectable"] is False
+    assert result["items"][1]["recommended_action"] == "block_sensitive"
+    assert Path(result["manifest_path"]).exists()
+
+
+def test_apply_scan_manifest_rejects_tamper_expiry_and_replay(tmp_path, monkeypatch):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+    safe = tmp_path / "safe.md"
+    safe.write_text("systemd MemoryMax 可以限制服务内存。\n", encoding="utf-8")
+    service = MemGuardService()
+    try:
+        created = create_scan_manifest(
+            [safe],
+            service,
+            store_dir=tmp_path / "pending",
+            now=1000.0,
+            ttl_seconds=60,
+        )
+        manifest_path = Path(created["manifest_path"])
+        document = json.loads(manifest_path.read_text(encoding="utf-8"))
+        document["items"][0]["path"] = str(tmp_path / "other.md")
+        manifest_path.write_text(json.dumps(document), encoding="utf-8")
+        tampered = apply_scan_manifest(manifest_path, [str(safe.resolve())], service, now=1010.0)
+        assert tampered["ok"] is False
+        assert tampered["error_code"] == "manifest_signature_invalid"
+
+        created = create_scan_manifest([safe], service, store_dir=tmp_path / "pending", now=2000.0, ttl_seconds=10)
+        expired = apply_scan_manifest(created["manifest_path"], [str(safe.resolve())], service, now=2011.0)
+        assert expired["ok"] is False
+        assert expired["error_code"] == "manifest_expired"
+
+        created = create_scan_manifest([safe], service, store_dir=tmp_path / "pending", now=3000.0)
+        first = apply_scan_manifest(created["manifest_path"], [str(safe.resolve())], service, now=3001.0)
+        second = apply_scan_manifest(created["manifest_path"], [str(safe.resolve())], service, now=3002.0)
+        assert first["ok"] is True
+        assert first["summary"]["stored"] == 1
+        assert second["ok"] is False
+        assert second["error_code"] == "manifest_already_used"
+    finally:
+        service.close()
+
+
+def test_scan_manifest_enforces_batch_limits(tmp_path, monkeypatch):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+    files = []
+    for index in range(3):
+        path = tmp_path / f"note-{index}.txt"
+        path.write_text("x" * 10, encoding="utf-8")
+        files.append(path)
+    service = MemGuardService()
+    try:
+        too_many = create_scan_manifest(files, service, store_dir=tmp_path / "pending", max_files=2)
+        too_large = create_scan_manifest(files[:2], service, store_dir=tmp_path / "pending", max_total_bytes=15)
+    finally:
+        service.close()
+
+    assert too_many["ok"] is False
+    assert too_many["error_code"] == "too_many_files"
+    assert too_large["ok"] is False
+    assert too_large["error_code"] == "total_size_limit_exceeded"
+
+
+def test_desktop_scan_files_and_apply_cli_require_explicit_selection(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+    safe = tmp_path / "safe.md"
+    safe.write_text("openKylin 使用 systemd 管理后台服务。\n", encoding="utf-8")
+
+    assert memctl_main(["desktop", "scan-files", "--file", str(safe)]) == 0
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["ok"] is True
+    assert preview["items"][0]["selectable"] is True
+    assert preview["items"][0]["ingest"]["attempted"] is False
+
+    assert memctl_main(
+        [
+            "desktop",
+            "apply-scan",
+            "--manifest",
+            preview["manifest_path"],
+            "--select",
+            str(safe),
+        ]
+    ) == 0
+    applied = json.loads(capsys.readouterr().out)
+    assert applied["ok"] is True
+    assert applied["summary"]["stored"] == 1
+
+
+def test_peony_plugin_uses_preview_confirmation_contract():
+    source = (Path(__file__).resolve().parents[1] / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
+
+    assert "scan-files" in source
+    assert "apply-scan" in source
+    assert "QTableWidget" in source
+    assert "QDialogButtonBox" in source
+    assert "导入所选文件" in source
+    assert "--ingest" not in source
+    assert "selectionUris.first" not in source
