@@ -57,7 +57,5 @@ This helper must be started through Polkit as root.
 unknown_action_rejected=true
 policy_installed=true
 helper_installed=true
--rwxr-xr-x 1 root root 1801  7月 2日 13:34 /usr/lib/memguardos/memguardos-native-helper.sh
--rw-r--r-- 1 root root 3627  7月 2日 13:34 /usr/share/polkit-1/actions/org.memguardos.policy
--rwxr-xr-x 1 root root 1801  7月 2日 13:12 /var/tmp/memguardos-polkit-staging/memguardos-native-helper.sh
--rw-r--r-- 1 root root 3627  7月 2日 13:12 /var/tmp/memguardos-polkit-staging/org.memguardos.policy
+-rwxr-xr-x 1 root root 1801  7月 2日 18:20 /usr/lib/memguardos/memguardos-native-helper.sh
+-rw-r--r-- 1 root root 3627  7月 2日 18:20 /usr/share/polkit-1/actions/org.memguardos.policy

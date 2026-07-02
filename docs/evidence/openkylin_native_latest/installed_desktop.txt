@@ -2,3 +2,4 @@ $ bash -lc find /usr/lib -path "*peony-extensions*memguardos*.so" -o -path "*uku
 /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
 /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
 /usr/bin/memguardos-tray
+45519 /usr/bin/memguardos-tray
