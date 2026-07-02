@@ -1,0 +1,2 @@
+$ bash -lc dpkg-query -W -f="\${Package} \${Version} \${Status}\n" "memguardos*" 2>/dev/null || true
+memguardos 0.1.0 install ok installed

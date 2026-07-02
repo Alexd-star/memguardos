@@ -1,0 +1,92 @@
+{
+  "schema": "memguardos-desktop-scan-manifest-v1",
+  "ok": true,
+  "manifest_id": "401e18f7-80e8-4bd6-bc7a-e13743a6028a",
+  "nonce": "MYsrbsuUuoE7chUVEn95-6ZQFo8phaG5",
+  "namespace": "default",
+  "created_at": 1782966822.8017607,
+  "expires_at": 1782967122.8017607,
+  "used": false,
+  "limits": {
+    "max_files": 100,
+    "max_file_bytes": 1048576,
+    "max_total_bytes": 10485760
+  },
+  "total_bytes": 118,
+  "items": [
+    {
+      "schema": "memguardos-peony-scan-report-v1",
+      "path": "/var/tmp/tmp.Ud9KZjIOar/peony_preference.md",
+      "exists": true,
+      "file_kind": "file",
+      "size_bytes": 57,
+      "eligible_for_text_import": true,
+      "recommended_action": "import_text",
+      "sensitivity": {
+        "level": "none",
+        "labels": [],
+        "redacted": false
+      },
+      "preview": "以后回答 openKylin 问题时先给可复制命令。",
+      "warnings": [],
+      "audit_event": {
+        "attempted": false,
+        "stored": false
+      },
+      "ingest": {
+        "attempted": false,
+        "stored": false
+      },
+      "verification": {
+        "audit_chain_ok": null
+      },
+      "selectable": true,
+      "fingerprint": {
+        "exists": true,
+        "device": 2053,
+        "inode": 45,
+        "size": 57,
+        "mtime_ns": 1782966822704138737,
+        "mode": 33204
+      }
+    },
+    {
+      "schema": "memguardos-peony-scan-report-v1",
+      "path": "/var/tmp/tmp.Ud9KZjIOar/peony_knowledge.txt",
+      "exists": true,
+      "file_kind": "file",
+      "size_bytes": 61,
+      "eligible_for_text_import": true,
+      "recommended_action": "import_text",
+      "sensitivity": {
+        "level": "none",
+        "labels": [],
+        "redacted": false
+      },
+      "preview": "systemd MemoryMax 可以限制后台记忆服务的内存。",
+      "warnings": [],
+      "audit_event": {
+        "attempted": false,
+        "stored": false
+      },
+      "ingest": {
+        "attempted": false,
+        "stored": false
+      },
+      "verification": {
+        "audit_chain_ok": null
+      },
+      "selectable": true,
+      "fingerprint": {
+        "exists": true,
+        "device": 2053,
+        "inode": 46,
+        "size": 61,
+        "mtime_ns": 1782966822704138737,
+        "mode": 33204
+      }
+    }
+  ],
+  "signature": "09af525654738ebc7ebc8e1a1a060388b70c10b1edc75eda136d16bcd6364172",
+  "manifest_path": "/home/luo/.memguardos/desktop-scans/401e18f7-80e8-4bd6-bc7a-e13743a6028a.json"
+}

@@ -1,2 +1,0 @@
-$ bash -lc git rev-parse --verify HEAD 2>/dev/null || echo synchronized_tree_without_git_metadata
-synchronized_tree_without_git_metadata

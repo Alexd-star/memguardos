@@ -1,5 +1,5 @@
 $ python3 -m memguard.cli.memctl openkylin-status
-[1782961582544] [32minfo [0m Proxy init engine sessionId:1883683603.
+[1782966821824] [32minfo [0m Proxy init engine sessionId:1252748004.
 {
   "schema": "memguardos-openkylin-native-status-v1",
   "system": {
@@ -297,14 +297,30 @@ $ python3 -m memguard.cli.memctl openkylin-status
     }
   },
   "resources": {
-    "cgroup_v2": false,
+    "cgroup_v2": true,
+    "service_managed": true,
+    "control_group": "/system.slice/memguardd.service",
+    "diagnosis_code": "ready",
+    "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": null,
-      "cgroup_memory_max": null
+      "cgroup_memory_current": "17420288",
+      "cgroup_memory_max": "536870912"
     },
     "cpu": {
-      "cpu_quota": null,
-      "cpu_stat": {}
+      "cpu_max": "50000 100000",
+      "cpu_quota_per_sec_usec": "500ms",
+      "cpu_stat": {
+        "usage_usec": 1456142,
+        "user_usec": 787578,
+        "system_usec": 668564,
+        "nice_usec": 0,
+        "core_sched.force_idle_usec": 0,
+        "nr_periods": 739,
+        "nr_throttled": 1,
+        "throttled_usec": 16827,
+        "nr_bursts": 0,
+        "burst_usec": 0
+      }
     },
     "namespace": "default"
   },
@@ -321,18 +337,18 @@ $ python3 -m memguard.cli.memctl openkylin-status
     "store_exists": true,
     "db_exists": true,
     "custom_patterns_exists": false,
-    "store_bytes": 59664,
-    "db_bytes": 364544,
-    "record_count": 17,
-    "live_record_count": 17,
-    "audit_event_count": 345
+    "store_bytes": 84453,
+    "db_bytes": 401408,
+    "record_count": 27,
+    "live_record_count": 27,
+    "audit_event_count": 364
   },
   "summary": {
     "overall": "yellow",
-    "readiness_score": 0.7857,
-    "green": 5,
+    "readiness_score": 0.9286,
+    "green": 6,
     "yellow": 1,
-    "red": 1
+    "red": 0
   },
   "components": [
     {
@@ -380,9 +396,9 @@ $ python3 -m memguard.cli.memctl openkylin-status
     {
       "name": "cgroup_v2",
       "label": "cgroup v2 资源治理",
-      "available": false,
-      "ready": false,
-      "level": "red"
+      "available": true,
+      "ready": true,
+      "level": "green"
     }
   ],
   "recommendations": [

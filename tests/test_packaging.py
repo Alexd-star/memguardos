@@ -255,7 +255,7 @@ def test_refresh_evidence_manifest_rebuilds_checksums_and_manifest(tmp_path):
 
     report = refresh_evidence_manifest(evidence)
 
-    assert report["file_count"] == 3
+    assert report["file_count"] == 2
     checksum_lines = (evidence / "SHA256SUMS.txt").read_text(
         encoding="utf-8"
     ).splitlines()
@@ -265,10 +265,9 @@ def test_refresh_evidence_manifest_rebuilds_checksums_and_manifest(tmp_path):
     manifest = json.loads(
         (evidence / "manifest.json").read_text(encoding="utf-8")
     )
-    assert manifest["file_count"] == 3
+    assert manifest["file_count"] == 2
     assert [item["path"] for item in manifest["files"]] == [
         "README.md",
-        "SHA256SUMS.txt",
         "nested/result.json",
     ]
 

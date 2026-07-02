@@ -1,0 +1,62 @@
+{
+  "schema": "memguardos-desktop-scan-manifest-v1",
+  "ok": true,
+  "manifest_id": "868639d0-c754-419e-a536-0d4b6664631f",
+  "nonce": "pxCjPd6JmxvvTk_CUDxIUZRSkZCvbPmY",
+  "namespace": "default",
+  "created_at": 1782966823.1442611,
+  "expires_at": 1782967123.1442611,
+  "used": false,
+  "limits": {
+    "max_files": 100,
+    "max_file_bytes": 1048576,
+    "max_total_bytes": 10485760
+  },
+  "total_bytes": 41,
+  "items": [
+    {
+      "schema": "memguardos-peony-scan-report-v1",
+      "path": "/var/tmp/tmp.Ud9KZjIOar/peony_secret.env",
+      "exists": true,
+      "file_kind": "file",
+      "size_bytes": 41,
+      "eligible_for_text_import": true,
+      "recommended_action": "block_sensitive",
+      "sensitivity": {
+        "level": "high",
+        "labels": [
+          "api_key",
+          "sensitive_os_source",
+          "token_assignment"
+        ],
+        "redacted": false
+      },
+      "preview": "OPENAI_API_KEY=sk-test-example1234567890",
+      "warnings": [
+        "检测到高风险敏感内容，默认不写入长期记忆。"
+      ],
+      "audit_event": {
+        "attempted": false,
+        "stored": false
+      },
+      "ingest": {
+        "attempted": false,
+        "stored": false
+      },
+      "verification": {
+        "audit_chain_ok": null
+      },
+      "selectable": false,
+      "fingerprint": {
+        "exists": true,
+        "device": 2053,
+        "inode": 48,
+        "size": 41,
+        "mtime_ns": 1782966822704138737,
+        "mode": 33204
+      }
+    }
+  ],
+  "signature": "ca2f58d2e95e5c009c91944c7791fe8be07c731fd4f5f48e92d5756ea3ed61f8",
+  "manifest_path": "/home/luo/.memguardos/desktop-scans/868639d0-c754-419e-a536-0d4b6664631f.json"
+}

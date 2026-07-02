@@ -1,1 +1,13 @@
-$ bash -lc ls -l /usr/share/polkit-1/actions/org.memguardos.policy /usr/lib/memguardos/memguardos-native-helper.sh 2>/dev/null || true
+$ bash -lc python3 - <<"PY"
+import xml.etree.ElementTree as ET
+root = ET.parse("packaging/polkit/org.memguardos.policy").getroot()
+actions = [item.attrib["id"] for item in root.findall("action")]
+required = {"org.memguardos.start-service", "org.memguardos.stop-service", "org.memguardos.restart-service", "org.memguardos.install-auditd-rules", "org.memguardos.run-bpf-lsm-test"}
+assert required.issubset(actions)
+print("actions=" + ",".join(actions))
+PY
+if sudo scripts/memguardos-native-helper.sh unsupported-action; then exit 3; else echo unknown_action_rejected=true; fi
+ls -l /usr/share/polkit-1/actions/org.memguardos.policy /usr/lib/memguardos/memguardos-native-helper.sh 2>/dev/null || true
+actions=org.memguardos.start-service,org.memguardos.stop-service,org.memguardos.restart-service,org.memguardos.refresh-services,org.memguardos.install-auditd-rules,org.memguardos.run-bpf-lsm-test
+Unsupported MemGuardOS native helper action: unsupported-action
+unknown_action_rejected=true

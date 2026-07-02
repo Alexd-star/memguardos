@@ -42,7 +42,7 @@ def refresh_evidence_manifest(root: Path) -> dict[str, object]:
         evidence_root.rglob("*"),
         key=lambda item: item.relative_to(evidence_root).as_posix(),
     ):
-        if not path.is_file() or path == manifest_path:
+        if not path.is_file() or path in {checksum_path, manifest_path}:
             continue
         manifest_files.append(
             {
