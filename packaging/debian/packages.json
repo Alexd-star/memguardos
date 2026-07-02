@@ -1,0 +1,12 @@
+{
+  "schema": "memguardos-debian-package-set-v1",
+  "packages": [
+    "memguardos-core",
+    "memguardos-ukui",
+    "memguardos-agent-bridge",
+    "memguardos-doc",
+    "memguardos"
+  ],
+  "upgrade_from_monolith": "memguardos (<< ${version})",
+  "data_policy": "Package removal never deletes ~/.memguardos or namespace data."
+}

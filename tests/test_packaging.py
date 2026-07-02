@@ -19,10 +19,34 @@ from scripts.check_competition_ready import (
     check_supply_chain_artifacts,
 )
 from scripts.generate_sbom import generate_sbom
+from scripts.build_deb_packages import build_package_plan, validate_no_overlap
 
 
 def test_competition_ready_hygiene_ignores_local_output_workspaces():
     assert "outputs" in IGNORED_HYGIENE_PARTS
+
+
+def test_split_debian_package_plan_has_enterprise_ownership_boundaries():
+    plan = build_package_plan(version="0.1.0-2", architecture="amd64", multiarch="x86_64-linux-gnu")
+
+    assert set(plan) == {
+        "memguardos",
+        "memguardos-core",
+        "memguardos-ukui",
+        "memguardos-agent-bridge",
+        "memguardos-doc",
+    }
+    assert plan["memguardos"]["architecture"] == "all"
+    assert plan["memguardos-doc"]["architecture"] == "all"
+    assert "memguardos-core (= 0.1.0-2)" in plan["memguardos-ukui"]["depends"]
+    assert "memguardos-core (= 0.1.0-2)" in plan["memguardos-agent-bridge"]["depends"]
+    assert plan["memguardos"]["files"] == []
+    assert "/usr/bin/memctl" in plan["memguardos-core"]["files"]
+    assert "/usr/bin/memguardos-tray" in plan["memguardos-ukui"]["files"]
+    assert "/lib/systemd/system/memguard-agent@.service" in plan["memguardos-agent-bridge"]["files"]
+    assert "/usr/share/doc/memguardos-doc/README.md" in plan["memguardos-doc"]["files"]
+    assert validate_no_overlap(plan) == []
+    assert (ROOT / "scripts/verify_deb_lifecycle.sh").exists()
 
 
 def test_competition_package_keeps_formal_and_process_materials_separate():
