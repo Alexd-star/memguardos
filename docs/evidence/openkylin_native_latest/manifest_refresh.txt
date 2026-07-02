@@ -1,5 +1,5 @@
 {
   "ok": true,
   "root": "/home/luo/memguardos-head/docs/evidence/openkylin_native_latest",
-  "file_count": 20
+  "file_count": 19
 }
