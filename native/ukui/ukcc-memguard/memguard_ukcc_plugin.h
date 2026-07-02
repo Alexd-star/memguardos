@@ -43,6 +43,7 @@ private:
     QLabel *sdkState_ = nullptr;
     QLabel *auditState_ = nullptr;
     QLabel *resultSummary_ = nullptr;
+    QLabel *operationGuide_ = nullptr;
     QLabel *serviceStatusIcon_ = nullptr;
     QLabel *serviceStatusLabel_ = nullptr;
     QLabel *auditStatusIcon_ = nullptr;
@@ -81,9 +82,10 @@ private:
     QString operationCompleteMessage(const QStringList &arguments, const QString &purpose, int exitCode) const;
     int operationTimeoutMs(const QStringList &arguments, const QString &purpose) const;
     void showDetailsOutput(const QString &text, const QString &summary);
+    void updateOperationGuide(const QString &message, bool busy);
     void setStatusBadge(QLabel *icon, QLabel *label, const QString &level, const QString &text);
     void appendHistory(const QString &operation, bool ok, const QString &message);
-    void exportDiagnostics(const QString &text);
+    bool exportDiagnostics(const QString &text);
     void openDashboard();
     void setBusy(bool busy, const QString &message);
     void showError(const QString &title, const QString &message);

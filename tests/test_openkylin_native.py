@@ -291,6 +291,15 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "技术详情" not in source
     assert "命令与诊断技术详情" not in source
     assert "操作结果" in source
+    assert "当前任务" in source
+    assert "结果位置" in source
+    assert "operationGuide_" in source
+    assert "updateOperationGuide" in source
+    assert "轻量操作" in source
+    assert "完整检查" in source
+    assert "导出快速报告" in source
+    assert "快速刷新、日志、审计校验通常在数秒内完成" in source
+    assert "端侧 SDK 完整检查和授权操作可能需要更久" in source
     assert "操作历史" in source
     assert "资源快照" in source
     assert "QProgressBar" in source
@@ -313,6 +322,8 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "showDetailsOutput" in source
     assert "cancelOperationButton_" in source
     assert "停止当前操作" in source
+    assert "startedAtMs" in source
+    assert "耗时" in source
     assert "服务日志已显示在【系统维护】" in source
     assert "summaryDescription_->setText(message)" in source
     assert 'runMemctl({QStringLiteral("diagnostics")}, QStringLiteral("export"))' in source
@@ -341,6 +352,7 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "查看服务日志" in source
     assert "系统维护" in source
     assert "导出系统报告" in source
+    assert "报告保存已取消，系统状态未改变" in source
     assert "检查内核保护状态" in source
     assert "native-action" in source
     assert "setStyleSheet" not in source

@@ -251,6 +251,13 @@ QWidget *MemGuardUkccPlugin::pluginUi()
     resultSummary_->setAccessibleName(QStringLiteral("最近一次操作结果摘要"));
     layout->addWidget(resultSummary_);
 
+    auto *guideBox = new QGroupBox(QStringLiteral("当前任务"));
+    auto *guideLayout = new QVBoxLayout(guideBox);
+    operationGuide_ = makeMutedLabel(QStringLiteral("当前任务：暂无后台操作。\n结果位置：快速状态显示在本页；日志、审计、SDK 和报告结果会显示在【系统维护】>【高级运行信息】或保存为文件。"));
+    operationGuide_->setAccessibleName(QStringLiteral("当前任务和结果位置说明"));
+    guideLayout->addWidget(operationGuide_);
+    layout->addWidget(guideBox);
+
     tabs_ = new QTabWidget;
     tabs_->setAccessibleName(QStringLiteral("MemGuardOS 设置分类"));
     overviewTabIndex_ = tabs_->addTab(buildOverviewTab(), QIcon::fromTheme(QStringLiteral("view-list-details")), QStringLiteral("总览"));
@@ -311,12 +318,13 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     auto *taskLayout = new QGridLayout(taskBox);
     auto *openConsole = makeOperationButton(QStringLiteral("applications-internet"), QStringLiteral("打开本地控制台"), QStringLiteral("打开 MemGuardOS 本地控制台"));
     auto *verifyAudit = makeOperationButton(QStringLiteral("security-high"), QStringLiteral("校验审计链"), QStringLiteral("校验 MemGuardOS 审计链"));
-    auto *exportReport = makeOperationButton(QStringLiteral("document-save"), QStringLiteral("导出系统报告"), QStringLiteral("导出 MemGuardOS 系统报告"));
+    auto *exportReport = makeOperationButton(QStringLiteral("document-save"), QStringLiteral("导出快速报告"), QStringLiteral("导出 MemGuardOS 系统报告"));
     auto *serviceLogs = makeOperationButton(QStringLiteral("text-x-log"), QStringLiteral("查看服务日志"), QStringLiteral("查看 memguardd 服务日志"));
     taskLayout->addWidget(openConsole, 0, 0);
     taskLayout->addWidget(verifyAudit, 0, 1);
     taskLayout->addWidget(exportReport, 0, 2);
     taskLayout->addWidget(serviceLogs, 0, 3);
+    taskLayout->addWidget(makeMutedLabel(QStringLiteral("轻量操作：快速刷新、日志、审计校验通常在数秒内完成；完整检查：端侧 SDK 完整检查和授权操作可能需要更久，可通过【停止当前操作】中断。")), 1, 0, 1, 4);
     layout->addWidget(taskBox);
 
     auto *flowBox = new QGroupBox(QStringLiteral("记忆治理流程"));
@@ -435,6 +443,7 @@ QWidget *MemGuardUkccPlugin::buildServiceTab()
     auto *sdkBox = new QGroupBox(QStringLiteral("端侧能力"));
     auto *sdkLayout = new QVBoxLayout(sdkBox);
     sdkLayout->addWidget(makeMutedLabel(QStringLiteral("检查 Kylin embedding/vector SDK 和本地模型状态。SDK 未就绪时，系统会保持稳定自动降级，不阻断普通记忆检索。")));
+    sdkLayout->addWidget(makeMutedLabel(QStringLiteral("完整检查会触发端侧模型推理，首次执行可能较慢；日常状态页使用轻量检查，避免拖慢设置界面。")));
     sdkLayout->addWidget(makeSeparator());
     sdkState_ = new QLabel(QStringLiteral("等待检查"));
     sdkState_->setWordWrap(true);
@@ -511,7 +520,7 @@ QWidget *MemGuardUkccPlugin::buildDiagnosticsTab()
     auto *reportLayout = new QVBoxLayout(reportBox);
     reportLayout->addWidget(makeMutedLabel(QStringLiteral("导出系统报告会聚合服务、SDK、资源、授权和审计状态；本地控制台提供更完整的记忆写入、检索、上下文和遗忘预览流程。")));
     auto *reportButtons = new QGridLayout;
-    auto *diagnostics = makeOperationButton(QStringLiteral("document-save"), QStringLiteral("导出系统报告"), QStringLiteral("导出 MemGuardOS 系统报告"));
+    auto *diagnostics = makeOperationButton(QStringLiteral("document-save"), QStringLiteral("导出快速报告"), QStringLiteral("导出 MemGuardOS 系统报告"));
     auto *dashboard = makeOperationButton(QStringLiteral("applications-internet"), QStringLiteral("打开本地控制台"), QStringLiteral("打开 MemGuardOS 本地控制台"));
     reportButtons->addWidget(diagnostics, 0, 0);
     reportButtons->addWidget(dashboard, 0, 1);
@@ -592,6 +601,7 @@ void MemGuardUkccPlugin::runProgram(const QString &program, const QStringList &a
     }
     setBusy(true, operationStartMessage(arguments, purpose));
     auto *process = new QProcess(this);
+    process->setProperty("startedAtMs", QDateTime::currentMSecsSinceEpoch());
     currentProcess_ = process;
     QPointer<QProcess> guard(process);
     process->setProcessChannelMode(QProcess::MergedChannels);
@@ -615,12 +625,18 @@ void MemGuardUkccPlugin::runProgram(const QString &program, const QStringList &a
             const QJsonObject payload = parsedObject(output);
             if (currentProcess_ == process)
                 currentProcess_.clear();
-            const QString summaryMessage = payload.value(QStringLiteral("message")).toString(output.left(240));
+            QString summaryMessage = payload.value(QStringLiteral("message")).toString(output.left(240));
+            const qint64 startedAtMs = process->property("startedAtMs").toLongLong();
+            const qint64 elapsedMs = startedAtMs > 0 ? QDateTime::currentMSecsSinceEpoch() - startedAtMs : 0;
+            const QString elapsedText = elapsedMs > 0 ? QStringLiteral("耗时 %1 秒").arg(QString::number(elapsedMs / 1000.0, 'f', 1)) : QString();
+            bool exportSaved = true;
             if (purpose == QStringLiteral("refresh") && !payload.isEmpty())
                 renderStatus(payload);
-            else if (purpose == QStringLiteral("export") && exitCode == 0)
-                exportDiagnostics(output);
-            else if (purpose == QStringLiteral("action")) {
+            else if (purpose == QStringLiteral("export") && exitCode == 0) {
+                exportSaved = exportDiagnostics(output);
+                if (!exportSaved)
+                    summaryMessage = QStringLiteral("报告保存已取消，系统状态未改变");
+            } else if (purpose == QStringLiteral("action")) {
                 if (exitCode == 0 && payload.value(QStringLiteral("ok")).toBool())
                     QMessageBox::information(page_, QStringLiteral("操作完成"), payload.value(QStringLiteral("message")).toString(QStringLiteral("系统操作已完成。")));
                 else
@@ -632,7 +648,14 @@ void MemGuardUkccPlugin::runProgram(const QString &program, const QStringList &a
             } else {
                 showDetailsOutput(output, summaryMessage);
             }
-            setBusy(false, operationCompleteMessage(arguments, purpose, exitCode));
+            QString completionMessage = operationCompleteMessage(arguments, purpose, exitCode);
+            if (purpose == QStringLiteral("export") && exitCode == 0 && !exportSaved)
+                completionMessage = QStringLiteral("报告保存已取消，系统状态未改变。");
+            if (!elapsedText.isEmpty())
+                completionMessage = QStringLiteral("%1（%2）").arg(completionMessage, elapsedText);
+            setBusy(false, completionMessage);
+            if (!elapsedText.isEmpty() && !summaryMessage.isEmpty())
+                summaryMessage = QStringLiteral("%1；%2").arg(summaryMessage, elapsedText);
             appendHistory(purposeText(purpose), exitCode == 0, summaryMessage);
             process->deleteLater();
         });
@@ -644,6 +667,7 @@ void MemGuardUkccPlugin::runProgram(const QString &program, const QStringList &a
         if (currentProcess_ == guard)
             currentProcess_.clear();
         setBusy(false, QStringLiteral("操作超时，已停止后台命令。"));
+        appendHistory(purposeText(purpose), false, QStringLiteral("操作超时，已自动停止。"));
         const int seconds = operationTimeoutMs(arguments, purpose) / 1000;
         showError(QStringLiteral("操作超时"), QStringLiteral("操作超过 %1 秒，已自动停止。请查看服务日志或导出系统报告后重试。").arg(seconds));
     });
@@ -717,6 +741,23 @@ void MemGuardUkccPlugin::showDetailsOutput(const QString &text, const QString &s
         detailsToggle_->setChecked(true);
     if (details_)
         details_->setPlainText(text.isEmpty() ? summary : text);
+    updateOperationGuide(QStringLiteral("结果位置：已切换到【系统维护】>【高级运行信息】，可直接查看原始输出。"), false);
+}
+
+void MemGuardUkccPlugin::updateOperationGuide(const QString &message, bool busy)
+{
+    if (!operationGuide_)
+        return;
+    if (busy) {
+        operationGuide_->setText(QStringLiteral("当前任务：%1\n结果位置：轻量状态会更新在本页；日志、审计、SDK 和报告输出会进入【系统维护】>【高级运行信息】。可点击【停止当前操作】取消。")
+            .arg(message));
+        return;
+    }
+    if (message.isEmpty()) {
+        operationGuide_->setText(QStringLiteral("当前任务：暂无后台操作。\n结果位置：快速状态显示在本页；日志、审计、SDK 和报告结果会显示在【系统维护】>【高级运行信息】或保存为文件。"));
+        return;
+    }
+    operationGuide_->setText(QStringLiteral("当前任务：暂无后台操作。\n结果位置：%1").arg(message));
 }
 
 void MemGuardUkccPlugin::renderStatus(const QJsonObject &payload)
@@ -973,19 +1014,23 @@ void MemGuardUkccPlugin::appendHistory(const QString &operation, bool ok, const 
         delete operationHistory_->takeTopLevelItem(operationHistory_->topLevelItemCount() - 1);
 }
 
-void MemGuardUkccPlugin::exportDiagnostics(const QString &text)
+bool MemGuardUkccPlugin::exportDiagnostics(const QString &text)
 {
     const QString path = QFileDialog::getSaveFileName(page_, QStringLiteral("保存系统报告"), QStringLiteral("memguardos-system-report.json"), QStringLiteral("JSON 文件 (*.json)"));
-    if (path.isEmpty())
-        return;
+    if (path.isEmpty()) {
+        updateOperationGuide(QStringLiteral("报告保存已取消，系统状态未改变。"), false);
+        return false;
+    }
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
         showError(QStringLiteral("无法保存系统报告"), file.errorString());
-        return;
+        return false;
     }
     file.write(text.toUtf8());
     file.close();
+    updateOperationGuide(QStringLiteral("系统报告已保存到 %1。").arg(path), false);
     QMessageBox::information(page_, QStringLiteral("系统报告已保存"), QStringLiteral("报告已保存到：\n%1").arg(path));
+    return true;
 }
 
 void MemGuardUkccPlugin::openDashboard()
@@ -1007,6 +1052,7 @@ void MemGuardUkccPlugin::setBusy(bool busy, const QString &message)
 {
     if (!message.isEmpty())
         summaryDescription_->setText(message);
+    updateOperationGuide(message, busy);
     if (cancelOperationButton_) {
         cancelOperationButton_->setVisible(busy);
         cancelOperationButton_->setEnabled(busy);
