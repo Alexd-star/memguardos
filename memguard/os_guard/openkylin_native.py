@@ -7,7 +7,7 @@ import shutil
 import subprocess
 
 from memguard.config import namespace_status, normalize_namespace
-from memguard.os_guard.cgroup import cgroup_status
+from memguard.os_guard.service_control import service_resource_status
 from memguard.retrieval.kylin_sdk import kylin_sdk_status
 
 
@@ -152,16 +152,21 @@ def _security_status() -> Dict[str, object]:
 
 
 def _resource_status(namespace: str) -> Dict[str, object]:
-    status = cgroup_status()
+    status = service_resource_status()
     memory = {
         "cgroup_memory_current": status.get("memory_current"),
         "cgroup_memory_max": status.get("memory_max"),
     }
     return {
         "cgroup_v2": bool(status.get("cgroup_v2")),
+        "service_managed": bool(status.get("service_managed")),
+        "control_group": status.get("control_group", ""),
+        "diagnosis_code": status.get("diagnosis_code", "unknown"),
+        "advice": status.get("advice", ""),
         "memory": memory,
         "cpu": {
-            "cpu_quota": status.get("cpu_quota"),
+            "cpu_max": status.get("cpu_max"),
+            "cpu_quota_per_sec_usec": status.get("cpu_quota_per_sec_usec"),
             "cpu_stat": status.get("cpu_stat", {}),
         },
         "namespace": namespace,

@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 
 from memguard.cli.memctl import main as memctl_main
+from memguard.os_guard import openkylin_native
+from memguard.os_guard.service_control import service_resource_status
 
 
 def test_openkylin_status_cli_has_native_operational_schema(tmp_path, monkeypatch, capsys):
@@ -79,3 +81,60 @@ def test_openkylin_native_packaging_assets_exist():
     build_script = (root / "scripts" / "build_deb.sh").read_text(encoding="utf-8")
     assert "org.memguardos.policy" in build_script
     assert "memguard-kylin-warmup.service" in build_script
+
+
+def test_service_resource_status_reads_systemd_control_group(monkeypatch, tmp_path):
+    cgroup_root = tmp_path / "cgroup"
+    unit_group = cgroup_root / "system.slice" / "memguardd.service"
+    unit_group.mkdir(parents=True)
+    (cgroup_root / "cgroup.controllers").write_text("cpu memory\n", encoding="utf-8")
+    (unit_group / "memory.current").write_text("4096\n", encoding="utf-8")
+    (unit_group / "memory.max").write_text("268435456\n", encoding="utf-8")
+    (unit_group / "cpu.max").write_text("200000 100000\n", encoding="utf-8")
+    (unit_group / "cpu.stat").write_text("usage_usec 1250\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        "memguard.os_guard.service_control._systemctl_show",
+        lambda unit: {
+            "LoadState": "loaded",
+            "ActiveState": "active",
+            "ControlGroup": "/system.slice/memguardd.service",
+            "MemoryMax": "268435456",
+            "CPUQuotaPerSecUSec": "2s",
+        },
+    )
+
+    result = service_resource_status(cgroup_root=cgroup_root)
+
+    assert result["cgroup_v2"] is True
+    assert result["service_managed"] is True
+    assert result["control_group"] == "/system.slice/memguardd.service"
+    assert result["memory_current"] == "4096"
+    assert result["memory_max"] == "268435456"
+    assert result["cpu_max"] == "200000 100000"
+    assert result["cpu_stat"] == {"usage_usec": 1250}
+
+
+def test_native_resource_status_uses_service_probe(monkeypatch):
+    monkeypatch.setattr(
+        openkylin_native,
+        "service_resource_status",
+        lambda: {
+            "cgroup_v2": True,
+            "service_managed": True,
+            "control_group": "/system.slice/memguardd.service",
+            "memory_current": "2048",
+            "memory_max": "268435456",
+            "cpu_max": "200000 100000",
+            "cpu_stat": {"usage_usec": 900},
+            "cpu_quota_per_sec_usec": "2s",
+        },
+    )
+
+    result = openkylin_native._resource_status("default")
+
+    assert result["cgroup_v2"] is True
+    assert result["service_managed"] is True
+    assert result["control_group"] == "/system.slice/memguardd.service"
+    assert result["memory"]["cgroup_memory_current"] == "2048"
+    assert result["cpu"]["cpu_max"] == "200000 100000"
