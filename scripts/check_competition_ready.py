@@ -418,7 +418,17 @@ def check_native_evidence_revision(evidence_dir: Path, expected_revision: str) -
     if not re.fullmatch(r"[0-9a-f]{40}", expected_revision):
         return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, f"本地 Git HEAD 无效：{expected_revision}", severity="P0")
     if revision != expected_revision:
-        return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, f"证据 {revision[:12]} 与当前 {expected_revision[:12]} 不一致", severity="P0")
+        delta_paths = _revision_delta_paths(revision, expected_revision)
+        allowed_prefix = "docs/evidence/openkylin_native_latest/"
+        if delta_paths is None or not delta_paths or any(not path.startswith(allowed_prefix) for path in delta_paths):
+            return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, f"证据 {revision[:12]} 与当前 {expected_revision[:12]} 不一致", severity="P0")
+        return Check(
+            "openKylin原生证据",
+            "证据对应当前 Git HEAD",
+            True,
+            "source=%s；当前 HEAD 仅追加/更新原生证据文件 %s 个" % (revision, len(delta_paths)),
+            severity="P0",
+        )
     if dirty:
         return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, "证据采集树包含未提交修改", severity="P0")
     return Check("openKylin原生证据", "证据对应当前 Git HEAD", True, revision, severity="P0")
@@ -1313,6 +1323,34 @@ def _git_head() -> str:
     except (OSError, subprocess.SubprocessError):
         return ""
     return completed.stdout.strip().lower()
+
+
+def _revision_delta_paths(source_revision: str, target_revision: str) -> Optional[List[str]]:
+    try:
+        ancestor = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", source_revision, target_revision],
+            cwd=ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+            check=False,
+        )
+        if ancestor.returncode != 0:
+            return None
+        completed = subprocess.run(
+            ["git", "diff", "--name-only", f"{source_revision}..{target_revision}"],
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if completed.returncode != 0:
+        return None
+    return [line.strip() for line in completed.stdout.splitlines() if line.strip()]
 
 
 def _expected_evidence_paths(evidence_dir: Path) -> List[str]:
