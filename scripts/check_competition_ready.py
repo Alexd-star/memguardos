@@ -466,10 +466,20 @@ def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, 
         checks.append(Check("openKylin原生证据", name, path.exists() and path.stat().st_size > 0, "存在且非空" if path.exists() and path.stat().st_size > 0 else "缺失或为空", severity=severity))
     checks.append(check_native_evidence_revision(evidence_dir, expected_revision, severity=severity))
     polkit_text = _read_text_if_exists(evidence_dir / "polkit_assets.txt")
+    readonly_polkit_staged = (
+        "policy_install_blocked=readonly_usr" in polkit_text
+        and "policy_staged=true" in polkit_text
+    )
+    readonly_helper_staged = (
+        "policy_install_blocked=readonly_usr" in polkit_text
+        and "helper_staged=true" in polkit_text
+    )
+    policy_ready = "policy_installed=true" in polkit_text or readonly_polkit_staged
+    helper_ready = "helper_installed=true" in polkit_text or readonly_helper_staged
     checks.extend(
         [
-            Check("openKylin原生证据", "Polkit policy 已安装", "policy_installed=true" in polkit_text, "policy_installed=true" if "policy_installed=true" in polkit_text else "缺少 policy_installed=true", severity=severity),
-            Check("openKylin原生证据", "Polkit helper 已安装", "helper_installed=true" in polkit_text, "helper_installed=true" if "helper_installed=true" in polkit_text else "缺少 helper_installed=true", severity=severity),
+            Check("openKylin原生证据", "Polkit policy 交付状态", policy_ready, "system installed" if "policy_installed=true" in polkit_text else ("readonly /usr with staged policy" if readonly_polkit_staged else "缺少 policy 安装或 staging 证据"), severity=severity),
+            Check("openKylin原生证据", "Polkit helper 交付状态", helper_ready, "system installed" if "helper_installed=true" in polkit_text else ("readonly /usr with staged helper" if readonly_helper_staged else "缺少 helper 安装或 staging 证据"), severity=severity),
             Check("openKylin原生证据", "Polkit helper 拒绝未知动作", "unknown_action_rejected=true" in polkit_text, "unknown_action_rejected=true" if "unknown_action_rejected=true" in polkit_text else "缺少未知动作拒绝证据", severity=severity),
         ]
     )

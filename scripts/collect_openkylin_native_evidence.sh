@@ -120,20 +120,41 @@ run_required_capture desktop_build.txt bash scripts/build_ukui_plugins.sh
 run_required_capture tray_assets.txt bash -lc 'file native/ukui/build/tray/memguardos-tray; ldd native/ukui/build/tray/memguardos-tray; test -f packaging/desktop/memguardos-tray.desktop; grep -E "^(Exec|OnlyShowIn)=" packaging/desktop/memguardos-tray.desktop'
 run_required_capture desktop_plugins.txt bash -lc 'file native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so; ldd native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so; ldd native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so'
 run_required_capture polkit_assets.txt bash -lc 'set -e
-install_polkit_assets() {
+POLICY_TARGET=/usr/share/polkit-1/actions/org.memguardos.policy
+HELPER_TARGET=/usr/lib/memguardos/memguardos-native-helper.sh
+STAGING_ROOT=/var/tmp/memguardos-polkit-staging
+STAGED_POLICY=${STAGING_ROOT}/org.memguardos.policy
+STAGED_HELPER=${STAGING_ROOT}/memguardos-native-helper.sh
+run_root() {
   if [ "$(id -u)" -eq 0 ]; then
-    install -d -m 0755 /usr/share/polkit-1/actions /usr/lib/memguardos
-    install -m 0644 packaging/polkit/org.memguardos.policy /usr/share/polkit-1/actions/org.memguardos.policy
-    install -m 0755 scripts/memguardos-native-helper.sh /usr/lib/memguardos/memguardos-native-helper.sh
+    "$@"
+  else
+    sudo "$@"
+  fi
+}
+install_polkit_assets() {
+  if ! { [ "$(id -u)" -eq 0 ] || { command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; }; }; then
+    echo polkit_install_skipped=needs_passwordless_sudo
     return 0
   fi
-  if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
-    sudo install -d -m 0755 /usr/share/polkit-1/actions /usr/lib/memguardos
-    sudo install -m 0644 packaging/polkit/org.memguardos.policy /usr/share/polkit-1/actions/org.memguardos.policy
-    sudo install -m 0755 scripts/memguardos-native-helper.sh /usr/lib/memguardos/memguardos-native-helper.sh
+  if run_root mkdir -p /usr/share/polkit-1/actions /usr/lib/memguardos 2>/tmp/memguardos-polkit-install.err \
+    && run_root chmod 0755 /usr/lib/memguardos \
+    && run_root install -m 0644 packaging/polkit/org.memguardos.policy "${POLICY_TARGET}" \
+    && run_root install -m 0755 scripts/memguardos-native-helper.sh "${HELPER_TARGET}"; then
+    echo polkit_install_mode=system
     return 0
   fi
-  echo polkit_install_skipped=needs_passwordless_sudo
+  if findmnt -no OPTIONS /usr 2>/dev/null | grep -q "\bro\b"; then
+    echo policy_install_blocked=readonly_usr
+  else
+    echo policy_install_failed=true
+  fi
+  sed "s/^/install_error=/" /tmp/memguardos-polkit-install.err 2>/dev/null || true
+  run_root mkdir -p "${STAGING_ROOT}"
+  run_root install -m 0644 packaging/polkit/org.memguardos.policy "${STAGED_POLICY}"
+  run_root install -m 0755 scripts/memguardos-native-helper.sh "${STAGED_HELPER}"
+  test -s "${STAGED_POLICY}" && echo policy_staged=true || echo policy_staged=false
+  test -x "${STAGED_HELPER}" && echo helper_staged=true || echo helper_staged=false
   return 0
 }
 install_polkit_assets
@@ -145,10 +166,12 @@ required = {"org.memguardos.start-service", "org.memguardos.stop-service", "org.
 assert required.issubset(actions)
 print("actions=" + ",".join(actions))
 PY
-if /usr/lib/memguardos/memguardos-native-helper.sh unsupported-action; then exit 3; else echo unknown_action_rejected=true; fi
-test -s /usr/share/polkit-1/actions/org.memguardos.policy && echo policy_installed=true || echo policy_installed=false
-test -x /usr/lib/memguardos/memguardos-native-helper.sh && echo helper_installed=true || echo helper_installed=false
-ls -l /usr/share/polkit-1/actions/org.memguardos.policy /usr/lib/memguardos/memguardos-native-helper.sh 2>/dev/null || true'
+HELPER_TO_TEST="${HELPER_TARGET}"
+test -x "${HELPER_TO_TEST}" || HELPER_TO_TEST="${STAGED_HELPER}"
+if "${HELPER_TO_TEST}" unsupported-action; then exit 3; else echo unknown_action_rejected=true; fi
+test -s "${POLICY_TARGET}" && echo policy_installed=true || echo policy_installed=false
+test -x "${HELPER_TARGET}" && echo helper_installed=true || echo helper_installed=false
+ls -l "${POLICY_TARGET}" "${HELPER_TARGET}" "${STAGED_POLICY}" "${STAGED_HELPER}" 2>/dev/null || true'
 run_required_capture systemd_cgroup.txt bash -lc 'systemctl show memguardd.service --property=LoadState,ActiveState,SubState,ControlGroup,MemoryMax,CPUQuotaPerSecUSec --no-pager; CG=$(systemctl show memguardd.service -p ControlGroup --value); test -n "$CG"; for f in memory.current memory.max cpu.max cpu.stat; do printf "%s\n" "--- ${f} ---"; cat "/sys/fs/cgroup${CG}/${f}" 2>/dev/null || true; done'
 
 run_required_capture debian_packages.txt bash scripts/build_deb.sh

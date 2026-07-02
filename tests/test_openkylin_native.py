@@ -313,9 +313,12 @@ def test_native_evidence_collector_installs_and_records_polkit_assets():
     assert "install -m 0755 scripts/memguardos-native-helper.sh" in collector
     assert "policy_installed=true" in collector
     assert "helper_installed=true" in collector
+    assert "policy_install_blocked=readonly_usr" in collector
+    assert "policy_staged=true" in collector
+    assert "helper_staged=true" in collector
     assert "unknown_action_rejected=true" in collector
-    assert "Polkit policy 已安装" in readiness
-    assert "Polkit helper 已安装" in readiness
+    assert "Polkit policy 交付状态" in readiness
+    assert "Polkit helper 交付状态" in readiness
 
 
 def test_privileged_action_rejects_unknown_action_without_execution(monkeypatch):
