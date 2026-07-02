@@ -4,6 +4,7 @@ from pathlib import Path
 from memguard.cli.memctl import main as memctl_main
 from memguard.desktop.scan_manifest import apply_scan_manifest, create_scan_manifest
 from memguard.os_guard import openkylin_native
+from memguard.os_guard.privileged_actions import ALLOWED_ACTIONS, run_privileged_action
 from memguard.os_guard.service_control import service_resource_status
 from memguard.service import MemGuardService
 
@@ -255,3 +256,68 @@ def test_peony_plugin_uses_preview_confirmation_contract():
     assert "导入所选文件" in source
     assert "--ingest" not in source
     assert "selectionUris.first" not in source
+
+
+def test_ukui_control_center_uses_structured_native_product_ui():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
+
+    assert "QTabWidget" in source
+    assert "QTreeWidget" in source
+    assert "QJsonDocument" in source
+    assert "技术详情" in source
+    assert "启动服务" in source
+    assert "停止服务" in source
+    assert "重启服务" in source
+    assert "查看服务日志" in source
+    assert "native-action" in source
+    assert "setStyleSheet" not in source
+    assert "QPalette" in source
+
+
+def test_privileged_actions_are_fixed_and_report_structured_result(monkeypatch):
+    calls = []
+    monkeypatch.setattr("memguard.os_guard.privileged_actions.shutil.which", lambda name: "/usr/bin/pkexec" if name == "pkexec" else None)
+
+    class Completed:
+        returncode = 0
+        stdout = "service started\n"
+        stderr = ""
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+        return Completed()
+
+    monkeypatch.setattr("memguard.os_guard.privileged_actions.subprocess.run", fake_run)
+
+    result = run_privileged_action("start-service")
+
+    assert set(ALLOWED_ACTIONS) >= {"start-service", "stop-service", "restart-service", "install-auditd-rules", "run-bpf-lsm-test"}
+    assert result["ok"] is True
+    assert result["action"] == "start-service"
+    assert calls[0][0] == ["/usr/bin/pkexec", "/usr/lib/memguardos/memguardos-native-helper.sh", "start-service"]
+
+
+def test_privileged_action_rejects_unknown_action_without_execution(monkeypatch):
+    monkeypatch.setattr(
+        "memguard.os_guard.privileged_actions.subprocess.run",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("must not execute")),
+    )
+
+    result = run_privileged_action("shell-command")
+
+    assert result["ok"] is False
+    assert result["error_code"] == "unsupported_action"
+
+
+def test_native_helper_has_strict_argument_and_environment_guards():
+    root = Path(__file__).resolve().parents[1]
+    helper = (root / "scripts/memguardos-native-helper.sh").read_text(encoding="utf-8")
+    policy = (root / "packaging/polkit/org.memguardos.policy").read_text(encoding="utf-8")
+
+    assert 'if [ "$#" -ne 1 ]' in helper
+    assert "MEMGUARD_PROJECT_ROOT" not in helper
+    assert "PATH='/usr/sbin:/usr/bin:/sbin:/bin'" in helper
+    for action in ("start-service", "stop-service", "restart-service"):
+        assert action in helper
+        assert f"org.memguardos.{action}" in policy

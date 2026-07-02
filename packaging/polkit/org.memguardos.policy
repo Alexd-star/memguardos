@@ -5,38 +5,45 @@
   <vendor>MemGuardOS</vendor>
   <vendor_url>https://github.com/Alexd-star/memguardos</vendor_url>
 
-  <action id="org.memguardos.install-services">
-    <description>Install or refresh MemGuardOS systemd services</description>
-    <message>需要管理员授权来安装或刷新 MemGuardOS systemd 服务。</message>
-    <defaults>
-      <allow_any>auth_admin</allow_any>
-      <allow_inactive>auth_admin</allow_inactive>
-      <allow_active>auth_admin_keep</allow_active>
-    </defaults>
+  <action id="org.memguardos.start-service">
+    <description>启动 MemGuardOS 服务</description>
+    <message>需要管理员授权来启动 MemGuardOS 记忆服务。</message>
+    <defaults><allow_any>auth_admin</allow_any><allow_inactive>auth_admin</allow_inactive><allow_active>auth_admin_keep</allow_active></defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/memguardos/memguardos-native-helper.sh</annotate>
-    <annotate key="org.freedesktop.policykit.exec.argv1">install-services</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">start-service</annotate>
   </action>
-
+  <action id="org.memguardos.stop-service">
+    <description>停止 MemGuardOS 服务</description>
+    <message>需要管理员授权来停止 MemGuardOS 记忆服务。</message>
+    <defaults><allow_any>auth_admin</allow_any><allow_inactive>auth_admin</allow_inactive><allow_active>auth_admin</allow_active></defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/memguardos/memguardos-native-helper.sh</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">stop-service</annotate>
+  </action>
+  <action id="org.memguardos.restart-service">
+    <description>重启 MemGuardOS 服务</description>
+    <message>需要管理员授权来重启 MemGuardOS 记忆服务。</message>
+    <defaults><allow_any>auth_admin</allow_any><allow_inactive>auth_admin</allow_inactive><allow_active>auth_admin_keep</allow_active></defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/memguardos/memguardos-native-helper.sh</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">restart-service</annotate>
+  </action>
+  <action id="org.memguardos.refresh-services">
+    <description>刷新 MemGuardOS systemd 单元</description>
+    <message>需要管理员授权来刷新 MemGuardOS 系统服务配置。</message>
+    <defaults><allow_any>auth_admin</allow_any><allow_inactive>auth_admin</allow_inactive><allow_active>auth_admin_keep</allow_active></defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/memguardos/memguardos-native-helper.sh</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">refresh-services</annotate>
+  </action>
   <action id="org.memguardos.install-auditd-rules">
-    <description>Install MemGuardOS auditd rules</description>
-    <message>需要管理员授权来安装 MemGuardOS 审计规则。</message>
-    <defaults>
-      <allow_any>auth_admin</allow_any>
-      <allow_inactive>auth_admin</allow_inactive>
-      <allow_active>auth_admin_keep</allow_active>
-    </defaults>
+    <description>安装 MemGuardOS 审计规则</description>
+    <message>需要管理员授权来安装 MemGuardOS auditd 审计规则。</message>
+    <defaults><allow_any>auth_admin</allow_any><allow_inactive>auth_admin</allow_inactive><allow_active>auth_admin_keep</allow_active></defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/memguardos/memguardos-native-helper.sh</annotate>
     <annotate key="org.freedesktop.policykit.exec.argv1">install-auditd-rules</annotate>
   </action>
-
   <action id="org.memguardos.run-bpf-lsm-test">
-    <description>Run MemGuardOS BPF LSM safety test</description>
-    <message>需要管理员授权来运行 MemGuardOS BPF LSM 安全测试。</message>
-    <defaults>
-      <allow_any>auth_admin</allow_any>
-      <allow_inactive>auth_admin</allow_inactive>
-      <allow_active>auth_admin</allow_active>
-    </defaults>
+    <description>运行 MemGuardOS BPF LSM 安全验证</description>
+    <message>需要管理员授权来运行安全测试路径上的 BPF LSM 验证。</message>
+    <defaults><allow_any>auth_admin</allow_any><allow_inactive>auth_admin</allow_inactive><allow_active>auth_admin</allow_active></defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/memguardos/memguardos-native-helper.sh</annotate>
     <annotate key="org.freedesktop.policykit.exec.argv1">run-bpf-lsm-test</annotate>
   </action>

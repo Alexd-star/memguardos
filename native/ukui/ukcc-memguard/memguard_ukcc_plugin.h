@@ -2,12 +2,16 @@
 
 #include <QList>
 #include <QObject>
+#include <QStringList>
 #include <QWidget>
-#include <QTextEdit>
 #include <ukcc/interface/interface.h>
 
 class QLabel;
+class QJsonObject;
 class QPushButton;
+class QTextEdit;
+class QToolButton;
+class QTreeWidget;
 
 class MemGuardUkccPlugin : public QObject, public CommonInterface
 {
@@ -27,10 +31,26 @@ public:
 
 private:
     QWidget *page_ = nullptr;
-    QTextEdit *output_ = nullptr;
-    QLabel *status_ = nullptr;
+    QLabel *summaryIcon_ = nullptr;
+    QLabel *summaryTitle_ = nullptr;
+    QLabel *summaryDescription_ = nullptr;
+    QLabel *serviceState_ = nullptr;
+    QLabel *sdkState_ = nullptr;
+    QLabel *auditState_ = nullptr;
+    QTreeWidget *components_ = nullptr;
+    QTextEdit *details_ = nullptr;
+    QToolButton *detailsToggle_ = nullptr;
     QList<QPushButton *> actionButtons_;
-    void runMemctl(const QStringList &args);
+
+    QWidget *buildOverviewTab();
+    QWidget *buildServiceTab();
+    QWidget *buildDiagnosticsTab();
+    void refreshStatus();
+    void runMemctl(const QStringList &arguments, const QString &purpose);
+    void runProgram(const QString &program, const QStringList &arguments, const QString &purpose);
+    void renderStatus(const QJsonObject &payload);
+    void exportDiagnostics(const QString &text);
     void openDashboard();
     void setBusy(bool busy, const QString &message);
+    void showError(const QString &title, const QString &message);
 };

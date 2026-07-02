@@ -17,11 +17,12 @@ from memguard.os_guard.auditd import audit_rules_file, auditctl_rules, ausearch_
 from memguard.os_guard.doctor import doctor_report
 from memguard.os_guard.cgroup import cgroup_status
 from memguard.os_guard.openkylin_native import openkylin_native_status
+from memguard.os_guard.privileged_actions import ALLOWED_ACTIONS, run_privileged_action
 from memguard.retrieval.kylin_sdk import kylin_sdk_status
 from memguard.service import MemGuardService
 
 
-_SERVICE_FREE_COMMANDS = {"doctor", "status", "namespaces", "sdk-status", "auditd-rules", "openkylin-status"}
+_SERVICE_FREE_COMMANDS = {"doctor", "status", "namespaces", "sdk-status", "auditd-rules", "openkylin-status", "native-action"}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -216,6 +217,9 @@ def build_parser() -> argparse.ArgumentParser:
     openkylin_status = sub.add_parser("openkylin-status", help="Show openKylin-native desktop, SDK, service and security status")
     openkylin_status.add_argument("--probe-sdk", action="store_true", help="Run one protected Kylin embedding probe")
     openkylin_status.add_argument("--probe-timeout", type=float, default=45.0)
+    native_action = sub.add_parser("native-action", help="Run a fixed openKylin system action through Polkit")
+    native_action.add_argument("action", choices=sorted(ALLOWED_ACTIONS))
+    native_action.add_argument("--timeout", type=float, default=180.0)
 
     auditd = sub.add_parser("auditd-rules", help="Print auditd rules for sensitive path monitoring")
     auditd.add_argument("--format", choices=["auditctl", "rules-file", "ausearch"], default="auditctl")
@@ -709,6 +713,11 @@ def _run_service_free_command(args: argparse.Namespace) -> int:
             )
         )
         return 0
+
+    if args.command == "native-action":
+        result = run_privileged_action(args.action, timeout=args.timeout)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if result.get("ok") else 2
 
     if args.command == "auditd-rules":
         if args.format == "auditctl":
