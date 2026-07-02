@@ -87,7 +87,7 @@ private:
     {
         if (current_)
             return;
-        QStringList arguments{QStringLiteral("openkylin-status")};
+        QStringList arguments{QStringLiteral("openkylin-status"), QStringLiteral("--fast")};
         const QString program = memctlProgram(&arguments);
         current_ = new QProcess(this);
         current_->setProcessChannelMode(QProcess::MergedChannels);

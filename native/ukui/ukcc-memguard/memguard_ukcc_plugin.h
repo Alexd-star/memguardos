@@ -2,6 +2,7 @@
 
 #include <QList>
 #include <QObject>
+#include <QPointer>
 #include <QStringList>
 #include <QWidget>
 #include <ukcc/interface/interface.h>
@@ -9,8 +10,10 @@
 class QLabel;
 class QJsonObject;
 class QListWidget;
+class QTabWidget;
 class QProgressBar;
 class QPushButton;
+class QProcess;
 class QTextEdit;
 class QToolButton;
 class QTreeWidget;
@@ -50,12 +53,18 @@ private:
     QLabel *desktopStatusLabel_ = nullptr;
     QLabel *readinessValueLabel_ = nullptr;
     QProgressBar *readinessBar_ = nullptr;
+    QPushButton *cancelOperationButton_ = nullptr;
     QListWidget *recommendations_ = nullptr;
+    QTabWidget *tabs_ = nullptr;
+    int overviewTabIndex_ = 0;
+    int serviceTabIndex_ = 1;
+    int diagnosticsTabIndex_ = 2;
     QTreeWidget *components_ = nullptr;
     QTreeWidget *resourceSnapshot_ = nullptr;
     QTreeWidget *operationHistory_ = nullptr;
     QTextEdit *details_ = nullptr;
     QToolButton *detailsToggle_ = nullptr;
+    QPointer<QProcess> currentProcess_;
     QList<QPushButton *> actionButtons_;
 
     QWidget *buildOverviewTab();
@@ -66,6 +75,12 @@ private:
     void runProgram(const QString &program, const QStringList &arguments, const QString &purpose);
     void renderStatus(const QJsonObject &payload);
     void renderResourceSnapshot(const QJsonObject &resources);
+    void addRecommendationRow(const QString &text, const QString &overall);
+    void handleRecommendationAction(const QString &text);
+    QString operationStartMessage(const QStringList &arguments, const QString &purpose) const;
+    QString operationCompleteMessage(const QStringList &arguments, const QString &purpose, int exitCode) const;
+    int operationTimeoutMs(const QStringList &arguments, const QString &purpose) const;
+    void showDetailsOutput(const QString &text, const QString &summary);
     void setStatusBadge(QLabel *icon, QLabel *label, const QString &level, const QString &text);
     void appendHistory(const QString &operation, bool ok, const QString &message);
     void exportDiagnostics(const QString &text);

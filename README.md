@@ -223,7 +223,8 @@ systemd/cgroup、auditd、SDK、UKUI、BPF LSM 常用验证入口：
 sudo bash scripts/install_openkylin.sh "$(pwd)"
 sudo systemctl start memguardd
 systemctl show memguardd -p MemoryMax -p CPUQuotaPerSecUSec
-python -m memguard.cli.memctl openkylin-status
+python -m memguard.cli.memctl openkylin-status --fast
+python -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
 python -m memguard.cli.memctl auditd-rules --format auditctl
 python -m memguard.cli.memctl sdk-status --probe-embedding --probe-timeout 90
 bash scripts/warmup_kylin_sdk.sh
@@ -371,7 +372,7 @@ dist/memguardos_full_repository_<时间戳>_manifest.json
 - Debian 安装包：历史单包已在 openKylin 维护模式完成完整 `apt install` 安装复验；当前版本已升级为五个职责独立的包，并已通过构建、文件冲突检查和离线生命周期验证。最终提交前建议在维护模式下按当前 Git HEAD 再跑一次五包 `apt install` 证据。
 - 语义抽取：默认采用可解释、可复现的 deterministic semantic rules；显式配置 `MEMGUARD_EXTRACTOR_COMMAND` 后可接本地 NER/LLM JSON 增强器，增强器失败会自动回退。
 - BPF LSM：已在 openKylin 对安全测试文件完成强制拒绝验证；支持从 JSON 生成可审查静态 denylist；默认不拦截 `/etc/shadow`、SSH、sudo 或 PAM 链路。
-- UKUI/Peony：Peony 右键菜单插件已在 openKylin 桌面右键菜单中可见验证；当前菜单动作采用 `memctl desktop scan-files` 预览和 `memctl desktop apply-scan` 确认执行，对用户主动选择的文件生成批量扫描清单，高风险敏感文本阻断写入，目录/大文件/非文本文件只记录 OS event，安全文本在用户确认后进入 `peony_file` 导入链路。UKUI 控制中心入口“MemGuardOS 记忆安全”已升级为本机运维面板，包含服务状态、服务级 cgroup、端侧向量能力、Kylin SDK 预热、审计链、Polkit 高权限动作、诊断报告和本地控制台入口；UKUI 托盘提供低干扰状态提醒和快捷入口。
+- UKUI/Peony：Peony 右键菜单插件已在 openKylin 桌面右键菜单中可见验证；当前菜单动作采用 `memctl desktop scan-files` 预览和 `memctl desktop apply-scan` 确认执行，对用户主动选择的文件生成批量扫描清单，高风险敏感文本阻断写入，目录/大文件/非文本文件只记录 OS event，安全文本在用户确认后进入 `peony_file` 导入链路。UKUI 控制中心入口“MemGuardOS 记忆安全”已升级为本机运维面板，包含服务状态、服务级 cgroup、端侧向量能力、Kylin SDK 预热、审计链、Polkit 高权限动作、诊断报告和本地控制台入口；打开设置页时默认使用 `openkylin-status --fast` 轻量状态，完整 SDK 推理探针只在用户主动检查或预热时执行，避免 SDK 冷启动拖慢系统设置；UKUI 托盘提供低干扰状态提醒和快捷入口。
 - Web 控制台：用于本地运维、调试和评审操作，默认绑定 `127.0.0.1`，不作为公网 SaaS 管理台。
 - 用户行为：主链路采集用户与 OpenHands Agent 的消息、反馈、工具调用和工具结果；shell、配置、OS 事件和 auditd 是补充来源，不宣称全量桌面行为捕获。
 - 真实 Agent：原 12 组 openKylin/OpenHands 会话和新增 R13-R20 8 组扩展会话均已完成归档，记忆系统层与 Agent 行为层合计 28/28。系统保留模型原始尝试，并通过偏好 Hook、有界合规修复、严格只读结构化意图恢复和程序性结果兜底提高小模型稳定性；该结果仅代表当前公开场景，不扩展为任意 Agent 任务均稳定完成。

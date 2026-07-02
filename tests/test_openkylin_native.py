@@ -29,6 +29,25 @@ def test_openkylin_status_cli_has_native_operational_schema(tmp_path, monkeypatc
     assert payload["recommendations"]
 
 
+def test_openkylin_status_fast_uses_light_sdk_status(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+    monkeypatch.delenv("MEMGUARD_NAMESPACE", raising=False)
+
+    def fail_heavy_probe(*args, **kwargs):
+        raise AssertionError("fast openKylin status must not load the full Kylin SDK path")
+
+    monkeypatch.setattr(openkylin_native, "kylin_sdk_status", fail_heavy_probe)
+
+    assert memctl_main(["openkylin-status", "--fast"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["schema"] == "memguardos-openkylin-native-status-v1"
+    assert payload["sdk"]["embedding"]["status_mode"] == "fast"
+    assert payload["sdk"]["embedding"]["embedding_probe"] is None
+    assert payload["sdk"]["embedding"]["inference_ready"] is None
+    assert "vector_store" in payload["sdk"]
+
+
 def test_desktop_scan_file_reports_preview_without_ingesting_sensitive_file(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
     secret_file = tmp_path / ".env"
@@ -282,6 +301,21 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "任务入口" in source
     assert "处理建议" in source
     assert "recommendations" in source
+    assert "addRecommendationRow" in source
+    assert "handleRecommendationAction" in source
+    assert "setItemWidget" in source
+    assert "检查端侧能力" in source
+    assert "校验审计链" in source
+    assert "去服务控制" in source
+    assert "setCurrentIndex(serviceTabIndex_)" in source
+    assert "operationStartMessage" in source
+    assert "operationCompleteMessage" in source
+    assert "showDetailsOutput" in source
+    assert "cancelOperationButton_" in source
+    assert "停止当前操作" in source
+    assert "服务日志已显示在【系统维护】" in source
+    assert "summaryDescription_->setText(message)" in source
+    assert 'runMemctl({QStringLiteral("diagnostics")}, QStringLiteral("export"))' in source
     assert "采集 → 抽取 → 上下文 → 遗忘" in source
     assert "服务运行" in source
     assert "桌面集成" in source
@@ -296,6 +330,8 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "维护工具" in source
     assert "报告与控制台" in source
     assert "系统维护说明" in source
+    assert "openkylin-status" in source
+    assert "--fast" in source
     assert "管理员授权" in source
     assert "appendHistory" in source
     assert "renderResourceSnapshot" in source
@@ -441,6 +477,8 @@ def test_ukui_tray_follows_system_theme_and_deduplicates_notifications():
     build = (root / "scripts/build_ukui_plugins.sh").read_text(encoding="utf-8")
 
     assert "QSystemTrayIcon" in source
+    assert "openkylin-status" in source
+    assert "--fast" in source
     assert "QIcon::fromTheme" in source
     assert "lastState_" in source
     assert "showMessage" in source

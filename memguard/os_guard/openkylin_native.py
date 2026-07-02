@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Dict, List
+import os
 import platform
 import shutil
 import subprocess
@@ -11,18 +12,26 @@ from memguard.os_guard.service_control import service_resource_status
 from memguard.retrieval.kylin_sdk import kylin_sdk_status
 
 
-def openkylin_native_status(namespace: str | None = None, probe_sdk: bool = False, probe_timeout: float = 45.0) -> Dict[str, object]:
+def openkylin_native_status(
+    namespace: str | None = None,
+    probe_sdk: bool = False,
+    probe_timeout: float = 45.0,
+    fast: bool = False,
+) -> Dict[str, object]:
     namespace = normalize_namespace(namespace)
     services = _service_status(["memguardd.service", "kylin-ai-vector-engine.service", "kytensor.service"])
-    sdk = kylin_sdk_status(probe_embedding=probe_sdk, probe_timeout=probe_timeout)
+    sdk = _fast_sdk_status(services) if fast and not probe_sdk else kylin_sdk_status(probe_embedding=probe_sdk, probe_timeout=probe_timeout)
     desktop = _desktop_status()
     security = _security_status()
     resources = _resource_status(namespace)
     system = _system_status()
+    embedding_ready = sdk["embedding"].get("inference_ready")
+    if fast and embedding_ready is None:
+        embedding_ready = sdk["embedding"].get("available")
     components = [
         _component("systemd", services["systemd"]["available"], services["systemd"]["active"], "systemd 服务管理"),
         _component("auditd", security["auditd"]["available"], security["auditd"]["rules_tool_available"], "审计规则工具"),
-        _component("kylin_embedding", sdk["embedding"].get("available"), sdk["embedding"].get("inference_ready"), "Kylin embedding SDK"),
+        _component("kylin_embedding", sdk["embedding"].get("available"), embedding_ready, "Kylin embedding SDK"),
         _component("kylin_vector", sdk["vector_store"].get("available"), sdk["vector_store"].get("user_service", {}).get("active"), "Kylin vector SDK"),
         _component("peony", desktop["peony"]["available"], desktop["peony"]["plugin_installed"], "Peony 右键插件"),
         _component("ukui_control_center", desktop["ukui_control_center"]["available"], desktop["ukui_control_center"]["plugin_installed"], "UKUI 控制中心插件"),
@@ -41,6 +50,96 @@ def openkylin_native_status(namespace: str | None = None, probe_sdk: bool = Fals
         "summary": _summary(components),
         "components": components,
         "recommendations": recommendations,
+    }
+
+
+def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
+    uid = os.getuid() if hasattr(os, "getuid") else 1000
+    embedding_library_candidates = [
+        Path("/lib/x86_64-linux-gnu/libkysdk-coreai-embedding.so.1"),
+        Path("/usr/lib/x86_64-linux-gnu/libkysdk-coreai-embedding.so.1"),
+        Path("/lib/aarch64-linux-gnu/libkysdk-coreai-embedding.so.1"),
+        Path("/usr/lib/aarch64-linux-gnu/libkysdk-coreai-embedding.so.1"),
+        Path("/lib/loongarch64-linux-gnu/libkysdk-coreai-embedding.so.1"),
+        Path("/usr/lib/loongarch64-linux-gnu/libkysdk-coreai-embedding.so.1"),
+    ]
+    embedding_headers = {
+        "/usr/include/kylin-ai/coreai/embedding/embedding.h": Path("/usr/include/kylin-ai/coreai/embedding/embedding.h").exists(),
+        "/usr/include/kylin-ai/plugins/ai-engines/ondeviceembeddingengine.h": Path("/usr/include/kylin-ai/plugins/ai-engines/ondeviceembeddingengine.h").exists(),
+    }
+    repositories = [
+        Path("/opt/appdata/kylin-ai/model-repository"),
+        Path("/usr/share/kylin-ai/model-repository"),
+    ]
+    text_models = [
+        "ensemble-embd_gte-base_uint8-text",
+        "embd_gte-base_uint8-text",
+        "tokenizer_gte-base_uint8-text",
+    ]
+    model_entries = sorted({entry.name for repo in repositories if repo.exists() for entry in repo.iterdir()})
+    has_text_models = any(name in model_entries for name in text_models)
+    library_file = next((str(path) for path in embedding_library_candidates if path.exists()), "")
+    runtime_base = Path(f"/tmp/.kylin-ai-runtime-unix/{uid}")
+    runtime_sockets = {
+        "core-textembedding.sock": str(runtime_base / "core-textembedding.sock"),
+        "config.sock": str(runtime_base / "config.sock"),
+    }
+    vector_socket = Path(f"/tmp/kylin-ai-vector-engine-{uid}.sock")
+    vector_binary = Path("/usr/bin/kylin-ai-vector-engine")
+    vector_header = Path("/usr/include/kysdk-vector-engine-client/Database.h")
+    embedding_available = bool(library_file or any(embedding_headers.values()) or has_text_models)
+    vector_service = services.get("kylin-ai-vector-engine.service", {}) if isinstance(services.get("kylin-ai-vector-engine.service"), dict) else {}
+    return {
+        "embedding": {
+            "backend": "kylin_coreai_embedding",
+            "status_mode": "fast",
+            "library": "libkysdk-coreai-embedding.so.1",
+            "library_file": library_file,
+            "library_loadable": None,
+            "headers": embedding_headers,
+            "runtime": {
+                "binary": "/usr/bin/kylin-ai-runtime",
+                "binary_exists": Path("/usr/bin/kylin-ai-runtime").exists(),
+                "base_dir": str(runtime_base),
+                "base_dir_exists": runtime_base.exists(),
+                "sockets": runtime_sockets,
+                "socket_exists": {name: Path(path).exists() for name, path in runtime_sockets.items()},
+            },
+            "kytensor": {
+                "service": services.get("kytensor.service", {}),
+                "repository_index": {
+                    "available": bool(model_entries),
+                    "ok": has_text_models,
+                    "models": model_entries[:32],
+                    "has_text_embedding_models": has_text_models,
+                },
+            },
+            "session": None,
+            "model_info": {"name": "gte text embedding model detected", "dim": 768, "ondevice": True} if has_text_models else None,
+            "embedding_probe": None,
+            "available": embedding_available,
+            "inference_ready": None,
+            "ready_for_default_retrieval": False,
+            "fallback": "hash_embedding",
+            "diagnosis": {
+                "availability_meaning": "fast mode checks files, sockets and services only; run sdk-status --probe-embedding for real inference.",
+                "probe_meaning": "not executed in fast mode to keep UKUI settings responsive.",
+            },
+        },
+        "vector_store": {
+            "backend": "kysdk_vector_engine_client",
+            "status_mode": "fast",
+            "library": "libkysdk-vector-engine-client.so.1",
+            "library_loadable": None,
+            "headers": {str(vector_header): vector_header.exists()},
+            "binary": str(vector_binary),
+            "default_binary": "/usr/bin/kylin-ai-vector-engine-default",
+            "user_service": vector_service,
+            "socket": str(vector_socket),
+            "socket_exists": vector_socket.exists(),
+            "available": vector_binary.exists() or vector_header.exists() or vector_socket.exists(),
+            "fallback": "sqlite_fts_hash_vector",
+        },
     }
 
 
