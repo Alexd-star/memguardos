@@ -276,12 +276,26 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "资源快照" in source
     assert "QProgressBar" in source
     assert "QScrollArea" in source
+    assert "setTextVisible(false)" in source
+    assert "readinessValueLabel_" in source
     assert "服务健康" in source
     assert "任务入口" in source
+    assert "处理建议" in source
+    assert "recommendations" in source
     assert "采集 → 抽取 → 上下文 → 遗忘" in source
     assert "服务运行" in source
     assert "桌面集成" in source
     assert "setStatusBadge" in source
+    assert "makeOperationButton" in source
+    assert "setIconSize(QSize(22, 22))" in source
+    assert "QFrame" in source
+    assert "QPalette::WindowText" in source
+    assert "服务控制" in source
+    assert "端侧能力" in source
+    assert "安全审计" in source
+    assert "维护工具" in source
+    assert "报告与控制台" in source
+    assert "系统维护说明" in source
     assert "管理员授权" in source
     assert "appendHistory" in source
     assert "renderResourceSnapshot" in source

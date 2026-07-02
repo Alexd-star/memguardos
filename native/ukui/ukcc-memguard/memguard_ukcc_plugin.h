@@ -8,6 +8,7 @@
 
 class QLabel;
 class QJsonObject;
+class QListWidget;
 class QProgressBar;
 class QPushButton;
 class QTextEdit;
@@ -47,7 +48,9 @@ private:
     QLabel *sdkStatusLabel_ = nullptr;
     QLabel *desktopStatusIcon_ = nullptr;
     QLabel *desktopStatusLabel_ = nullptr;
+    QLabel *readinessValueLabel_ = nullptr;
     QProgressBar *readinessBar_ = nullptr;
+    QListWidget *recommendations_ = nullptr;
     QTreeWidget *components_ = nullptr;
     QTreeWidget *resourceSnapshot_ = nullptr;
     QTreeWidget *operationHistory_ = nullptr;
