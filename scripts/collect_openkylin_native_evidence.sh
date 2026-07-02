@@ -29,6 +29,31 @@ run_required_capture() {
   } >"${OUT_DIR}/${name}" 2>&1
 }
 
+find_pytest_python() {
+  if [ -n "${PYTHON_BIN:-}" ] && [ -x "${PYTHON_BIN}" ] && "${PYTHON_BIN}" -m pytest --version >/dev/null 2>&1; then
+    printf '%s\n' "${PYTHON_BIN}"
+    return 0
+  fi
+  local project_parent
+  project_parent="$(dirname "$(pwd)")"
+  local candidates=(
+    "$(pwd)/.venv/bin/python"
+    "$(pwd)/.venv/Scripts/python.exe"
+    "${project_parent}/memguardos/.venv/bin/python"
+    "${project_parent}/memguardos/.venv/Scripts/python.exe"
+    "${HOME:-}/memguardos/.venv/bin/python"
+    "python3"
+  )
+  local candidate
+  for candidate in "${candidates[@]}"; do
+    if command -v "${candidate}" >/dev/null 2>&1 && "${candidate}" -m pytest --version >/dev/null 2>&1; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
 SOURCE_REVISION="${MEMGUARD_SOURCE_REVISION:-}"
 SOURCE_MODE="${MEMGUARD_SOURCE_MODE:-git_worktree}"
 DIRTY=false
@@ -104,11 +129,12 @@ print("actions=" + ",".join(actions))
 PY
 if sudo scripts/memguardos-native-helper.sh unsupported-action; then exit 3; else echo unknown_action_rejected=true; fi
 ls -l /usr/share/polkit-1/actions/org.memguardos.policy /usr/lib/memguardos/memguardos-native-helper.sh 2>/dev/null || true'
-run_required_capture systemd_cgroup.txt bash -lc 'systemctl show memguardd.service --property=LoadState,ActiveState,SubState,ControlGroup,MemoryMax,CPUQuotaPerSecUSec --no-pager; CG=$(systemctl show memguardd.service -p ControlGroup --value); test -n "$CG"; for f in memory.current memory.max cpu.max cpu.stat; do printf "--- %s ---\n" "$f"; cat "/sys/fs/cgroup${CG}/${f}" 2>/dev/null || true; done'
+run_required_capture systemd_cgroup.txt bash -lc 'systemctl show memguardd.service --property=LoadState,ActiveState,SubState,ControlGroup,MemoryMax,CPUQuotaPerSecUSec --no-pager; CG=$(systemctl show memguardd.service -p ControlGroup --value); test -n "$CG"; for f in memory.current memory.max cpu.max cpu.stat; do printf "%s\n" "--- ${f} ---"; cat "/sys/fs/cgroup${CG}/${f}" 2>/dev/null || true; done'
 
 run_required_capture debian_packages.txt bash scripts/build_deb.sh
 run_required_capture deb_lifecycle.txt bash scripts/verify_deb_lifecycle.sh
-run_required_capture pytest_openkylin.txt python3 -m pytest -q
+PYTEST_PYTHON="$(find_pytest_python)"
+run_required_capture pytest_openkylin.txt "${PYTEST_PYTHON}" -m pytest -q
 
 run_capture installed_packages.txt bash -lc 'dpkg-query -W -f="\${Package} \${Version} \${Status}\n" "memguardos*" 2>/dev/null || true'
 run_capture installed_desktop.txt bash -lc 'find /usr/lib -path "*peony-extensions*memguardos*.so" -o -path "*ukui-control-center*memguardos*.so" 2>/dev/null || true; command -v memguardos-tray || true; pgrep -a memguardos-tray || true'
