@@ -266,6 +266,12 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "QTreeWidget" in source
     assert "QJsonDocument" in source
     assert "技术详情" in source
+    assert "操作结果" in source
+    assert "操作历史" in source
+    assert "资源快照" in source
+    assert "管理员授权" in source
+    assert "appendHistory" in source
+    assert "renderResourceSnapshot" in source
     assert "启动服务" in source
     assert "停止服务" in source
     assert "重启服务" in source
@@ -296,6 +302,20 @@ def test_privileged_actions_are_fixed_and_report_structured_result(monkeypatch):
     assert result["ok"] is True
     assert result["action"] == "start-service"
     assert calls[0][0] == ["/usr/bin/pkexec", "/usr/lib/memguardos/memguardos-native-helper.sh", "start-service"]
+
+
+def test_native_evidence_collector_installs_and_records_polkit_assets():
+    root = Path(__file__).resolve().parents[1]
+    collector = (root / "scripts/collect_openkylin_native_evidence.sh").read_text(encoding="utf-8")
+    readiness = (root / "scripts/check_competition_ready.py").read_text(encoding="utf-8")
+
+    assert "install -m 0644 packaging/polkit/org.memguardos.policy" in collector
+    assert "install -m 0755 scripts/memguardos-native-helper.sh" in collector
+    assert "policy_installed=true" in collector
+    assert "helper_installed=true" in collector
+    assert "unknown_action_rejected=true" in collector
+    assert "Polkit policy 已安装" in readiness
+    assert "Polkit helper 已安装" in readiness
 
 
 def test_privileged_action_rejects_unknown_action_without_execution(monkeypatch):

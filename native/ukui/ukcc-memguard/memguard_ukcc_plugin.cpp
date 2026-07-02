@@ -1,6 +1,7 @@
 #include "memguard_ukcc_plugin.h"
 
 #include <QAbstractItemView>
+#include <QDateTime>
 #include <QDesktopServices>
 #include <QDialog>
 #include <QFile>
@@ -78,6 +79,19 @@ QString boolText(bool value)
     return value ? QStringLiteral("正常") : QStringLiteral("需要检查");
 }
 
+QString purposeText(const QString &purpose)
+{
+    if (purpose == QStringLiteral("refresh"))
+        return QStringLiteral("状态刷新");
+    if (purpose == QStringLiteral("export"))
+        return QStringLiteral("诊断导出");
+    if (purpose == QStringLiteral("action"))
+        return QStringLiteral("管理员授权操作");
+    if (purpose == QStringLiteral("details"))
+        return QStringLiteral("查看详情");
+    return QStringLiteral("系统操作");
+}
+
 } // namespace
 
 QString MemGuardUkccPlugin::plugini18nName()
@@ -130,6 +144,11 @@ QWidget *MemGuardUkccPlugin::pluginUi()
     summaryLayout->addWidget(refresh);
     layout->addWidget(summaryBox);
 
+    resultSummary_ = new QLabel(QStringLiteral("操作结果：等待首次检查。"));
+    resultSummary_->setWordWrap(true);
+    resultSummary_->setAccessibleName(QStringLiteral("最近一次操作结果摘要"));
+    layout->addWidget(resultSummary_);
+
     auto *tabs = new QTabWidget;
     tabs->setAccessibleName(QStringLiteral("MemGuardOS 设置分类"));
     tabs->addTab(buildOverviewTab(), QIcon::fromTheme(QStringLiteral("view-list-details")), QStringLiteral("总览"));
@@ -157,6 +176,35 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     components_->header()->setSectionResizeMode(2, QHeaderView::Stretch);
     components_->setAccessibleName(QStringLiteral("本机组件状态列表"));
     layout->addWidget(components_);
+
+    auto *resourceBox = new QGroupBox(QStringLiteral("资源快照"));
+    auto *resourceLayout = new QVBoxLayout(resourceBox);
+    resourceSnapshot_ = new QTreeWidget;
+    resourceSnapshot_->setColumnCount(2);
+    resourceSnapshot_->setHeaderLabels({QStringLiteral("项目"), QStringLiteral("当前值")});
+    resourceSnapshot_->setRootIsDecorated(false);
+    resourceSnapshot_->setAlternatingRowColors(true);
+    resourceSnapshot_->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    resourceSnapshot_->header()->setSectionResizeMode(1, QHeaderView::Stretch);
+    resourceSnapshot_->setAccessibleName(QStringLiteral("memguardd 服务资源快照"));
+    resourceLayout->addWidget(resourceSnapshot_);
+    layout->addWidget(resourceBox);
+
+    auto *historyBox = new QGroupBox(QStringLiteral("操作历史"));
+    auto *historyLayout = new QVBoxLayout(historyBox);
+    operationHistory_ = new QTreeWidget;
+    operationHistory_->setColumnCount(4);
+    operationHistory_->setHeaderLabels({QStringLiteral("时间"), QStringLiteral("操作"), QStringLiteral("结果"), QStringLiteral("说明")});
+    operationHistory_->setRootIsDecorated(false);
+    operationHistory_->setAlternatingRowColors(true);
+    operationHistory_->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    operationHistory_->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    operationHistory_->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    operationHistory_->header()->setSectionResizeMode(3, QHeaderView::Stretch);
+    operationHistory_->setAccessibleName(QStringLiteral("MemGuardOS 最近操作历史"));
+    historyLayout->addWidget(operationHistory_);
+    layout->addWidget(historyBox);
+
     auto *hint = new QLabel(QStringLiteral("状态来自本机实时检查。选择【重新检查状态】可刷新服务、SDK、审计和资源信息。"));
     hint->setWordWrap(true);
     layout->addWidget(hint);
@@ -183,6 +231,10 @@ QWidget *MemGuardUkccPlugin::buildServiceTab()
     serviceButtons->addWidget(logs);
     serviceButtons->addStretch();
     serviceLayout->addLayout(serviceButtons);
+    auto *serviceHint = new QLabel(QStringLiteral("启动、停止和重启属于管理员授权操作，会通过 Polkit 显示系统授权窗口。"));
+    serviceHint->setWordWrap(true);
+    serviceHint->setAccessibleName(QStringLiteral("管理员授权说明"));
+    serviceLayout->addWidget(serviceHint);
     layout->addWidget(serviceBox);
 
     auto *sdkBox = new QGroupBox(QStringLiteral("端侧向量能力"));
@@ -213,6 +265,9 @@ QWidget *MemGuardUkccPlugin::buildServiceTab()
     securityButtons->addStretch();
     securityLayout->addWidget(auditState_);
     securityLayout->addLayout(securityButtons);
+    auto *securityHint = new QLabel(QStringLiteral("安装审计规则和 BPF 安全验证会触发管理员授权；未知动作会被白名单 helper 拒绝。"));
+    securityHint->setWordWrap(true);
+    securityLayout->addWidget(securityHint);
     layout->addWidget(securityBox);
     layout->addStretch();
 
@@ -315,6 +370,7 @@ void MemGuardUkccPlugin::runProgram(const QString &program, const QStringList &a
             const QString output = cleanedOutput(process->readAll());
             const QJsonObject payload = parsedObject(output);
             details_->setPlainText(output);
+            const QString summaryMessage = payload.value(QStringLiteral("message")).toString(output.left(240));
             if (purpose == QStringLiteral("refresh") && !payload.isEmpty())
                 renderStatus(payload);
             else if (purpose == QStringLiteral("export") && exitCode == 0)
@@ -331,6 +387,7 @@ void MemGuardUkccPlugin::runProgram(const QString &program, const QStringList &a
                 detailsToggle_->setChecked(true);
             }
             setBusy(false, exitCode == 0 ? QStringLiteral("检查完成") : QStringLiteral("需要处理"));
+            appendHistory(purposeText(purpose), exitCode == 0, summaryMessage);
             process->deleteLater();
         });
     QTimer::singleShot(180000, this, [this, guard]() {
@@ -380,6 +437,46 @@ void MemGuardUkccPlugin::renderStatus(const QJsonObject &payload)
     auditState_->setText(QStringLiteral("auditd：%1；Polkit 策略：%2；BPF LSM：可选安全验证路径")
         .arg(boolText(security.value(QStringLiteral("auditd")).toObject().value(QStringLiteral("available")).toBool()))
         .arg(boolText(security.value(QStringLiteral("polkit")).toObject().value(QStringLiteral("policy_installed")).toBool())));
+    renderResourceSnapshot(payload.value(QStringLiteral("resources")).toObject());
+    appendHistory(QStringLiteral("状态刷新"), true, summaryDescription_->text());
+}
+
+void MemGuardUkccPlugin::renderResourceSnapshot(const QJsonObject &resources)
+{
+    if (!resourceSnapshot_)
+        return;
+    resourceSnapshot_->clear();
+    const QJsonObject memory = resources.value(QStringLiteral("memory")).toObject();
+    const QJsonObject cpu = resources.value(QStringLiteral("cpu")).toObject();
+    const QList<QPair<QString, QString>> rows = {
+        {QStringLiteral("服务 cgroup"), resources.value(QStringLiteral("control_group")).toString(QStringLiteral("未识别"))},
+        {QStringLiteral("内存当前值"), memory.value(QStringLiteral("cgroup_memory_current")).toVariant().toString()},
+        {QStringLiteral("内存上限"), memory.value(QStringLiteral("cgroup_memory_max")).toVariant().toString()},
+        {QStringLiteral("CPU 配额"), cpu.value(QStringLiteral("cpu_max")).toVariant().toString()},
+        {QStringLiteral("CPU 统计"), QString(QJsonDocument(cpu.value(QStringLiteral("cpu_stat")).toObject()).toJson(QJsonDocument::Compact))},
+    };
+    for (const auto &row : rows) {
+        auto *item = new QTreeWidgetItem(resourceSnapshot_);
+        item->setText(0, row.first);
+        item->setText(1, row.second.isEmpty() ? QStringLiteral("未采集") : row.second);
+    }
+}
+
+void MemGuardUkccPlugin::appendHistory(const QString &operation, bool ok, const QString &message)
+{
+    if (resultSummary_)
+        resultSummary_->setText(QStringLiteral("操作结果：%1，%2。").arg(operation, ok ? QStringLiteral("已完成") : QStringLiteral("需要处理")));
+    if (!operationHistory_)
+        return;
+    auto *item = new QTreeWidgetItem(operationHistory_);
+    item->setIcon(2, ok ? levelIcon(QStringLiteral("green")) : levelIcon(QStringLiteral("red")));
+    item->setText(0, QDateTime::currentDateTime().toString(QStringLiteral("HH:mm:ss")));
+    item->setText(1, operation);
+    item->setText(2, ok ? QStringLiteral("完成") : QStringLiteral("失败"));
+    item->setText(3, message.simplified().left(280));
+    operationHistory_->insertTopLevelItem(0, operationHistory_->takeTopLevelItem(operationHistory_->indexOfTopLevelItem(item)));
+    while (operationHistory_->topLevelItemCount() > 12)
+        delete operationHistory_->takeTopLevelItem(operationHistory_->topLevelItemCount() - 1);
 }
 
 void MemGuardUkccPlugin::exportDiagnostics(const QString &text)

@@ -465,6 +465,43 @@ def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, 
         path = evidence_dir / name
         checks.append(Check("openKylin原生证据", name, path.exists() and path.stat().st_size > 0, "存在且非空" if path.exists() and path.stat().st_size > 0 else "缺失或为空", severity=severity))
     checks.append(check_native_evidence_revision(evidence_dir, expected_revision, severity=severity))
+    polkit_text = _read_text_if_exists(evidence_dir / "polkit_assets.txt")
+    checks.extend(
+        [
+            Check("openKylin原生证据", "Polkit policy 已安装", "policy_installed=true" in polkit_text, "policy_installed=true" if "policy_installed=true" in polkit_text else "缺少 policy_installed=true", severity=severity),
+            Check("openKylin原生证据", "Polkit helper 已安装", "helper_installed=true" in polkit_text, "helper_installed=true" if "helper_installed=true" in polkit_text else "缺少 helper_installed=true", severity=severity),
+            Check("openKylin原生证据", "Polkit helper 拒绝未知动作", "unknown_action_rejected=true" in polkit_text, "unknown_action_rejected=true" if "unknown_action_rejected=true" in polkit_text else "缺少未知动作拒绝证据", severity=severity),
+        ]
+    )
+    deb_lifecycle = _read_text_if_exists(evidence_dir / "deb_lifecycle.txt")
+    checks.extend(
+        [
+            Check("openKylin原生证据", "Debian 五包生命周期", "package_count=5" in deb_lifecycle and "offline_install=ok" in deb_lifecycle, "package_count=5 offline_install=ok" if "package_count=5" in deb_lifecycle and "offline_install=ok" in deb_lifecycle else "缺少五包安装证据", severity=severity),
+            Check("openKylin原生证据", "Debian 桌面包卸载重装", "desktop_remove_core_preserved=ok" in deb_lifecycle and "desktop_reinstall=ok" in deb_lifecycle, "桌面包卸载/重装通过" if "desktop_reinstall=ok" in deb_lifecycle else "缺少桌面包卸载/重装证据", severity=severity),
+            Check("openKylin原生证据", "Debian 用户数据保护", "user_data_delete_guard=ok" in deb_lifecycle, "user_data_delete_guard=ok" if "user_data_delete_guard=ok" in deb_lifecycle else "缺少用户数据保护证据", severity=severity),
+        ]
+    )
+    peony_preview = _load_evidence_json(evidence_dir / "peony_batch_preview.json")
+    peony_apply = _load_evidence_json(evidence_dir / "peony_batch_apply.json")
+    peony_sensitive = _load_evidence_json(evidence_dir / "peony_sensitive_preview.json")
+    preview_ok = bool(peony_preview and peony_preview.get("ok") and len(peony_preview.get("items", [])) >= 2 and all(bool(item.get("selectable")) for item in peony_preview.get("items", [])))
+    stored_count = _nested_get(peony_apply, ["summary", "stored"]) if peony_apply else 0
+    try:
+        stored_count_numeric = int(stored_count or 0)
+    except (TypeError, ValueError):
+        stored_count_numeric = 0
+    apply_ok = bool(peony_apply and peony_apply.get("ok") and stored_count_numeric >= 2 and _nested_get(peony_apply, ["audit_chain", "ok"]) is True)
+    sensitive_items = peony_sensitive.get("items", []) if peony_sensitive else []
+    sensitive_ok = bool(sensitive_items and sensitive_items[0].get("recommended_action") == "block_sensitive" and sensitive_items[0].get("selectable") is False)
+    checks.extend(
+        [
+            Check("openKylin原生证据", "Peony 批量预览确认契约", preview_ok, "批量预览可选择安全项" if preview_ok else "批量预览证据不足", severity=severity),
+            Check("openKylin原生证据", "Peony 确认导入与审计链", apply_ok, "stored>=2 audit_chain=true" if apply_ok else "确认导入或审计链证据不足", severity=severity),
+            Check("openKylin原生证据", "Peony 敏感文件阻断", sensitive_ok, "block_sensitive selectable=false" if sensitive_ok else "敏感阻断证据不足", severity=severity),
+        ]
+    )
+    tray_text = _read_text_if_exists(evidence_dir / "tray_assets.txt")
+    checks.append(Check("openKylin原生证据", "UKUI 托盘安装资产", "memguardos-tray" in tray_text and "OnlyShowIn=UKUI" in tray_text, "托盘程序与 UKUI autostart 存在" if "OnlyShowIn=UKUI" in tray_text else "托盘证据不足", severity=severity))
     if evidence_dir.exists():
         checks.extend(check_evidence_manifest_freshness(evidence_dir, severity=severity))
     return checks

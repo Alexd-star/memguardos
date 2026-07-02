@@ -119,7 +119,25 @@ PY
 run_required_capture desktop_build.txt bash scripts/build_ukui_plugins.sh
 run_required_capture tray_assets.txt bash -lc 'file native/ukui/build/tray/memguardos-tray; ldd native/ukui/build/tray/memguardos-tray; test -f packaging/desktop/memguardos-tray.desktop; grep -E "^(Exec|OnlyShowIn)=" packaging/desktop/memguardos-tray.desktop'
 run_required_capture desktop_plugins.txt bash -lc 'file native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so; ldd native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so; ldd native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so'
-run_required_capture polkit_assets.txt bash -lc 'python3 - <<"PY"
+run_required_capture polkit_assets.txt bash -lc 'set -e
+install_polkit_assets() {
+  if [ "$(id -u)" -eq 0 ]; then
+    install -d -m 0755 /usr/share/polkit-1/actions /usr/lib/memguardos
+    install -m 0644 packaging/polkit/org.memguardos.policy /usr/share/polkit-1/actions/org.memguardos.policy
+    install -m 0755 scripts/memguardos-native-helper.sh /usr/lib/memguardos/memguardos-native-helper.sh
+    return 0
+  fi
+  if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
+    sudo install -d -m 0755 /usr/share/polkit-1/actions /usr/lib/memguardos
+    sudo install -m 0644 packaging/polkit/org.memguardos.policy /usr/share/polkit-1/actions/org.memguardos.policy
+    sudo install -m 0755 scripts/memguardos-native-helper.sh /usr/lib/memguardos/memguardos-native-helper.sh
+    return 0
+  fi
+  echo polkit_install_skipped=needs_passwordless_sudo
+  return 0
+}
+install_polkit_assets
+python3 - <<"PY"
 import xml.etree.ElementTree as ET
 root = ET.parse("packaging/polkit/org.memguardos.policy").getroot()
 actions = [item.attrib["id"] for item in root.findall("action")]
@@ -127,7 +145,9 @@ required = {"org.memguardos.start-service", "org.memguardos.stop-service", "org.
 assert required.issubset(actions)
 print("actions=" + ",".join(actions))
 PY
-if sudo scripts/memguardos-native-helper.sh unsupported-action; then exit 3; else echo unknown_action_rejected=true; fi
+if /usr/lib/memguardos/memguardos-native-helper.sh unsupported-action; then exit 3; else echo unknown_action_rejected=true; fi
+test -s /usr/share/polkit-1/actions/org.memguardos.policy && echo policy_installed=true || echo policy_installed=false
+test -x /usr/lib/memguardos/memguardos-native-helper.sh && echo helper_installed=true || echo helper_installed=false
 ls -l /usr/share/polkit-1/actions/org.memguardos.policy /usr/lib/memguardos/memguardos-native-helper.sh 2>/dev/null || true'
 run_required_capture systemd_cgroup.txt bash -lc 'systemctl show memguardd.service --property=LoadState,ActiveState,SubState,ControlGroup,MemoryMax,CPUQuotaPerSecUSec --no-pager; CG=$(systemctl show memguardd.service -p ControlGroup --value); test -n "$CG"; for f in memory.current memory.max cpu.max cpu.stat; do printf "%s\n" "--- ${f} ---"; cat "/sys/fs/cgroup${CG}/${f}" 2>/dev/null || true; done'
 

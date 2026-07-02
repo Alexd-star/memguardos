@@ -37,7 +37,10 @@ private:
     QLabel *serviceState_ = nullptr;
     QLabel *sdkState_ = nullptr;
     QLabel *auditState_ = nullptr;
+    QLabel *resultSummary_ = nullptr;
     QTreeWidget *components_ = nullptr;
+    QTreeWidget *resourceSnapshot_ = nullptr;
+    QTreeWidget *operationHistory_ = nullptr;
     QTextEdit *details_ = nullptr;
     QToolButton *detailsToggle_ = nullptr;
     QList<QPushButton *> actionButtons_;
@@ -49,6 +52,8 @@ private:
     void runMemctl(const QStringList &arguments, const QString &purpose);
     void runProgram(const QString &program, const QStringList &arguments, const QString &purpose);
     void renderStatus(const QJsonObject &payload);
+    void renderResourceSnapshot(const QJsonObject &resources);
+    void appendHistory(const QString &operation, bool ok, const QString &message);
     void exportDiagnostics(const QString &text);
     void openDashboard();
     void setBusy(bool busy, const QString &message);
