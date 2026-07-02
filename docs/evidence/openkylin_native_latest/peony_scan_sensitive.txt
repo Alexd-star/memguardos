@@ -1,0 +1,35 @@
+$ python3 -m memguard.cli.memctl desktop scan-file --file /tmp/tmp.TDKNA4LO73/peony_secret.env --ingest
+{
+  "schema": "memguardos-peony-scan-report-v1",
+  "path": "/tmp/tmp.TDKNA4LO73/peony_secret.env",
+  "exists": true,
+  "file_kind": "file",
+  "size_bytes": 41,
+  "eligible_for_text_import": true,
+  "recommended_action": "block_sensitive",
+  "sensitivity": {
+    "level": "high",
+    "labels": [
+      "api_key",
+      "sensitive_os_source",
+      "token_assignment"
+    ],
+    "redacted": false
+  },
+  "preview": "OPENAI_API_KEY=sk-test-example1234567890",
+  "warnings": [
+    "检测到高风险敏感内容，默认不写入长期记忆。"
+  ],
+  "audit_event": {
+    "attempted": true,
+    "stored": false,
+    "reason": "sensitive_block"
+  },
+  "ingest": {
+    "attempted": false,
+    "stored": false
+  },
+  "verification": {
+    "audit_chain_ok": true
+  }
+}

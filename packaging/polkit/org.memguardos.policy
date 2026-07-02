@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>MemGuardOS</vendor>
+  <vendor_url>https://github.com/Alexd-star/memguardos</vendor_url>
+
+  <action id="org.memguardos.install-services">
+    <description>Install or refresh MemGuardOS systemd services</description>
+    <message>需要管理员授权来安装或刷新 MemGuardOS systemd 服务。</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/memguardos/memguardos-native-helper.sh</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">install-services</annotate>
+  </action>
+
+  <action id="org.memguardos.install-auditd-rules">
+    <description>Install MemGuardOS auditd rules</description>
+    <message>需要管理员授权来安装 MemGuardOS 审计规则。</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/memguardos/memguardos-native-helper.sh</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">install-auditd-rules</annotate>
+  </action>
+
+  <action id="org.memguardos.run-bpf-lsm-test">
+    <description>Run MemGuardOS BPF LSM safety test</description>
+    <message>需要管理员授权来运行 MemGuardOS BPF LSM 安全测试。</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/memguardos/memguardos-native-helper.sh</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">run-bpf-lsm-test</annotate>
+  </action>
+</policyconfig>

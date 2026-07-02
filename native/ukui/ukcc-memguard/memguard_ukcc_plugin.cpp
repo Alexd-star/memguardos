@@ -65,16 +65,20 @@ QWidget *MemGuardUkccPlugin::pluginUi()
     auto *opsBox = new QGroupBox(QStringLiteral("常用操作"));
     auto *buttons = new QGridLayout(opsBox);
     auto *health = new QPushButton(QStringLiteral("运行环境检查"));
+    auto *nativeStatus = new QPushButton(QStringLiteral("本机状态总览"));
     auto *audit = new QPushButton(QStringLiteral("校验审计链"));
     auto *sdk = new QPushButton(QStringLiteral("检查端侧向量能力"));
+    auto *warmup = new QPushButton(QStringLiteral("预热 Kylin SDK"));
     auto *diagnostics = new QPushButton(QStringLiteral("导出诊断报告"));
     auto *dashboard = new QPushButton(QStringLiteral("打开本地控制台"));
     buttons->addWidget(health, 0, 0);
-    buttons->addWidget(audit, 0, 1);
-    buttons->addWidget(sdk, 0, 2);
-    buttons->addWidget(diagnostics, 1, 0);
-    buttons->addWidget(dashboard, 1, 1);
-    actionButtons_ = QList<QPushButton *>() << health << audit << sdk << diagnostics << dashboard;
+    buttons->addWidget(nativeStatus, 0, 1);
+    buttons->addWidget(audit, 0, 2);
+    buttons->addWidget(sdk, 1, 0);
+    buttons->addWidget(warmup, 1, 1);
+    buttons->addWidget(diagnostics, 1, 2);
+    buttons->addWidget(dashboard, 2, 0);
+    actionButtons_ = QList<QPushButton *>() << health << nativeStatus << audit << sdk << warmup << diagnostics << dashboard;
 
     output_ = new QTextEdit;
     output_->setReadOnly(true);
@@ -87,9 +91,13 @@ QWidget *MemGuardUkccPlugin::pluginUi()
     layout->addWidget(output_);
 
     connect(health, &QPushButton::clicked, this, [this]() { runMemctl(QStringList() << QStringLiteral("doctor")); });
+    connect(nativeStatus, &QPushButton::clicked, this, [this]() { runMemctl(QStringList() << QStringLiteral("openkylin-status")); });
     connect(audit, &QPushButton::clicked, this, [this]() { runMemctl(QStringList() << QStringLiteral("verify-audit")); });
     connect(sdk, &QPushButton::clicked, this, [this]() {
         runMemctl(QStringList() << QStringLiteral("sdk-status") << QStringLiteral("--probe-embedding") << QStringLiteral("--probe-timeout") << QStringLiteral("90"));
+    });
+    connect(warmup, &QPushButton::clicked, this, [this]() {
+        runMemctl(QStringList() << QStringLiteral("openkylin-status") << QStringLiteral("--probe-sdk") << QStringLiteral("--probe-timeout") << QStringLiteral("90"));
     });
     connect(diagnostics, &QPushButton::clicked, this, [this]() {
         runMemctl(QStringList() << QStringLiteral("diagnostics") << QStringLiteral("--probe-sdk") << QStringLiteral("--probe-timeout") << QStringLiteral("90"));

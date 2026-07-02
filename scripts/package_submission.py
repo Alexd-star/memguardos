@@ -76,6 +76,7 @@ FORMAL_DOCS = {
     "docs/详细设计说明书.md",
     "docs/安全设计说明书.md",
     "docs/操作系统机制说明.md",
+    "docs/openKylin原生化适配说明.md",
     "docs/Peony与UKUI桌面集成实现说明.md",
     "docs/麒麟SDK集成证据.md",
     "docs/openKylin验证记录.md",
@@ -109,6 +110,7 @@ FORMAL_SCRIPTS = {
     "scripts/build_ukui_plugins.sh",
     "scripts/build_deb.sh",
     "scripts/collect_openkylin_evidence.sh",
+    "scripts/collect_openkylin_native_evidence.sh",
     "scripts/collect_agent_evidence.sh",
     "scripts/demo_smoke.py",
     "scripts/diagnose_kylin_embedding.sh",
@@ -123,6 +125,9 @@ FORMAL_SCRIPTS = {
     "scripts/memguardd.service",
     "scripts/memguardd@.service",
     "scripts/memguard-agent@.service",
+    "scripts/memguard-kylin-warmup.service",
+    "scripts/memguardos-native-helper.sh",
+    "scripts/warmup_kylin_sdk.sh",
     "scripts/memguard_agent_bridge.py",
     "scripts/openhands_memory_hook.py",
     "scripts/run_openhands_memguard_demo.py",
@@ -169,6 +174,8 @@ def classify_file(path: Path) -> str:
         return "作品主体/脚本"
     if rel.startswith("scripts/"):
         return "过程与工程支撑文档"
+    if rel.startswith("packaging/polkit/"):
+        return "作品主体/原生增强"
     if rel.startswith("native/"):
         return "作品主体/原生增强"
     if rel in PROCESS_TESTS:
@@ -212,7 +219,9 @@ def should_skip(path: Path) -> bool:
     rel = path.relative_to(ROOT).as_posix()
     if rel.startswith("docs/research/"):
         return True
-    if rel.startswith("docs/evidence/openkylin_") or rel.startswith("docs/evidence/kylin_embedding_diag_"):
+    if rel.startswith("docs/evidence/openkylin_") and not rel.startswith("docs/evidence/openkylin_native_latest/"):
+        return True
+    if rel.startswith("docs/evidence/kylin_embedding_diag_"):
         return True
     rel_parts = path.relative_to(ROOT).parts
     if any(part in EXCLUDED_DIRS for part in rel_parts):

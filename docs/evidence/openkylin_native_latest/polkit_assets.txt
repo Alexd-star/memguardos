@@ -1,0 +1,1 @@
+$ bash -lc ls -l /usr/share/polkit-1/actions/org.memguardos.policy /usr/lib/memguardos/memguardos-native-helper.sh 2>/dev/null || true

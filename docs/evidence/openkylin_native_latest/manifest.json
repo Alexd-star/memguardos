@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "file_count": 13,
+  "files": [
+    {
+      "path": "SHA256SUMS.txt",
+      "bytes": 1037,
+      "sha256": "af03d73150957715c8c7192ddeb71fd78235e79026e20ffe469904013508bbe5"
+    },
+    {
+      "path": "desktop_plugins.txt",
+      "bytes": 286,
+      "sha256": "f11f589f71b24beff42679bfdb4627c77942f3ab80ee462ed167db1b18565dbd"
+    },
+    {
+      "path": "environment.txt",
+      "bytes": 451,
+      "sha256": "33780934b1b5e26a7a5732ee54b58eaa8315e949e787f29cd912eac20bc935da"
+    },
+    {
+      "path": "git_head.txt",
+      "bytes": 137,
+      "sha256": "ecf3f255dabb418663cd0fc938b76bdc3bde38d495582731f01f42e1348812c1"
+    },
+    {
+      "path": "kylin_warmup.txt",
+      "bytes": 326,
+      "sha256": "3cc7d58fb8b2c5fd87739e7a7697109c7cefd91773a110d3ded840ff1da6e165"
+    },
+    {
+      "path": "manifest_refresh.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "openkylin_status.txt",
+      "bytes": 12439,
+      "sha256": "90a7c6757f55fb88c70221a78d6243df64eecb7068c8dcdc49ba56c256379b3c"
+    },
+    {
+      "path": "openkylin_status_probe_sdk.txt",
+      "bytes": 12643,
+      "sha256": "1ce6ae73e9b8c037688d05cd26c76c6b1df8a80d2936c6296f727928401b622a"
+    },
+    {
+      "path": "peony_scan_ingest.txt",
+      "bytes": 855,
+      "sha256": "f958e0bc7393c42ecded357aaf083fcbdd5f9ae7a916b6bb813393cdcd66a6a9"
+    },
+    {
+      "path": "peony_scan_preview.txt",
+      "bytes": 688,
+      "sha256": "2765869308f6496249efc47810cda19a51454765aecb6ea73b7e366fe13cc9dc"
+    },
+    {
+      "path": "peony_scan_sensitive.txt",
+      "bytes": 868,
+      "sha256": "5c98da6699efb702edec0df6cfa82f91d66364fa2d9ee0c6ffccd1c5943b9908"
+    },
+    {
+      "path": "polkit_assets.txt",
+      "bytes": 135,
+      "sha256": "9e560175cacf3fd7dbfade9c30c73270f1935f3f0c508363110d048c2908d446"
+    },
+    {
+      "path": "systemd_units.txt",
+      "bytes": 2882,
+      "sha256": "076118d392f562002046b15bea96b41673933409b104b69ec249f221957bfb43"
+    }
+  ]
+}

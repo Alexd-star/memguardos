@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from memguard.config import list_namespaces
+from memguard.desktop.peony_scan import scan_peony_file
 from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.replay import load_event_file, load_event_jsonl
 from memguard.llm.adapter import LLMAdapterError, generate_answer
@@ -14,11 +15,12 @@ from memguard.os_guard.auditd_events import parse_auditd_events
 from memguard.os_guard.auditd import audit_rules_file, auditctl_rules, ausearch_command
 from memguard.os_guard.doctor import doctor_report
 from memguard.os_guard.cgroup import cgroup_status
+from memguard.os_guard.openkylin_native import openkylin_native_status
 from memguard.retrieval.kylin_sdk import kylin_sdk_status
 from memguard.service import MemGuardService
 
 
-_SERVICE_FREE_COMMANDS = {"doctor", "status", "namespaces", "sdk-status", "auditd-rules"}
+_SERVICE_FREE_COMMANDS = {"doctor", "status", "namespaces", "sdk-status", "auditd-rules", "openkylin-status"}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -171,6 +173,14 @@ def build_parser() -> argparse.ArgumentParser:
     web.add_argument("--port", type=int, default=8765)
     web.add_argument("--auth-token-file", default="", help="Optional bearer token file for dashboard API calls")
 
+    desktop = sub.add_parser("desktop", help="Desktop integration operations for UKUI/Peony")
+    desktop_sub = desktop.add_subparsers(dest="desktop_command", required=True)
+    scan_file = desktop_sub.add_parser("scan-file", help="Preview or ingest one Peony-selected file")
+    scan_file.add_argument("--file", required=True, help="Path selected from Peony")
+    scan_file.add_argument("--ingest", action="store_true", help="Record OS event and import safe text files")
+    scan_file.add_argument("--notify", action="store_true", help="Send a desktop notification when notify-send is available")
+    scan_file.add_argument("--max-bytes", type=int, default=1024 * 1024, help="Maximum text file size for direct import")
+
     patterns = sub.add_parser("patterns", help="List or add custom sensitive patterns")
     pattern_sub = patterns.add_subparsers(dest="pattern_command", required=True)
     pattern_sub.add_parser("list", help="List custom patterns")
@@ -192,6 +202,9 @@ def build_parser() -> argparse.ArgumentParser:
     sdk_status = sub.add_parser("sdk-status", help="Detect openKylin Kylin AI embedding/vector SDK capabilities")
     sdk_status.add_argument("--probe-embedding", action="store_true", help="Run one real embedding call; may be slow if the model service is not ready")
     sdk_status.add_argument("--probe-timeout", type=float, default=45.0, help="Timeout in seconds for the protected embedding probe subprocess")
+    openkylin_status = sub.add_parser("openkylin-status", help="Show openKylin-native desktop, SDK, service and security status")
+    openkylin_status.add_argument("--probe-sdk", action="store_true", help="Run one protected Kylin embedding probe")
+    openkylin_status.add_argument("--probe-timeout", type=float, default=45.0)
 
     auditd = sub.add_parser("auditd-rules", help="Print auditd rules for sensitive path monitoring")
     auditd.add_argument("--format", choices=["auditctl", "rules-file", "ausearch"], default="auditctl")
@@ -240,6 +253,23 @@ def main(argv: list[str] | None = None) -> int:
 
     service = MemGuardService(namespace=args.namespace)
     try:
+        if args.command == "desktop":
+            if args.desktop_command == "scan-file":
+                print(
+                    json.dumps(
+                        scan_peony_file(
+                            args.file,
+                            service,
+                            ingest=args.ingest,
+                            notify=args.notify,
+                            max_bytes=args.max_bytes,
+                        ),
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                )
+                return 0
+
         if args.command == "agent":
             if args.agent_command == "ingest-event":
                 print(json.dumps(service.ingest_interaction(load_event_file(Path(args.file))), ensure_ascii=False, indent=2))
@@ -624,6 +654,20 @@ def _run_service_free_command(args: argparse.Namespace) -> int:
         print(
             json.dumps(
                 kylin_sdk_status(probe_embedding=args.probe_embedding, probe_timeout=args.probe_timeout),
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "openkylin-status":
+        print(
+            json.dumps(
+                openkylin_native_status(
+                    namespace=args.namespace,
+                    probe_sdk=args.probe_sdk,
+                    probe_timeout=args.probe_timeout,
+                ),
                 ensure_ascii=False,
                 indent=2,
             )

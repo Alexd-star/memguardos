@@ -34,6 +34,9 @@ mkdir -p \
   "${STAGING}/DEBIAN" \
   "${STAGING}/opt/memguardos" \
   "${STAGING}/usr/bin" \
+  "${STAGING}/usr/lib/memguardos" \
+  "${STAGING}/usr/lib/systemd/user" \
+  "${STAGING}/usr/share/polkit-1/actions" \
   "${STAGING}/lib/systemd/system" \
   "${STAGING}/usr/share/doc/${PACKAGE_NAME}"
 
@@ -55,6 +58,9 @@ rsync -a --delete \
 install -m 0644 scripts/memguardd.service "${STAGING}/lib/systemd/system/memguardd.service"
 install -m 0644 scripts/memguardd@.service "${STAGING}/lib/systemd/system/memguardd@.service"
 install -m 0644 scripts/memguard-agent@.service "${STAGING}/lib/systemd/system/memguard-agent@.service"
+install -m 0644 scripts/memguard-kylin-warmup.service "${STAGING}/usr/lib/systemd/user/memguard-kylin-warmup.service"
+install -m 0755 scripts/memguardos-native-helper.sh "${STAGING}/usr/lib/memguardos/memguardos-native-helper.sh"
+install -m 0644 packaging/polkit/org.memguardos.policy "${STAGING}/usr/share/polkit-1/actions/org.memguardos.policy"
 install -m 0644 README.md "${STAGING}/usr/share/doc/${PACKAGE_NAME}/README.md"
 install -m 0644 LICENSE "${STAGING}/usr/share/doc/${PACKAGE_NAME}/copyright"
 
@@ -92,6 +98,9 @@ if [ "${WITH_UKUI}" != "no" ]; then
 fi
 
 DEPENDS="python3 (>= 3.9), systemd"
+if [ -f /usr/share/doc/policykit-1/copyright ] || command -v pkexec >/dev/null 2>&1; then
+  DEPENDS="${DEPENDS}, policykit-1 | polkitd"
+fi
 if [ "${INCLUDE_UKUI}" = "1" ]; then
   DEPENDS="${DEPENDS}, libqt5core5a, libqt5widgets5, peony, ukui-control-center, libpeony3, libukcc3"
 fi

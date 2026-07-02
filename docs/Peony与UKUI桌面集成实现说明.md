@@ -7,9 +7,9 @@
 MemGuardOS 的默认主链路是 CLI、daemon、Unix socket API 和本地 Web 控制台。为了进一步体现 openKylin 桌面生态适配，项目补充了 UKUI 原生插件能力：
 
 1. 在 Peony 文件管理器右键菜单中增加“用 MemGuardOS 扫描并导入记忆”动作。
-2. 用户右键选中文件后，可以把文件路径转换为统一 OS event，写入 MemGuardOS 记忆系统。
-3. 对小于 1 MB 的文本类文件，插件会进一步调用 `memctl ingest --file ... --source-kind peony_file`，把文件内容纳入同一套清洗、敏感检测、建模、检索和审计链路；目录、大文件和非文本文件只记录 OS event，不直接读取内容。
-4. 提供 UKUI 控制中心插件入口，用于展示本机运行状态、审计完整性、端侧向量能力、诊断报告和本地控制台入口。
+2. 用户右键选中文件后，可以调用统一的 `memctl desktop scan-file` 生成文件扫描报告，把文件路径转换为统一 OS event，并在安全条件满足时写入 MemGuardOS 记忆系统。
+3. 对小于 1 MB 的文本类文件，扫描命令会先执行敏感检测；高风险文本阻断写入，目录、大文件和非文本文件只记录 OS event，不直接读取内容，安全文本才进入 `peony_file` 导入链路。
+4. 提供 UKUI 控制中心插件入口，用于展示本机运行状态、审计完整性、端侧向量能力、Kylin SDK 预热、诊断报告和本地控制台入口。
 5. 在 openKylin 只读 `/usr` 的 ostree/overlay 环境中，提供可复现的演示安装方法。
 
 这个设计避免把桌面联动做成单纯的 `notify-send` 脚本，而是接入 openKylin 的真实插件接口。
@@ -29,6 +29,10 @@ MemGuardOS 的默认主链路是 CLI、daemon、Unix socket API 和本地 Web �
 | `scripts/build_ukui_plugins.sh` | 构建 Peony/UKCC 两个 `.so` |
 | `scripts/install_ukui_plugins.sh` | 安装插件，支持只读 `/usr` 下的 bind mount 演示安装 |
 | `scripts/build_deb.sh` | 生成 MemGuardOS Debian 安装包，并在依赖存在时把 Peony/UKUI 插件打入系统插件目录 |
+| `memguard/desktop/peony_scan.py` | Peony 文件扫描报告、敏感阻断、安全文本导入和审计链验证 |
+| `memguard/os_guard/openkylin_native.py` | openKylin 本机状态总览，供 UKUI 控制中心和证据采集复用 |
+| `scripts/warmup_kylin_sdk.sh` | Kylin embedding SDK 预热与 fallback 状态报告 |
+| `packaging/polkit/org.memguardos.policy` | 高权限操作 Polkit 授权资产 |
 | `scripts/probe_ukui_deep_plugins.sh` | 探测开发包、插件目录和系统环境 |
 | `scripts/verify_ukui_plugins.sh` | 检查构建产物、安装产物、动态依赖、关键字符串和人工可见性步骤 |
 
@@ -91,51 +95,43 @@ memguardos-peony-memory-scan
 2. 否则使用当前目录或菜单 URI。
 3. 如果是 `file://` 本地文件 URI，则转换为本地路径。
 
-之后构造统一 OS event：
-
-```json
-{
-  "event_type": "peony_context_menu",
-  "path": "/home/<用户>/桌面/memguardos-ui-test.txt",
-  "process": "peony",
-  "action": "inspect"
-}
-```
-
-插件通过本地命令调用 MemGuardOS。第一步始终写入 OS event：
+之后插件通过本地命令调用 MemGuardOS 的统一桌面扫描入口：
 
 ```bash
-memctl ingest-os-event --json '<event-json>'
+memctl desktop scan-file --file '<path>' --ingest --notify
 ```
 
-如果选中项是小于 1 MB 的文本类文件，插件还会执行第二步内容导入：
-
-```bash
-memctl ingest --file '<path>' --source-kind peony_file
-```
+该命令会内部构造统一 OS event，并根据文件类型和敏感检测结果决定是否导入文本内容。它不是简单地把所有右键文件都读入记忆，而是先产出可审计报告，再执行受控动作。
 
 因此 Peony 插件不是只显示 UI，而是接入项目已有 OS 事件和文件导入链路：
 
 ```text
 Peony 右键菜单
+  -> memctl desktop scan-file
   -> peony_context_menu OS event
-  -> memctl ingest-os-event
   -> OS 路径解析
   -> 敏感检测
-  -> 记忆写入/阻断
+  -> 扫描报告
+  -> 安全文本记忆写入/敏感内容阻断/目录大文件仅审计
   -> SQLite 审计哈希链
-  -> 文本类文件内容导入 peony_file
   -> 混合检索命中导入内容
   -> 后续检索、RAG 上下文和精准遗忘
 ```
 
-插件还会调用：
+扫描报告示例：
 
-```bash
-notify-send MemGuardOS ...
+```json
+{
+  "schema": "memguardos-peony-scan-report-v1",
+  "recommended_action": "import_text",
+  "sensitivity": {"level": "none", "labels": []},
+  "ingest": {"attempted": true, "stored": true},
+  "audit_event": {"attempted": true, "stored": true},
+  "verification": {"audit_chain_ok": true}
+}
 ```
 
-用于桌面提示。当前提示会区分两类结果：文本内容已进入记忆安全导入链路，或目录、大文件、非文本文件仅完成 OS event 审计。这一边界可以避免右键菜单误读二进制文件或超大文件，也方便答辩时解释为什么桌面入口不是简单按钮，而是与核心记忆系统形成了可验证闭环。
+`--notify` 会在系统存在 `notify-send` 时发送桌面提示。提示会区分安全文本导入、敏感阻断、仅审计三类结果。这一边界可以避免右键菜单误读二进制文件、超大文件或密钥文件，也方便答辩时解释为什么桌面入口不是简单按钮，而是与核心记忆系统形成了可验证闭环。
 
 ## 4.1 Peony 文件扫描闭环 smoke
 
@@ -380,8 +376,10 @@ MemGuardOS 记忆安全
 
 ```text
 运行环境检查
+本机状态总览
 校验审计链
 检查端侧向量能力
+预热 Kylin SDK
 导出诊断报告
 打开本地控制台
 ```
@@ -401,7 +399,7 @@ buttons=运行 doctor,验证审计链,检查 Kylin SDK
 status=visible_in_user_screenshot
 ```
 
-新版本的按钮文本更接近企业交付语义：用户看到的是“运行环境检查”和“端侧向量能力”，而不是底层命令名；“导出诊断报告”会调用 `memctl diagnostics --probe-sdk` 汇总 doctor、namespace、检索状态、记忆策略、Kylin SDK 和审计链结果；“打开本地控制台”会启动并打开 `http://127.0.0.1:8765`，用于本机管理员查看记忆、检索、RAG 上下文、精准遗忘、审计记录和系统诊断。
+新版本的按钮文本更接近企业交付语义：用户看到的是“运行环境检查”和“端侧向量能力”，而不是底层命令名；“本机状态总览”会调用 `memctl openkylin-status` 汇总系统、服务、SDK、桌面插件、安全授权和资源状态；“预热 Kylin SDK”会调用带真实探针的本机状态检查；“导出诊断报告”会调用 `memctl diagnostics --probe-sdk` 汇总 doctor、namespace、检索状态、记忆策略、Kylin SDK 和审计链结果；“打开本地控制台”会启动并打开 `http://127.0.0.1:8765`，用于本机管理员查看记忆、检索、RAG 上下文、精准遗忘、审计记录和系统诊断。
 
 ## 9. 点击后的后端验证
 

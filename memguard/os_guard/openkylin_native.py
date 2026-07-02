@@ -1,0 +1,261 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Dict, List
+import platform
+import shutil
+import subprocess
+
+from memguard.config import namespace_status, normalize_namespace
+from memguard.os_guard.cgroup import cgroup_status
+from memguard.retrieval.kylin_sdk import kylin_sdk_status
+
+
+def openkylin_native_status(namespace: str | None = None, probe_sdk: bool = False, probe_timeout: float = 45.0) -> Dict[str, object]:
+    namespace = normalize_namespace(namespace)
+    services = _service_status(["memguardd.service", "kylin-ai-vector-engine.service", "kytensor.service"])
+    sdk = kylin_sdk_status(probe_embedding=probe_sdk, probe_timeout=probe_timeout)
+    desktop = _desktop_status()
+    security = _security_status()
+    resources = _resource_status(namespace)
+    system = _system_status()
+    components = [
+        _component("systemd", services["systemd"]["available"], services["systemd"]["active"], "systemd 服务管理"),
+        _component("auditd", security["auditd"]["available"], security["auditd"]["rules_tool_available"], "审计规则工具"),
+        _component("kylin_embedding", sdk["embedding"].get("available"), sdk["embedding"].get("inference_ready"), "Kylin embedding SDK"),
+        _component("kylin_vector", sdk["vector_store"].get("available"), sdk["vector_store"].get("user_service", {}).get("active"), "Kylin vector SDK"),
+        _component("peony", desktop["peony"]["available"], desktop["peony"]["plugin_installed"], "Peony 右键插件"),
+        _component("ukui_control_center", desktop["ukui_control_center"]["available"], desktop["ukui_control_center"]["plugin_installed"], "UKUI 控制中心插件"),
+        _component("cgroup_v2", resources["cgroup_v2"], resources["cgroup_v2"], "cgroup v2 资源治理"),
+    ]
+    recommendations = _recommendations(components, sdk=sdk, desktop=desktop, security=security)
+    return {
+        "schema": "memguardos-openkylin-native-status-v1",
+        "system": system,
+        "services": services,
+        "sdk": sdk,
+        "desktop": desktop,
+        "security": security,
+        "resources": resources,
+        "namespace": namespace_status(namespace),
+        "summary": _summary(components),
+        "components": components,
+        "recommendations": recommendations,
+    }
+
+
+def _system_status() -> Dict[str, object]:
+    os_release = _read_os_release()
+    return {
+        "platform": platform.platform(),
+        "kernel": platform.release(),
+        "machine": platform.machine(),
+        "distribution_id": os_release.get("ID", ""),
+        "distribution_name": os_release.get("NAME", ""),
+        "distribution_version": os_release.get("VERSION", ""),
+        "is_openkylin_like": "openkylin" in " ".join(os_release.values()).lower(),
+    }
+
+
+def _service_status(units: List[str]) -> Dict[str, object]:
+    systemctl = shutil.which("systemctl")
+    result: Dict[str, object] = {
+        "systemd": {
+            "available": bool(systemctl),
+            "active": False,
+            "note": "systemctl not found" if not systemctl else "systemctl available",
+        }
+    }
+    if not systemctl:
+        for unit in units:
+            result[unit] = {"available": False, "active": False, "state": "unknown"}
+        return result
+    for unit in units:
+        result[unit] = _systemctl_unit_status(systemctl, unit)
+    result["systemd"]["active"] = True
+    return result
+
+
+def _systemctl_unit_status(systemctl: str, unit: str) -> Dict[str, object]:
+    available = subprocess.run(
+        [systemctl, "list-unit-files", unit, "--no-legend"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        timeout=5,
+        check=False,
+    )
+    active = subprocess.run(
+        [systemctl, "is-active", unit],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        timeout=5,
+        check=False,
+    )
+    enabled = subprocess.run(
+        [systemctl, "is-enabled", unit],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        timeout=5,
+        check=False,
+    )
+    return {
+        "available": bool(available.stdout.strip()),
+        "active": active.stdout.strip() == "active",
+        "state": active.stdout.strip() or "unknown",
+        "enabled": enabled.stdout.strip() or "unknown",
+    }
+
+
+def _desktop_status() -> Dict[str, object]:
+    multiarch = _multiarch()
+    peony_plugin = Path("/usr/lib") / multiarch / "peony-extensions" / "libpeony-menu-plugin-memguardos.so"
+    ukcc_plugin = Path("/usr/lib") / multiarch / "ukui-control-center" / "libmemguardos-ukcc-plugin.so"
+    return {
+        "session_desktop": _env_value("XDG_CURRENT_DESKTOP"),
+        "desktop_session": _env_value("DESKTOP_SESSION"),
+        "peony": {
+            "available": bool(shutil.which("peony")),
+            "plugin_path": str(peony_plugin),
+            "plugin_installed": peony_plugin.exists(),
+        },
+        "ukui_control_center": {
+            "available": bool(shutil.which("ukui-control-center") or shutil.which("ukcc")),
+            "plugin_path": str(ukcc_plugin),
+            "plugin_installed": ukcc_plugin.exists(),
+        },
+        "notify_send": {
+            "available": bool(shutil.which("notify-send")),
+        },
+    }
+
+
+def _security_status() -> Dict[str, object]:
+    return {
+        "auditd": {
+            "available": bool(shutil.which("auditctl")),
+            "rules_tool_available": bool(shutil.which("auditctl") or Path("/etc/audit/rules.d").exists()),
+        },
+        "bpf_lsm": {
+            "source_available": Path("native/bpf_lsm/memguard_lsm.bpf.c").exists(),
+            "loader_available": Path("native/bpf_lsm/memguard_lsm_loader.c").exists(),
+            "note": "可选强制拦截能力，默认仅用于安全测试路径和可审查 denylist。",
+        },
+        "polkit": {
+            "available": bool(shutil.which("pkexec")),
+            "policy_path": "/usr/share/polkit-1/actions/org.memguardos.policy",
+            "policy_installed": Path("/usr/share/polkit-1/actions/org.memguardos.policy").exists(),
+        },
+    }
+
+
+def _resource_status(namespace: str) -> Dict[str, object]:
+    status = cgroup_status()
+    memory = {
+        "cgroup_memory_current": status.get("memory_current"),
+        "cgroup_memory_max": status.get("memory_max"),
+    }
+    return {
+        "cgroup_v2": bool(status.get("cgroup_v2")),
+        "memory": memory,
+        "cpu": {
+            "cpu_quota": status.get("cpu_quota"),
+            "cpu_stat": status.get("cpu_stat", {}),
+        },
+        "namespace": namespace,
+    }
+
+
+def _component(name: str, available: object, ready: object, label: str) -> Dict[str, object]:
+    if ready is True:
+        level = "green"
+    elif available:
+        level = "yellow"
+    else:
+        level = "red"
+    return {"name": name, "label": label, "available": bool(available), "ready": bool(ready), "level": level}
+
+
+def _summary(components: List[Dict[str, object]]) -> Dict[str, object]:
+    weights = {"green": 2, "yellow": 1, "red": 0}
+    max_score = len(components) * 2
+    score = sum(weights[str(item["level"])] for item in components)
+    if any(item["level"] == "red" for item in components[:2]):
+        overall = "red"
+    elif any(item["level"] in {"yellow", "red"} for item in components):
+        overall = "yellow"
+    else:
+        overall = "green"
+    return {
+        "overall": overall,
+        "readiness_score": round(score / max_score, 4) if max_score else 0.0,
+        "green": sum(1 for item in components if item["level"] == "green"),
+        "yellow": sum(1 for item in components if item["level"] == "yellow"),
+        "red": sum(1 for item in components if item["level"] == "red"),
+    }
+
+
+def _recommendations(components: List[Dict[str, object]], sdk: Dict[str, object], desktop: Dict[str, object], security: Dict[str, object]) -> List[str]:
+    recommendations = []
+    by_name = {str(item["name"]): item for item in components}
+    if by_name["kylin_embedding"]["level"] != "green":
+        recommendations.append("Kylin embedding SDK 未进入真实推理就绪状态时，保持稳定 fallback；需要端侧增强时先运行 warmup_kylin_sdk.sh。")
+    if by_name["peony"]["level"] != "green" or by_name["ukui_control_center"]["level"] != "green":
+        recommendations.append("如需桌面原生体验，请安装 memguardos UKUI/Peony 插件并重启 Peony 或 UKUI 控制中心。")
+    if not security["polkit"]["policy_installed"]:
+        recommendations.append("如需桌面授权弹窗，请安装 org.memguardos.policy 和 memguardos-native-helper.sh。")
+    if sdk["vector_store"].get("available") and not sdk["vector_store"].get("user_service", {}).get("active"):
+        recommendations.append("Kylin vector SDK 已安装但用户服务未激活，可重启 kylin-ai-vector-engine 后复验。")
+    if not desktop["notify_send"]["available"]:
+        recommendations.append("notify-send 不可用时，Peony 扫描仍会写入 JSON/审计，但不会显示桌面通知。")
+    if not recommendations:
+        recommendations.append("openKylin 原生化状态良好，可继续进行最终证据采集和演示录屏。")
+    return recommendations
+
+
+def _read_os_release() -> Dict[str, str]:
+    path = Path("/etc/os-release")
+    if not path.exists():
+        return {}
+    result = {}
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if "=" not in line or line.startswith("#"):
+            continue
+        key, value = line.split("=", 1)
+        result[key] = value.strip().strip('"')
+    return result
+
+
+def _multiarch() -> str:
+    command = shutil.which("dpkg-architecture")
+    if command:
+        try:
+            completed = subprocess.run(
+                [command, "-qDEB_HOST_MULTIARCH"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+            value = completed.stdout.strip()
+            if value:
+                return value
+        except (OSError, subprocess.SubprocessError):
+            pass
+    machine = platform.machine()
+    if machine in {"x86_64", "AMD64"}:
+        return "x86_64-linux-gnu"
+    if machine in {"aarch64", "arm64"}:
+        return "aarch64-linux-gnu"
+    if machine == "loongarch64":
+        return "loongarch64-linux-gnu"
+    return f"{machine}-linux-gnu"
+
+
+def _env_value(name: str) -> str:
+    import os
+
+    return os.environ.get(name, "")
