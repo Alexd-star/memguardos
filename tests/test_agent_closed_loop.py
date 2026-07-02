@@ -14,6 +14,7 @@ from memguard.integrations.openhands_runner import (
     repair_failed_preferred_tool_intent,
     _selected_values_for_stage,
 )
+from memguard.integrations.adherence import _pytest_python_executable
 from memguard.ingestion.tool_result import ToolResult
 from memguard.api.server import handle_request
 from memguard.cli.memctl import main as memctl_main
@@ -952,10 +953,7 @@ def test_runner_recovers_bare_pytest_when_test_runner_preference_is_selected(tmp
         assert result["structured_intent_recovery"]["command"] == (
             "python -m pytest tests/test_core.py"
         )
-        project_python = Path.cwd() / ".venv" / "bin" / "python"
-        expected_python = (
-            str(project_python.absolute()) if project_python.exists() else sys.executable
-        )
+        expected_python = _pytest_python_executable(workspace)
         assert executions[0][0] == [
             expected_python,
             "-m",

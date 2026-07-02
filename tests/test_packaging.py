@@ -62,7 +62,13 @@ def test_native_evidence_revision_rejects_unknown_and_mismatch(tmp_path):
     revision.write_text(json.dumps({"source_revision": "b" * 40, "dirty": False}), encoding="utf-8")
     result = check_native_evidence_revision(tmp_path, expected)
     assert result.ok is False
+    assert result.severity == "P0"
     assert "不一致" in result.detail
+
+    ci_result = check_native_evidence_revision(tmp_path, expected, severity="P1")
+    assert ci_result.ok is False
+    assert ci_result.severity == "P1"
+    assert "不一致" in ci_result.detail
 
 
 def test_competition_package_keeps_formal_and_process_materials_separate():

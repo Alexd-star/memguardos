@@ -223,7 +223,14 @@ def main() -> int:
     checks.extend(check_sources())
     checks.extend(check_eval(eval_path))
     checks.extend(check_openkylin_evidence(evidence_dir, allow_missing=args.allow_missing_openkylin))
-    checks.extend(check_native_openkylin_evidence(native_evidence_dir, expected_revision=_git_head(), severity="P0"))
+    native_evidence_severity = "P1" if args.allow_missing_openkylin else "P0"
+    checks.extend(
+        check_native_openkylin_evidence(
+            native_evidence_dir,
+            expected_revision=_git_head(),
+            severity=native_evidence_severity,
+        )
+    )
     checks.extend(check_performance_evidence(performance_evidence_dir, severity="P0"))
     checks.extend(check_memory_value_evidence(memory_value_evidence_dir, severity="P0"))
     checks.extend(
@@ -406,32 +413,32 @@ def check_openkylin_evidence(evidence_dir: Path, allow_missing: bool = False) ->
     return checks
 
 
-def check_native_evidence_revision(evidence_dir: Path, expected_revision: str) -> Check:
+def check_native_evidence_revision(evidence_dir: Path, expected_revision: str, severity: str = "P0") -> Check:
     path = evidence_dir / "source_revision.json"
     payload = _load_evidence_json(path)
     if not payload:
-        return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, "缺少或无法解析 source_revision.json", severity="P0")
+        return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, "缺少或无法解析 source_revision.json", severity=severity)
     revision = str(payload.get("source_revision", ""))
     dirty = bool(payload.get("dirty", False))
     if not re.fullmatch(r"[0-9a-f]{40}", revision):
-        return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, f"无效版本标识：{revision or '<empty>'}", severity="P0")
+        return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, f"无效版本标识：{revision or '<empty>'}", severity=severity)
     if not re.fullmatch(r"[0-9a-f]{40}", expected_revision):
-        return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, f"本地 Git HEAD 无效：{expected_revision}", severity="P0")
+        return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, f"本地 Git HEAD 无效：{expected_revision}", severity=severity)
     if revision != expected_revision:
         delta_paths = _revision_delta_paths(revision, expected_revision)
         allowed_prefix = "docs/evidence/openkylin_native_latest/"
         if delta_paths is None or not delta_paths or any(not path.startswith(allowed_prefix) for path in delta_paths):
-            return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, f"证据 {revision[:12]} 与当前 {expected_revision[:12]} 不一致", severity="P0")
+            return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, f"证据 {revision[:12]} 与当前 {expected_revision[:12]} 不一致", severity=severity)
         return Check(
             "openKylin原生证据",
             "证据对应当前 Git HEAD",
             True,
             "source=%s；当前 HEAD 仅追加/更新原生证据文件 %s 个" % (revision, len(delta_paths)),
-            severity="P0",
+            severity=severity,
         )
     if dirty:
-        return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, "证据采集树包含未提交修改", severity="P0")
-    return Check("openKylin原生证据", "证据对应当前 Git HEAD", True, revision, severity="P0")
+        return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, "证据采集树包含未提交修改", severity=severity)
+    return Check("openKylin原生证据", "证据对应当前 Git HEAD", True, revision, severity=severity)
 
 
 def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, severity: str) -> List[Check]:
@@ -457,7 +464,7 @@ def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, 
     for name in required:
         path = evidence_dir / name
         checks.append(Check("openKylin原生证据", name, path.exists() and path.stat().st_size > 0, "存在且非空" if path.exists() and path.stat().st_size > 0 else "缺失或为空", severity=severity))
-    checks.append(check_native_evidence_revision(evidence_dir, expected_revision))
+    checks.append(check_native_evidence_revision(evidence_dir, expected_revision, severity=severity))
     if evidence_dir.exists():
         checks.extend(check_evidence_manifest_freshness(evidence_dir, severity=severity))
     return checks
