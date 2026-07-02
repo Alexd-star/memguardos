@@ -254,7 +254,11 @@ MemGuardOS 提供 `.deb` 打包脚本，用于在 openKylin/Debian 系系统中�
 ```bash
 cd ~/memguardos
 bash scripts/build_deb.sh
-sudo apt install ./dist/memguardos_0.1.0_amd64.deb
+sudo apt install ./dist/memguardos-core_0.1.0-2_amd64.deb \
+  ./dist/memguardos-ukui_0.1.0-2_amd64.deb \
+  ./dist/memguardos-agent-bridge_0.1.0-2_amd64.deb \
+  ./dist/memguardos-doc_0.1.0-2_all.deb \
+  ./dist/memguardos_0.1.0-2_all.deb
 memctl doctor
 sudo systemctl start memguardd
 systemctl status memguardd --no-pager
@@ -605,7 +609,7 @@ Web 控制台是本地可视化入口，适合展示系统能力和降低操作�
 
 ### 6.3 openKylin 桌面入口
 
-在 openKylin 桌面环境中，MemGuardOS 提供 Peony 文件右键菜单和 UKUI 控制中心入口。Peony 入口适合从文件管理器中触发“用 MemGuardOS 扫描并导入记忆”；该入口会把选中文件路径写成 OS event，并对小于 1 MB 的文本类文件执行内容导入。UKUI 控制中心入口适合集中查看运行环境检查、审计链校验、端侧向量能力检查、诊断报告导出和本地控制台打开操作。
+在 openKylin 桌面环境中，MemGuardOS 提供 Peony 文件右键菜单、UKUI 控制中心入口和 UKUI 托盘。Peony 入口适合从文件管理器中触发文件扫描；系统会先展示多文件预览、敏感风险和建议动作，用户确认后才导入安全文本。UKUI 控制中心入口适合集中查看服务状态、服务级 cgroup、审计链、端侧向量能力、Polkit 高权限动作、诊断报告导出和本地控制台打开操作。托盘用于低干扰状态提醒和快捷入口，退出托盘不会停止核心服务。
 
 这两个入口用于展示 MemGuardOS 与 openKylin 桌面环境的集成方向。它们不是独立账号系统，也不是完整企业控制台。若插件在当前桌面会话中不可见，应先确认插件版本、安装路径、只读 `/usr` 状态和桌面缓存，再重启 Peony 或注销重进桌面会话。
 
@@ -777,7 +781,7 @@ nohup peony "$(xdg-user-dir DESKTOP)" >/tmp/peony_window_memguardos.log 2>&1 &
 
 预期结果：
 
-1. Peony 文件右键菜单中出现【用 MemGuardOS 扫描并导入记忆】。
+1. Peony 文件右键菜单中出现 MemGuardOS 扫描入口，并能打开预览确认对话框。
 2. UKUI 设置/控制中心左侧安全分类下出现【MemGuardOS 记忆安全】。
 3. 控制中心页面可见【运行环境检查】、【校验审计链】、【检查端侧向量能力】、【导出诊断报告】和【打开本地控制台】。
 

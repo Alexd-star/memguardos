@@ -227,8 +227,8 @@ python -m memguard.cli.memctl openkylin-status
 python -m memguard.cli.memctl auditd-rules --format auditctl
 python -m memguard.cli.memctl sdk-status --probe-embedding --probe-timeout 90
 bash scripts/warmup_kylin_sdk.sh
-python -m memguard.cli.memctl desktop scan-file --file README.md --ingest
-MEMGUARD_EMBEDDING_BACKEND=auto python -m memguard.cli.memctl search "openKylin 服务内存限制" --top-k 2
+python -m memguard.cli.memctl desktop scan-files --file README.md
+python -m memguard.cli.memctl search "openKylin 服务内存限制" --top-k 2
 bash scripts/collect_openkylin_native_evidence.sh
 ```
 
@@ -236,12 +236,16 @@ bash scripts/collect_openkylin_native_evidence.sh
 
 ```bash
 bash scripts/build_deb.sh
-sudo apt install ./dist/memguardos_0.1.0_amd64.deb
+sudo apt install ./dist/memguardos-core_0.1.0-2_amd64.deb \
+  ./dist/memguardos-ukui_0.1.0-2_amd64.deb \
+  ./dist/memguardos-agent-bridge_0.1.0-2_amd64.deb \
+  ./dist/memguardos-doc_0.1.0-2_all.deb \
+  ./dist/memguardos_0.1.0-2_all.deb
 memctl doctor
 sudo systemctl start memguardd
 ```
 
-`build_deb.sh` 会把 MemGuardOS 安装到 `/opt/memguardos`，提供 `/usr/bin/memctl` 和 `/usr/bin/memguardd` 包装命令，安装 `memguardd.service`、`memguardd@.service`、`memguard-agent@.service`、Kylin SDK 预热 user service、Polkit policy 和受控 helper，并在 Peony/UKUI 构建依赖存在时把两个原生桌面插件 `.so` 一并打入 `.deb`。当前 openKylin 维护模式已完成 `sudo apt install ./dist/memguardos_0.1.0_amd64.deb` 完整安装复验，安装后 `dpkg` 状态、systemd 服务、cgroup 限制、Peony/UKUI 插件依赖、审计链和 Kylin embedding SDK 真实推理均有证据。该包用于产品化安装验证；正式竞赛提交仍以 `memguardos_competition_submission_*.zip` 为主。
+`build_deb.sh` 生成五个职责独立的包：`memguardos-core` 提供 CLI、daemon、systemd、Polkit 和 BPF 安全验证资产；`memguardos-ukui` 提供 Peony、UKUI 控制中心和系统托盘；`memguardos-agent-bridge` 提供 OpenHands/Agent 桥接；`memguardos-doc` 提供中文文档；`memguardos` 是完整安装元包。分包构建会检查文件所有权冲突，`verify_deb_lifecycle.sh` 会验证离线安装、桌面包移除与重装以及用户数据保护。旧版单包的维护模式安装证据继续保留；新版五包需在最终 HEAD 下刷新一次维护模式 `apt install` 证据。
 
 ## 评测与证据
 
@@ -364,10 +368,10 @@ dist/memguardos_full_repository_<时间戳>_manifest.json
 ## 准确边界
 
 - Kylin embedding SDK：已完成真实向量探针和可选重排检索证据；默认主路径仍保留 FTS/hash/graph fallback。
-- Debian 安装包：已在 openKylin 维护模式完成完整 `apt install` 安装复验，证据位于 `docs/evidence/latest/deb_apt_install_*.txt`。
+- Debian 安装包：历史单包已在 openKylin 维护模式完成完整 `apt install` 安装复验；当前版本已升级为五个职责独立的包，并已通过构建、文件冲突检查和离线生命周期验证。最终提交前建议在维护模式下按当前 Git HEAD 再跑一次五包 `apt install` 证据。
 - 语义抽取：默认采用可解释、可复现的 deterministic semantic rules；显式配置 `MEMGUARD_EXTRACTOR_COMMAND` 后可接本地 NER/LLM JSON 增强器，增强器失败会自动回退。
 - BPF LSM：已在 openKylin 对安全测试文件完成强制拒绝验证；支持从 JSON 生成可审查静态 denylist；默认不拦截 `/etc/shadow`、SSH、sudo 或 PAM 链路。
-- UKUI/Peony：Peony 右键菜单插件已在 openKylin 桌面右键菜单中可见验证；菜单动作统一调用 `memctl desktop scan-file`，对用户主动选择的文件生成扫描报告，高风险敏感文本阻断写入，目录/大文件/非文本文件只记录 OS event，安全文本才进入 `peony_file` 导入链路。UKUI 控制中心入口“MemGuardOS 记忆安全”已升级为本机运维面板，包含本机状态总览、运行环境检查、审计链校验、端侧向量能力、Kylin SDK 预热、诊断报告和本地控制台入口。
+- UKUI/Peony：Peony 右键菜单插件已在 openKylin 桌面右键菜单中可见验证；当前菜单动作采用 `memctl desktop scan-files` 预览和 `memctl desktop apply-scan` 确认执行，对用户主动选择的文件生成批量扫描清单，高风险敏感文本阻断写入，目录/大文件/非文本文件只记录 OS event，安全文本在用户确认后进入 `peony_file` 导入链路。UKUI 控制中心入口“MemGuardOS 记忆安全”已升级为本机运维面板，包含服务状态、服务级 cgroup、端侧向量能力、Kylin SDK 预热、审计链、Polkit 高权限动作、诊断报告和本地控制台入口；UKUI 托盘提供低干扰状态提醒和快捷入口。
 - Web 控制台：用于本地运维、调试和评审操作，默认绑定 `127.0.0.1`，不作为公网 SaaS 管理台。
 - 用户行为：主链路采集用户与 OpenHands Agent 的消息、反馈、工具调用和工具结果；shell、配置、OS 事件和 auditd 是补充来源，不宣称全量桌面行为捕获。
 - 真实 Agent：原 12 组 openKylin/OpenHands 会话和新增 R13-R20 8 组扩展会话均已完成归档，记忆系统层与 Agent 行为层合计 28/28。系统保留模型原始尝试，并通过偏好 Hook、有界合规修复、严格只读结构化意图恢复和程序性结果兜底提高小模型稳定性；该结果仅代表当前公开场景，不扩展为任意 Agent 任务均稳定完成。

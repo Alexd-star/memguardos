@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
@@ -178,6 +180,11 @@ def main() -> int:
     parser.add_argument("--eval", default="docs/eval_result.json", help="Evaluation JSON path")
     parser.add_argument("--evidence-dir", default="docs/evidence/latest", help="openKylin evidence directory")
     parser.add_argument(
+        "--native-evidence-dir",
+        default="docs/evidence/openkylin_native_latest",
+        help="Current-HEAD openKylin desktop product evidence directory",
+    )
+    parser.add_argument(
         "--performance-evidence-dir",
         default="docs/evidence/performance_latest",
         help="Optimized concurrency and ablation evidence directory",
@@ -204,6 +211,7 @@ def main() -> int:
 
     eval_path = _resolve(args.eval)
     evidence_dir = _resolve(args.evidence_dir)
+    native_evidence_dir = _resolve(args.native_evidence_dir)
     performance_evidence_dir = _resolve(args.performance_evidence_dir)
     memory_value_evidence_dir = _resolve(args.memory_value_evidence_dir)
     real_agent_extension_evidence_dir = _resolve(
@@ -215,6 +223,7 @@ def main() -> int:
     checks.extend(check_sources())
     checks.extend(check_eval(eval_path))
     checks.extend(check_openkylin_evidence(evidence_dir, allow_missing=args.allow_missing_openkylin))
+    checks.extend(check_native_openkylin_evidence(native_evidence_dir, expected_revision=_git_head(), severity="P0"))
     checks.extend(check_performance_evidence(performance_evidence_dir, severity="P0"))
     checks.extend(check_memory_value_evidence(memory_value_evidence_dir, severity="P0"))
     checks.extend(
@@ -394,6 +403,53 @@ def check_openkylin_evidence(evidence_dir: Path, allow_missing: bool = False) ->
     checks.extend(check_openkylin_metrics(evidence_dir, severity=severity))
     checks.extend(check_deb_install_evidence(evidence_dir, severity=severity))
     checks.extend(check_evidence_manifest_freshness(evidence_dir, severity=severity))
+    return checks
+
+
+def check_native_evidence_revision(evidence_dir: Path, expected_revision: str) -> Check:
+    path = evidence_dir / "source_revision.json"
+    payload = _load_evidence_json(path)
+    if not payload:
+        return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, "缺少或无法解析 source_revision.json", severity="P0")
+    revision = str(payload.get("source_revision", ""))
+    dirty = bool(payload.get("dirty", False))
+    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+        return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, f"无效版本标识：{revision or '<empty>'}", severity="P0")
+    if not re.fullmatch(r"[0-9a-f]{40}", expected_revision):
+        return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, f"本地 Git HEAD 无效：{expected_revision}", severity="P0")
+    if revision != expected_revision:
+        return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, f"证据 {revision[:12]} 与当前 {expected_revision[:12]} 不一致", severity="P0")
+    if dirty:
+        return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, "证据采集树包含未提交修改", severity="P0")
+    return Check("openKylin原生证据", "证据对应当前 Git HEAD", True, revision, severity="P0")
+
+
+def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, severity: str) -> List[Check]:
+    required = [
+        "source_revision.json",
+        "environment.txt",
+        "openkylin_status.txt",
+        "openkylin_status_probe_sdk.txt",
+        "peony_batch_preview.json",
+        "peony_batch_apply.json",
+        "peony_sensitive_preview.json",
+        "systemd_cgroup.txt",
+        "polkit_assets.txt",
+        "tray_assets.txt",
+        "desktop_build.txt",
+        "debian_packages.txt",
+        "deb_lifecycle.txt",
+        "pytest_openkylin.txt",
+        "manifest.json",
+        "SHA256SUMS.txt",
+    ]
+    checks = [Check("openKylin原生证据", "证据目录", evidence_dir.exists(), _display_path(evidence_dir), severity=severity)]
+    for name in required:
+        path = evidence_dir / name
+        checks.append(Check("openKylin原生证据", name, path.exists() and path.stat().st_size > 0, "存在且非空" if path.exists() and path.stat().st_size > 0 else "缺失或为空", severity=severity))
+    checks.append(check_native_evidence_revision(evidence_dir, expected_revision))
+    if evidence_dir.exists():
+        checks.extend(check_evidence_manifest_freshness(evidence_dir, severity=severity))
     return checks
 
 
@@ -1241,6 +1297,22 @@ def _display_path(path: Path) -> str:
         return path.relative_to(ROOT).as_posix()
     except ValueError:
         return str(path)
+
+
+def _git_head() -> str:
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return completed.stdout.strip().lower()
 
 
 def _expected_evidence_paths(evidence_dir: Path) -> List[str]:

@@ -233,7 +233,7 @@ bash scripts/install_ukui_plugins.sh --no-build
 
 - Peony 右键菜单插件构建产物：`native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so`。
 - UKUI 控制中心插件构建产物：`native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so`。
-- openKylin ostree/overlay 只读 `/usr` 场景已通过 bind mount 演示安装处理；Peony 右键菜单项“用 MemGuardOS 扫描并导入记忆”已在桌面右键菜单中可见验证，UKUI 控制中心入口“MemGuardOS 记忆安全”已在设置界面中可见验证。当前源码已将控制中心升级为本机运维面板，提供运行环境检查、审计链校验、端侧向量能力检查、诊断报告和本地控制台入口；`peony_file_scan_smoke.sh` 会自动复验右键动作对应的文本文件导入、检索和审计链。
+- openKylin ostree/overlay 只读 `/usr` 场景支持 bind mount 演示安装处理；Peony 右键入口已升级为多文件预览、确认导入和敏感阻断闭环，UKUI 控制中心入口“MemGuardOS 记忆安全”提供本机运维面板，UKUI 托盘提供状态提醒和快捷入口。当前原生化证据脚本会自动复验 Peony 预览/确认/阻断、桌面构建、Polkit、托盘、服务级 cgroup、五包构建和离线生命周期。
 - `ukui_enterprise_panel.txt` 记录新控制中心插件 `.so` 已重新构建并安装到系统插件目录，字符串核查包含【运行环境检查】、【校验审计链】、【检查端侧向量能力】、【导出诊断报告】和【打开本地控制台】。
 - `diagnostics_probe_after_reset.txt` 记录默认用户库重建后的诊断报告：`audit_chain.ok=true`，Kylin embedding 实际探针 `ok=true`、维度为 `768`。
 

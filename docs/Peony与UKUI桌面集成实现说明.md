@@ -1,44 +1,71 @@
 # Peony 与 UKUI 桌面集成实现说明
 
-本文说明 MemGuardOS 如何实现 openKylin 桌面 UI 集成，重点覆盖 Peony 文件管理器右键菜单、UKUI 控制中心插件原型、只读 `/usr` 环境下的安装处理、插件不显示问题的定位过程，以及最终可见性验证证据。
+本文说明 MemGuardOS 如何在 openKylin 桌面环境中形成可见、可用、可验证的原生集成。重点覆盖 Peony 文件管理器右键菜单、UKUI 控制中心、UKUI 托盘、Polkit 授权、只读 `/usr` 环境处理和最终证据采集。本文只描述当前代码已经实现的能力，不把可选增强夸大为 openKylin 官方内置组件。
 
 ## 1. 设计目标
 
-MemGuardOS 的默认主链路是 CLI、daemon、Unix socket API 和本地 Web 控制台。为了进一步体现 openKylin 桌面生态适配，项目补充了 UKUI 原生插件能力：
+MemGuardOS 的核心能力是 Agent 记忆提取、检索增强、精准遗忘和审计治理。桌面集成不是为了替代核心 CLI、daemon 或 Unix socket API，而是让 openKylin 用户可以用熟悉的桌面方式完成常见操作。
 
-1. 在 Peony 文件管理器右键菜单中增加“用 MemGuardOS 扫描并导入记忆”动作。
-2. 用户右键选中文件后，可以调用统一的 `memctl desktop scan-file` 生成文件扫描报告，把文件路径转换为统一 OS event，并在安全条件满足时写入 MemGuardOS 记忆系统。
-3. 对小于 1 MB 的文本类文件，扫描命令会先执行敏感检测；高风险文本阻断写入，目录、大文件和非文本文件只记录 OS event，不直接读取内容，安全文本才进入 `peony_file` 导入链路。
-4. 提供 UKUI 控制中心插件入口，用于展示本机运行状态、审计完整性、端侧向量能力、Kylin SDK 预热、诊断报告和本地控制台入口。
-5. 在 openKylin 只读 `/usr` 的 ostree/overlay 环境中，提供可复现的演示安装方法。
+桌面侧有三个目标：
 
-这个设计避免把桌面联动做成单纯的 `notify-send` 脚本，而是接入 openKylin 的真实插件接口。
+1. **降低入口门槛**：用户可以从 Peony 右键菜单选择文件，也可以从 UKUI 控制中心查看服务、SDK、审计和资源状态。
+2. **避免误导和误操作**：文件导入必须先预览、再确认；敏感文件默认阻断；服务启停和 auditd/BPF 操作必须走受控授权。
+3. **保持 openKylin 原生风格**：插件使用 Qt Widgets、系统字体、系统调色板和主题图标，不使用网页式卡片、渐变、硬编码颜色或自定义浮窗。
+
+这套设计与赛题的最新 Q&A 一致：系统不需要自己实现一个完整 OS Agent，但需要接入现有 Agent，并提取用户与 Agent 交互中的偏好和习惯。因此 Peony/UKUI 入口服务的是用户主动选择的 Agent 相关资料、日志、任务说明和系统状态治理，而不是后台采集所有桌面行为。
 
 ## 2. 文件结构
 
-相关源码和脚本如下：
-
 | 路径 | 作用 |
 |---|---|
-| `native/ukui/peony-memguard/` | Peony 文件管理器右键菜单插件源码 |
-| `native/ukui/peony-memguard/memguard_peony_plugin.cpp` | 右键菜单动作、事件转换和命令触发实现 |
-| `native/ukui/peony-memguard/memguard_peony_plugin.h` | `Peony::MenuPluginInterface` 插件类声明 |
-| `native/ukui/peony-memguard/common.json` | Peony Qt 插件元数据，包含 `version: 3.2.2` |
-| `native/ukui/ukcc-memguard/` | UKUI 控制中心插件原型源码 |
-| `native/ukui/ukcc-memguard/ukcc-memguard.json` | UKCC 插件元数据，包含 `version: 3.2.2` |
-| `scripts/build_ukui_plugins.sh` | 构建 Peony/UKCC 两个 `.so` |
-| `scripts/install_ukui_plugins.sh` | 安装插件，支持只读 `/usr` 下的 bind mount 演示安装 |
-| `scripts/build_deb.sh` | 生成 MemGuardOS Debian 安装包，并在依赖存在时把 Peony/UKUI 插件打入系统插件目录 |
-| `memguard/desktop/peony_scan.py` | Peony 文件扫描报告、敏感阻断、安全文本导入和审计链验证 |
-| `memguard/os_guard/openkylin_native.py` | openKylin 本机状态总览，供 UKUI 控制中心和证据采集复用 |
-| `scripts/warmup_kylin_sdk.sh` | Kylin embedding SDK 预热与 fallback 状态报告 |
-| `packaging/polkit/org.memguardos.policy` | 高权限操作 Polkit 授权资产 |
-| `scripts/probe_ukui_deep_plugins.sh` | 探测开发包、插件目录和系统环境 |
-| `scripts/verify_ukui_plugins.sh` | 检查构建产物、安装产物、动态依赖、关键字符串和人工可见性步骤 |
+| `native/ukui/peony-memguard/` | Peony 文件管理器右键插件源码 |
+| `native/ukui/peony-memguard/memguard_peony_plugin.cpp` | 菜单动作、多文件 URI 解析、预览对话框、确认导入和结果提示 |
+| `native/ukui/peony-memguard/common.json` | Peony Qt 插件元数据，包含与系统插件接口匹配的 `version` |
+| `native/ukui/ukcc-memguard/` | UKUI 控制中心“MemGuardOS 记忆安全”插件源码 |
+| `native/ukui/tray/` | UKUI 系统托盘源码和 `.pro` 构建文件 |
+| `packaging/desktop/memguardos-tray.desktop` | 托盘自动启动入口，仅在 UKUI 会话启用 |
+| `packaging/polkit/org.memguardos.policy` | Polkit 授权策略 |
+| `scripts/memguardos-native-helper.sh` | 受控高权限 helper，只允许白名单动作 |
+| `memguard/desktop/peony_scan.py` | 单文件扫描、敏感检测、导入、审计、批量 manifest 生成与确认执行 |
+| `memguard/desktop/scan_manifest.py` | 批量扫描 manifest 的签名、过期、文件指纹、nonce 和防重放校验 |
+| `memguard/os_guard/openkylin_native.py` | openKylin 状态总览，供 CLI、UKUI 控制中心和证据采集复用 |
+| `memguard/os_guard/service_control.py` | systemd 服务级 cgroup 状态读取 |
+| `memguard/os_guard/privileged_actions.py` | Polkit/native action 白名单定义和执行入口 |
+| `scripts/build_ukui_plugins.sh` | 构建 Peony、UKUI 控制中心和托盘 |
+| `scripts/install_ukui_plugins.sh` | 在可写系统目录或只读 `/usr` 演示路径安装插件 |
+| `scripts/build_deb_packages.py` | 构建五个职责独立的 Debian 包 |
+| `scripts/verify_deb_lifecycle.sh` | 验证分包离线安装、移除、重装和用户数据保护 |
+| `scripts/collect_openkylin_native_evidence.sh` | 采集 openKylin 原生化证据 |
 
-## 3. Peony 右键菜单插件实现
+## 3. Peony 右键菜单：从“触发按钮”到“确认闭环”
 
-Peony 文件管理器的菜单扩展通过 `Peony::MenuPluginInterface` 实现。MemGuardOS 插件类继承 `QObject` 和 `Peony::MenuPluginInterface`，并通过 Qt 插件宏声明元数据：
+早期桌面入口只做到了右键菜单可见并调用单文件 `scan-file --ingest`。当前实现已经升级为更接近产品的两阶段闭环。
+
+第一阶段是预览。用户在 Peony 中选择一个或多个文件，右键点击 MemGuardOS 菜单后，插件会调用：
+
+```bash
+memctl desktop scan-files --file <path1> --file <path2>
+```
+
+该命令不会立刻写入长期记忆，而是生成预览 manifest。manifest 包含文件路径、大小、类型、内容摘要、敏感标签、建议动作、是否可勾选、文件指纹、过期时间和签名。目录、大文件、二进制文件和敏感文件默认不可勾选或只进入审计事件，不会被直接读入长期记忆。
+
+第二阶段是确认。Peony 插件用 Qt 原生对话框显示预览表格，用户明确勾选后才调用：
+
+```bash
+memctl desktop apply-scan --manifest <manifest_path> --select <path>
+```
+
+`apply-scan` 会校验 manifest 的 HMAC 签名、nonce、过期时间、文件指纹和是否已经使用。只有预览过且用户确认的安全文件才会进入导入流程。导入结果会写入审计链，返回成功、跳过、阻断和失败统计。
+
+这个设计解决了三个风险：
+
+- 防止右键误点后直接把敏感文件写入长期记忆。
+- 防止预览和执行之间文件被替换。
+- 防止旧 manifest 被重复利用或篡改。
+
+## 4. Peony 插件源码实现要点
+
+Peony 菜单扩展通过 `Peony::MenuPluginInterface` 实现。MemGuardOS 插件继承 `QObject` 和 `Peony::MenuPluginInterface`，并通过 Qt 插件宏加载 `common.json`：
 
 ```cpp
 class MemGuardPeonyPlugin : public QObject, public Peony::MenuPluginInterface
@@ -49,422 +76,125 @@ class MemGuardPeonyPlugin : public QObject, public Peony::MenuPluginInterface
 };
 ```
 
-插件类型返回 `Peony::PluginInterface::MenuPlugin`，表示这是菜单扩展：
+插件在 `DirectoryView`、`DesktopWindow` 或存在选中文件 URI 时返回菜单项。这样既支持普通文件管理器窗口，也支持桌面文件右键。菜单文本使用自然中文，不包含“赛题演示”或“测试按钮”等不适合产品交付的字样。
 
-```cpp
-Peony::PluginInterface::PluginType MemGuardPeonyPlugin::pluginType()
-{
-    return Peony::PluginInterface::MenuPlugin;
-}
-```
+点击菜单后，插件会把 `file://` URI 转为本地路径，批量传给 `memctl desktop scan-files`。预览结果通过 `QDialog`、`QTreeWidget`、`QDialogButtonBox` 等原生组件展示，按钮使用系统标准按钮语义。界面不使用硬编码背景色和网页式卡片，确保在 openKylin 默认主题、深色主题和高缩放环境中尽量保持一致。
 
-核心逻辑位于 `menuActions(...)`。Peony 在构建右键菜单时会传入菜单类型、当前 URI 和选中文件 URI 列表，插件根据这些信息返回一个 `QAction`：
+## 5. UKUI 控制中心：记忆安全中心
 
-```cpp
-QList<QAction *> MemGuardPeonyPlugin::menuActions(
-    Peony::MenuPluginInterface::Types types,
-    const QString &uri,
-    const QStringList &selectionUris)
-```
+UKUI 控制中心插件的定位是“MemGuardOS 记忆安全中心”。它不重复实现后端逻辑，而是消费 `memctl openkylin-status`、`memctl sdk-status`、`memctl verify-audit` 和 `memctl native-action` 等稳定命令。
 
-最初实现只判断 `DirectoryView`，但桌面文件右键在当前 openKylin/Peony 环境中可能以 `DesktopWindow` 类型传入，因此最终实现支持三类条件：
+页面包括：
 
-1. `DirectoryView`：文件管理器目录视图右键。
-2. `DesktopWindow`：桌面文件或桌面区域右键。
-3. `selectionUris` 非空：只要存在选中文件，即可返回动作。
+- **总览**：展示服务状态、SDK 状态、审计链状态、资源状态和建议操作。
+- **服务**：启动、停止、重启 `memguardd.service`，查看服务日志，检查 systemd/cgroup 状态。
+- **端侧智能**：检查 Kylin embedding/vector SDK，执行 SDK 预热，显示当前是否使用 fallback。
+- **安全审计**：校验审计链，安装 auditd 规则，运行 BPF LSM 安全验证。
+- **诊断**：导出诊断报告，打开本地 Web 控制台，查看技术详情。
 
-最终返回的菜单文本为：
+控制中心使用 `QTabWidget`、`QTreeWidget`、`QGroupBox`、`QPushButton`、`QTextEdit` 等系统控件，遵循 openKylin/UKUI 的视觉习惯。状态呈现以红黄绿语义为主，但颜色由系统调色板和主题控制，不把自定义 UI 风格强行覆盖到系统设置里。
 
-```text
-用 MemGuardOS 扫描并导入记忆
-```
+## 6. UKUI 托盘
 
-该动作的 `objectName` 为：
+托盘程序位于 `native/ukui/tray/`。它的作用是提供低干扰状态提醒，而不是做一个悬浮控制台。托盘启动后会周期性调用 `memctl openkylin-status`，判断服务、SDK 和审计是否处于正常状态。首次启动保持安静，只有状态变化时才发送通知，避免持续弹窗影响用户。
 
-```text
-memguardos-peony-memory-scan
-```
+托盘菜单包含：
 
-## 4. 点击菜单后的事件链路
+- 【打开记忆安全中心】
+- 【打开本地控制台】
+- 【重新检查状态】
+- 【退出托盘】
 
-用户点击菜单后，插件执行 `sendSelectionToMemGuard()`。
+退出托盘只关闭托盘进程，不停止 `memguardd.service`。托盘图标优先使用 freedesktop/UKUI 主题图标，缺失时使用 Qt 标准图标降级。
 
-该函数首先选择目标路径：
+## 7. Polkit 授权边界
 
-1. 如果存在 `selectionUris`，使用第一个选中文件。
-2. 否则使用当前目录或菜单 URI。
-3. 如果是 `file://` 本地文件 URI，则转换为本地路径。
+UKUI 控制中心里的部分操作需要管理员权限，例如启动/停止系统服务、刷新 systemd、安装 auditd 规则和运行 BPF 安全验证。项目提供 `packaging/polkit/org.memguardos.policy` 和 `scripts/memguardos-native-helper.sh`。
 
-之后插件通过本地命令调用 MemGuardOS 的统一桌面扫描入口：
+helper 的安全约束包括：
 
-```bash
-memctl desktop scan-file --file '<path>' --ingest --notify
-```
+1. 只接受一个动作参数。
+2. 只允许白名单动作，不接受任意 shell 命令。
+3. 固定 PATH 为系统安全路径。
+4. 清理 `PYTHONPATH`、`LD_PRELOAD`、`LD_LIBRARY_PATH` 等高风险环境变量。
+5. 固定项目根为 `/opt/memguardos`。
+6. 未知动作必须返回失败。
 
-该命令会内部构造统一 OS event，并根据文件类型和敏感检测结果决定是否导入文本内容。它不是简单地把所有右键文件都读入记忆，而是先产出可审计报告，再执行受控动作。
+当前白名单动作为 `start-service`、`stop-service`、`restart-service`、`refresh-services`、`install-auditd-rules` 和 `run-bpf-lsm-test`。是否出现图形授权弹窗取决于 openKylin 桌面会话中的 Polkit agent；命令行和维护模式下可以通过 `sudo` 复验同一条路径。
 
-因此 Peony 插件不是只显示 UI，而是接入项目已有 OS 事件和文件导入链路：
+## 8. 构建、安装与验证
 
-```text
-Peony 右键菜单
-  -> memctl desktop scan-file
-  -> peony_context_menu OS event
-  -> OS 路径解析
-  -> 敏感检测
-  -> 扫描报告
-  -> 安全文本记忆写入/敏感内容阻断/目录大文件仅审计
-  -> SQLite 审计哈希链
-  -> 混合检索命中导入内容
-  -> 后续检索、RAG 上下文和精准遗忘
-```
-
-扫描报告示例：
-
-```json
-{
-  "schema": "memguardos-peony-scan-report-v1",
-  "recommended_action": "import_text",
-  "sensitivity": {"level": "none", "labels": []},
-  "ingest": {"attempted": true, "stored": true},
-  "audit_event": {"attempted": true, "stored": true},
-  "verification": {"audit_chain_ok": true}
-}
-```
-
-`--notify` 会在系统存在 `notify-send` 时发送桌面提示。提示会区分安全文本导入、敏感阻断、仅审计三类结果。这一边界可以避免右键菜单误读二进制文件、超大文件或密钥文件，也方便答辩时解释为什么桌面入口不是简单按钮，而是与核心记忆系统形成了可验证闭环。
-
-## 4.1 Peony 文件扫描闭环 smoke
-
-为了避免只依赖人工截图，项目提供了 `scripts/peony_file_scan_smoke.sh`。该脚本会创建一个真实 Markdown 样例文件，模拟 Peony 右键事件，执行 `ingest-os-event` 和 `ingest --file --source-kind peony_file`，随后检索样例内容并校验审计链。脚本输出 JSON 结果，关键字段包括：
-
-```json
-{
-  "ok": true,
-  "file_ingest_stored": true,
-  "search_hits": 2,
-  "audit_ok": true
-}
-```
-
-该证据证明桌面集成已经从“菜单可见”推进到“菜单动作对应的导入链路可复验”。真实桌面点击仍需在 openKylin 图形界面中人工确认，因为 Peony 插件由桌面进程加载；但核心动作本身已经可以通过 smoke 脚本自动复跑，并被纳入 `collect_openkylin_evidence.sh` 和提交包检查。
-
-## 5. 元数据 version 的关键适配
-
-Peony 使用 Qt 插件元数据识别和管理插件。调试过程中发现，系统自带 Peony 菜单插件的元数据都包含：
-
-```json
-"MetaData": {
-  "version": "3.2.2"
-}
-```
-
-而最初的 `common.json` 只有 `Keys`、`Name`、`Description`，单独用 `QPluginLoader` 可以加载，但 Peony 插件管理器可能因为版本字段缺失而过滤该插件。通过在 openKylin 虚拟机中执行：
+构建桌面组件：
 
 ```bash
-pkg-config --modversion peony
-```
-
-得到当前 Peony 插件接口版本：
-
-```text
-3.2.2
-```
-
-因此最终 `native/ukui/peony-memguard/common.json` 写为：
-
-```json
-{
-  "version": "3.2.2",
-  "Keys": [
-    "memguardos-peony-menu-plugin"
-  ],
-  "Name": "MemGuardOS Peony Menu Plugin",
-  "Description": "Send selected files to MemGuardOS as OS-agent memory events."
-}
-```
-
-UKUI 控制中心插件元数据也同步加入 `version: 3.2.2`，保持与系统插件风格一致。
-
-这个问题的定位结论是：
-
-1. `.so` 文件本身可被 `QPluginLoader` 加载。
-2. `menuActions(...)` 单独调用能返回菜单项。
-3. Peony UI 不显示时，根因更可能在 Peony 插件管理器注册阶段。
-4. 补齐 `version` 元数据后，Peony 右键菜单可见。
-
-## 6. openKylin 只读 `/usr` 的安装处理
-
-当前 openKylin 虚拟机使用 ostree/overlay 布局，`/usr` 挂载为只读：
-
-```text
-/dev/sda5 on /usr type ext4 (ro,relatime)
-overlay on /usr type overlay (ro,relatime,...)
-```
-
-因此直接执行：
-
-```bash
-sudo install -m 755 libpeony-menu-plugin-memguardos.so /usr/lib/x86_64-linux-gnu/peony-extensions/
-```
-
-会返回：
-
-```text
-只读文件系统
-```
-
-为兼顾系统安全和比赛演示，`scripts/install_ukui_plugins.sh` 实现了两级安装策略：
-
-1. 如果目标插件目录可写，直接安装到系统目录。
-2. 如果目标插件目录不可写，复制原插件目录到 `/var/tmp/memguardos-ukui-visible/`，把 MemGuardOS 插件放入该目录，再使用 bind mount 挂载回系统插件目录。
-
-关键逻辑如下：
-
-```bash
-BIND_BASE="${MEMGUARDOS_UKUI_BIND_BASE:-/var/tmp/memguardos-ukui-visible}"
-sudo cp -a "${dest_dir}/." "${bind_dir}/" 2>/dev/null || true
-sudo install -m 755 "${plugin}" "${bind_dir}/${dest_name}"
-sudo mount --bind "${bind_dir}" "${dest_dir}"
-sudo install -m 755 "${plugin}" "${dest_dir}/${dest_name}"
-```
-
-这种方式不会修改只读系统镜像，适合评审现场演示。为了重启后自动恢复挂载，虚拟机中还增加了 `memguardos-ukui-bind.service`：
-
-```text
-/etc/systemd/system/memguardos-ukui-bind.service
-```
-
-该服务开机后执行：
-
-```bash
-/bin/bash /home/<用户>/memguardos/scripts/install_ukui_plugins.sh --no-build
-```
-
-当前服务状态：
-
-```text
-enabled
-active
-```
-
-## 7. 构建与安装步骤
-
-在 openKylin 中执行：
-
-```bash
-cd ~/memguardos
-source .venv/bin/activate
-bash scripts/probe_ukui_deep_plugins.sh docs/evidence/latest
 bash scripts/build_ukui_plugins.sh
-bash scripts/install_ukui_plugins.sh --no-build
 ```
 
-构建结果：
+构建成功后应看到 Peony 插件、UKUI 控制中心插件和托盘可执行文件：
 
 ```text
 native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so
 native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so
+native/ukui/build/tray/memguardos-tray
 ```
 
-安装后目标路径：
+如果 openKylin 的 `/usr` 可写，可以通过安装脚本放入系统插件目录。如果 `/usr` 是只读 ostree/overlay 布局，脚本会使用 `/var/tmp/memguardos-ukui-visible/` 和 bind mount 做演示安装。该方式适合现场可见性验证；正式安装建议使用维护模式或系统允许写入软件包的环境。
 
-```text
-/usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
-/usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
-```
-
-重启 Peony：
+分包构建：
 
 ```bash
-export DISPLAY=:0
-export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
-pkill -x peony 2>/dev/null || true
-pkill -x peony-qt-desktop 2>/dev/null || true
-nohup peony-qt-desktop -w -d >/tmp/peony_desktop_memguardos.log 2>&1 &
-nohup peony "$(xdg-user-dir DESKTOP)" >/tmp/peony_window_memguardos.log 2>&1 &
+bash scripts/build_deb.sh
 ```
 
-## 8. 验证方法
-
-### 8.1 插件产物验证
-
-执行：
+分包离线生命周期验证：
 
 ```bash
-bash scripts/verify_ukui_plugins.sh
+bash scripts/verify_deb_lifecycle.sh
 ```
 
-检查内容包括：
+该验证会检查五包数量、依赖、文件冲突、离线解包、移除桌面包后核心能力保留、重装桌面包和用户数据保护。
 
-1. 构建产物是否存在。
-2. 系统安装产物是否存在。
-3. `file` 是否识别为 ELF shared object。
-4. `ldd` 是否存在 `not found`。
-5. `strings` 是否包含 `MemGuardOS`、`memguardos`、`扫描`、`导入`、`记忆安全` 等关键字符串。
+## 9. 自动证据与人工截图
 
-### 8.2 Qt 插件元数据验证
-
-调试时使用 `QPluginLoader` 输出元数据，确认安装后的 Peony 插件包含：
-
-```json
-{
-  "IID": "org.ukui.peony-qt.plugin-iface.MenuPluginInterface",
-  "MetaData": {
-    "Description": "Send selected files to MemGuardOS as OS-agent memory events.",
-    "Keys": ["memguardos-peony-menu-plugin"],
-    "Name": "MemGuardOS Peony Menu Plugin",
-    "version": "3.2.2"
-  },
-  "className": "MemGuardPeonyPlugin"
-}
-```
-
-### 8.3 菜单函数验证
-
-通过小型 Qt/Peony 探针直接实例化插件并调用 `menuActions(...)`，验证：
-
-```text
-DirectoryView actions 1 "用 MemGuardOS 扫描并导入记忆"
-DesktopWindow actions 1 "用 MemGuardOS 扫描并导入记忆"
-```
-
-这说明插件逻辑对文件管理器目录视图和桌面文件右键都能返回菜单项。
-
-### 8.4 桌面 UI 可见验证
-
-人工验证步骤：
-
-1. 打开 openKylin 桌面。
-2. 打开 Peony 文件管理器或直接使用桌面文件。
-3. 右键文件 `memguardos-ui-test.txt`。
-4. 确认菜单中出现：
-
-```text
-用 MemGuardOS 扫描并导入记忆
-```
-
-当前已经由人工截图确认该菜单项在 openKylin 桌面中可见，证据记录为：
-
-```text
-docs/evidence/latest/ukui_peony_visible_manual_confirmation.txt
-docs/evidence/latest/ukui_plugin_visible_final.txt
-```
-
-其中确认文件记录：
-
-```text
-menu_text=用 MemGuardOS 扫描并导入记忆
-status=visible_in_user_screenshot
-```
-
-### 8.5 UKUI 控制中心可见验证
-
-打开 UKUI 设置/控制中心后，左侧“安全”分类下已经出现：
-
-```text
-MemGuardOS ...
-```
-
-右侧页面标题和说明为：
-
-```text
-MemGuardOS 记忆安全
-管理本机 Agent 记忆服务的运行状态、审计完整性、端侧向量能力和诊断信息。
-```
-
-页面提供面向本机运维的常用操作：
-
-```text
-运行环境检查
-本机状态总览
-校验审计链
-检查端侧向量能力
-预热 Kylin SDK
-导出诊断报告
-打开本地控制台
-```
-
-当前已经由人工截图确认 UKUI 控制中心入口可见；最新版本已将原始命令按钮升级为本机运维面板。历史可见性证据记录为：
-
-```text
-docs/evidence/latest/ukui_control_center_visible_manual_confirmation.txt
-docs/evidence/latest/ukui_plugin_visible_final.txt
-```
-
-其中确认文件记录：
-
-```text
-entry_text=MemGuardOS 记忆安全
-buttons=运行 doctor,验证审计链,检查 Kylin SDK
-status=visible_in_user_screenshot
-```
-
-新版本的按钮文本更接近企业交付语义：用户看到的是“运行环境检查”和“端侧向量能力”，而不是底层命令名；“本机状态总览”会调用 `memctl openkylin-status` 汇总系统、服务、SDK、桌面插件、安全授权和资源状态；“预热 Kylin SDK”会调用带真实探针的本机状态检查；“导出诊断报告”会调用 `memctl diagnostics --probe-sdk` 汇总 doctor、namespace、检索状态、记忆策略、Kylin SDK 和审计链结果；“打开本地控制台”会启动并打开 `http://127.0.0.1:8765`，用于本机管理员查看记忆、检索、RAG 上下文、精准遗忘、审计记录和系统诊断。
-
-## 9. 点击后的后端验证
-
-为了确保“菜单可见”不是空按钮，还验证了系统 Python 可直接导入 MemGuardOS：
+自动证据采集：
 
 ```bash
-python3 -c "import memguard; print(memguard.__file__)"
+bash scripts/collect_openkylin_native_evidence.sh
 ```
 
-在系统 Python 不知道项目路径时，通过用户 site-packages 中的 `.pth` 文件把项目根目录加入模块搜索路径：
+该脚本会采集：
 
-```text
-~/.local/lib/python3.12/site-packages/memguardos_editable.pth
-```
+- 当前 Git HEAD 或显式 `MEMGUARD_SOURCE_REVISION`。
+- `openkylin-status` 和 SDK 真实探针。
+- Peony 批量预览、确认导入和敏感阻断 JSON。
+- Peony、UKUI 控制中心、托盘构建产物和 `ldd` 依赖。
+- Polkit policy 解析和未知动作拒绝证据。
+- `memguardd.service` 的服务级 cgroup 状态。
+- 五个 Debian 包构建和生命周期验证。
+- openKylin 上的 pytest 结果。
+- `manifest.json` 和 `SHA256SUMS.txt`。
 
-内容：
+人工截图仍然有价值。最终视频或截图建议覆盖：
 
-```text
-/home/<用户>/memguardos
-```
+1. Peony 右键菜单出现 MemGuardOS 入口。
+2. Peony 预览对话框显示可导入文件与敏感阻断文件。
+3. UKUI 控制中心“MemGuardOS 记忆安全”页面。
+4. 托盘菜单和状态变化通知。
+5. `openkylin-status` 输出中 service、SDK、desktop、security 状态。
+6. 分包 `apt install` 或离线生命周期验证结果。
 
-之后执行：
+## 10. 准确表述边界
 
-```bash
-python3 -m memguard.cli.memctl ingest-os-event --json '{"event_type":"peony_context_menu_probe","path":"/home/<用户>/桌面/memguardos-ui-test.txt","process":"peony","action":"inspect"}'
-```
+可以说：
 
-返回：
+- MemGuardOS 已经具备 Peony 多文件预览确认闭环、UKUI 控制中心原生运维页、UKUI 托盘、Polkit 授权资产和 Debian 分包交付。
+- Peony 文件入口会阻断敏感内容，并通过 manifest 防篡改和防重放。
+- UKUI 控制中心和托盘复用同一套 CLI/JSON 契约，不是孤立 demo。
+- 桌面 UI 遵循 openKylin/UKUI 原生控件和主题，不采用网页仪表盘式风格。
 
-```json
-{
-  "stored": true,
-  "record": {
-    "type": "knowledge",
-    "subtype": "os_event"
-  }
-}
-```
+不能说：
 
-这说明 Peony 菜单动作背后的 OS event 写入链路是可用的。
-
-## 10. 当前边界
-
-当前可以准确宣称：
-
-1. Peony 右键菜单插件源码已实现。
-2. Peony 插件已在 openKylin 上构建为 `.so`。
-3. Peony 插件安装产物已出现在系统插件目录。
-4. Peony 插件元数据包含与系统一致的 `version: 3.2.2`。
-5. Peony 菜单函数对 `DirectoryView` 和 `DesktopWindow` 均返回菜单项。
-6. Peony 右键菜单项已在 openKylin 桌面可见验证。
-7. UKUI 控制中心入口已在 openKylin 设置界面可见验证；当前源码提供本机运维面板，覆盖运行环境检查、审计链校验、端侧向量能力、诊断报告和本地控制台入口。
-8. 菜单点击后的 OS event 写入链路已验证。
-
-仍需准确表述的边界：
-
-1. bind mount 安装方式用于 openKylin 只读 `/usr` 环境下的评审演示和本地验证，不等同于正式 `.deb` 包安装。
-2. 项目已经提供 `scripts/build_deb.sh` 用于生成 `.deb` 安装包；该包会把插件安装到系统插件目录，适合在允许系统包写入的维护模式或等效环境中验证。
-3. 后续若进入长期产品化交付，还可以进一步制作 openKylin 官方扩展包或拆分 `memguardos` 与 `memguardos-ukui` 两个二进制包。
-
-## 11. 对赛题的意义
-
-该桌面集成增强了作品的 OS 属性和可展示性：
-
-1. 证明系统能接入 openKylin 原生桌面组件，而不仅是命令行工具。
-2. 文件右键菜单把用户桌面行为转换为统一 OS event，补强“用户行为数据接入”。
-3. 选中文件路径进入敏感检测和审计链，体现 OS 上下文安全治理。
-4. 与 auditd、BPF LSM、systemd/cgroup、mmap 存储形成互补，构成更完整的 Linux/openKylin 智能体记忆基础设施。
+- 不能说已经进入 openKylin 官方控制中心或软件源。
+- 不能说 Peony 会自动采集用户所有桌面行为。
+- 不能说 Polkit 弹窗在无桌面 agent 或维护模式中必然出现。
+- 不能说分包已经替代所有历史单包证据；新版五包的完整 `apt install` 证据仍需在最终维护模式下按当前 HEAD 复跑。

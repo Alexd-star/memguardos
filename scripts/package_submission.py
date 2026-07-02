@@ -49,6 +49,8 @@ ROLE_DESCRIPTIONS = {
 FORMAL_DOCS = {
     "README.md",
     "PROJECT_INDEX.md",
+    "PRODUCT.md",
+    "DESIGN.md",
     "docs/01_项目简介.md",
     "docs/02_用户手册.md",
     "docs/03_操作手册.md",
@@ -109,6 +111,8 @@ FORMAL_SCRIPTS = {
     "scripts/bpftrace_sensitive_open.bt",
     "scripts/build_ukui_plugins.sh",
     "scripts/build_deb.sh",
+    "scripts/build_deb_packages.py",
+    "scripts/verify_deb_lifecycle.sh",
     "scripts/collect_openkylin_evidence.sh",
     "scripts/collect_openkylin_native_evidence.sh",
     "scripts/collect_agent_evidence.sh",
@@ -127,6 +131,8 @@ FORMAL_SCRIPTS = {
     "scripts/memguard-agent@.service",
     "scripts/memguard-kylin-warmup.service",
     "scripts/memguardos-native-helper.sh",
+    "packaging/debian/packages.json",
+    "packaging/desktop/memguardos-tray.desktop",
     "scripts/warmup_kylin_sdk.sh",
     "scripts/memguard_agent_bridge.py",
     "scripts/openhands_memory_hook.py",
@@ -174,7 +180,7 @@ def classify_file(path: Path) -> str:
         return "作品主体/脚本"
     if rel.startswith("scripts/"):
         return "过程与工程支撑文档"
-    if rel.startswith("packaging/polkit/"):
+    if rel.startswith("packaging/"):
         return "作品主体/原生增强"
     if rel.startswith("native/"):
         return "作品主体/原生增强"

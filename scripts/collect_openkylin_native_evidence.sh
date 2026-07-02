@@ -4,7 +4,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 OUT_DIR="${1:-docs/evidence/openkylin_native_latest}"
+rm -rf "${OUT_DIR}"
 mkdir -p "${OUT_DIR}"
+export PYTHONPATH="$(pwd)${PYTHONPATH:+:$PYTHONPATH}"
 
 run_capture() {
   local name="$1"
@@ -18,29 +20,98 @@ run_capture() {
   }
 }
 
-export PYTHONPATH="$(pwd)${PYTHONPATH:+:$PYTHONPATH}"
+run_required_capture() {
+  local name="$1"
+  shift
+  {
+    echo "$ $*"
+    "$@"
+  } >"${OUT_DIR}/${name}" 2>&1
+}
 
-run_capture environment.txt bash -lc 'cat /etc/os-release 2>/dev/null || true; uname -a; python3 --version'
-run_capture git_head.txt bash -lc 'git rev-parse --verify HEAD 2>/dev/null || echo synchronized_tree_without_git_metadata'
-run_capture openkylin_status.txt python3 -m memguard.cli.memctl openkylin-status
-run_capture openkylin_status_probe_sdk.txt python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
-run_capture kylin_warmup.txt bash scripts/warmup_kylin_sdk.sh
+SOURCE_REVISION="${MEMGUARD_SOURCE_REVISION:-}"
+SOURCE_MODE="${MEMGUARD_SOURCE_MODE:-git_worktree}"
+DIRTY=false
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  ACTUAL_REVISION="$(git rev-parse HEAD)"
+  if [ -n "${SOURCE_REVISION}" ] && [ "${SOURCE_REVISION}" != "${ACTUAL_REVISION}" ]; then
+    echo "MEMGUARD_SOURCE_REVISION does not match Git HEAD" >&2
+    exit 2
+  fi
+  SOURCE_REVISION="${ACTUAL_REVISION}"
+  test -z "$(git status --porcelain)" || DIRTY=true
+else
+  SOURCE_MODE="${MEMGUARD_SOURCE_MODE:-git_archive}"
+fi
+if ! [[ "${SOURCE_REVISION}" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "A verified 40-character MEMGUARD_SOURCE_REVISION is required when Git metadata is absent." >&2
+  exit 2
+fi
+if [ "${DIRTY}" = true ]; then
+  echo "Refusing to collect final evidence from a dirty worktree." >&2
+  exit 2
+fi
+python3 - "${SOURCE_REVISION}" "${SOURCE_MODE}" "${DIRTY}" >"${OUT_DIR}/source_revision.json" <<'PY'
+import json, sys
+print(json.dumps({
+    "schema": "memguardos-source-revision-v1",
+    "source_revision": sys.argv[1],
+    "source_mode": sys.argv[2],
+    "dirty": sys.argv[3].lower() == "true",
+}, ensure_ascii=False, indent=2))
+PY
+
+run_required_capture environment.txt bash -lc 'cat /etc/os-release; uname -a; python3 --version; printf "desktop=%s\nsession=%s\n" "${XDG_CURRENT_DESKTOP:-}" "${DESKTOP_SESSION:-}"'
+run_required_capture openkylin_status.txt python3 -m memguard.cli.memctl openkylin-status
+run_required_capture openkylin_status_probe_sdk.txt python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
+run_required_capture kylin_warmup.txt bash scripts/warmup_kylin_sdk.sh
 
 TMP_SAMPLE_DIR="$(mktemp -d)"
 trap 'rm -rf "${TMP_SAMPLE_DIR}"' EXIT
-
-SAMPLE="${TMP_SAMPLE_DIR}/peony_sample.md"
-printf '以后回答 openKylin 问题时先给可复制命令。\n' >"${SAMPLE}"
-run_capture peony_scan_preview.txt python3 -m memguard.cli.memctl desktop scan-file --file "${SAMPLE}"
-run_capture peony_scan_ingest.txt python3 -m memguard.cli.memctl desktop scan-file --file "${SAMPLE}" --ingest
-
+SAMPLE_A="${TMP_SAMPLE_DIR}/peony_preference.md"
+SAMPLE_B="${TMP_SAMPLE_DIR}/peony_knowledge.txt"
 SECRET="${TMP_SAMPLE_DIR}/peony_secret.env"
+printf '以后回答 openKylin 问题时先给可复制命令。\n' >"${SAMPLE_A}"
+printf 'systemd MemoryMax 可以限制后台记忆服务的内存。\n' >"${SAMPLE_B}"
 printf 'OPENAI_API_KEY=sk-test-example1234567890\n' >"${SECRET}"
-run_capture peony_scan_sensitive.txt python3 -m memguard.cli.memctl desktop scan-file --file "${SECRET}" --ingest
 
-run_capture systemd_units.txt bash -lc 'systemctl status memguardd.service --no-pager 2>/dev/null || true; systemctl --user status memguard-kylin-warmup.service --no-pager 2>/dev/null || true'
-run_capture desktop_plugins.txt bash -lc 'find /usr/lib -path "*peony-extensions*memguardos*.so" -o -path "*ukui-control-center*memguardos*.so" 2>/dev/null || true'
-run_capture polkit_assets.txt bash -lc 'ls -l /usr/share/polkit-1/actions/org.memguardos.policy /usr/lib/memguardos/memguardos-native-helper.sh 2>/dev/null || true'
+python3 -m memguard.cli.memctl desktop scan-files --file "${SAMPLE_A}" --file "${SAMPLE_B}" >"${OUT_DIR}/peony_batch_preview.json"
+MANIFEST_PATH="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["manifest_path"])' "${OUT_DIR}/peony_batch_preview.json")"
+python3 -m memguard.cli.memctl desktop apply-scan --manifest "${MANIFEST_PATH}" --select "${SAMPLE_A}" --select "${SAMPLE_B}" >"${OUT_DIR}/peony_batch_apply.json"
+python3 -m memguard.cli.memctl desktop scan-files --file "${SECRET}" >"${OUT_DIR}/peony_sensitive_preview.json"
+python3 - "${OUT_DIR}" <<'PY'
+import json, pathlib, sys
+root = pathlib.Path(sys.argv[1])
+preview = json.loads((root / "peony_batch_preview.json").read_text(encoding="utf-8"))
+applied = json.loads((root / "peony_batch_apply.json").read_text(encoding="utf-8"))
+sensitive = json.loads((root / "peony_sensitive_preview.json").read_text(encoding="utf-8"))
+assert preview["ok"] and len(preview["items"]) == 2 and all(item["selectable"] for item in preview["items"])
+assert applied["ok"] and applied["summary"]["stored"] == 2 and applied["audit_chain"]["ok"]
+assert sensitive["items"][0]["recommended_action"] == "block_sensitive"
+assert sensitive["items"][0]["selectable"] is False
+PY
+
+run_required_capture desktop_build.txt bash scripts/build_ukui_plugins.sh
+run_required_capture tray_assets.txt bash -lc 'file native/ukui/build/tray/memguardos-tray; ldd native/ukui/build/tray/memguardos-tray; test -f packaging/desktop/memguardos-tray.desktop; grep -E "^(Exec|OnlyShowIn)=" packaging/desktop/memguardos-tray.desktop'
+run_required_capture desktop_plugins.txt bash -lc 'file native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so; ldd native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so; ldd native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so'
+run_required_capture polkit_assets.txt bash -lc 'python3 - <<"PY"
+import xml.etree.ElementTree as ET
+root = ET.parse("packaging/polkit/org.memguardos.policy").getroot()
+actions = [item.attrib["id"] for item in root.findall("action")]
+required = {"org.memguardos.start-service", "org.memguardos.stop-service", "org.memguardos.restart-service", "org.memguardos.install-auditd-rules", "org.memguardos.run-bpf-lsm-test"}
+assert required.issubset(actions)
+print("actions=" + ",".join(actions))
+PY
+if sudo scripts/memguardos-native-helper.sh unsupported-action; then exit 3; else echo unknown_action_rejected=true; fi
+ls -l /usr/share/polkit-1/actions/org.memguardos.policy /usr/lib/memguardos/memguardos-native-helper.sh 2>/dev/null || true'
+run_required_capture systemd_cgroup.txt bash -lc 'systemctl show memguardd.service --property=LoadState,ActiveState,SubState,ControlGroup,MemoryMax,CPUQuotaPerSecUSec --no-pager; CG=$(systemctl show memguardd.service -p ControlGroup --value); test -n "$CG"; for f in memory.current memory.max cpu.max cpu.stat; do printf "--- %s ---\n" "$f"; cat "/sys/fs/cgroup${CG}/${f}" 2>/dev/null || true; done'
+
+run_required_capture debian_packages.txt bash scripts/build_deb.sh
+run_required_capture deb_lifecycle.txt bash scripts/verify_deb_lifecycle.sh
+run_required_capture pytest_openkylin.txt python3 -m pytest -q
+
+run_capture installed_packages.txt bash -lc 'dpkg-query -W -f="\${Package} \${Version} \${Status}\n" "memguardos*" 2>/dev/null || true'
+run_capture installed_desktop.txt bash -lc 'find /usr/lib -path "*peony-extensions*memguardos*.so" -o -path "*ukui-control-center*memguardos*.so" 2>/dev/null || true; command -v memguardos-tray || true; pgrep -a memguardos-tray || true'
 
 python3 scripts/refresh_evidence_manifest.py "${OUT_DIR}" >"${OUT_DIR}/manifest_refresh.txt"
 echo "openkylin_native_evidence=${OUT_DIR}"

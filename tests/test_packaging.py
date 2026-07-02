@@ -11,6 +11,7 @@ from scripts.check_competition_ready import (
     check_eval,
     IGNORED_HYGIENE_PARTS,
     check_memory_value_evidence,
+    check_native_evidence_revision,
     check_openkylin_metrics,
     check_performance_evidence,
     check_real_agent_extension_evidence,
@@ -47,6 +48,21 @@ def test_split_debian_package_plan_has_enterprise_ownership_boundaries():
     assert "/usr/share/doc/memguardos-doc/README.md" in plan["memguardos-doc"]["files"]
     assert validate_no_overlap(plan) == []
     assert (ROOT / "scripts/verify_deb_lifecycle.sh").exists()
+
+
+def test_native_evidence_revision_rejects_unknown_and_mismatch(tmp_path):
+    expected = "a" * 40
+    revision = tmp_path / "source_revision.json"
+    revision.write_text(json.dumps({"source_revision": expected, "dirty": False}), encoding="utf-8")
+    assert check_native_evidence_revision(tmp_path, expected).ok is True
+
+    revision.write_text(json.dumps({"source_revision": "synchronized_tree_without_git_metadata"}), encoding="utf-8")
+    assert check_native_evidence_revision(tmp_path, expected).ok is False
+
+    revision.write_text(json.dumps({"source_revision": "b" * 40, "dirty": False}), encoding="utf-8")
+    result = check_native_evidence_revision(tmp_path, expected)
+    assert result.ok is False
+    assert "不一致" in result.detail
 
 
 def test_competition_package_keeps_formal_and_process_materials_separate():
@@ -125,8 +141,14 @@ def test_competition_package_requires_memory_value_code_data_and_evidence():
         "docs/evidence/openkylin_native_latest/openkylin_status.txt",
         "docs/evidence/openkylin_native_latest/openkylin_status_probe_sdk.txt",
         "docs/evidence/openkylin_native_latest/kylin_warmup.txt",
-        "docs/evidence/openkylin_native_latest/peony_scan_ingest.txt",
-        "docs/evidence/openkylin_native_latest/peony_scan_sensitive.txt",
+        "docs/evidence/openkylin_native_latest/source_revision.json",
+        "docs/evidence/openkylin_native_latest/peony_batch_preview.json",
+        "docs/evidence/openkylin_native_latest/peony_batch_apply.json",
+        "docs/evidence/openkylin_native_latest/peony_sensitive_preview.json",
+        "docs/evidence/openkylin_native_latest/tray_assets.txt",
+        "docs/evidence/openkylin_native_latest/debian_packages.txt",
+        "docs/evidence/openkylin_native_latest/deb_lifecycle.txt",
+        "docs/evidence/openkylin_native_latest/pytest_openkylin.txt",
         "docs/evidence/openkylin_native_latest/manifest.json",
         "docs/evidence/openkylin_native_latest/SHA256SUMS.txt",
         "docs/evidence/real_agent_holdout_latest/metrics.json",
