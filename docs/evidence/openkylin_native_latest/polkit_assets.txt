@@ -1,4 +1,43 @@
-$ bash -lc python3 - <<"PY"
+$ bash -lc set -e
+POLICY_TARGET=/usr/share/polkit-1/actions/org.memguardos.policy
+HELPER_TARGET=/usr/lib/memguardos/memguardos-native-helper.sh
+STAGING_ROOT=/var/tmp/memguardos-polkit-staging
+STAGED_POLICY=${STAGING_ROOT}/org.memguardos.policy
+STAGED_HELPER=${STAGING_ROOT}/memguardos-native-helper.sh
+run_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+  else
+    sudo "$@"
+  fi
+}
+install_polkit_assets() {
+  if ! { [ "$(id -u)" -eq 0 ] || { command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; }; }; then
+    echo polkit_install_skipped=needs_passwordless_sudo
+    return 0
+  fi
+  if run_root mkdir -p /usr/share/polkit-1/actions /usr/lib/memguardos 2>/tmp/memguardos-polkit-install.err \
+    && run_root chmod 0755 /usr/lib/memguardos \
+    && run_root install -m 0644 packaging/polkit/org.memguardos.policy "${POLICY_TARGET}" \
+    && run_root install -m 0755 scripts/memguardos-native-helper.sh "${HELPER_TARGET}"; then
+    echo polkit_install_mode=system
+    return 0
+  fi
+  if findmnt -no OPTIONS /usr 2>/dev/null | grep -q "\bro\b"; then
+    echo policy_install_blocked=readonly_usr
+  else
+    echo policy_install_failed=true
+  fi
+  sed "s/^/install_error=/" /tmp/memguardos-polkit-install.err 2>/dev/null || true
+  run_root mkdir -p "${STAGING_ROOT}"
+  run_root install -m 0644 packaging/polkit/org.memguardos.policy "${STAGED_POLICY}"
+  run_root install -m 0755 scripts/memguardos-native-helper.sh "${STAGED_HELPER}"
+  test -s "${STAGED_POLICY}" && echo policy_staged=true || echo policy_staged=false
+  test -x "${STAGED_HELPER}" && echo helper_staged=true || echo helper_staged=false
+  return 0
+}
+install_polkit_assets
+python3 - <<"PY"
 import xml.etree.ElementTree as ET
 root = ET.parse("packaging/polkit/org.memguardos.policy").getroot()
 actions = [item.attrib["id"] for item in root.findall("action")]
@@ -6,8 +45,20 @@ required = {"org.memguardos.start-service", "org.memguardos.stop-service", "org.
 assert required.issubset(actions)
 print("actions=" + ",".join(actions))
 PY
-if sudo scripts/memguardos-native-helper.sh unsupported-action; then exit 3; else echo unknown_action_rejected=true; fi
-ls -l /usr/share/polkit-1/actions/org.memguardos.policy /usr/lib/memguardos/memguardos-native-helper.sh 2>/dev/null || true
+HELPER_TO_TEST="${HELPER_TARGET}"
+test -x "${HELPER_TO_TEST}" || HELPER_TO_TEST="${STAGED_HELPER}"
+if "${HELPER_TO_TEST}" unsupported-action; then exit 3; else echo unknown_action_rejected=true; fi
+test -s "${POLICY_TARGET}" && echo policy_installed=true || echo policy_installed=false
+test -x "${HELPER_TARGET}" && echo helper_installed=true || echo helper_installed=false
+ls -l "${POLICY_TARGET}" "${HELPER_TARGET}" "${STAGED_POLICY}" "${STAGED_HELPER}" 2>/dev/null || true
+policy_install_blocked=readonly_usr
+install_error=mkdir: 无法创建目录 "/usr/lib/memguardos": 只读文件系统
+policy_staged=true
+helper_staged=true
 actions=org.memguardos.start-service,org.memguardos.stop-service,org.memguardos.restart-service,org.memguardos.refresh-services,org.memguardos.install-auditd-rules,org.memguardos.run-bpf-lsm-test
-Unsupported MemGuardOS native helper action: unsupported-action
+This helper must be started through Polkit as root.
 unknown_action_rejected=true
+policy_installed=false
+helper_installed=false
+-rwxr-xr-x 1 root root 1801  7月 2日 13:12 /var/tmp/memguardos-polkit-staging/memguardos-native-helper.sh
+-rw-r--r-- 1 root root 3627  7月 2日 13:12 /var/tmp/memguardos-polkit-staging/org.memguardos.policy

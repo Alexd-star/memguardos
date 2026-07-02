@@ -30,12 +30,12 @@
 
 采集输出必须包含：
 
-- `policy_installed=true`
-- `helper_installed=true`
+- 在维护模式或可写 `/usr` 环境下：`policy_installed=true`、`helper_installed=true`
+- 在普通只读 `/usr` 环境下：`policy_install_blocked=readonly_usr`、`policy_staged=true`、`helper_staged=true`
 - `unknown_action_rejected=true`
 - action 列表
 
-如果当前环境没有 sudo 权限，脚本要明确输出失败原因，并由 readiness 门禁报告为未满足，而不是静默通过。
+如果当前环境没有 sudo 权限，脚本要明确输出失败原因，并由 readiness 门禁报告为未满足，而不是静默通过；如果是 openKylin 普通模式的只读 `/usr`，允许记录 staging 交付证据，同时在最终演示或维护模式安装中补充 system installed 证据。
 
 ### 2.3 readiness 门禁
 

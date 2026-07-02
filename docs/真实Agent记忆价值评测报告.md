@@ -131,7 +131,7 @@ Runner 会检查已选择偏好是否转化为成功工具调用和最终回答�
 最新同 HEAD openKylin 全量测试结果为：
 
 ```text
-245 passed in 32.96s
+270 passed in 150.43s
 ```
 
 隔离审计链验证为 `ok=true`。`docs/evidence/memory_value_latest/` 仍保留采集当时的 `223 passed` 历史快照；最新同 HEAD 复跑结果用于最终提交口径。证据目录经 SHA-256 清单校验，运行时 workspace、SQLite、段文件和 Python 缓存已从正式证据中清理，只保留结果、上下文快照、环境、日志、报告和前后文件清单。

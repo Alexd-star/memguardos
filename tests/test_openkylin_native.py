@@ -7,6 +7,7 @@ from memguard.os_guard import openkylin_native
 from memguard.os_guard.privileged_actions import ALLOWED_ACTIONS, run_privileged_action
 from memguard.os_guard.service_control import service_resource_status
 from memguard.service import MemGuardService
+from scripts.check_competition_ready import check_native_openkylin_evidence
 
 
 def test_openkylin_status_cli_has_native_operational_schema(tmp_path, monkeypatch, capsys):
@@ -319,6 +320,64 @@ def test_native_evidence_collector_installs_and_records_polkit_assets():
     assert "unknown_action_rejected=true" in collector
     assert "Polkit policy 交付状态" in readiness
     assert "Polkit helper 交付状态" in readiness
+
+
+def test_native_evidence_readiness_parses_polkit_result_lines_not_command_echoes(tmp_path):
+    evidence = tmp_path / "openkylin_native_latest"
+    evidence.mkdir()
+    for name in (
+        "source_revision.json",
+        "environment.txt",
+        "openkylin_status.txt",
+        "openkylin_status_probe_sdk.txt",
+        "peony_batch_preview.json",
+        "peony_batch_apply.json",
+        "peony_sensitive_preview.json",
+        "systemd_cgroup.txt",
+        "tray_assets.txt",
+        "desktop_build.txt",
+        "debian_packages.txt",
+        "deb_lifecycle.txt",
+        "pytest_openkylin.txt",
+        "manifest.json",
+        "SHA256SUMS.txt",
+    ):
+        (evidence / name).write_text("placeholder\n", encoding="utf-8")
+    (evidence / "source_revision.json").write_text(
+        json.dumps(
+            {
+                "schema": "memguardos-source-revision-v1",
+                "source_revision": "abc123",
+                "source_mode": "git_archive",
+                "dirty": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (evidence / "polkit_assets.txt").write_text(
+        "\n".join(
+            [
+                'test -s "${POLICY_TARGET}" && echo policy_installed=true || echo policy_installed=false',
+                'test -x "${HELPER_TARGET}" && echo helper_installed=true || echo helper_installed=false',
+                "policy_install_blocked=readonly_usr",
+                "policy_staged=true",
+                "helper_staged=true",
+                "unknown_action_rejected=true",
+                "policy_installed=false",
+                "helper_installed=false",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    checks = check_native_openkylin_evidence(evidence, expected_revision="abc123", severity="P0")
+    by_name = {check.name: check for check in checks}
+
+    assert by_name["Polkit policy 交付状态"].ok is True
+    assert by_name["Polkit policy 交付状态"].detail == "readonly /usr with staged policy"
+    assert by_name["Polkit helper 交付状态"].ok is True
+    assert by_name["Polkit helper 交付状态"].detail == "readonly /usr with staged helper"
 
 
 def test_privileged_action_rejects_unknown_action_without_execution(monkeypatch):

@@ -466,21 +466,22 @@ def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, 
         checks.append(Check("openKylin原生证据", name, path.exists() and path.stat().st_size > 0, "存在且非空" if path.exists() and path.stat().st_size > 0 else "缺失或为空", severity=severity))
     checks.append(check_native_evidence_revision(evidence_dir, expected_revision, severity=severity))
     polkit_text = _read_text_if_exists(evidence_dir / "polkit_assets.txt")
+    polkit_values = _parse_result_key_values(polkit_text)
     readonly_polkit_staged = (
-        "policy_install_blocked=readonly_usr" in polkit_text
-        and "policy_staged=true" in polkit_text
+        polkit_values.get("policy_install_blocked") == "readonly_usr"
+        and polkit_values.get("policy_staged") == "true"
     )
     readonly_helper_staged = (
-        "policy_install_blocked=readonly_usr" in polkit_text
-        and "helper_staged=true" in polkit_text
+        polkit_values.get("policy_install_blocked") == "readonly_usr"
+        and polkit_values.get("helper_staged") == "true"
     )
-    policy_ready = "policy_installed=true" in polkit_text or readonly_polkit_staged
-    helper_ready = "helper_installed=true" in polkit_text or readonly_helper_staged
+    policy_ready = polkit_values.get("policy_installed") == "true" or readonly_polkit_staged
+    helper_ready = polkit_values.get("helper_installed") == "true" or readonly_helper_staged
     checks.extend(
         [
-            Check("openKylin原生证据", "Polkit policy 交付状态", policy_ready, "system installed" if "policy_installed=true" in polkit_text else ("readonly /usr with staged policy" if readonly_polkit_staged else "缺少 policy 安装或 staging 证据"), severity=severity),
-            Check("openKylin原生证据", "Polkit helper 交付状态", helper_ready, "system installed" if "helper_installed=true" in polkit_text else ("readonly /usr with staged helper" if readonly_helper_staged else "缺少 helper 安装或 staging 证据"), severity=severity),
-            Check("openKylin原生证据", "Polkit helper 拒绝未知动作", "unknown_action_rejected=true" in polkit_text, "unknown_action_rejected=true" if "unknown_action_rejected=true" in polkit_text else "缺少未知动作拒绝证据", severity=severity),
+            Check("openKylin原生证据", "Polkit policy 交付状态", policy_ready, "system installed" if polkit_values.get("policy_installed") == "true" else ("readonly /usr with staged policy" if readonly_polkit_staged else "缺少 policy 安装或 staging 证据"), severity=severity),
+            Check("openKylin原生证据", "Polkit helper 交付状态", helper_ready, "system installed" if polkit_values.get("helper_installed") == "true" else ("readonly /usr with staged helper" if readonly_helper_staged else "缺少 helper 安装或 staging 证据"), severity=severity),
+            Check("openKylin原生证据", "Polkit helper 拒绝未知动作", polkit_values.get("unknown_action_rejected") == "true", "unknown_action_rejected=true" if polkit_values.get("unknown_action_rejected") == "true" else "缺少未知动作拒绝证据", severity=severity),
         ]
     )
     deb_lifecycle = _read_text_if_exists(evidence_dir / "deb_lifecycle.txt")
@@ -1349,6 +1350,17 @@ def _load_evidence_json_from_capture(path: Path) -> Optional[Dict[str, Any]]:
 
 def _read_text_if_exists(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
+
+
+def _parse_result_key_values(text: str) -> Dict[str, str]:
+    values: Dict[str, str] = {}
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=[^\s]+", line):
+            continue
+        key, value = line.split("=", 1)
+        values[key] = value
+    return values
 
 
 def _resolve(path: str) -> Path:
