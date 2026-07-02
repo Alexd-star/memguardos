@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=MemGuardOS 记忆安全
+Comment=显示本机 Agent 记忆服务状态
+Exec=/usr/bin/memguardos-tray
+Icon=security-high
+Terminal=false
+OnlyShowIn=UKUI;
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-after=panel
+StartupNotify=false

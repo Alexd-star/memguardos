@@ -321,3 +321,20 @@ def test_native_helper_has_strict_argument_and_environment_guards():
     for action in ("start-service", "stop-service", "restart-service"):
         assert action in helper
         assert f"org.memguardos.{action}" in policy
+
+
+def test_ukui_tray_follows_system_theme_and_deduplicates_notifications():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/tray/memguard_tray.cpp").read_text(encoding="utf-8")
+    desktop = (root / "packaging/desktop/memguardos-tray.desktop").read_text(encoding="utf-8")
+    build = (root / "scripts/build_ukui_plugins.sh").read_text(encoding="utf-8")
+
+    assert "QSystemTrayIcon" in source
+    assert "QIcon::fromTheme" in source
+    assert "lastState_" in source
+    assert "showMessage" in source
+    assert "setStyleSheet" not in source
+    assert "QSystemTrayIcon::isSystemTrayAvailable" in source
+    assert "Exec=/usr/bin/memguardos-tray" in desktop
+    assert "OnlyShowIn=UKUI;" in desktop
+    assert "tray" in build

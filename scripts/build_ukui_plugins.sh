@@ -31,5 +31,15 @@ for plugin in peony-memguard ukcc-memguard; do
   )
 done
 
-echo "UKUI plugin build completed:"
+tray_build="${OUT_DIR}/tray"
+rm -rf "${tray_build}"
+mkdir -p "${tray_build}"
+(
+  cd "${tray_build}"
+  "${QMAKE_BIN}" "../../tray/memguard-tray.pro"
+  make -j"$(nproc)"
+)
+
+echo "UKUI desktop build completed:"
 find "${OUT_DIR}" -maxdepth 3 -type f -name '*.so' -print
+find "${OUT_DIR}" -maxdepth 3 -type f -name 'memguardos-tray' -print
