@@ -1,5 +1,5 @@
 $ python3 -m memguard.cli.memctl openkylin-status
-[1782969161522] [32minfo [0m Proxy init engine sessionId:486269283.
+[1782970430136] [32minfo [0m Proxy init engine sessionId:831435931.
 {
   "schema": "memguardos-openkylin-native-status-v1",
   "system": {
@@ -293,7 +293,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
     "polkit": {
       "available": true,
       "policy_path": "/usr/share/polkit-1/actions/org.memguardos.policy",
-      "policy_installed": false
+      "policy_installed": true
     }
   },
   "resources": {
@@ -303,21 +303,21 @@ $ python3 -m memguard.cli.memctl openkylin-status
     "diagnosis_code": "ready",
     "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": "17854464",
+      "cgroup_memory_current": "20021248",
       "cgroup_memory_max": "536870912"
     },
     "cpu": {
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 2889484,
-        "user_usec": 1581471,
-        "system_usec": 1308012,
+        "usage_usec": 284091,
+        "user_usec": 157415,
+        "system_usec": 126675,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 1070,
-        "nr_throttled": 16,
-        "throttled_usec": 768753,
+        "nr_periods": 9,
+        "nr_throttled": 4,
+        "throttled_usec": 185393,
         "nr_bursts": 0,
         "burst_usec": 0
       }
@@ -337,11 +337,11 @@ $ python3 -m memguard.cli.memctl openkylin-status
     "store_exists": true,
     "db_exists": true,
     "custom_patterns_exists": false,
-    "store_bytes": 114516,
-    "db_bytes": 446464,
-    "record_count": 39,
-    "live_record_count": 39,
-    "audit_event_count": 384
+    "store_bytes": 129379,
+    "db_bytes": 466944,
+    "record_count": 45,
+    "live_record_count": 45,
+    "audit_event_count": 421
   },
   "summary": {
     "overall": "yellow",
@@ -402,7 +402,6 @@ $ python3 -m memguard.cli.memctl openkylin-status
     }
   ],
   "recommendations": [
-    "Kylin embedding SDK 未进入真实推理就绪状态时，保持稳定 fallback；需要端侧增强时先运行 warmup_kylin_sdk.sh。",
-    "如需桌面授权弹窗，请安装 org.memguardos.policy 和 memguardos-native-helper.sh。"
+    "Kylin embedding SDK 未进入真实推理就绪状态时，保持稳定 fallback；需要端侧增强时先运行 warmup_kylin_sdk.sh。"
   ]
 }

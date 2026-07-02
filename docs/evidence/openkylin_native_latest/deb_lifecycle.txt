@@ -1,5 +1,5 @@
 $ bash scripts/verify_deb_lifecycle.sh
-[1782969190201] [32minfo [0m Proxy init engine sessionId:1822140633.
+[1782970450694] [32minfo [0m Proxy init engine sessionId:1643189659.
 package_count=5
 offline_install=ok
 desktop_remove_core_preserved=ok
