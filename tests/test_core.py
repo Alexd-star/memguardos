@@ -761,6 +761,53 @@ def test_auto_retrieval_can_use_successful_kylin_embedding_probe(monkeypatch):
     assert retriever.status()["last_backend_used"] == "kylin_sdk"
 
 
+def test_platform_default_backend_prefers_auto_only_on_openkylin(monkeypatch):
+    monkeypatch.delenv("MEMGUARD_EMBEDDING_BACKEND", raising=False)
+    monkeypatch.setattr("memguard.retrieval.hybrid._is_openkylin", lambda: True)
+    assert HybridRetriever().requested_backend == "auto"
+
+    monkeypatch.setattr("memguard.retrieval.hybrid._is_openkylin", lambda: False)
+    assert HybridRetriever().requested_backend == "hash"
+
+    monkeypatch.setenv("MEMGUARD_EMBEDDING_BACKEND", "kylin")
+    assert HybridRetriever().requested_backend == "kylin"
+
+
+def test_kylin_provider_recovers_after_cooldown_and_bounds_cache(monkeypatch):
+    from memguard.retrieval.hybrid import KylinEmbeddingProvider
+
+    now = {"value": 100.0}
+    calls = {"count": 0}
+
+    def fake_embed(text, _timeout_seconds, include_vector=True):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            return {"ok": False, "error": "temporary runtime failure"}
+        return {"ok": True, "dim": 2, "vector": [1.0, float(len(text))]}
+
+    monkeypatch.setattr(KylinEmbeddingBackend, "embed_in_subprocess", staticmethod(fake_embed))
+    provider = KylinEmbeddingProvider(
+        cooldown_seconds=10,
+        max_cache_entries=2,
+        clock=lambda: now["value"],
+    )
+
+    assert provider.vector("first") is None
+    assert provider.vector("first") is None
+    assert calls["count"] == 1
+    assert provider.status()["degraded"] is True
+
+    now["value"] = 111.0
+    assert provider.vector("first") is not None
+    assert provider.vector("second") is not None
+    assert provider.vector("third") is not None
+    status = provider.status()
+    assert status["degraded"] is False
+    assert status["cache_entries"] == 2
+    assert status["cache_capacity"] == 2
+    assert status["last_success_at"] == 111.0
+
+
 def test_custom_sensitive_pattern(tmp_path, monkeypatch):
     monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
     service = make_service(tmp_path)

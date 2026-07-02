@@ -2142,8 +2142,8 @@ class MemGuardService:
     def retrieval_status(self) -> Dict[str, object]:
         status = self.retriever.status()
         status["policy"] = {
-            "default_backend": "hash",
-            "kylin_sdk_role": "optional_rerank_backend",
+            "default_backend": self.retriever.requested_backend,
+            "kylin_sdk_role": "openkylin_auto_rerank_with_hash_fallback",
             "fallback_behavior": "If Kylin embedding inference fails or times out, retrieval keeps using stable SQLite FTS + hash-vector ranking.",
         }
         self._audit(

@@ -1,9 +1,12 @@
 from functools import lru_cache
+from collections import OrderedDict
+from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 import hashlib
 import math
 import os
 import re
+import time
 
 from memguard.retrieval.kylin_sdk import KylinEmbeddingBackend
 
@@ -87,29 +90,56 @@ class HashEmbeddingProvider:
 class KylinEmbeddingProvider:
     name = "kylin_sdk"
 
-    def __init__(self, timeout_seconds: float = 8.0, max_failures: int = 1):
+    def __init__(
+        self,
+        timeout_seconds: float = 8.0,
+        max_failures: int = 1,
+        cooldown_seconds: float = 60.0,
+        max_cache_entries: int = 1024,
+        clock=time.monotonic,
+    ):
         self.timeout_seconds = max(1.0, timeout_seconds)
         self.max_failures = max(1, max_failures)
+        self.cooldown_seconds = max(1.0, cooldown_seconds)
+        self.max_cache_entries = max(1, max_cache_entries)
+        self.clock = clock
         self.failures = 0
         self.disabled_reason = ""
-        self.cache: Dict[str, List[float]] = {}
+        self.disabled_until = 0.0
+        self.last_error_at: float | None = None
+        self.last_success_at: float | None = None
+        self.cache: OrderedDict[str, List[float]] = OrderedDict()
         self.sdk = KylinEmbeddingBackend()
 
     def vector(self, text: str) -> Optional[List[float]]:
-        if self.disabled_reason:
+        now = float(self.clock())
+        if self.disabled_reason and now < self.disabled_until:
             return None
-        key = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        if self.disabled_reason:
+            self.disabled_reason = ""
+        key = hashlib.sha256(("kylin-sdk-v1\0" + text).encode("utf-8")).hexdigest()
         if key in self.cache:
-            return self.cache[key]
+            vector = self.cache.pop(key)
+            self.cache[key] = vector
+            return vector
         result = self.sdk.embed_in_subprocess(text, self.timeout_seconds, include_vector=True)
         if result.get("ok") and isinstance(result.get("vector"), list) and result["vector"]:
             vector = normalize_vector(result["vector"])
             self.cache[key] = vector
+            while len(self.cache) > self.max_cache_entries:
+                self.cache.popitem(last=False)
+            self.failures = 0
+            self.disabled_reason = ""
+            self.disabled_until = 0.0
+            self.last_success_at = now
             return vector
         self.failures += 1
         self.disabled_reason = str(result.get("error") or result.get("error_message") or "kylin embedding unavailable")
+        self.last_error_at = now
         if self.failures < self.max_failures:
             self.disabled_reason = ""
+        else:
+            self.disabled_until = now + self.cooldown_seconds
         return None
 
     def status(self) -> Dict[str, object]:
@@ -119,7 +149,13 @@ class KylinEmbeddingProvider:
             "timeout_seconds": self.timeout_seconds,
             "failures": self.failures,
             "disabled_reason": self.disabled_reason,
+            "degraded": bool(self.disabled_reason),
+            "disabled_until": self.disabled_until or None,
+            "last_error_at": self.last_error_at,
+            "last_success_at": self.last_success_at,
             "cache_entries": len(self.cache),
+            "cache_capacity": self.max_cache_entries,
+            "cooldown_seconds": self.cooldown_seconds,
             "fallback": "hash",
         }
 
@@ -132,9 +168,21 @@ def _configured_timeout() -> float:
         return 8.0
 
 
+def _is_openkylin() -> bool:
+    try:
+        text = Path("/etc/os-release").read_text(encoding="utf-8", errors="replace").lower()
+    except OSError:
+        return False
+    return "openkylin" in text
+
+
+def _platform_default_backend() -> str:
+    return "auto" if _is_openkylin() else "hash"
+
+
 class HybridRetriever:
     def __init__(self, embedding_backend: Optional[str] = None):
-        backend = (embedding_backend or os.environ.get("MEMGUARD_EMBEDDING_BACKEND") or "hash").strip().lower()
+        backend = (embedding_backend or os.environ.get("MEMGUARD_EMBEDDING_BACKEND") or _platform_default_backend()).strip().lower()
         if backend not in {"hash", "auto", "kylin", "kylin_sdk"}:
             backend = "hash"
         self.requested_backend = backend
