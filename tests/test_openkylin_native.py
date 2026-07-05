@@ -287,7 +287,11 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "QTabWidget" in source
     assert "QTreeWidget" in source
     assert "QJsonDocument" in source
-    assert "高级信息" in source
+    assert "详细结果" in source
+    assert "查看详细结果" in source
+    assert "高级信息" not in source
+    assert "高级运行信息" not in source
+    assert "原始输出" not in source
     assert "技术详情" not in source
     assert "命令与诊断技术详情" not in source
     assert "操作结果" in source
@@ -322,8 +326,11 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "showDetailsOutput" in source
     assert "cancelOperationButton_" in source
     assert "停止当前操作" in source
-    assert "startedAtMs" in source
-    assert "耗时" in source
+    assert "startedAtMs" not in source
+    assert "耗时" not in source
+    assert "QDateTime" not in source
+    assert "HH:mm:ss" not in source
+    assert 'QStringLiteral("时间")' not in source
     assert "服务日志已显示在【系统维护】" in source
     assert "summaryDescription_->setText(message)" in source
     assert 'runMemctl({QStringLiteral("diagnostics")}, QStringLiteral("export"))' in source
