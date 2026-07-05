@@ -8,7 +8,7 @@ def test_dashboard_uses_role_oriented_product_navigation_without_contest_copy():
     assert "普通用户" in page
     assert "系统维护" in page
     assert "管理员视图" in page
-    assert "高级信息" in page
+    assert "详细记录" in page
     assert "MemGuardOS 控制台" not in page
     assert "一键验收路径" not in page
     assert "演示" not in page
@@ -26,7 +26,11 @@ def test_dashboard_keeps_raw_payloads_in_advanced_details_instead_of_main_flow()
     assert "overviewOut" in page
     assert 'class="advanced-output"' in page
     assert "运行记录" in page
-    assert "原始响应" in page
+    assert "操作回执" in page
+    assert "高级信息" not in page
+    assert "原始响应" not in page
+    assert "调试" not in page
+    assert "耗时" not in page
     assert "<pre id=\"overviewOut\"" in page
     assert "<pre id=\"agentOut\"" in page
 

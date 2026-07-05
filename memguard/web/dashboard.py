@@ -588,7 +588,7 @@ def _dashboard_html() -> str:
               <div class="funnel-row"><span>注入</span><div class="funnel-bar"><span style="width:64%"></span></div><b>64%</b></div>
               <div class="funnel-row"><span>遗忘</span><div class="funnel-bar"><span style="width:38%"></span></div><b>按需</b></div>
             </div>
-            <p class="muted" style="margin:12px 0 0">条形图表示流程阶段，不表示固定业务比例；实际数量以实时记忆、审计事件和高级信息为准。</p>
+            <p class="muted" style="margin:12px 0 0">条形图表示流程阶段，不表示固定业务比例；实际数量以实时记忆、审计事件和详细记录为准。</p>
           </div>
         </div>
         <div class="grid two" style="margin-top:12px">
@@ -636,7 +636,7 @@ def _dashboard_html() -> str:
           <div class="panel"><div class="item-title">状态摘要</div><div id="statusCards" class="list"></div></div>
           <div class="panel"><div class="item-title">系统报告说明</div><p class="muted">导出的系统报告包含命名空间、检索策略、冷热分层、Kylin SDK、审计链和最近操作记录，不包含记忆正文。</p></div>
         </div>
-        <details><summary>高级信息：原始响应</summary><pre id="overviewOut" class="advanced-output"></pre></details>
+        <details><summary>详细记录：操作回执</summary><pre id="overviewOut" class="advanced-output"></pre></details>
       </section>
       <section id="ingest">
         <h2>写入记忆</h2>
@@ -646,7 +646,7 @@ def _dashboard_html() -> str:
           <label>记忆层级</label><select id="tier"><option value="">自动</option><option>working</option><option>session</option><option>long_term</option></select>
           <div class="actions"><button class="primary" onclick="ingest(event)">写入</button><button class="secondary" onclick="explainExtraction(event)">解释抽取</button></div>
         </div>
-        <details><summary>高级信息：原始响应</summary><pre id="ingestOut" class="advanced-output"></pre></details>
+        <details><summary>详细记录：操作回执</summary><pre id="ingestOut" class="advanced-output"></pre></details>
       </section>
       <section id="search">
         <h2>混合检索</h2>
@@ -656,7 +656,7 @@ def _dashboard_html() -> str:
           <div class="actions"><button class="primary" onclick="search(event)">检索</button><button class="secondary" onclick="graphSearch(event)">层次图谱</button></div>
         </div>
         <div id="searchCards" class="list" style="margin-top:12px"></div>
-        <details><summary>高级信息：原始响应</summary><pre id="searchOut" class="advanced-output"></pre></details>
+        <details><summary>详细记录：操作回执</summary><pre id="searchOut" class="advanced-output"></pre></details>
       </section>
       <section id="context">
         <h2>生成上下文</h2>
@@ -667,7 +667,7 @@ def _dashboard_html() -> str:
           <div class="actions"><button class="primary" onclick="contextBuild(event)">构建</button></div>
         </div>
         <div id="contextVisual" style="margin-top:12px"></div>
-        <details><summary>高级信息：原始响应</summary><pre id="contextOut" class="advanced-output"></pre></details>
+        <details><summary>详细记录：操作回执</summary><pre id="contextOut" class="advanced-output"></pre></details>
       </section>
       <section id="agent">
         <h2>Agent 交互治理</h2>
@@ -682,7 +682,7 @@ def _dashboard_html() -> str:
         <div id="agentMetrics" class="grid four" style="margin-top:12px"></div>
         <div class="panel" style="margin-top:12px">
           <div class="item-title">记忆价值指标</div>
-          <p class="muted">本页把记忆价值拆成可解释的操作指标：工具选择命中、重复尝试减少、高风险确认、跨会话复用和遗忘后残留。实时数值来自 Agent 事件、稳定偏好和三阶段上下文，详细记录可在高级信息中查看。</p>
+          <p class="muted">本页把记忆价值拆成可解释的操作指标：工具选择命中、重复尝试减少、高风险确认、跨会话复用和遗忘后残留。实时数值来自 Agent 事件、稳定偏好和三阶段上下文，完整回执可在详细记录中查看。</p>
           <div class="grid four">
             <div class="item"><div class="item-title">工具选择命中</div><div class="muted">偏好记忆帮助 Agent 选择 rg、journalctl、pytest 等用户确认过的工具。</div></div>
             <div class="item"><div class="item-title">重复尝试</div><div class="muted">程序性记忆记录失败命令和修复命令，减少跨会话重复踩坑。</div></div>
@@ -691,7 +691,7 @@ def _dashboard_html() -> str:
           </div>
         </div>
         <div class="grid two" style="margin-top:12px">
-          <div class="panel"><div class="item-title">交互事件时间线</div><div id="agentTimeline" class="timeline" style="margin-top:12px"></div></div>
+          <div class="panel"><div class="item-title">交互记录</div><div id="agentTimeline" class="timeline" style="margin-top:12px"></div></div>
           <div class="panel"><div class="item-title">偏好依据</div><div id="agentPreferences" class="list" style="margin-top:12px"></div></div>
         </div>
         <div class="panel" style="margin-top:12px"><div class="item-title">三阶段上下文对比</div><div id="agentContexts" class="stage-columns" style="margin-top:12px"></div></div>
@@ -704,7 +704,7 @@ def _dashboard_html() -> str:
           <div class="actions"><button class="secondary" onclick="agentForget(event, false)">预览影响</button><button class="danger" onclick="agentForget(event, true)">确认遗忘</button></div>
           <div id="agentForgetImpact" class="list" style="margin-top:12px"></div>
         </div>
-        <details><summary>高级信息：原始响应</summary><pre id="agentOut" class="advanced-output"></pre></details>
+        <details><summary>详细记录：操作回执</summary><pre id="agentOut" class="advanced-output"></pre></details>
       </section>
       <section id="forget">
         <h2>精准遗忘</h2>
@@ -722,7 +722,7 @@ def _dashboard_html() -> str:
           <div class="item"><div class="item-title">遗忘后复检</div><div class="muted">遗忘后建议重新检索和校验审计链，确认敏感载荷不可访问。</div></div>
         </div>
         <div id="forgetCards" class="list" style="margin-top:12px"></div>
-        <details><summary>高级信息：原始响应</summary><pre id="forgetOut" class="advanced-output"></pre></details>
+        <details><summary>详细记录：操作回执</summary><pre id="forgetOut" class="advanced-output"></pre></details>
       </section>
       <section id="audit">
         <h2>审计记录</h2>
@@ -751,7 +751,7 @@ def _dashboard_html() -> str:
             <div class="item"><div class="item-title">审计链</div><div class="muted">verify-audit 结果和最近审计事件，便于管理员复核。</div></div>
           </div>
         </div>
-        <details open><summary>高级信息：原始响应</summary><pre id="diagnosticsOut" class="advanced-output"></pre></details>
+        <details open><summary>详细记录：操作回执</summary><pre id="diagnosticsOut" class="advanced-output"></pre></details>
       </section>
     </div>
   </main>
@@ -881,7 +881,7 @@ def _dashboard_html() -> str:
         '<div class="item"><div class="item-title">候选 #' + (idx + 1) + ' · ' + esc(item.type || 'memory') + '</div>'
         + '<div class="muted">' + esc(item.summary || item.memory_id) + '</div>'
         + '<div class="muted">分数 ' + esc(item.score) + ' · 命中关键词 ' + esc((item.matched_keywords || []).join(', ')) + '</div></div>'
-      ).join('') : '<div class="item"><div class="item-title">' + (confirmed ? '已执行' : '未发现候选') + '</div><div class="muted">请展开高级信息查看原始响应。</div></div>';
+      ).join('') : '<div class="item"><div class="item-title">' + (confirmed ? '已执行' : '未发现候选') + '</div><div class="muted">请展开详细记录查看操作回执。</div></div>';
     }
     function renderAgentOverview(payload) {
       const result = payload.result || {};

@@ -82,7 +82,7 @@ def main() -> int:
             "rag_visual_ok": "候选选择轨迹" in page,
             "forget_candidate_visual_ok": "候选会以卡片形式列出" in page,
             "agent_workspace_ok": "Agent 交互治理" in page and "三阶段上下文对比" in page,
-            "role_split_ok": "普通用户" in page and "个人工作台" in page and "系统维护" in page and "高级信息" in page,
+            "role_split_ok": "普通用户" in page and "个人工作台" in page and "系统维护" in page and "详细记录" in page,
             "token_session_storage_ok": "sessionStorage" in page and "localStorage" not in page,
             "html_security_headers_ok": _security_headers_ok(page_headers, expect_csp=True),
             "json_security_headers_ok": json_status == 200 and _security_headers_ok(json_headers, expect_csp=False),
