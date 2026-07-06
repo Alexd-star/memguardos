@@ -360,7 +360,7 @@ void MemGuardPeonyPlugin::runApply(const QStringList &arguments)
     progress->setCancelButton(nullptr);
     process->setProcessChannelMode(QProcess::MergedChannels);
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
-        [progress, process](int, QProcess::ExitStatus) {
+        [this, progress, process](int, QProcess::ExitStatus) {
             progress->close();
             QString error;
             const QJsonObject result = parseJsonOutput(process->readAll(), &error);

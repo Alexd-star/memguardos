@@ -653,6 +653,7 @@ def test_peony_plugin_uses_preview_confirmation_contract():
     assert "--memory-id" in source
     assert "遗忘本次导入内容" in source
     assert "openLocalConsole(QStringLiteral(\"#audit\"))" in source
+    assert "[this, progress, process]" in source
 
 
 def test_ukui_control_center_uses_structured_native_product_ui():
