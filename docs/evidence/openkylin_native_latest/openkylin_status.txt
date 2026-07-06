@@ -100,7 +100,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
       "product_state": {
         "installed": true,
         "last_probe_success": true,
-        "last_success_at": "2026-07-06T14:40:19+08:00",
+        "last_success_at": "2026-07-06T15:37:40+08:00",
         "last_success_dim": 768,
         "last_success_model": "ensemble-embd_gte-base_uint8-text",
         "last_failure_at": "",
@@ -183,21 +183,21 @@ $ python3 -m memguard.cli.memctl openkylin-status
     "diagnosis_code": "ready",
     "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": "16289792",
+      "cgroup_memory_current": "16306176",
       "cgroup_memory_max": "536870912"
     },
     "cpu": {
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 17695640,
-        "user_usec": 12772032,
-        "system_usec": 4923607,
+        "usage_usec": 18842964,
+        "user_usec": 13551201,
+        "system_usec": 5291762,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 2395,
-        "nr_throttled": 233,
-        "throttled_usec": 11882781,
+        "nr_periods": 2490,
+        "nr_throttled": 251,
+        "throttled_usec": 12810926,
         "nr_bursts": 0,
         "burst_usec": 0
       }
@@ -217,11 +217,11 @@ $ python3 -m memguard.cli.memctl openkylin-status
     "store_exists": true,
     "db_exists": true,
     "custom_patterns_exists": false,
-    "store_bytes": 279074,
+    "store_bytes": 289095,
     "db_bytes": 827392,
-    "record_count": 105,
-    "live_record_count": 105,
-    "audit_event_count": 788
+    "record_count": 109,
+    "live_record_count": 109,
+    "audit_event_count": 795
   },
   "summary": {
     "overall": "green",
