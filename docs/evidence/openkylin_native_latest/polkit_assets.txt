@@ -51,16 +51,11 @@ if "${HELPER_TO_TEST}" unsupported-action; then exit 3; else echo unknown_action
 test -s "${POLICY_TARGET}" && echo policy_installed=true || echo policy_installed=false
 test -x "${HELPER_TARGET}" && echo helper_installed=true || echo helper_installed=false
 ls -l "${POLICY_TARGET}" "${HELPER_TARGET}" "${STAGED_POLICY}" "${STAGED_HELPER}" 2>/dev/null || true
-chmod: 更改 '/usr/lib/memguardos' 的权限: 只读文件系统
-policy_install_blocked=readonly_usr
-policy_staged=true
-helper_staged=true
+polkit_install_mode=system
 actions=org.memguardos.start-service,org.memguardos.stop-service,org.memguardos.restart-service,org.memguardos.refresh-services,org.memguardos.install-auditd-rules,org.memguardos.run-bpf-lsm-test
 This helper must be started through Polkit as root.
 unknown_action_rejected=true
 policy_installed=true
 helper_installed=true
--rwxr-xr-x 1 root root 1801  7月 2日 20:42 /usr/lib/memguardos/memguardos-native-helper.sh
--rw-r--r-- 1 root root 3627  7月 2日 20:42 /usr/share/polkit-1/actions/org.memguardos.policy
--rwxr-xr-x 1 root root 1801  7月 6日 01:33 /var/tmp/memguardos-polkit-staging/memguardos-native-helper.sh
--rw-r--r-- 1 root root 3627  7月 6日 01:33 /var/tmp/memguardos-polkit-staging/org.memguardos.policy
+-rwxr-xr-x 1 root root 1801  7月 6日 12:21 /usr/lib/memguardos/memguardos-native-helper.sh
+-rw-r--r-- 1 root root 3627  7月 6日 12:21 /usr/share/polkit-1/actions/org.memguardos.policy
