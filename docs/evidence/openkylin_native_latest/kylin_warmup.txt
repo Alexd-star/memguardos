@@ -7,5 +7,6 @@ $ bash scripts/warmup_kylin_sdk.sh
   "model": "ensemble-embd_gte-base_uint8-text",
   "dim": 768,
   "fallback": "hash_embedding",
-  "recommendation": "Kylin embedding SDK 已预热，可作为端侧检索增强。"
+  "recommendation": "Kylin embedding SDK 已预热，可作为端侧检索增强。",
+  "completed_at": "2026-07-06T13:10:32+08:00"
 }

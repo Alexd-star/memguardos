@@ -4,13 +4,13 @@
   "files": [
     {
       "path": "deb_lifecycle.txt",
-      "bytes": 225,
-      "sha256": "399b7815b76051a85b3d526fe8fbd77bdd1c5fde23f7fcc608c13cfe3551bf60"
+      "bytes": 224,
+      "sha256": "9fade68cfb1315b49934344a64cc4ab969e01edc37715fa4d4e667937f5c56d8"
     },
     {
       "path": "debian_packages.txt",
       "bytes": 9706,
-      "sha256": "a01ed3049fba3a691fcd85b99071c4b4cf217b5f5aa960129e2aa4eddfe82fac"
+      "sha256": "fae492a749b513a06e1149da82131a8cc960af67ae15cdff50b1373aa0660ccf"
     },
     {
       "path": "desktop_build.txt",
@@ -20,7 +20,7 @@
     {
       "path": "desktop_plugins.txt",
       "bytes": 5975,
-      "sha256": "f428f299fb2cf8a009aa7e427a1cf76fd6e0189be324577a482bccb9a368a897"
+      "sha256": "8f3f7689043abc00cf0aff5e62936ec76a70d3e1f985603c8ad97d48e5dd4097"
     },
     {
       "path": "environment.txt",
@@ -39,8 +39,8 @@
     },
     {
       "path": "kylin_warmup.txt",
-      "bytes": 326,
-      "sha256": "3cc7d58fb8b2c5fd87739e7a7697109c7cefd91773a110d3ded840ff1da6e165"
+      "bytes": 373,
+      "sha256": "14c4cca05af50d0058801898ee80e80401727a1d80e1b8c90b434f20d37af16e"
     },
     {
       "path": "manifest_refresh.txt",
@@ -49,53 +49,53 @@
     },
     {
       "path": "openkylin_status.txt",
-      "bytes": 8296,
-      "sha256": "71792bc3662fc2b9019cea9cab76f4071bc90341f72a0fbc653cda748cd3cb2f"
+      "bytes": 8754,
+      "sha256": "4edbe026afdd7b192c66a2cb7a66e983cf016664f5d32dc5cd43d37db39cdf69"
     },
     {
       "path": "openkylin_status_probe_sdk.txt",
-      "bytes": 13900,
-      "sha256": "74224724a78a000acf2df5fe1fe1555062e1d3a4bffec52d6e06dfa4c624fd7a"
+      "bytes": 14301,
+      "sha256": "df6de132b7855ee5b60407f8cdee8d3eff2d229b69c3a8c4c221b784a93f5602"
     },
     {
       "path": "peony_batch_apply.json",
       "bytes": 2171,
-      "sha256": "16a584d16fb336976c3f6e36bb0e8b2b111a1fbb1227fd85d9f26f3fc2c4e2d0"
+      "sha256": "a0d0293b5f63df4b2334246e88a080231fb214c29b93e73b8a059178ec46922f"
     },
     {
       "path": "peony_batch_preview.json",
-      "bytes": 2469,
-      "sha256": "ddf7300e537bb818ba92b3671c837212080b91e4468fe207e62e9fb58bd399f7"
+      "bytes": 2461,
+      "sha256": "87400470947d2509e599eef5e30b4278f60b371a61aa407e1e0e1cd3ca089398"
     },
     {
       "path": "peony_sensitive_preview.json",
-      "bytes": 1697,
-      "sha256": "868d9329af233a387f22fdab3b296c434b173e9ac5df24af9dd238f011343fc2"
+      "bytes": 1689,
+      "sha256": "286f9ff38aeb72cd753d6eac0d301159c7af2973da4c27f7023db9cf7d55126d"
     },
     {
       "path": "polkit_assets.txt",
       "bytes": 3099,
-      "sha256": "d03a4c76e2f14e464db604cecb9452fe2de57e5121a613290f1d8bbeb876368f"
+      "sha256": "2b8f058f5859ad21822ec8e572de219377644376562ab978844cc7e49aa3be55"
     },
     {
       "path": "pytest_openkylin.txt",
       "bytes": 405,
-      "sha256": "35594d786595bfcf67becbb059c5c9517ee31a3846788df3b6b773dccbb52041"
+      "sha256": "31c6164c93ece5edf7a48eca189be9a79c53c24d34557c4d8bb33d6b65353520"
     },
     {
       "path": "source_revision.json",
-      "bytes": 190,
-      "sha256": "0d77a02e6fdacfb88577751a4ab58201e52dafa4a89300c5af8bb4ee62652d98"
+      "bytes": 163,
+      "sha256": "331dbd3d42cb78fa8c6318c6ade49d4a90fe0d0facc1c4782f9c749088784a18"
     },
     {
       "path": "systemd_cgroup.txt",
-      "bytes": 788,
-      "sha256": "d0850f4748d739f751a336a3b66d821babf400e6ff9eae294a7b799f8d1844a3"
+      "bytes": 789,
+      "sha256": "3821c8dad982a5ce1b9f9e2567e5c86154fb2d8d7993aaac60b588e3c77f25d1"
     },
     {
       "path": "tray_assets.txt",
       "bytes": 3148,
-      "sha256": "102f464eefd00910bd640ad7eaeade4ecde748074cbeb903e948fb32f5a22337"
+      "sha256": "816b9d9b0bb11a9e19b46ce4be0cd415ea5cb3be3f2f3f02ffa3a88fb46bc966"
     }
   ]
 }

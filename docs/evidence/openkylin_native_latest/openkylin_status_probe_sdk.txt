@@ -1,5 +1,5 @@
 $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
-[1783312651881] [32minfo [0m Proxy init engine sessionId:200057793.
+[1783314631181] [32minfo [0m Proxy init engine sessionId:2037990270.
 {
   "schema": "memguardos-openkylin-native-status-v1",
   "system": {
@@ -242,7 +242,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
           0.011692
         ],
         "subprocess_returncode": 0,
-        "stderr_tail": "[1783312652085] \u001b[32minfo \u001b[0m Proxy init engine sessionId:934829946."
+        "stderr_tail": "[1783314631278] \u001b[32minfo \u001b[0m Proxy init engine sessionId:588097927."
       },
       "available": true,
       "inference_ready": true,
@@ -257,7 +257,17 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
       "capability_state": "inference_ready",
       "component_ready": true,
       "user_message": "推理就绪，可作为端侧检索增强",
-      "next_action": "可继续使用，也可定期导出诊断报告"
+      "next_action": "可继续使用，也可定期导出诊断报告",
+      "product_state": {
+        "installed": true,
+        "last_probe_success": true,
+        "last_success_at": "2026-07-06T13:07:59+08:00",
+        "last_success_dim": 768,
+        "last_success_model": "ensemble-embd_gte-base_uint8-text",
+        "warmup_state": "ready",
+        "fallback": "hash_embedding",
+        "user_message": "已安装，最近一次端侧向量预热成功"
+      }
     },
     "vector_store": {
       "backend": "kysdk_vector_engine_client",
@@ -323,21 +333,21 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
     "diagnosis_code": "ready",
     "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": "17293312",
+      "cgroup_memory_current": "17276928",
       "cgroup_memory_max": "536870912"
     },
     "cpu": {
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 3696811,
-        "user_usec": 2908984,
-        "system_usec": 787826,
+        "usage_usec": 5687955,
+        "user_usec": 4342141,
+        "system_usec": 1345813,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 352,
-        "nr_throttled": 54,
-        "throttled_usec": 2536263,
+        "nr_periods": 705,
+        "nr_throttled": 77,
+        "throttled_usec": 3606019,
         "nr_bursts": 0,
         "burst_usec": 0
       }
@@ -357,11 +367,11 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
     "store_exists": true,
     "db_exists": true,
     "custom_patterns_exists": false,
-    "store_bytes": 229589,
-    "db_bytes": 733184,
-    "record_count": 85,
-    "live_record_count": 85,
-    "audit_event_count": 689
+    "store_bytes": 249011,
+    "db_bytes": 774144,
+    "record_count": 93,
+    "live_record_count": 93,
+    "audit_event_count": 702
   },
   "summary": {
     "overall": "green",

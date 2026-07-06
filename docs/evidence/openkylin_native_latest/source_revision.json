@@ -1,6 +1,6 @@
 {
   "schema": "memguardos-source-revision-v1",
-  "source_revision": "8eed8b1e333ff4940ab7d170d606322f21b24d8d",
-  "source_mode": "synchronized_tree_without_git_metadata",
+  "source_revision": "52403721981ca452d7e6cc9778e0b9375196adf0",
+  "source_mode": "git_archive",
   "dirty": false
 }
