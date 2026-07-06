@@ -184,6 +184,178 @@ QString friendlyRecommendationText(const QString &text)
     return text;
 }
 
+QString formatBytesValue(const QString &raw)
+{
+    if (raw.isEmpty())
+        return QStringLiteral("未采集");
+    if (raw == QStringLiteral("max"))
+        return QStringLiteral("未限制");
+
+    bool ok = false;
+    const qlonglong bytes = raw.toLongLong(&ok);
+    if (!ok)
+        return raw;
+    if (bytes < 1024)
+        return QStringLiteral("%1 B").arg(bytes);
+    if (bytes < 1024 * 1024)
+        return QStringLiteral("%1 KB").arg(QString::number(bytes / 1024.0, 'f', 1));
+    if (bytes < 1024LL * 1024LL * 1024LL)
+        return QStringLiteral("%1 MB").arg(QString::number(bytes / (1024.0 * 1024.0), 'f', 1));
+    return QStringLiteral("%1 GB").arg(QString::number(bytes / (1024.0 * 1024.0 * 1024.0), 'f', 2));
+}
+
+QString formatCpuQuota(const QString &raw, const QJsonValue &quotaValue)
+{
+    if (!quotaValue.isUndefined() && !quotaValue.isNull()) {
+        const QString quota = quotaValue.toVariant().toString();
+        if (!quota.isEmpty() && quota != QStringLiteral("0") && quota != QStringLiteral("infinity"))
+            return quota;
+    }
+    if (raw.isEmpty())
+        return QStringLiteral("未采集");
+    const QStringList parts = raw.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    if (!parts.isEmpty() && parts.first() == QStringLiteral("max"))
+        return QStringLiteral("未限制");
+    if (parts.size() >= 2) {
+        bool quotaOk = false;
+        bool periodOk = false;
+        const double quota = parts.at(0).toDouble(&quotaOk);
+        const double period = parts.at(1).toDouble(&periodOk);
+        if (quotaOk && periodOk && period > 0.0)
+            return QStringLiteral("约 %1% 单核配额").arg(QString::number((quota / period) * 100.0, 'f', 0));
+    }
+    return raw;
+}
+
+QString formatCpuUsage(const QJsonObject &stat)
+{
+    if (stat.isEmpty())
+        return QStringLiteral("未采集");
+    const double usageSeconds = stat.value(QStringLiteral("usage_usec")).toDouble() / 1000000.0;
+    const int throttled = stat.value(QStringLiteral("nr_throttled")).toInt();
+    if (usageSeconds <= 0.0 && throttled <= 0)
+        return QStringLiteral("已采集，暂无明显负载");
+    if (throttled > 0)
+        return QStringLiteral("累计使用 %1 秒，限流 %2 次").arg(QString::number(usageSeconds, 'f', 1)).arg(throttled);
+    return QStringLiteral("累计使用 %1 秒").arg(QString::number(usageSeconds, 'f', 1));
+}
+
+QString formatResourceValue(const QString &key, const QJsonObject &resources)
+{
+    const QJsonObject memory = resources.value(QStringLiteral("memory")).toObject();
+    const QJsonObject cpu = resources.value(QStringLiteral("cpu")).toObject();
+    if (key == QStringLiteral("control_group"))
+        return resources.value(QStringLiteral("control_group")).toString(QStringLiteral("未识别"));
+    if (key == QStringLiteral("memory_current"))
+        return formatBytesValue(memory.value(QStringLiteral("cgroup_memory_current")).toVariant().toString());
+    if (key == QStringLiteral("memory_max"))
+        return formatBytesValue(memory.value(QStringLiteral("cgroup_memory_max")).toVariant().toString());
+    if (key == QStringLiteral("cpu_quota"))
+        return formatCpuQuota(cpu.value(QStringLiteral("cpu_max")).toVariant().toString(), cpu.value(QStringLiteral("cpu_quota_per_sec_usec")));
+    if (key == QStringLiteral("cpu_usage"))
+        return formatCpuUsage(cpu.value(QStringLiteral("cpu_stat")).toObject());
+    return QStringLiteral("未采集");
+}
+
+QString statusTextFromBool(bool ok)
+{
+    return ok ? QStringLiteral("通过") : QStringLiteral("需要处理");
+}
+
+QString formatMaintenanceResult(const QString &text, const QString &summary)
+{
+    const QJsonObject payload = parsedObject(text);
+    if (payload.isEmpty())
+        return text.isEmpty() ? summary : text;
+
+    QStringList lines;
+    lines << QStringLiteral("结果摘要");
+
+    if (payload.contains(QStringLiteral("summary"))) {
+        const QJsonObject status = payload.value(QStringLiteral("summary")).toObject();
+        const QString overall = status.value(QStringLiteral("overall")).toString();
+        if (!overall.isEmpty()) {
+            lines << QStringLiteral("本机状态：%1").arg(levelText(overall));
+            lines << QStringLiteral("组件结果：正常 %1 项，建议确认 %2 项，不可用 %3 项。")
+                         .arg(status.value(QStringLiteral("green")).toInt())
+                         .arg(status.value(QStringLiteral("yellow")).toInt())
+                         .arg(status.value(QStringLiteral("red")).toInt());
+        }
+    }
+
+    if (payload.contains(QStringLiteral("embedding")) || payload.contains(QStringLiteral("vector_store"))) {
+        const QJsonObject embedding = payload.value(QStringLiteral("embedding")).toObject();
+        const QJsonObject model = embedding.value(QStringLiteral("model_info")).toObject();
+        lines << QStringLiteral("端侧向量：%1").arg(statusTextFromBool(embedding.value(QStringLiteral("available")).toBool()));
+        if (!model.isEmpty()) {
+            lines << QStringLiteral("模型：%1，维度：%2")
+                         .arg(model.value(QStringLiteral("name")).toString(QStringLiteral("未识别")))
+                         .arg(model.value(QStringLiteral("dim")).toVariant().toString());
+        }
+        const QJsonObject productState = embedding.value(QStringLiteral("product_state")).toObject();
+        const QString message = embedding.value(QStringLiteral("user_message")).toString(productState.value(QStringLiteral("user_message")).toString());
+        if (!message.isEmpty())
+            lines << QStringLiteral("状态说明：%1").arg(message);
+        const QString nextAction = embedding.value(QStringLiteral("next_action")).toString();
+        if (!nextAction.isEmpty())
+            lines << QStringLiteral("下一步：%1").arg(nextAction);
+
+        const QJsonObject vector = payload.value(QStringLiteral("vector_store")).toObject();
+        const QString vectorMessage = vector.value(QStringLiteral("user_message")).toString();
+        if (!vectorMessage.isEmpty())
+            lines << QStringLiteral("向量服务：%1").arg(vectorMessage);
+    }
+
+    if (payload.contains(QStringLiteral("sdk"))) {
+        const QJsonObject embedding = payload.value(QStringLiteral("sdk")).toObject().value(QStringLiteral("embedding")).toObject();
+        const QString message = embedding.value(QStringLiteral("user_message")).toString();
+        if (!message.isEmpty())
+            lines << QStringLiteral("Kylin SDK：%1").arg(message);
+        const QString nextAction = embedding.value(QStringLiteral("next_action")).toString();
+        if (!nextAction.isEmpty())
+            lines << QStringLiteral("下一步：%1").arg(nextAction);
+    }
+
+    if (payload.contains(QStringLiteral("resources"))) {
+        const QJsonObject resources = payload.value(QStringLiteral("resources")).toObject();
+        lines << QStringLiteral("资源组：%1").arg(formatResourceValue(QStringLiteral("control_group"), resources));
+        lines << QStringLiteral("当前内存：%1").arg(formatResourceValue(QStringLiteral("memory_current"), resources));
+        lines << QStringLiteral("内存上限：%1").arg(formatResourceValue(QStringLiteral("memory_max"), resources));
+        lines << QStringLiteral("CPU 配额：%1").arg(formatResourceValue(QStringLiteral("cpu_quota"), resources));
+        lines << QStringLiteral("CPU 使用：%1").arg(formatResourceValue(QStringLiteral("cpu_usage"), resources));
+    }
+
+    if (payload.contains(QStringLiteral("ok"))) {
+        lines << QStringLiteral("执行结果：%1").arg(statusTextFromBool(payload.value(QStringLiteral("ok")).toBool()));
+        const QString message = payload.value(QStringLiteral("message")).toString();
+        if (!message.isEmpty())
+            lines << QStringLiteral("说明：%1").arg(message);
+    }
+    if (payload.contains(QStringLiteral("output_dir")))
+        lines << QStringLiteral("保存位置：%1").arg(payload.value(QStringLiteral("output_dir")).toString());
+    if (payload.contains(QStringLiteral("file_count")))
+        lines << QStringLiteral("证据文件：%1 个").arg(payload.value(QStringLiteral("file_count")).toVariant().toString());
+    if (payload.contains(QStringLiteral("source_revision_status"))) {
+        const QString revisionStatus = payload.value(QStringLiteral("source_revision_status")).toString();
+        lines << QStringLiteral("版本记录：%1").arg(revisionStatus == QStringLiteral("not_available")
+                ? QStringLiteral("当前运行环境未提供 Git 信息，最终提交建议在源码目录重新采集")
+                : QStringLiteral("已记录"));
+    }
+    if (payload.contains(QStringLiteral("checked")))
+        lines << QStringLiteral("审计检查数量：%1").arg(payload.value(QStringLiteral("checked")).toVariant().toString());
+    if (payload.contains(QStringLiteral("failed_audit_id")))
+        lines << QStringLiteral("需要处理的审计记录：%1").arg(payload.value(QStringLiteral("failed_audit_id")).toVariant().toString());
+
+    const QJsonArray recommendations = payload.value(QStringLiteral("recommendations")).toArray();
+    if (!recommendations.isEmpty()) {
+        lines << QStringLiteral("处理建议：");
+        for (const QJsonValue &value : recommendations)
+            lines << QStringLiteral("• %1").arg(friendlyRecommendationText(value.toString()));
+    }
+    lines << QStringLiteral("需要保存完整诊断信息时，请使用【导出系统报告】。");
+    return lines.join(QLatin1Char('\n'));
+}
+
 } // namespace
 
 QString MemGuardUkccPlugin::plugini18nName()
@@ -555,12 +727,14 @@ QWidget *MemGuardUkccPlugin::buildDiagnosticsTab()
 
     auto *reportBox = new QGroupBox(QStringLiteral("报告与控制台"));
     auto *reportLayout = new QVBoxLayout(reportBox);
-    reportLayout->addWidget(makeMutedLabel(QStringLiteral("导出系统报告会聚合服务、端侧能力、资源、授权和审计状态；本地控制台提供更完整的记忆写入、检索、上下文和遗忘预览流程。")));
+    reportLayout->addWidget(makeMutedLabel(QStringLiteral("导出系统报告会聚合服务、端侧能力、资源、授权和审计状态；验收证据会生成带 SHA256 清单的本机证据目录；本地控制台提供更完整的记忆写入、检索、上下文和遗忘预览流程。")));
     auto *reportButtons = new QGridLayout;
     auto *diagnostics = makeOperationButton(QStringLiteral("document-save"), QStringLiteral("导出快速报告"), QStringLiteral("导出 MemGuardOS 系统报告"));
+    auto *evidence = makeOperationButton(QStringLiteral("document-send"), QStringLiteral("导出验收证据"), QStringLiteral("导出 MemGuardOS openKylin 验收证据包"));
     auto *dashboard = makeOperationButton(QStringLiteral("applications-internet"), QStringLiteral("打开本地控制台"), QStringLiteral("打开 MemGuardOS 本地控制台"));
     reportButtons->addWidget(diagnostics, 0, 0);
-    reportButtons->addWidget(dashboard, 0, 1);
+    reportButtons->addWidget(evidence, 0, 1);
+    reportButtons->addWidget(dashboard, 0, 2);
     reportLayout->addLayout(reportButtons);
     layout->addWidget(reportBox);
 
@@ -593,12 +767,13 @@ QWidget *MemGuardUkccPlugin::buildDiagnosticsTab()
     detailsLayout->addWidget(details_, 1);
     layout->addWidget(detailsBox, 1);
 
-    actionButtons_ << diagnostics << dashboard << refresh << verifyAudit << logs;
+    actionButtons_ << diagnostics << evidence << dashboard << refresh << verifyAudit << logs;
     connect(detailsToggle_, &QToolButton::toggled, this, [this](bool checked) {
         detailsToggle_->setArrowType(checked ? Qt::DownArrow : Qt::RightArrow);
         details_->setVisible(checked);
     });
     connect(diagnostics, &QPushButton::clicked, this, [this]() { runMemctl({QStringLiteral("diagnostics")}, QStringLiteral("export")); });
+    connect(evidence, &QPushButton::clicked, this, [this]() { runMemctl({QStringLiteral("collect-openkylin-evidence")}, QStringLiteral("details")); });
     connect(dashboard, &QPushButton::clicked, this, &MemGuardUkccPlugin::openDashboard);
     connect(refresh, &QPushButton::clicked, this, &MemGuardUkccPlugin::refreshStatus);
     connect(verifyAudit, &QPushButton::clicked, this, [this]() { runMemctl({QStringLiteral("verify-audit")}, QStringLiteral("details")); });
@@ -713,6 +888,8 @@ QString MemGuardUkccPlugin::operationStartMessage(const QStringList &arguments, 
         return QStringLiteral("正在检查端侧向量能力，窗口可保持打开，也可以随时停止。");
     if (joined.contains(QStringLiteral("diagnostics")))
         return QStringLiteral("正在生成系统报告，完成后请选择保存位置。");
+    if (joined.contains(QStringLiteral("collect-openkylin-evidence")))
+        return QStringLiteral("正在导出验收证据，完成后会显示保存位置。");
     if (joined.contains(QStringLiteral("native-action")))
         return QStringLiteral("正在等待系统授权并执行操作。");
     if (joined.contains(QStringLiteral("openkylin-status")) && joined.contains(QStringLiteral("--fast")))
@@ -736,6 +913,8 @@ QString MemGuardUkccPlugin::operationCompleteMessage(const QStringList &argument
         return QStringLiteral("端侧向量能力检查已完成，结果已显示在【系统维护】。");
     if (joined.contains(QStringLiteral("diagnostics")))
         return QStringLiteral("系统报告已生成。");
+    if (joined.contains(QStringLiteral("collect-openkylin-evidence")))
+        return QStringLiteral("验收证据已导出，保存位置已显示在【系统维护】。");
     if (purpose == QStringLiteral("refresh"))
         return QStringLiteral("状态刷新已完成，可以继续操作。");
     if (purpose == QStringLiteral("action"))
@@ -754,7 +933,7 @@ int MemGuardUkccPlugin::operationTimeoutMs(const QStringList &arguments, const Q
         return 10000;
     if (joined.contains(QStringLiteral("verify-audit")))
         return 20000;
-    if (joined.contains(QStringLiteral("sdk-status")) || joined.contains(QStringLiteral("--probe-sdk")) || joined.contains(QStringLiteral("diagnostics")))
+    if (joined.contains(QStringLiteral("sdk-status")) || joined.contains(QStringLiteral("--probe-sdk")) || joined.contains(QStringLiteral("diagnostics")) || joined.contains(QStringLiteral("collect-openkylin-evidence")))
         return 120000;
     if (joined.contains(QStringLiteral("native-action")))
         return 90000;
@@ -768,7 +947,7 @@ void MemGuardUkccPlugin::showDetailsOutput(const QString &text, const QString &s
     if (detailsToggle_)
         detailsToggle_->setChecked(true);
     if (details_)
-        details_->setPlainText(text.isEmpty() ? summary : text);
+        details_->setPlainText(formatMaintenanceResult(text, summary));
     updateOperationGuide(QStringLiteral("已切换到【系统维护】>【维护结果】，可查看处理结果。"), false);
 }
 
@@ -1015,14 +1194,12 @@ void MemGuardUkccPlugin::renderResourceSnapshot(const QJsonObject &resources)
     if (!resourceSnapshot_)
         return;
     resourceSnapshot_->clear();
-    const QJsonObject memory = resources.value(QStringLiteral("memory")).toObject();
-    const QJsonObject cpu = resources.value(QStringLiteral("cpu")).toObject();
     const QList<QPair<QString, QString>> rows = {
-        {QStringLiteral("服务 cgroup"), resources.value(QStringLiteral("control_group")).toString(QStringLiteral("未识别"))},
-        {QStringLiteral("内存当前值"), memory.value(QStringLiteral("cgroup_memory_current")).toVariant().toString()},
-        {QStringLiteral("内存上限"), memory.value(QStringLiteral("cgroup_memory_max")).toVariant().toString()},
-        {QStringLiteral("CPU 配额"), cpu.value(QStringLiteral("cpu_max")).toVariant().toString()},
-        {QStringLiteral("CPU 统计"), QString(QJsonDocument(cpu.value(QStringLiteral("cpu_stat")).toObject()).toJson(QJsonDocument::Compact))},
+        {QStringLiteral("服务资源组"), formatResourceValue(QStringLiteral("control_group"), resources)},
+        {QStringLiteral("当前内存"), formatResourceValue(QStringLiteral("memory_current"), resources)},
+        {QStringLiteral("内存上限"), formatResourceValue(QStringLiteral("memory_max"), resources)},
+        {QStringLiteral("CPU 配额"), formatResourceValue(QStringLiteral("cpu_quota"), resources)},
+        {QStringLiteral("CPU 使用"), formatResourceValue(QStringLiteral("cpu_usage"), resources)},
     };
     for (const auto &row : rows) {
         auto *item = new QTreeWidgetItem(resourceSnapshot_);

@@ -3,6 +3,7 @@
 #include <QDesktopServices>
 #include <QFile>
 #include <QIcon>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLockFile>
@@ -30,6 +31,17 @@ QJsonObject parseObject(const QByteArray &raw)
         return {};
     const QJsonDocument document = QJsonDocument::fromJson(raw.mid(first, last - first + 1));
     return document.isObject() ? document.object() : QJsonObject();
+}
+
+QString firstRecommendation(const QJsonObject &payload)
+{
+    const QJsonArray recommendations = payload.value(QStringLiteral("recommendations")).toArray();
+    for (const QJsonValue &value : recommendations) {
+        const QString text = value.toString().simplified();
+        if (!text.isEmpty())
+            return text;
+    }
+    return {};
 }
 
 QString memctlProgram(QStringList *arguments)
@@ -108,7 +120,11 @@ private:
                         .arg(summary.value(QStringLiteral("green")).toInt())
                         .arg(summary.value(QStringLiteral("yellow")).toInt())
                         .arg(summary.value(QStringLiteral("red")).toInt());
-                    applyState(overall, title, body);
+                    const QString recommendation = firstRecommendation(payload);
+                    applyState(
+                        overall,
+                        title,
+                        recommendation.isEmpty() ? body : QStringLiteral("%1\n下一步：%2").arg(body, recommendation));
                 }
                 finished->deleteLater();
             });

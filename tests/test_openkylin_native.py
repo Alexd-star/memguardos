@@ -497,6 +497,34 @@ def test_desktop_scan_files_and_apply_cli_require_explicit_selection(tmp_path, m
     assert applied["summary"]["stored"] == 1
 
 
+def test_collect_openkylin_evidence_cli_exports_manifested_package(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+    output_dir = tmp_path / "native-evidence"
+
+    assert memctl_main(["collect-openkylin-evidence", "--output-dir", str(output_dir)]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["ok"] is True
+    assert Path(payload["output_dir"]) == output_dir.resolve()
+    expected = {
+        "source_revision.json",
+        "environment.json",
+        "openkylin_status.json",
+        "diagnostics.json",
+        "audit_chain.json",
+        "systemd_cgroup.json",
+        "desktop_assets.json",
+        "manifest.json",
+        "SHA256SUMS.txt",
+    }
+    assert expected.issubset({path.name for path in output_dir.iterdir()})
+    manifest = json.loads((output_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schema"] == "memguardos-openkylin-evidence-manifest-v1"
+    assert "SHA256SUMS.txt" not in {item["path"] for item in manifest["files"]}
+    assert "manifest.json" not in {item["path"] for item in manifest["files"]}
+    assert (output_dir / "SHA256SUMS.txt").read_text(encoding="utf-8").strip()
+
+
 def test_peony_plugin_uses_preview_confirmation_contract():
     source = (Path(__file__).resolve().parents[1] / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
 
@@ -605,6 +633,13 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "管理员授权" in source
     assert "appendHistory" in source
     assert "renderResourceSnapshot" in source
+    assert "formatMaintenanceResult" in source
+    assert "formatResourceValue" in source
+    assert "details_->setPlainText(formatMaintenanceResult" in source
+    assert "CPU 使用" in source
+    assert "CPU 配额" in source
+    assert "CPU 统计" not in source
+    assert "QJsonDocument(cpu.value(QStringLiteral(\"cpu_stat\")).toObject()).toJson" not in source
     assert "capability_state" in source
     assert "user_message" in source
     assert "next_action" in source
@@ -616,6 +651,8 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "查看服务日志" in source
     assert "系统维护" in source
     assert "导出系统报告" in source
+    assert "导出验收证据" in source
+    assert "collect-openkylin-evidence" in source
     assert "报告保存已取消，系统状态未改变" in source
     assert "检查内核保护状态" in source
     assert "native-action" in source
@@ -760,8 +797,13 @@ def test_ukui_tray_follows_system_theme_and_deduplicates_notifications():
     assert "QIcon::fromTheme" in source
     assert "lastState_" in source
     assert "showMessage" in source
+    assert "recommendations" in source
+    assert "firstRecommendation" in source
+    assert "下一步" in source
+    assert "showMessage" in source
     assert "setStyleSheet" not in source
     assert "QSystemTrayIcon::isSystemTrayAvailable" in source
     assert "Exec=/usr/bin/memguardos-tray" in desktop
     assert "OnlyShowIn=UKUI;" in desktop
     assert "tray" in build
+

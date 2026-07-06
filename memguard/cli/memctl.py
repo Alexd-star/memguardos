@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
+import platform
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -18,6 +23,7 @@ from memguard.os_guard.doctor import doctor_report
 from memguard.os_guard.cgroup import cgroup_status
 from memguard.os_guard.openkylin_native import openkylin_native_status
 from memguard.os_guard.privileged_actions import ALLOWED_ACTIONS, run_privileged_action
+from memguard.os_guard.service_control import service_resource_status
 from memguard.retrieval.kylin_sdk import kylin_sdk_status
 from memguard.service import MemGuardService
 
@@ -169,6 +175,13 @@ def build_parser() -> argparse.ArgumentParser:
     diagnostics.add_argument("--probe-sdk", action="store_true", help="Run a real Kylin embedding SDK probe in the diagnostics report")
     diagnostics.add_argument("--probe-timeout", type=float, default=90.0, help="Timeout in seconds for the optional SDK probe")
     diagnostics.add_argument("--audit-limit", type=int, default=20, help="Number of recent audit events to include")
+    evidence = sub.add_parser("collect-openkylin-evidence", help="Export an openKylin acceptance evidence package with manifest and SHA256 checksums")
+    evidence.add_argument("--output-dir", default="", help="Evidence output directory. Defaults to ~/MemGuardOS-openKylin-evidence")
+    evidence.add_argument("--probe-sdk", action="store_true", help="Include a real Kylin SDK inference probe")
+    evidence.add_argument("--probe-timeout", type=float, default=90.0, help="Timeout in seconds for the optional SDK probe")
+    evidence.add_argument("--include-readiness", action="store_true", help="Run scripts/check_competition_ready.py when available")
+    evidence.add_argument("--include-pytest", action="store_true", help="Run local pytest when a source checkout with tests is available")
+    evidence.add_argument("--timeout", type=float, default=300.0, help="Timeout in seconds for optional readiness/pytest commands")
 
     web = sub.add_parser("web", help="Run a localhost Web dashboard for local operation and inspection")
     web.add_argument("--host", default="127.0.0.1")
@@ -641,6 +654,11 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
             return 0 if payload["ok"] else 2
 
+        if args.command == "collect-openkylin-evidence":
+            result = _collect_openkylin_evidence(args, service)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result.get("ok") else 2
+
         if args.command == "web":
             token = Path(args.auth_token_file).read_text(encoding="utf-8").strip() if args.auth_token_file else ""
             from memguard.web.dashboard import run_dashboard
@@ -770,6 +788,200 @@ def _read_auditd_lines(path: str, limit: int) -> list[str]:
         return sys.stdin.read().splitlines()
     lines = Path(path).read_text(encoding="utf-8", errors="replace").splitlines()
     return lines[-max(1, limit) :]
+
+
+def _collect_openkylin_evidence(args: argparse.Namespace, service: MemGuardService) -> dict[str, object]:
+    output_dir = Path(args.output_dir or (Path.home() / "MemGuardOS-openKylin-evidence")).expanduser().resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    source_revision = _source_revision_payload()
+    _write_json(output_dir / "source_revision.json", source_revision)
+    _write_json(
+        output_dir / "environment.json",
+        {
+            "schema": "memguardos-openkylin-evidence-environment-v1",
+            "platform": platform.platform(),
+            "python": sys.version.split()[0],
+            "executable": sys.executable,
+            "cwd": str(Path.cwd()),
+            "distribution": _os_release_fields(),
+            "desktop": {
+                "XDG_CURRENT_DESKTOP": os.environ.get("XDG_CURRENT_DESKTOP", ""),
+                "DESKTOP_SESSION": os.environ.get("DESKTOP_SESSION", ""),
+                "XDG_SESSION_TYPE": os.environ.get("XDG_SESSION_TYPE", ""),
+            },
+        },
+    )
+    _write_json(
+        output_dir / "openkylin_status.json",
+        openkylin_native_status(
+            namespace=service.namespace,
+            probe_sdk=args.probe_sdk,
+            probe_timeout=args.probe_timeout,
+            fast=not args.probe_sdk,
+        ),
+    )
+    _write_json(output_dir / "audit_chain.json", service.verify_audit())
+    _write_json(output_dir / "systemd_cgroup.json", service_resource_status())
+    _write_json(output_dir / "desktop_assets.json", _desktop_asset_payload())
+    _write_json(
+        output_dir / "diagnostics.json",
+        {
+            "schema": "memguardos-openkylin-evidence-diagnostics-v1",
+            "namespace": service.namespace,
+            "doctor": doctor_report(namespace=service.namespace),
+            "runtime_status": cgroup_status(),
+            "namespace_status": service.namespace_status(),
+            "retrieval_status": service.retrieval_status(),
+            "memory_policy": service.memory_policy_status(),
+            "kylin_sdk": kylin_sdk_status(probe_embedding=args.probe_sdk, probe_timeout=args.probe_timeout),
+            "recent_audit": service.audit(limit=20),
+        },
+    )
+
+    if args.include_readiness:
+        _write_command_capture(
+            output_dir / "readiness.txt",
+            [sys.executable, "scripts/check_competition_ready.py"],
+            timeout=args.timeout,
+            cwd=Path.cwd(),
+            require_path=Path("scripts/check_competition_ready.py"),
+        )
+    if args.include_pytest:
+        _write_command_capture(
+            output_dir / "pytest.txt",
+            [sys.executable, "-m", "pytest", "-q"],
+            timeout=args.timeout,
+            cwd=Path.cwd(),
+            require_path=Path("tests"),
+        )
+
+    manifest = _write_evidence_manifest(output_dir)
+    return {
+        "ok": True,
+        "schema": "memguardos-openkylin-evidence-package-v1",
+        "output_dir": str(output_dir),
+        "file_count": manifest["file_count"],
+        "source_revision_status": source_revision["status"],
+        "include_readiness": bool(args.include_readiness),
+        "include_pytest": bool(args.include_pytest),
+    }
+
+
+def _write_json(path: Path, payload: dict[str, object]) -> None:
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _source_revision_payload() -> dict[str, object]:
+    env_revision = os.environ.get("MEMGUARD_SOURCE_REVISION", "").strip()
+    if env_revision:
+        return {
+            "schema": "memguardos-source-revision-v1",
+            "source_revision": env_revision,
+            "source_mode": os.environ.get("MEMGUARD_SOURCE_MODE", "environment"),
+            "dirty": os.environ.get("MEMGUARD_SOURCE_DIRTY", "false").lower() == "true",
+            "status": "provided",
+        }
+    result = subprocess.run(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, check=False)
+    revision = result.stdout.strip()
+    if result.returncode == 0 and revision:
+        dirty = subprocess.run(["git", "status", "--porcelain"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, check=False)
+        return {
+            "schema": "memguardos-source-revision-v1",
+            "source_revision": revision,
+            "source_mode": "git_worktree",
+            "dirty": bool(dirty.stdout.strip()),
+            "status": "git",
+        }
+    return {
+        "schema": "memguardos-source-revision-v1",
+        "source_revision": "",
+        "source_mode": "installed_package_or_unknown",
+        "dirty": None,
+        "status": "not_available",
+        "note": "Git metadata was not available in this runtime. Run from the source checkout or set MEMGUARD_SOURCE_REVISION for final contest evidence.",
+    }
+
+
+def _os_release_fields() -> dict[str, str]:
+    path = Path("/etc/os-release")
+    if not path.exists():
+        return {}
+    fields: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        fields[key] = value.strip().strip('"')
+    return fields
+
+
+def _desktop_asset_payload() -> dict[str, object]:
+    peony_plugins = sorted(str(path) for path in Path("/usr/lib").glob("*/peony-extensions/libpeony-menu-plugin-memguardos.so"))
+    ukcc_plugins = sorted(str(path) for path in Path("/usr/lib").glob("*/ukui-control-center/libmemguardos-ukcc-plugin.so"))
+    return {
+        "schema": "memguardos-desktop-assets-v1",
+        "peony_plugins": peony_plugins,
+        "ukui_control_center_plugins": ukcc_plugins,
+        "tray": {
+            "binary": "/usr/bin/memguardos-tray",
+            "binary_exists": Path("/usr/bin/memguardos-tray").exists(),
+            "autostart": "/etc/xdg/autostart/memguardos-tray.desktop",
+            "autostart_exists": Path("/etc/xdg/autostart/memguardos-tray.desktop").exists(),
+        },
+        "menu_entry": {
+            "desktop_file": "/usr/share/applications/memguardos-center.desktop",
+            "exists": Path("/usr/share/applications/memguardos-center.desktop").exists(),
+        },
+        "notify_send": bool(shutil.which("notify-send")),
+    }
+
+
+def _write_command_capture(path: Path, command: list[str], *, timeout: float, cwd: Path, require_path: Path) -> None:
+    if not require_path.exists():
+        path.write_text(
+            "$ %s\nskipped=missing_%s\n" % (" ".join(command), require_path.as_posix()),
+            encoding="utf-8",
+        )
+        return
+    completed = subprocess.run(
+        command,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=timeout,
+        check=False,
+    )
+    path.write_text("$ %s\n%s" % (" ".join(command), completed.stdout), encoding="utf-8")
+
+
+def _write_evidence_manifest(root: Path) -> dict[str, object]:
+    checksum_path = root / "SHA256SUMS.txt"
+    manifest_path = root / "manifest.json"
+    files = [
+        path
+        for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix())
+        if path.is_file() and path not in {checksum_path, manifest_path}
+    ]
+    checksum_path.write_text(
+        "\n".join("%s  %s" % (hashlib.sha256(path.read_bytes()).hexdigest(), path.relative_to(root).as_posix()) for path in files) + "\n",
+        encoding="utf-8",
+    )
+    manifest = {
+        "schema": "memguardos-openkylin-evidence-manifest-v1",
+        "file_count": len(files),
+        "files": [
+            {
+                "path": path.relative_to(root).as_posix(),
+                "bytes": path.stat().st_size,
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+            for path in files
+        ],
+    }
+    _write_json(manifest_path, manifest)
+    return manifest
 
 
 if __name__ == "__main__":
