@@ -1,5 +1,5 @@
 $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
-[1783312143103] [32minfo [0m Proxy init engine sessionId:1189073218.
+[1783312651881] [32minfo [0m Proxy init engine sessionId:200057793.
 {
   "schema": "memguardos-openkylin-native-status-v1",
   "system": {
@@ -242,7 +242,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
           0.011692
         ],
         "subprocess_returncode": 0,
-        "stderr_tail": "[1783312143171] \u001b[32minfo \u001b[0m Proxy init engine sessionId:713267222."
+        "stderr_tail": "[1783312652085] \u001b[32minfo \u001b[0m Proxy init engine sessionId:934829946."
       },
       "available": true,
       "inference_ready": true,
@@ -323,21 +323,21 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
     "diagnosis_code": "ready",
     "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": "17707008",
+      "cgroup_memory_current": "17293312",
       "cgroup_memory_max": "536870912"
     },
     "cpu": {
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 860523,
-        "user_usec": 566880,
-        "system_usec": 293642,
+        "usage_usec": 3696811,
+        "user_usec": 2908984,
+        "system_usec": 787826,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 220,
-        "nr_throttled": 5,
-        "throttled_usec": 126243,
+        "nr_periods": 352,
+        "nr_throttled": 54,
+        "throttled_usec": 2536263,
         "nr_bursts": 0,
         "burst_usec": 0
       }
@@ -357,11 +357,11 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
     "store_exists": true,
     "db_exists": true,
     "custom_patterns_exists": false,
-    "store_bytes": 219568,
-    "db_bytes": 708608,
-    "record_count": 81,
-    "live_record_count": 81,
-    "audit_event_count": 682
+    "store_bytes": 229589,
+    "db_bytes": 733184,
+    "record_count": 85,
+    "live_record_count": 85,
+    "audit_event_count": 689
   },
   "summary": {
     "overall": "green",

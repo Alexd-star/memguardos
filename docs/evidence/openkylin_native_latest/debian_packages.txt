@@ -37,23 +37,23 @@ dpkg-deb: 正在 '/home/luo/memguardos-product-head/dist/memguardos_0.1.0-2_all.
       "architecture": "amd64",
       "path": "/home/luo/memguardos-product-head/dist/memguardos-core_0.1.0-2_amd64.deb",
       "bytes": 126232,
-      "sha256": "6aeb7a2efba8c9f34b37b593182dd7a9bc24380202d933c212103c87fad86bb4"
+      "sha256": "1fc49620b070055e0083f71734c65c70941ceaf982627498989d2a29cb229286"
     },
     {
       "package": "memguardos-ukui",
       "version": "0.1.0-2",
       "architecture": "amd64",
       "path": "/home/luo/memguardos-product-head/dist/memguardos-ukui_0.1.0-2_amd64.deb",
-      "bytes": 82600,
-      "sha256": "7cb0a97e9fafdb33864dcc8b6c875cfdc8bee1be5ffb0348af447ac0f4270dce"
+      "bytes": 82452,
+      "sha256": "32fff40113f838994df21d35b4fcce2e8a6e63f6a0a2c225ff55b227f641fced"
     },
     {
       "package": "memguardos-agent-bridge",
       "version": "0.1.0-2",
       "architecture": "amd64",
       "path": "/home/luo/memguardos-product-head/dist/memguardos-agent-bridge_0.1.0-2_amd64.deb",
-      "bytes": 7468,
-      "sha256": "c6746826946f1ec69bfa7c48d1d05703d4e609a3325944b66bb7f78379fc90a9"
+      "bytes": 7472,
+      "sha256": "20e9bf715dcd6681d9678d7ffdca1ef5cad9a2aa2160d17563db5aa822b25e95"
     },
     {
       "package": "memguardos-doc",
@@ -61,15 +61,15 @@ dpkg-deb: 正在 '/home/luo/memguardos-product-head/dist/memguardos_0.1.0-2_all.
       "architecture": "all",
       "path": "/home/luo/memguardos-product-head/dist/memguardos-doc_0.1.0-2_all.deb",
       "bytes": 171048,
-      "sha256": "a4ac1b629a03ff2e4c9bd45e4e641864facb690356e6418e2aa5f321b326c6be"
+      "sha256": "33a27e7bcdc99a2c3c8c080826d0e569586108ded884f1575346c0bfed351a87"
     },
     {
       "package": "memguardos",
       "version": "0.1.0-2",
       "architecture": "all",
       "path": "/home/luo/memguardos-product-head/dist/memguardos_0.1.0-2_all.deb",
-      "bytes": 884,
-      "sha256": "4a050c18a9a93d15a5882e1e2701a03a9c823e484bdec2bf36db9b832fd4ed5f"
+      "bytes": 888,
+      "sha256": "50fd30e67d044edd91224d28d0a6b9bee62c01ee366614317e38d6213dc6621a"
     }
   ]
 }
