@@ -5,12 +5,12 @@
     {
       "path": "deb_lifecycle.txt",
       "bytes": 224,
-      "sha256": "fd7b41a7b95300996dd10a1f747407bfd283cdae434b678e09c35c6917b09963"
+      "sha256": "cc02f4327f079d79bd690026cc6cedf7705b350a1000cd8fa35446ba810d1075"
     },
     {
       "path": "debian_packages.txt",
-      "bytes": 9706,
-      "sha256": "bf27bf22c1718b9b736eedf0a8a18b91eb8a5279450b9fb89085b771c127a4f7"
+      "bytes": 9707,
+      "sha256": "b7b7ab67a64b75b6784e97444c47e6b5ecd52fffe0f140f80e79b2e63f3b8ccf"
     },
     {
       "path": "desktop_build.txt",
@@ -20,7 +20,7 @@
     {
       "path": "desktop_plugins.txt",
       "bytes": 5975,
-      "sha256": "1d7bb2844f78e078d276514f60dcc427623d7f5728e4027e1f8413e7af602f79"
+      "sha256": "883bda28a7d5681c08f95e371d754d3516d26c58035a1976bd5680bdf7248d44"
     },
     {
       "path": "environment.txt",
@@ -30,7 +30,7 @@
     {
       "path": "installed_desktop.txt",
       "bytes": 413,
-      "sha256": "f2f7c7cd17be267385eafac6abdb22c4537f853a947a6ca09b87dd469fbc5e6d"
+      "sha256": "5d7c5e12d41ff1040eecd00bd7599a0f7bbce0c3fca4d2dc9a463979c3890921"
     },
     {
       "path": "installed_packages.txt",
@@ -40,7 +40,7 @@
     {
       "path": "kylin_warmup.txt",
       "bytes": 373,
-      "sha256": "d22732442964d70f0182fef29fb116d9e3602165293ec6c465e73a59c35d5d98"
+      "sha256": "363a62f24d1da8f58e4aad7ea92afc0ec14d378ae650f2d3b49a84319cf9fa3d"
     },
     {
       "path": "manifest_refresh.txt",
@@ -49,53 +49,53 @@
     },
     {
       "path": "openkylin_status.txt",
-      "bytes": 8759,
-      "sha256": "79888b60a01bb8906c6ef718eb4850a25b57a333ff4508a7d7f13b4921b4db46"
+      "bytes": 8827,
+      "sha256": "793696bcd54d84c0811fdb7b0b4034e0f0874fe693e83659ec48ef90f798c413"
     },
     {
       "path": "openkylin_status_probe_sdk.txt",
-      "bytes": 14306,
-      "sha256": "77e3ce7d9207409be36aae3eab86abb5e7b0aaf6a2acf708dc388605e8b6cb4b"
+      "bytes": 14374,
+      "sha256": "14a62d457a60a31e2c73695b37ba69f717a785c8ab45e7b13c82e328018f8838"
     },
     {
       "path": "peony_batch_apply.json",
       "bytes": 2171,
-      "sha256": "d4c62b47801251ffc083e981089c6b162511a17f311022584dabfd46ed7bc4f0"
+      "sha256": "33bd371a9f66a12a88fd434a4c15bdf0bf5b653316e27ecd9fb24af19d56dce5"
     },
     {
       "path": "peony_batch_preview.json",
-      "bytes": 2463,
-      "sha256": "a4c4005c913da2001646014bb0e34b774f963bd6e6ee07662eddc0dc3357e2ac"
+      "bytes": 2469,
+      "sha256": "9ff559587f2fddc1db4c8e603094fba9263dada8bb6db5d85967e139fb6273da"
     },
     {
       "path": "peony_sensitive_preview.json",
-      "bytes": 1694,
-      "sha256": "7042475db7188271d4d3a0abe11b5d73a86a0fcfb5b9a2fef68938a3176d199a"
+      "bytes": 1697,
+      "sha256": "4543166f9d2e92da89278f7285aa0a208670f111b94abfefdc1ac437cfd12f3d"
     },
     {
       "path": "polkit_assets.txt",
       "bytes": 3099,
-      "sha256": "0016a70aec3f38abbb4540247298cd19b7bd8b4146955674d0841013660b498a"
+      "sha256": "7a9de45886a14ba3abf2ba42fbe0ad04e1e11334a89228b2fd479b8dab925d35"
     },
     {
       "path": "pytest_openkylin.txt",
-      "bytes": 405,
-      "sha256": "ef7a27f0baaf705e2140b524bd41f84acf9547de8e6ca4b92964676865eee0e0"
+      "bytes": 394,
+      "sha256": "540777df602debde5a45d8c2d19728ca125a0eced33ecb76088121a85842e26b"
     },
     {
       "path": "source_revision.json",
       "bytes": 163,
-      "sha256": "f99a650e6a3edf3067a9931e442ad78833d68251a18463fd4a01b502d639572f"
+      "sha256": "842a82c3f7efac4e4614db6f4984322cb45674bc1a5c5ae8b4c141d0e27ab62e"
     },
     {
       "path": "systemd_cgroup.txt",
-      "bytes": 792,
-      "sha256": "4aabc91fb52d7487ed1d3f66361e85cac7f0e105da21122f621826212d620597"
+      "bytes": 794,
+      "sha256": "790cef421baa29d29b59755d55cbd67966b06cd9ba713de8eadeb2466741b4fc"
     },
     {
       "path": "tray_assets.txt",
       "bytes": 3148,
-      "sha256": "746ecaa587fda45fd159b3356bd130a4f5d9b6264aadd323d6beba96684e736d"
+      "sha256": "34df4d5f0d9faf5200e8d45ca2d615bdf867b22f22dca06ced75441d3708a7da"
     }
   ]
 }

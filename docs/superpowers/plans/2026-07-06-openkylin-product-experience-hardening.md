@@ -158,6 +158,8 @@ python scripts/check_competition_ready.py
 
 Observed on 2026-07-06: focused tests `54 passed`; full pytest `283 passed, 1 skipped`; ruff, Markdown links and competition readiness all passed.
 
-- [ ] **Step 3: Apply on openKylin**
+- [x] **Step 3: Apply on openKylin**
 
 Sync the changed files to `/home/luo/memguardos-product-head`, rebuild five Debian packages, reinstall with `apt install --reinstall`, restart the tray in the current UKUI session, and collect openKylin native evidence for the committed code revision.
+
+Observed on 2026-07-06: source revision `ec02835cf40b32084a9b1029437e8003fe3dfada`; five Debian packages rebuilt and reinstalled with `apt install --reinstall`; tray restarted in the UKUI session; openKylin native focused tests `28 passed`; final evidence pytest `284 passed`; evidence manifest refreshed with 19 files.
