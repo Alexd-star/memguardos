@@ -779,7 +779,11 @@ void MemGuardUkccPlugin::renderStatus(const QJsonObject &payload)
         item->setIcon(0, levelIcon(level));
         item->setText(0, component.value(QStringLiteral("label")).toString());
         item->setText(1, levelText(level));
-        item->setText(2, component.value(QStringLiteral("ready")).toBool() ? QStringLiteral("已就绪") : QStringLiteral("查看诊断建议"));
+        const QString userMessage = component.value(QStringLiteral("user_message")).toString();
+        const QString nextAction = component.value(QStringLiteral("next_action")).toString();
+        item->setText(2, userMessage.isEmpty()
+            ? (component.value(QStringLiteral("ready")).toBool() ? QStringLiteral("已就绪") : QStringLiteral("查看诊断建议"))
+            : (nextAction.isEmpty() ? userMessage : QStringLiteral("%1；%2").arg(userMessage, nextAction)));
     }
     const QJsonObject services = payload.value(QStringLiteral("services")).toObject();
     const QJsonObject memguardService = services.value(QStringLiteral("memguardd.service")).toObject();
@@ -798,15 +802,26 @@ void MemGuardUkccPlugin::renderStatus(const QJsonObject &payload)
     const bool inferenceKnown = !inferenceValue.isUndefined() && !inferenceValue.isNull();
     const bool embeddingReady = inferenceKnown && inferenceValue.toBool();
     const bool fastSdkStatus = embedding.value(QStringLiteral("status_mode")).toString() == QStringLiteral("fast");
+    const QString capabilityState = embedding.value(QStringLiteral("capability_state")).toString();
+    const QString userMessage = embedding.value(QStringLiteral("user_message")).toString();
+    const QString nextAction = embedding.value(QStringLiteral("next_action")).toString();
+    const bool installedNotProbed = capabilityState == QStringLiteral("installed_not_probed");
+    const QString sdkLevel = embeddingReady || installedNotProbed
+        ? QStringLiteral("green")
+        : (embeddingAvailable ? QStringLiteral("yellow") : QStringLiteral("red"));
+    const QString sdkLabel = userMessage.isEmpty()
+        ? (embeddingReady ? QStringLiteral("推理就绪") : (embeddingAvailable ? QStringLiteral("SDK 可检测，完整推理按需检查") : QStringLiteral("未检测到")))
+        : userMessage;
     setStatusBadge(
         sdkStatusIcon_,
         sdkStatusLabel_,
-        embeddingReady ? QStringLiteral("green") : (embeddingAvailable ? QStringLiteral("yellow") : QStringLiteral("red")),
-        embeddingReady ? QStringLiteral("推理就绪") : (embeddingAvailable ? QStringLiteral("SDK 可检测，完整推理按需检查") : QStringLiteral("未检测到")));
-    sdkState_->setText(QStringLiteral("安装状态：%1；推理状态：%2；模型：%3")
+        sdkLevel,
+        sdkLabel);
+    sdkState_->setText(QStringLiteral("安装状态：%1；推理状态：%2；模型：%3；建议：%4")
         .arg(boolText(embedding.value(QStringLiteral("available")).toBool()))
-        .arg(inferenceKnown ? boolText(embeddingReady) : (fastSdkStatus ? QStringLiteral("未执行快速启动时的重探针") : QStringLiteral("未执行")))
-        .arg(embedding.value(QStringLiteral("model_info")).toObject().value(QStringLiteral("name")).toString(QStringLiteral("未识别"))));
+        .arg(inferenceKnown ? boolText(embeddingReady) : (fastSdkStatus ? QStringLiteral("已安装，未执行推理探针") : QStringLiteral("未执行推理探针")))
+        .arg(embedding.value(QStringLiteral("model_info")).toObject().value(QStringLiteral("name")).toString(QStringLiteral("未识别")))
+        .arg(nextAction.isEmpty() ? QStringLiteral("日常使用可保持稳定检索路径") : nextAction));
     const QJsonObject security = payload.value(QStringLiteral("security")).toObject();
     const bool auditReady = security.value(QStringLiteral("auditd")).toObject().value(QStringLiteral("rules_tool_available")).toBool();
     setStatusBadge(

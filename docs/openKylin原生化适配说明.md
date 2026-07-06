@@ -38,6 +38,16 @@ MemGuardOS 面向 openKylin 的适配目标分为四层。
 python -m memguard.cli.memctl openkylin-status
 ```
 
+控制中心、托盘和日常状态刷新默认使用快速状态。快速状态只检查 SDK 文件、头文件、模型仓库、socket、systemd 服务和插件文件，不执行真实 embedding 推理。这样可以避免用户打开【设置】>【安全】时被端侧模型冷启动拖慢。快速状态下，如果 Kylin embedding SDK、模型和运行路径已经可检测，系统会显示“已安装，未执行推理探针”，并给出“需要端侧增强时点击预热”的下一步建议；这不是故障，也不会影响默认 FTS/hash/graph 稳定检索路径。
+
+需要证明 Kylin embedding 真实推理可用时，应主动运行完整探针：
+
+```bash
+python -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
+```
+
+完整探针会调用 SDK 返回真实 768 维向量，适合证据采集、答辩和安装后复验；日常 UI 不默认执行它。
+
 该命令检查的内容包括：
 
 - `system`：系统版本、内核、架构、是否识别为 openKylin 类环境。

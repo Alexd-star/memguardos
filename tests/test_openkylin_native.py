@@ -45,7 +45,85 @@ def test_openkylin_status_fast_uses_light_sdk_status(tmp_path, monkeypatch, caps
     assert payload["sdk"]["embedding"]["status_mode"] == "fast"
     assert payload["sdk"]["embedding"]["embedding_probe"] is None
     assert payload["sdk"]["embedding"]["inference_ready"] is None
+    assert payload["sdk"]["embedding"]["capability_state"] in {
+        "installed_not_probed",
+        "not_installed",
+        "metadata_incomplete",
+    }
+    assert payload["sdk"]["embedding"]["user_message"]
+    assert payload["sdk"]["embedding"]["next_action"]
     assert "vector_store" in payload["sdk"]
+
+
+def test_fast_openkylin_status_does_not_mark_installed_embedding_as_fault(monkeypatch, tmp_path):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+
+    monkeypatch.setattr(
+        openkylin_native,
+        "_service_status",
+        lambda units: {
+            "systemd": {"available": True, "active": True},
+            "memguardd.service": {"available": True, "active": True, "state": "active"},
+            "kylin-ai-vector-engine.service": {"available": True, "active": True, "state": "active"},
+            "kytensor.service": {"available": True, "active": True, "state": "active"},
+        },
+    )
+    monkeypatch.setattr(
+        openkylin_native,
+        "_fast_sdk_status",
+        lambda services: {
+            "embedding": {
+                "status_mode": "fast",
+                "available": True,
+                "inference_ready": None,
+                "embedding_probe": None,
+                "model_info": {"name": "ensemble-embd_gte-base_uint8-text", "dim": 768, "ondevice": True},
+                "fallback": "hash_embedding",
+                "diagnosis": {},
+            },
+            "vector_store": {"available": True, "user_service": {"active": True}},
+        },
+    )
+    monkeypatch.setattr(
+        openkylin_native,
+        "_desktop_status",
+        lambda: {
+            "peony": {"available": True, "plugin_installed": True},
+            "ukui_control_center": {"available": True, "plugin_installed": True},
+            "notify_send": {"available": True},
+        },
+    )
+    monkeypatch.setattr(
+        openkylin_native,
+        "_security_status",
+        lambda: {
+            "auditd": {"available": True, "rules_tool_available": True},
+            "polkit": {"available": True, "policy_installed": True},
+            "bpf_lsm": {"source_available": True, "loader_available": True},
+        },
+    )
+    monkeypatch.setattr(
+        openkylin_native,
+        "_resource_status",
+        lambda namespace: {
+            "cgroup_v2": True,
+            "service_managed": True,
+            "control_group": "/system.slice/memguardd.service",
+            "memory": {},
+            "cpu": {},
+            "namespace": namespace,
+        },
+    )
+
+    payload = openkylin_native.openkylin_native_status(namespace="default", fast=True)
+    components = {item["name"]: item for item in payload["components"]}
+
+    assert components["kylin_embedding"]["level"] == "green"
+    assert components["kylin_embedding"]["ready"] is True
+    assert components["kylin_embedding"]["user_message"] == "已安装，未执行推理探针"
+    assert components["kylin_embedding"]["next_action"] == "需要端侧增强时点击“预热 Kylin SDK”"
+    assert payload["summary"]["overall"] == "green"
+    assert not any("未进入真实推理就绪状态" in item for item in payload["recommendations"])
 
 
 def test_desktop_scan_file_reports_preview_without_ingesting_sensitive_file(tmp_path, monkeypatch, capsys):
@@ -353,6 +431,11 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "管理员授权" in source
     assert "appendHistory" in source
     assert "renderResourceSnapshot" in source
+    assert "capability_state" in source
+    assert "user_message" in source
+    assert "next_action" in source
+    assert "已安装，未执行推理探针" in source
+    assert "预热 Kylin SDK" in source
     assert "启动服务" in source
     assert "停止服务" in source
     assert "重启服务" in source

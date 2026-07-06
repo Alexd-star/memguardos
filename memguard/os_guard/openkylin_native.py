@@ -21,17 +21,24 @@ def openkylin_native_status(
     namespace = normalize_namespace(namespace)
     services = _service_status(["memguardd.service", "kylin-ai-vector-engine.service", "kytensor.service"])
     sdk = _fast_sdk_status(services) if fast and not probe_sdk else kylin_sdk_status(probe_embedding=probe_sdk, probe_timeout=probe_timeout)
+    _augment_embedding_product_state(sdk["embedding"])
     desktop = _desktop_status()
     security = _security_status()
     resources = _resource_status(namespace)
     system = _system_status()
-    embedding_ready = sdk["embedding"].get("inference_ready")
-    if fast and embedding_ready is None:
-        embedding_ready = sdk["embedding"].get("available")
+    embedding_ready = sdk["embedding"].get("component_ready")
     components = [
         _component("systemd", services["systemd"]["available"], services["systemd"]["active"], "systemd 服务管理"),
         _component("auditd", security["auditd"]["available"], security["auditd"]["rules_tool_available"], "审计规则工具"),
-        _component("kylin_embedding", sdk["embedding"].get("available"), embedding_ready, "Kylin embedding SDK"),
+        _component(
+            "kylin_embedding",
+            sdk["embedding"].get("available"),
+            embedding_ready,
+            "Kylin embedding SDK",
+            user_message=str(sdk["embedding"].get("user_message", "")),
+            next_action=str(sdk["embedding"].get("next_action", "")),
+            capability_state=str(sdk["embedding"].get("capability_state", "")),
+        ),
         _component("kylin_vector", sdk["vector_store"].get("available"), sdk["vector_store"].get("user_service", {}).get("active"), "Kylin vector SDK"),
         _component("peony", desktop["peony"]["available"], desktop["peony"]["plugin_installed"], "Peony 右键插件"),
         _component("ukui_control_center", desktop["ukui_control_center"]["available"], desktop["ukui_control_center"]["plugin_installed"], "UKUI 控制中心插件"),
@@ -88,6 +95,18 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
     vector_binary = Path("/usr/bin/kylin-ai-vector-engine")
     vector_header = Path("/usr/include/kysdk-vector-engine-client/Database.h")
     embedding_available = bool(library_file or any(embedding_headers.values()) or has_text_models)
+    if has_text_models and embedding_available:
+        capability_state = "installed_not_probed"
+        user_message = "已安装，未执行推理探针"
+        next_action = "需要端侧增强时点击“预热 Kylin SDK”"
+    elif embedding_available:
+        capability_state = "metadata_incomplete"
+        user_message = "已检测到部分 SDK 文件，模型或运行时信息不完整"
+        next_action = "进入端侧能力页运行完整检查"
+    else:
+        capability_state = "not_installed"
+        user_message = "未检测到 Kylin embedding SDK"
+        next_action = "可继续使用稳定检索路径，或安装 openKylin AI 组件"
     vector_service = services.get("kylin-ai-vector-engine.service", {}) if isinstance(services.get("kylin-ai-vector-engine.service"), dict) else {}
     return {
         "embedding": {
@@ -120,6 +139,10 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
             "available": embedding_available,
             "inference_ready": None,
             "ready_for_default_retrieval": False,
+            "capability_state": capability_state,
+            "component_ready": capability_state == "installed_not_probed",
+            "user_message": user_message,
+            "next_action": next_action,
             "fallback": "hash_embedding",
             "diagnosis": {
                 "availability_meaning": "fast mode checks files, sockets and services only; run sdk-status --probe-embedding for real inference.",
@@ -141,6 +164,44 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
             "fallback": "sqlite_fts_hash_vector",
         },
     }
+
+
+def _augment_embedding_product_state(embedding: Dict[str, object]) -> None:
+    if embedding.get("capability_state"):
+        return
+    available = bool(embedding.get("available"))
+    inference_value = embedding.get("inference_ready")
+    probe = embedding.get("embedding_probe")
+    model_info = embedding.get("model_info")
+    if inference_value is True:
+        embedding["capability_state"] = "inference_ready"
+        embedding["component_ready"] = True
+        embedding["user_message"] = "推理就绪，可作为端侧检索增强"
+        embedding["next_action"] = "可继续使用，也可定期导出诊断报告"
+    elif inference_value is False:
+        embedding["capability_state"] = "probe_failed"
+        embedding["component_ready"] = False
+        embedding["user_message"] = "已安装，但真实推理未通过"
+        embedding["next_action"] = "进入端侧能力页查看完整检查结果并执行预热"
+    elif available and model_info:
+        embedding["capability_state"] = "installed_not_probed"
+        embedding["component_ready"] = True
+        embedding["user_message"] = "已安装，未执行推理探针"
+        embedding["next_action"] = "需要端侧增强时点击“预热 Kylin SDK”"
+    elif available:
+        embedding["capability_state"] = "metadata_incomplete"
+        embedding["component_ready"] = False
+        embedding["user_message"] = "已检测到部分 SDK 文件，模型或运行时信息不完整"
+        embedding["next_action"] = "进入端侧能力页运行完整检查"
+    else:
+        embedding["capability_state"] = "not_installed"
+        embedding["component_ready"] = False
+        embedding["user_message"] = "未检测到 Kylin embedding SDK"
+        embedding["next_action"] = "可继续使用稳定检索路径，或安装 openKylin AI 组件"
+    if probe is None and embedding["capability_state"] == "installed_not_probed":
+        diagnosis = embedding.setdefault("diagnosis", {})
+        if isinstance(diagnosis, dict):
+            diagnosis["product_status_meaning"] = "未执行推理探针不是故障；快速状态用于保持 UKUI 设置页流畅。"
 
 
 def _system_status() -> Dict[str, object]:
@@ -272,14 +333,30 @@ def _resource_status(namespace: str) -> Dict[str, object]:
     }
 
 
-def _component(name: str, available: object, ready: object, label: str) -> Dict[str, object]:
+def _component(
+    name: str,
+    available: object,
+    ready: object,
+    label: str,
+    *,
+    user_message: str = "",
+    next_action: str = "",
+    capability_state: str = "",
+) -> Dict[str, object]:
     if ready is True:
         level = "green"
     elif available:
         level = "yellow"
     else:
         level = "red"
-    return {"name": name, "label": label, "available": bool(available), "ready": bool(ready), "level": level}
+    result = {"name": name, "label": label, "available": bool(available), "ready": bool(ready), "level": level}
+    if user_message:
+        result["user_message"] = user_message
+    if next_action:
+        result["next_action"] = next_action
+    if capability_state:
+        result["capability_state"] = capability_state
+    return result
 
 
 def _summary(components: List[Dict[str, object]]) -> Dict[str, object]:
@@ -304,7 +381,10 @@ def _summary(components: List[Dict[str, object]]) -> Dict[str, object]:
 def _recommendations(components: List[Dict[str, object]], sdk: Dict[str, object], desktop: Dict[str, object], security: Dict[str, object]) -> List[str]:
     recommendations = []
     by_name = {str(item["name"]): item for item in components}
-    if by_name["kylin_embedding"]["level"] != "green":
+    embedding_state = str(sdk["embedding"].get("capability_state", ""))
+    if embedding_state == "installed_not_probed":
+        recommendations.append("Kylin embedding SDK 已安装；日常状态刷新不执行推理探针，需要端侧增强时可在控制中心点击“预热 Kylin SDK”。")
+    elif by_name["kylin_embedding"]["level"] != "green":
         recommendations.append("Kylin embedding SDK 未进入真实推理就绪状态时，保持稳定 fallback；需要端侧增强时先运行 warmup_kylin_sdk.sh。")
     if by_name["peony"]["level"] != "green" or by_name["ukui_control_center"]["level"] != "green":
         recommendations.append("如需桌面原生体验，请安装 memguardos UKUI/Peony 插件并重启 Peony 或 UKUI 控制中心。")
