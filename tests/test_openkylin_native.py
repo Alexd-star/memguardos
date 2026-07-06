@@ -920,6 +920,7 @@ def test_ukui_tray_follows_system_theme_and_deduplicates_notifications():
     assert "openControlCenter(QStringLiteral(\"sdk\"))" in source
     assert "openControlCenter(QStringLiteral(\"audit\"))" in source
     assert "openDashboard(QStringLiteral(\"#audit\"))" in source
+    assert "connect(openDashboardAction, &QAction::triggered, this, [this]() { openDashboard(); });" in source
     assert "最近一次阻断记录" in source
     assert "setStyleSheet" not in source
     assert "QSystemTrayIcon::isSystemTrayAvailable" in source

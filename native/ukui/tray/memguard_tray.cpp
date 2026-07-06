@@ -111,7 +111,7 @@ public:
         connect(openSdk, &QAction::triggered, this, [this]() { openControlCenter(QStringLiteral("sdk")); });
         connect(openAudit, &QAction::triggered, this, [this]() { openControlCenter(QStringLiteral("audit")); });
         connect(openSensitive, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#audit")); });
-        connect(openDashboardAction, &QAction::triggered, this, &TrayController::openDashboard);
+        connect(openDashboardAction, &QAction::triggered, this, [this]() { openDashboard(); });
         connect(refresh, &QAction::triggered, this, &TrayController::refresh);
         connect(quit, &QAction::triggered, qApp, &QApplication::quit);
         connect(&tray_, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
