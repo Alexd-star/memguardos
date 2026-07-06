@@ -26,7 +26,7 @@ def test_openkylin_status_cli_has_native_operational_schema(tmp_path, monkeypatc
     assert "peony" in payload["desktop"]
     assert "auditd" in payload["security"]
     assert "memory" in payload["resources"]
-    assert payload["recommendations"]
+    assert isinstance(payload["recommendations"], list)
 
 
 def test_openkylin_status_fast_uses_light_sdk_status(tmp_path, monkeypatch, capsys):
@@ -131,6 +131,7 @@ def test_fast_openkylin_status_does_not_mark_installed_embedding_as_fault(monkey
     assert components["kylin_embedding"]["user_message"] == "已安装，未执行推理探针"
     assert components["kylin_embedding"]["next_action"] == "需要端侧增强时点击“预热 Kylin SDK”"
     assert payload["summary"]["overall"] == "green"
+    assert payload["recommendations"] == []
     assert not any("未进入真实推理就绪状态" in item for item in payload["recommendations"])
 
 
@@ -206,6 +207,7 @@ def test_fast_openkylin_status_treats_vector_socket_as_ready(monkeypatch, tmp_pa
     assert components["kylin_vector"]["capability_state"] == "socket_ready"
     assert components["kylin_vector"]["user_message"] == "向量服务接口可连接"
     assert payload["summary"]["overall"] == "green"
+    assert payload["recommendations"] == []
     assert not any("Kylin vector SDK 已安装但用户服务未激活" in item for item in payload["recommendations"])
 
 

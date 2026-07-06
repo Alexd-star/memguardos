@@ -442,9 +442,7 @@ def _recommendations(components: List[Dict[str, object]], sdk: Dict[str, object]
     recommendations = []
     by_name = {str(item["name"]): item for item in components}
     embedding_state = str(sdk["embedding"].get("capability_state", ""))
-    if embedding_state == "installed_not_probed":
-        recommendations.append("Kylin embedding SDK 已安装；日常状态刷新不执行推理探针，需要端侧增强时可在控制中心点击“预热 Kylin SDK”。")
-    elif by_name["kylin_embedding"]["level"] != "green":
+    if embedding_state != "installed_not_probed" and by_name["kylin_embedding"]["level"] != "green":
         recommendations.append("Kylin embedding SDK 未进入真实推理就绪状态时，保持稳定 fallback；需要端侧增强时先运行 warmup_kylin_sdk.sh。")
     if by_name["peony"]["level"] != "green" or by_name["ukui_control_center"]["level"] != "green":
         recommendations.append("如需桌面原生体验，请安装 memguardos UKUI/Peony 插件并重启 Peony 或 UKUI 控制中心。")
@@ -454,8 +452,6 @@ def _recommendations(components: List[Dict[str, object]], sdk: Dict[str, object]
         recommendations.append("Kylin vector SDK 已安装但用户服务未激活，可重启 kylin-ai-vector-engine 后复验。")
     if not desktop["notify_send"]["available"]:
         recommendations.append("notify-send 不可用时，Peony 扫描仍会写入 JSON/审计，但不会显示桌面通知。")
-    if not recommendations:
-        recommendations.append("openKylin 原生化状态良好，可继续进行最终证据采集和演示录屏。")
     return recommendations
 
 
