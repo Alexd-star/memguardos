@@ -22,6 +22,7 @@ def openkylin_native_status(
     services = _service_status(["memguardd.service", "kylin-ai-vector-engine.service", "kytensor.service"])
     sdk = _fast_sdk_status(services) if fast and not probe_sdk else kylin_sdk_status(probe_embedding=probe_sdk, probe_timeout=probe_timeout)
     _augment_embedding_product_state(sdk["embedding"])
+    _augment_vector_product_state(sdk["vector_store"])
     desktop = _desktop_status()
     security = _security_status()
     resources = _resource_status(namespace)
@@ -39,7 +40,15 @@ def openkylin_native_status(
             next_action=str(sdk["embedding"].get("next_action", "")),
             capability_state=str(sdk["embedding"].get("capability_state", "")),
         ),
-        _component("kylin_vector", sdk["vector_store"].get("available"), sdk["vector_store"].get("user_service", {}).get("active"), "Kylin vector SDK"),
+        _component(
+            "kylin_vector",
+            sdk["vector_store"].get("available"),
+            sdk["vector_store"].get("component_ready"),
+            "Kylin vector SDK",
+            user_message=str(sdk["vector_store"].get("user_message", "")),
+            next_action=str(sdk["vector_store"].get("next_action", "")),
+            capability_state=str(sdk["vector_store"].get("capability_state", "")),
+        ),
         _component("peony", desktop["peony"]["available"], desktop["peony"]["plugin_installed"], "Peony 右键插件"),
         _component("ukui_control_center", desktop["ukui_control_center"]["available"], desktop["ukui_control_center"]["plugin_installed"], "UKUI 控制中心插件"),
         _component("cgroup_v2", resources["cgroup_v2"], resources["cgroup_v2"], "cgroup v2 资源治理"),
@@ -108,6 +117,24 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
         user_message = "未检测到 Kylin embedding SDK"
         next_action = "可继续使用稳定检索路径，或安装 openKylin AI 组件"
     vector_service = services.get("kylin-ai-vector-engine.service", {}) if isinstance(services.get("kylin-ai-vector-engine.service"), dict) else {}
+    vector_socket_exists = vector_socket.exists()
+    vector_available = vector_binary.exists() or vector_header.exists() or vector_socket_exists
+    if vector_socket_exists:
+        vector_state = "socket_ready"
+        vector_message = "向量服务接口可连接"
+        vector_action = "可继续使用；如需服务管理状态，可在系统维护中刷新服务"
+    elif vector_service.get("active"):
+        vector_state = "service_active"
+        vector_message = "向量服务正在运行"
+        vector_action = "可继续使用"
+    elif vector_available:
+        vector_state = "metadata_available"
+        vector_message = "已检测到向量组件，服务接口未连接"
+        vector_action = "需要端侧向量库时重启 Kylin vector engine"
+    else:
+        vector_state = "not_installed"
+        vector_message = "未检测到 Kylin vector SDK"
+        vector_action = "系统将继续使用 SQLite FTS 与本地向量 fallback"
     return {
         "embedding": {
             "backend": "kylin_coreai_embedding",
@@ -159,8 +186,12 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
             "default_binary": "/usr/bin/kylin-ai-vector-engine-default",
             "user_service": vector_service,
             "socket": str(vector_socket),
-            "socket_exists": vector_socket.exists(),
-            "available": vector_binary.exists() or vector_header.exists() or vector_socket.exists(),
+            "socket_exists": vector_socket_exists,
+            "available": vector_available,
+            "capability_state": vector_state,
+            "component_ready": vector_state in {"socket_ready", "service_active"},
+            "user_message": vector_message,
+            "next_action": vector_action,
             "fallback": "sqlite_fts_hash_vector",
         },
     }
@@ -202,6 +233,35 @@ def _augment_embedding_product_state(embedding: Dict[str, object]) -> None:
         diagnosis = embedding.setdefault("diagnosis", {})
         if isinstance(diagnosis, dict):
             diagnosis["product_status_meaning"] = "未执行推理探针不是故障；快速状态用于保持 UKUI 设置页流畅。"
+
+
+def _augment_vector_product_state(vector_store: Dict[str, object]) -> None:
+    if vector_store.get("capability_state"):
+        return
+    available = bool(vector_store.get("available"))
+    user_service = vector_store.get("user_service", {})
+    service_active = bool(user_service.get("active")) if isinstance(user_service, dict) else False
+    socket_ready = bool(vector_store.get("socket_exists"))
+    if socket_ready:
+        vector_store["capability_state"] = "socket_ready"
+        vector_store["component_ready"] = True
+        vector_store["user_message"] = "向量服务接口可连接"
+        vector_store["next_action"] = "可继续使用；如需服务管理状态，可在系统维护中刷新服务"
+    elif service_active:
+        vector_store["capability_state"] = "service_active"
+        vector_store["component_ready"] = True
+        vector_store["user_message"] = "向量服务正在运行"
+        vector_store["next_action"] = "可继续使用"
+    elif available:
+        vector_store["capability_state"] = "metadata_available"
+        vector_store["component_ready"] = False
+        vector_store["user_message"] = "已检测到向量组件，服务接口未连接"
+        vector_store["next_action"] = "需要端侧向量库时重启 Kylin vector engine"
+    else:
+        vector_store["capability_state"] = "not_installed"
+        vector_store["component_ready"] = False
+        vector_store["user_message"] = "未检测到 Kylin vector SDK"
+        vector_store["next_action"] = "系统将继续使用 SQLite FTS 与本地向量 fallback"
 
 
 def _system_status() -> Dict[str, object]:
@@ -390,7 +450,7 @@ def _recommendations(components: List[Dict[str, object]], sdk: Dict[str, object]
         recommendations.append("如需桌面原生体验，请安装 memguardos UKUI/Peony 插件并重启 Peony 或 UKUI 控制中心。")
     if not security["polkit"]["policy_installed"]:
         recommendations.append("如需桌面授权弹窗，请安装 org.memguardos.policy 和 memguardos-native-helper.sh。")
-    if sdk["vector_store"].get("available") and not sdk["vector_store"].get("user_service", {}).get("active"):
+    if sdk["vector_store"].get("available") and not sdk["vector_store"].get("component_ready"):
         recommendations.append("Kylin vector SDK 已安装但用户服务未激活，可重启 kylin-ai-vector-engine 后复验。")
     if not desktop["notify_send"]["available"]:
         recommendations.append("notify-send 不可用时，Peony 扫描仍会写入 JSON/审计，但不会显示桌面通知。")
