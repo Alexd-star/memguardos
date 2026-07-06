@@ -63,6 +63,24 @@ def test_openkylin_status_fast_uses_light_sdk_status(tmp_path, monkeypatch, caps
     assert payload["sdk"]["vector_store"]["next_action"]
 
 
+def test_openkylin_status_default_uses_light_product_status(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+    monkeypatch.delenv("MEMGUARD_NAMESPACE", raising=False)
+
+    def fail_heavy_probe(*args, **kwargs):
+        raise AssertionError("default openKylin status must stay lightweight; use --probe-sdk for full SDK probing")
+
+    monkeypatch.setattr(openkylin_native, "kylin_sdk_status", fail_heavy_probe)
+
+    assert memctl_main(["openkylin-status"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["schema"] == "memguardos-openkylin-native-status-v1"
+    assert payload["sdk"]["embedding"]["status_mode"] == "fast"
+    assert payload["sdk"]["embedding"]["embedding_probe"] is None
+    assert payload["sdk"]["embedding"]["inference_ready"] is None
+
+
 def test_fast_openkylin_status_does_not_mark_installed_embedding_as_fault(monkeypatch, tmp_path):
     monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
 

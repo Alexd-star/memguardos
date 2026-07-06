@@ -2,8 +2,8 @@
 
 该目录提供两个可选 UKUI 原生插件原型：
 
-- `peony-memguard`：Peony 文件管理器右键菜单插件，把选中文件路径作为 `peony_context_menu` OS 事件发送给 `memctl ingest-os-event`，触发 MemGuardOS 的敏感路径识别与审计。
-- `ukcc-memguard`：UKUI 控制中心插件入口，提供运行环境检查、审计链校验、端侧向量能力检查、诊断报告和本地控制台入口。页面初次打开时使用 `memctl openkylin-status --fast` 读取轻量状态，只检查服务、插件、模型仓库、socket 和文件存在性；完整 Kylin SDK 推理探针只在用户点击【检查端侧向量能力】或【预热 Kylin SDK】时执行，避免打开系统设置时因 SDK 冷启动造成卡顿。
+- `peony-memguard`：Peony 文件管理器右键菜单插件，对用户选中的一个或多个文件先执行扫描预览，显示风险、建议动作和可导入状态；用户确认后才执行导入，高风险敏感文本会被阻断，目录、大文件和非文本文件只记录来源事件。
+- `ukcc-memguard`：UKUI 控制中心插件入口，提供运行环境检查、审计链校验、端侧向量能力检查、诊断报告和本地控制台入口。页面初次打开时使用 `memctl openkylin-status` 读取默认轻量状态，只检查服务、插件、模型仓库、socket 和文件存在性；完整 Kylin SDK 推理探针只在用户点击【检查端侧向量能力】或【预热 Kylin SDK】时执行，避免打开系统设置时因 SDK 冷启动造成卡顿。
 
 这两个插件需要 `libpeony-dev`、`libukcc-dev`、Qt5 开发包和 openKylin 插件安装能力。当前默认主路径仍是 CLI、daemon、Unix socket API 和本地 Web 控制台；插件属于面向 openKylin 桌面生态的原生增强。
 

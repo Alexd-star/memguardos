@@ -215,7 +215,7 @@ def build_parser() -> argparse.ArgumentParser:
     sdk_status.add_argument("--probe-embedding", action="store_true", help="Run one real embedding call; may be slow if the model service is not ready")
     sdk_status.add_argument("--probe-timeout", type=float, default=45.0, help="Timeout in seconds for the protected embedding probe subprocess")
     openkylin_status = sub.add_parser("openkylin-status", help="Show openKylin-native desktop, SDK, service and security status")
-    openkylin_status.add_argument("--fast", action="store_true", help="Use lightweight checks suitable for desktop UI startup")
+    openkylin_status.add_argument("--fast", action="store_true", help="Use lightweight checks suitable for desktop UI startup; this is also the default unless --probe-sdk is set")
     openkylin_status.add_argument("--probe-sdk", action="store_true", help="Run one protected Kylin embedding probe")
     openkylin_status.add_argument("--probe-timeout", type=float, default=45.0)
     native_action = sub.add_parser("native-action", help="Run a fixed openKylin system action through Polkit")
@@ -702,13 +702,14 @@ def _run_service_free_command(args: argparse.Namespace) -> int:
         return 0
 
     if args.command == "openkylin-status":
+        lightweight_status = args.fast or not args.probe_sdk
         print(
             json.dumps(
                 openkylin_native_status(
                     namespace=args.namespace,
                     probe_sdk=args.probe_sdk,
                     probe_timeout=args.probe_timeout,
-                    fast=args.fast,
+                    fast=lightweight_status,
                 ),
                 ensure_ascii=False,
                 indent=2,
