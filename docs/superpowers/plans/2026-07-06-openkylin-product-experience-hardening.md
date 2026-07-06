@@ -162,4 +162,4 @@ Observed on 2026-07-06: focused tests `54 passed`; full pytest `283 passed, 1 sk
 
 Sync the changed files to `/home/luo/memguardos-product-head`, rebuild five Debian packages, reinstall with `apt install --reinstall`, restart the tray in the current UKUI session, and collect openKylin native evidence for the committed code revision.
 
-Observed on 2026-07-06: source revision `ec02835cf40b32084a9b1029437e8003fe3dfada`; five Debian packages rebuilt and reinstalled with `apt install --reinstall`; tray restarted in the UKUI session; openKylin native focused tests `28 passed`; final evidence pytest `284 passed`; evidence manifest refreshed with 19 files.
+Observed on 2026-07-06: source revision is recorded in `docs/evidence/openkylin_native_latest/source_revision.json`; five Debian packages rebuilt and reinstalled with `apt install --reinstall`; tray restarted in the UKUI session; openKylin native focused tests `28 passed`; final evidence pytest `284 passed`; evidence manifest refreshed with 19 files.
