@@ -59,7 +59,10 @@ def test_debian_packages_apply_openkylin_native_install_lifecycle():
     assert "systemctl --global enable memguard-kylin-warmup.service" in builder
     assert "用户数据保留" in builder
     assert "update-desktop-database" in builder
+    assert "xdg-desktop-menu forceupdate" in builder
+    assert "gtk-update-icon-cache" in builder
     assert "peony -q" in builder
+    assert "pkill -x ukui-control-center" in builder
     assert "rm -rf /var/lib/memguardos" not in builder
     assert "rm -rf /opt/memguardos/data" not in builder
     assert "Name=MemGuardOS 记忆安全" in menu

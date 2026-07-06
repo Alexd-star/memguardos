@@ -390,9 +390,59 @@ void MemGuardPeonyPlugin::runApply(const QStringList &arguments)
                 box.addButton(QStringLiteral("关闭"), QMessageBox::RejectRole);
                 box.exec();
                 if (box.clickedButton() == view)
-                    openLocalConsole();
+                    openLocalConsole(QStringLiteral("#audit"));
                 else if (box.clickedButton() == forget)
-                    openLocalConsole(QStringLiteral("#forget"));
+                    runForgetImport(storedIds);
+            }
+            progress->deleteLater();
+            process->deleteLater();
+        });
+    process->start(command.program, command.arguments);
+    progress->show();
+}
+
+void MemGuardPeonyPlugin::runForgetImport(const QStringList &memoryIds)
+{
+    if (memoryIds.isEmpty()) {
+        QMessageBox::information(nullptr, QStringLiteral("MemGuardOS"), QStringLiteral("本次没有已导入的记忆可撤销。"));
+        return;
+    }
+    QStringList args{QStringLiteral("desktop"), QStringLiteral("forget-import"), QStringLiteral("--compact"), QStringLiteral("--notify")};
+    for (const QString &memoryId : memoryIds)
+        args << QStringLiteral("--memory-id") << memoryId;
+
+    const Command command = memctlCommand(args);
+    auto *process = new QProcess(this);
+    auto *progress = new QProgressDialog(QStringLiteral("正在遗忘本次导入内容…"), QString(), 0, 0);
+    progress->setWindowTitle(QStringLiteral("遗忘本次导入内容"));
+    progress->setWindowModality(Qt::ApplicationModal);
+    progress->setMinimumDuration(0);
+    progress->setCancelButton(nullptr);
+    process->setProcessChannelMode(QProcess::MergedChannels);
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
+        [progress, process](int, QProcess::ExitStatus) {
+            progress->close();
+            QString error;
+            const QJsonObject result = parseJsonOutput(process->readAll(), &error);
+            if (result.isEmpty()) {
+                QMessageBox::critical(nullptr, QStringLiteral("遗忘失败"), error);
+            } else {
+                const QJsonObject summary = result.value(QStringLiteral("summary")).toObject();
+                const QJsonObject audit = result.value(QStringLiteral("audit_chain")).toObject();
+                const bool ok = result.value(QStringLiteral("ok")).toBool();
+                const QString message = QStringLiteral("已遗忘 %1 条本次导入记忆；%2 条未找到；%3 条此前已遗忘。\n审计记录：%4")
+                    .arg(summary.value(QStringLiteral("forgotten")).toInt())
+                    .arg(summary.value(QStringLiteral("missing")).toInt())
+                    .arg(summary.value(QStringLiteral("already_deleted")).toInt())
+                    .arg(audit.value(QStringLiteral("ok")).toBool() ? QStringLiteral("完整") : QStringLiteral("需要检查"));
+                QMessageBox box(ok ? QMessageBox::Information : QMessageBox::Warning,
+                    ok ? QStringLiteral("遗忘完成") : QStringLiteral("遗忘结果需要确认"),
+                    message);
+                auto *view = box.addButton(QStringLiteral("查看审计记录"), QMessageBox::ActionRole);
+                box.addButton(QStringLiteral("关闭"), QMessageBox::RejectRole);
+                box.exec();
+                if (box.clickedButton() == view)
+                    openLocalConsole(QStringLiteral("#audit"));
             }
             progress->deleteLater();
             process->deleteLater();

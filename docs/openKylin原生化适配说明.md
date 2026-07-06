@@ -22,10 +22,10 @@ MemGuardOS 面向 openKylin 的适配目标分为四层。
 |---|---|---|
 | openKylin 状态总览 | 聚合系统版本、systemd、服务级 cgroup、Kylin SDK、Peony、UKUI、Polkit、BPF、auditd、诊断建议 | `python -m memguard.cli.memctl openkylin-status` |
 | 服务级资源治理 | 读取 `memguardd.service` 的真实 ControlGroup，再读取 cgroup v2 资源文件 | `systemctl show memguardd.service`、`memctl openkylin-status` |
-| Kylin SDK 自适应检索 | openKylin 默认 `auto`，支持 SDK 成功路径、失败冷却、LRU 缓存和稳定 fallback | `memctl sdk-status --probe-embedding`、`memctl openkylin-status --probe-sdk` |
-| Peony 文件右键闭环 | 支持多文件扫描、敏感阻断、预览清单、一次性签名 manifest、确认后导入和审计验证 | `memctl desktop scan-files`、`memctl desktop apply-scan` |
+| Kylin SDK 自适应检索 | openKylin 默认 `auto`，支持 SDK 成功路径、失败冷却、LRU 缓存、延迟预算和稳定 fallback | `memctl sdk-status --probe-embedding`、`memctl openkylin-status --probe-sdk` |
+| Peony 文件右键闭环 | 支持多文件扫描、敏感阻断、预览清单、一次性签名 manifest、确认后导入、本次导入撤销和审计验证 | `memctl desktop scan-files`、`memctl desktop apply-scan`、`memctl desktop forget-import` |
 | UKUI 控制中心 | 原生 Qt Widgets 页面，按系统状态、SDK、审计、安全操作、诊断导出组织，不使用网页式硬编码 UI | `native/ukui/ukcc-memguard/` |
-| UKUI 托盘 | 提供健康状态轮询、状态变化通知、打开控制中心、打开本地控制台、重新检查状态 | `native/ukui/tray/` |
+| UKUI 托盘 | 提供健康状态轮询、状态变化通知、打开控制中心、SDK/审计定向页、本地控制台审计页和重新检查状态 | `native/ukui/tray/` |
 | Polkit 授权 | 仅允许白名单动作，固定 PATH，拒绝任意命令和环境变量注入 | `memctl native-action`、`scripts/memguardos-native-helper.sh` |
 | Debian 分包 | 生成核心包、桌面包、Agent 适配包、文档包和元包，并检查文件冲突和卸载边界 | `bash scripts/build_deb.sh`、`bash scripts/verify_deb_lifecycle.sh` |
 | 原生化证据采集 | 当前 Git HEAD 门禁、Peony 批量证据、SDK 探针、桌面插件构建、Polkit、cgroup、分包、pytest | `bash scripts/collect_openkylin_native_evidence.sh` |
@@ -90,18 +90,26 @@ python -m memguard.cli.memctl desktop apply-scan --manifest /tmp/memguardos-peon
 
 执行阶段会验证 manifest 的 HMAC 签名、文件指纹、nonce、过期时间和是否已使用。这样可以防止“预览一个文件、导入另一个文件”或重复使用旧清单。安全文本会进入 `peony_file` 来源，敏感内容会被阻断，所有结果进入审计链。
 
+如果用户发现本次导入不合适，Peony 结果对话框里的【撤销导入 / 立即遗忘】会把本批次返回的 `memory_id` 直接传给：
+
+```bash
+python -m memguard.cli.memctl desktop forget-import --memory-id <memory_id> --compact
+```
+
+该命令只处理本次导入的记忆 ID，不要求用户再去控制台手动搜索；执行后会写入遗忘审计、压缩受管段文件，并返回不可恢复验证结果。这样右键文件形成了“预览、确认、导入、撤销、审计”的完整闭环。
+
 这个流程对用户更友好：右键后先看结果，再决定是否导入；对评审更可信：每一步都有 JSON 证据、审计链和可复跑命令。
 
 ## 5. UKUI 控制中心和托盘
 
-UKUI 控制中心插件遵循 openKylin/UKUI 原生桌面风格：使用系统字体、系统调色板、主题图标和 Qt Widgets 组件，不使用网页式卡片、渐变背景或硬编码深浅色。页面主要包含：
+UKUI 控制中心插件遵循 openKylin/UKUI 原生桌面风格：使用系统字体、系统调色板、主题图标和 Qt Widgets 组件，不使用网页式卡片、渐变背景或硬编码深浅色。页面按普通用户和管理员分层，普通用户页只保留服务是否正常、文件是否安全、敏感是否阻断和如何遗忘；管理员页再展示 systemd、cgroup、auditd、BPF、Polkit、Kylin SDK 和诊断导出。页面主要包含：
 
 - 状态页：服务状态、SDK 状态、审计状态、资源状态和修复建议。
 - SDK 页：Kylin embedding/vector 的库、模型、socket、推理就绪和 fallback 说明。
 - 安全页：审计链校验、auditd 规则安装、BPF 安全验证、Polkit 授权入口。
 - 诊断页：导出诊断包、打开本地 Web 控制台、查看服务日志。
 
-托盘程序使用 `QSystemTrayIcon`，只在 UKUI 会话中自动启动。它低频轮询 `memctl openkylin-status`，只在状态变化时发送通知，避免持续打扰用户。托盘退出不会停止核心服务，符合系统组件的最小惊扰原则。
+托盘程序使用 `QSystemTrayIcon`，只在 UKUI 会话中自动启动。它低频轮询 `memctl openkylin-status`，只在状态变化时发送通知，避免持续打扰用户。托盘菜单提供【打开记忆安全中心】、【查看端侧向量能力】、【查看审计状态】、【查看最近一次阻断记录】、【打开本地控制台】和【重新检查状态】。SDK 和审计入口会在打开控制中心前写入轻量目标文件，使控制中心直接定位到对应管理员工具；敏感阻断入口会打开本地控制台审计页，便于用户查看最近阻断记录。托盘退出不会停止核心服务，符合系统组件的最小惊扰原则。
 
 ## 6. Polkit 与高权限边界
 
@@ -136,7 +144,7 @@ dist/memguardos-doc_0.1.0-2_all.deb
 dist/memguardos_0.1.0-2_all.deb
 ```
 
-其中 `memguardos-core` 提供 CLI、daemon、systemd、Polkit、BPF 安全验证资产和核心 Python 模块；`memguardos-ukui` 提供 Peony、UKUI 控制中心、托盘和桌面入口；`memguardos-agent-bridge` 提供 OpenHands/Agent 适配；`memguardos-doc` 提供中文文档；`memguardos` 是完整安装元包。
+其中 `memguardos-core` 提供 CLI、daemon、systemd、Polkit、BPF 安全验证资产和核心 Python 模块；`memguardos-ukui` 提供 Peony、UKUI 控制中心、托盘和桌面入口；`memguardos-agent-bridge` 提供 OpenHands/Agent 适配；`memguardos-doc` 提供中文文档；`memguardos` 是完整安装元包。桌面包安装后会刷新桌面菜单、应用图标缓存，重启 Peony，并关闭已打开的 UKUI 控制中心实例，让用户重新打开设置时看到新插件；卸载桌面包不会删除核心服务和用户记忆数据。
 
 离线生命周期验证命令：
 

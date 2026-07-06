@@ -12,7 +12,7 @@ from pathlib import Path
 
 from memguard.config import list_namespaces
 from memguard.desktop.peony_scan import scan_peony_file
-from memguard.desktop.scan_manifest import apply_scan_manifest, create_scan_manifest
+from memguard.desktop.scan_manifest import apply_scan_manifest, create_scan_manifest, forget_imported_memories
 from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.replay import load_event_file, load_event_jsonl
 from memguard.llm.adapter import LLMAdapterError, generate_answer
@@ -205,6 +205,11 @@ def build_parser() -> argparse.ArgumentParser:
     apply_scan.add_argument("--manifest", required=True, help="Manifest path returned by scan-files")
     apply_scan.add_argument("--select", action="append", required=True, help="Confirmed safe file path; repeat for multiple files")
     apply_scan.add_argument("--notify", action="store_true", help="Send one batch completion notification")
+    forget_import = desktop_sub.add_parser("forget-import", help="Forget memories created by one Peony import result")
+    forget_import.add_argument("--memory-id", action="append", required=True, help="Imported memory id to forget; repeat for multiple files")
+    forget_import.add_argument("--reason", default="撤销 Peony 文件导入", help="Audit reason stored with the forgetting tombstone")
+    forget_import.add_argument("--compact", action="store_true", help="Compact segment storage after forgetting")
+    forget_import.add_argument("--notify", action="store_true", help="Send one desktop notification")
 
     patterns = sub.add_parser("patterns", help="List or add custom sensitive patterns")
     pattern_sub = patterns.add_subparsers(dest="pattern_command", required=True)
@@ -319,6 +324,16 @@ def main(argv: list[str] | None = None) -> int:
                     args.manifest,
                     args.select,
                     service,
+                    notify=args.notify,
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0 if result.get("ok") else 2
+            if args.desktop_command == "forget-import":
+                result = forget_imported_memories(
+                    args.memory_id,
+                    service,
+                    reason=args.reason,
+                    compact=args.compact,
                     notify=args.notify,
                 )
                 print(json.dumps(result, ensure_ascii=False, indent=2))

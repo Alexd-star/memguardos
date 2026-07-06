@@ -150,6 +150,22 @@ def apply_scan_manifest(
     return result
 
 
+def forget_imported_memories(
+    memory_ids: Iterable[str],
+    service: MemGuardService,
+    *,
+    reason: str = "撤销 Peony 文件导入",
+    compact: bool = True,
+    notify: bool = False,
+) -> dict[str, object]:
+    result = service.forget_memory_ids(list(memory_ids), reason=reason, compact=compact)
+    result["schema"] = "memguardos-desktop-forget-import-v1"
+    result["audit_chain"] = service.verify_audit()
+    if notify:
+        _notify_forget(result)
+    return result
+
+
 def _canonical_path(path: str | Path) -> Path:
     return Path(path).expanduser().resolve()
 
@@ -229,3 +245,13 @@ def _notify_batch(result: dict[str, object]) -> None:
         "MemGuardOS 文件检查完成",
         f"已导入 {summary['stored']}，阻断 {summary['blocked']}，失败 {summary['failed']}。",
     )
+
+
+def _notify_forget(result: dict[str, object]) -> None:
+    from memguard.desktop.peony_scan import notify_desktop
+
+    summary = result["summary"]
+    if result.get("ok"):
+        notify_desktop("MemGuardOS 已撤销导入", f"已遗忘本次导入的 {summary['forgotten']} 条记忆。")
+    else:
+        notify_desktop("MemGuardOS 撤销导入需要确认", f"已处理 {summary['forgotten']} 条，仍有 {summary['missing']} 条需要检查。")

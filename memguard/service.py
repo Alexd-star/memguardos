@@ -1940,6 +1940,62 @@ class MemGuardService:
             "external_residue": external_residue,
         }
 
+    def forget_memory_ids(self, memory_ids: List[str], reason: str, compact: bool = False) -> Dict[str, object]:
+        unique_ids: List[str] = []
+        for memory_id in memory_ids:
+            normalized = str(memory_id).strip()
+            if normalized and normalized not in unique_ids:
+                unique_ids.append(normalized)
+
+        forgotten: List[str] = []
+        missing: List[str] = []
+        already_deleted: List[str] = []
+        verification: List[Dict[str, object]] = []
+
+        for memory_id in unique_ids:
+            row = self.meta.get_memory(memory_id)
+            record = self.store.get_latest(memory_id)
+            if row is None and record is None:
+                missing.append(memory_id)
+                continue
+            if (row is not None and row.get("deleted")) or (record is not None and record.deleted):
+                already_deleted.append(memory_id)
+                verification.append(self.verify_forget_probe(memory_id))
+                continue
+            if record is None:
+                missing.append(memory_id)
+                continue
+            tombstone = self.store.tombstone(record, reason)
+            self.meta.mark_deleted(memory_id, superseded_by=tombstone.version.version_id)
+            forgotten.append(memory_id)
+
+        if compact and forgotten:
+            self.store.compact()
+
+        for memory_id in forgotten:
+            verification.append(self.verify_forget_probe(memory_id))
+
+        result = {
+            "ok": bool(forgotten) and not missing,
+            "confirmed": True,
+            "reason": reason,
+            "requested_memory_ids": unique_ids,
+            "forgotten_memory_ids": forgotten,
+            "missing_memory_ids": missing,
+            "already_deleted_memory_ids": already_deleted,
+            "summary": {
+                "requested": len(unique_ids),
+                "forgotten": len(forgotten),
+                "missing": len(missing),
+                "already_deleted": len(already_deleted),
+                "compact": compact,
+            },
+            "verification": verification,
+            "external_residue": self._managed_forget_residue(confirm=True),
+        }
+        self._audit("forget_memory_ids", None, result["summary"] | {"reason": reason, "memory_ids": forgotten})
+        return result
+
     def _managed_forget_residue(self, confirm: bool) -> Dict[str, object]:
         return {
             "scope": "confirmed_boundary_notice" if confirm else "dry_run_boundary_notice",

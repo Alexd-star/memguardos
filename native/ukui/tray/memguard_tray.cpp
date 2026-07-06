@@ -44,6 +44,40 @@ QString firstRecommendation(const QJsonObject &payload)
     return {};
 }
 
+bool containsAny(const QString &text, const QStringList &keywords)
+{
+    for (const QString &keyword : keywords) {
+        if (text.contains(keyword, Qt::CaseInsensitive))
+            return true;
+    }
+    return false;
+}
+
+QString targetFromRecommendation(const QString &recommendation)
+{
+    if (containsAny(recommendation, {QStringLiteral("SDK"), QStringLiteral("Kylin"), QStringLiteral("embedding"), QStringLiteral("vector"), QStringLiteral("向量")}))
+        return QStringLiteral("sdk");
+    if (containsAny(recommendation, {QStringLiteral("audit"), QStringLiteral("审计")}))
+        return QStringLiteral("audit");
+    if (containsAny(recommendation, {QStringLiteral("敏感"), QStringLiteral("阻断"), QStringLiteral("Peony"), QStringLiteral("文件")}))
+        return QStringLiteral("sensitive");
+    if (containsAny(recommendation, {QStringLiteral("memguardd"), QStringLiteral("systemd"), QStringLiteral("服务")}))
+        return QStringLiteral("service");
+    if (containsAny(recommendation, {QStringLiteral("cgroup"), QStringLiteral("CPU"), QStringLiteral("内存"), QStringLiteral("资源")}))
+        return QStringLiteral("resources");
+    return QStringLiteral("overview");
+}
+
+void writeNavigationTarget(const QString &target)
+{
+    if (target.isEmpty())
+        return;
+    const QString runtime = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+    QFile file(runtime + QStringLiteral("/memguardos-ukcc-target"));
+    if (file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
+        file.write(target.toUtf8());
+}
+
 QString memctlProgram(QStringList *arguments)
 {
     if (QFile::exists(QStringLiteral("/usr/bin/memctl")))
@@ -65,18 +99,28 @@ public:
         tray_.setIcon(themedIcon(QStringLiteral("security-high"), QStyle::SP_MessageBoxInformation));
         auto *menu = new QMenu;
         auto *openCenter = menu->addAction(themedIcon(QStringLiteral("preferences-system"), QStyle::SP_FileDialogDetailedView), QStringLiteral("打开记忆安全中心"));
+        auto *openSdk = menu->addAction(themedIcon(QStringLiteral("system-search"), QStyle::SP_FileDialogContentsView), QStringLiteral("查看端侧向量能力"));
+        auto *openAudit = menu->addAction(themedIcon(QStringLiteral("security-high"), QStyle::SP_DialogApplyButton), QStringLiteral("查看审计状态"));
+        auto *openSensitive = menu->addAction(themedIcon(QStringLiteral("dialog-warning"), QStyle::SP_MessageBoxWarning), QStringLiteral("查看最近一次阻断记录"));
         auto *openDashboardAction = menu->addAction(themedIcon(QStringLiteral("applications-internet"), QStyle::SP_DesktopIcon), QStringLiteral("打开本地控制台"));
         auto *refresh = menu->addAction(themedIcon(QStringLiteral("view-refresh"), QStyle::SP_BrowserReload), QStringLiteral("重新检查状态"));
         menu->addSeparator();
         auto *quit = menu->addAction(themedIcon(QStringLiteral("application-exit"), QStyle::SP_DialogCloseButton), QStringLiteral("退出托盘"));
         tray_.setContextMenu(menu);
-        connect(openCenter, &QAction::triggered, this, &TrayController::openControlCenter);
+        connect(openCenter, &QAction::triggered, this, [this]() { openControlCenter(); });
+        connect(openSdk, &QAction::triggered, this, [this]() { openControlCenter(QStringLiteral("sdk")); });
+        connect(openAudit, &QAction::triggered, this, [this]() { openControlCenter(QStringLiteral("audit")); });
+        connect(openSensitive, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#audit")); });
         connect(openDashboardAction, &QAction::triggered, this, &TrayController::openDashboard);
         connect(refresh, &QAction::triggered, this, &TrayController::refresh);
         connect(quit, &QAction::triggered, qApp, &QApplication::quit);
         connect(&tray_, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
-            if (reason == QSystemTrayIcon::Trigger)
-                openControlCenter();
+            if (reason == QSystemTrayIcon::Trigger) {
+                if (lastTarget_ == QStringLiteral("sensitive"))
+                    openDashboard(QStringLiteral("#audit"));
+                else
+                    openControlCenter(lastTarget_);
+            }
         });
         timer_.setInterval(60000);
         connect(&timer_, &QTimer::timeout, this, &TrayController::refresh);
@@ -94,6 +138,7 @@ private:
     QTimer timer_;
     QProcess *current_ = nullptr;
     QString lastState_;
+    QString lastTarget_;
 
     void refresh()
     {
@@ -121,6 +166,7 @@ private:
                         .arg(summary.value(QStringLiteral("yellow")).toInt())
                         .arg(summary.value(QStringLiteral("red")).toInt());
                     const QString recommendation = firstRecommendation(payload);
+                    lastTarget_ = targetFromRecommendation(recommendation);
                     applyState(
                         overall,
                         title,
@@ -147,15 +193,28 @@ private:
 
     void openControlCenter()
     {
+        openControlCenter(QString());
+    }
+
+    void openControlCenter(const QString &target)
+    {
+        writeNavigationTarget(target.isEmpty() ? lastTarget_ : target);
         QProcess::startDetached(QStringLiteral("ukui-control-center"), {});
     }
 
     void openDashboard()
     {
+        openDashboard(QString());
+    }
+
+    void openDashboard(const QString &fragment)
+    {
         QStringList arguments{QStringLiteral("web"), QStringLiteral("--host"), QStringLiteral("127.0.0.1"), QStringLiteral("--port"), QStringLiteral("8765")};
         const QString program = memctlProgram(&arguments);
         QProcess::startDetached(program, arguments);
-        QTimer::singleShot(800, this, []() { QDesktopServices::openUrl(QUrl(QStringLiteral("http://127.0.0.1:8765"))); });
+        QTimer::singleShot(800, this, [fragment]() {
+            QDesktopServices::openUrl(QUrl(QStringLiteral("http://127.0.0.1:8765%1").arg(fragment)));
+        });
     }
 };
 

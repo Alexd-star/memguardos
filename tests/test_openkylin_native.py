@@ -566,6 +566,38 @@ def test_desktop_scan_files_and_apply_cli_require_explicit_selection(tmp_path, m
     assert applied["summary"]["stored"] == 1
 
 
+def test_desktop_forget_import_cli_targets_selected_memory_ids(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+    safe = tmp_path / "safe.md"
+    safe.write_text("以后 openKylin 服务排查优先查看 systemctl status memguardd。\n", encoding="utf-8")
+
+    assert memctl_main(["desktop", "scan-files", "--file", str(safe)]) == 0
+    preview = json.loads(capsys.readouterr().out)
+    assert memctl_main(
+        [
+            "desktop",
+            "apply-scan",
+            "--manifest",
+            preview["manifest_path"],
+            "--select",
+            str(safe),
+        ]
+    ) == 0
+    applied = json.loads(capsys.readouterr().out)
+    memory_id = applied["results"][0]["ingest"]["memory_id"]
+
+    assert memctl_main(["desktop", "forget-import", "--memory-id", memory_id, "--compact"]) == 0
+    forgotten = json.loads(capsys.readouterr().out)
+
+    assert forgotten["ok"] is True
+    assert forgotten["summary"]["forgotten"] == 1
+    assert forgotten["forgotten_memory_ids"] == [memory_id]
+    assert forgotten["verification"][0]["irreversible_ok"] is True
+    assert memctl_main(["verify-forget", memory_id, "--probe", "systemctl status memguardd"]) == 0
+    probe = json.loads(capsys.readouterr().out)
+    assert probe["irreversible_ok"] is True
+
+
 def test_collect_openkylin_evidence_cli_exports_manifested_package(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
     output_dir = tmp_path / "native-evidence"
@@ -617,6 +649,10 @@ def test_peony_plugin_uses_preview_confirmation_contract():
     assert "仅审计" in source
     assert "查看结果" in source
     assert "立即遗忘" in source
+    assert "forget-import" in source
+    assert "--memory-id" in source
+    assert "遗忘本次导入内容" in source
+    assert "openLocalConsole(QStringLiteral(\"#audit\"))" in source
 
 
 def test_ukui_control_center_uses_structured_native_product_ui():
@@ -654,7 +690,8 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "打开文件管理器" in source
     assert "查看遗忘入口" in source
     assert "服务健康" in source
-    assert "任务入口" in source
+    assert "普通用户常用入口" in source
+    assert "任务入口" not in source
     assert "普通用户" in source
     assert "文件安全" in source
     assert "敏感阻断" in source
@@ -879,9 +916,27 @@ def test_ukui_tray_follows_system_theme_and_deduplicates_notifications():
     assert "firstRecommendation" in source
     assert "下一步" in source
     assert "showMessage" in source
+    assert "openControlCenter(QStringLiteral(\"sdk\"))" in source
+    assert "openControlCenter(QStringLiteral(\"audit\"))" in source
+    assert "openDashboard(QStringLiteral(\"#audit\"))" in source
+    assert "最近一次阻断记录" in source
     assert "setStyleSheet" not in source
     assert "QSystemTrayIcon::isSystemTrayAvailable" in source
     assert "Exec=/usr/bin/memguardos-tray" in desktop
     assert "OnlyShowIn=UKUI;" in desktop
     assert "tray" in build
+
+
+def test_ukui_control_center_keeps_user_ui_product_facing():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
+
+    assert "普通用户常用入口" in source
+    assert "管理员工具" in source
+    assert "系统维护" in source
+    assert "JSON" not in source[source.index("QWidget *MemGuardUkccPlugin::pluginUi") : source.index("void MemGuardUkccPlugin::renderStatus")]
+    assert "栈" not in source
+    assert "调试" not in source
+    assert "当前没有需要处理的建议" in source
+    assert "不影响日常记忆检索" in source
 

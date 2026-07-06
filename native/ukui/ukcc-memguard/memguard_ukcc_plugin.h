@@ -78,6 +78,7 @@ private:
     void renderResourceSnapshot(const QJsonObject &resources);
     void addRecommendationRow(const QString &text, const QString &overall);
     void handleRecommendationAction(const QString &text);
+    void applyNavigationTarget(const QString &target);
     QString operationStartMessage(const QStringList &arguments, const QString &purpose) const;
     QString operationCompleteMessage(const QStringList &arguments, const QString &purpose, int exitCode) const;
     int operationTimeoutMs(const QStringList &arguments, const QString &purpose) const;

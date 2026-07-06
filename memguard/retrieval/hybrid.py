@@ -168,6 +168,14 @@ def _configured_timeout() -> float:
         return 8.0
 
 
+def _configured_rerank_budget_ms() -> float:
+    raw = os.environ.get("MEMGUARD_KYLIN_RERANK_BUDGET_MS", "160")
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return 160.0
+
+
 def _is_openkylin() -> bool:
     try:
         text = Path("/etc/os-release").read_text(encoding="utf-8", errors="replace").lower()
@@ -188,6 +196,7 @@ class HybridRetriever:
         self.requested_backend = backend
         self.hash_provider = HashEmbeddingProvider()
         self.kylin_provider = KylinEmbeddingProvider(timeout_seconds=_configured_timeout()) if backend in {"auto", "kylin", "kylin_sdk"} else None
+        self.kylin_rerank_budget_ms = _configured_rerank_budget_ms()
         self.last_backend_used = "hash"
 
     def status(self) -> Dict[str, object]:
@@ -196,6 +205,7 @@ class HybridRetriever:
             "last_backend_used": self.last_backend_used,
             "hash": self.hash_provider.status(),
             "kylin": self.kylin_provider.status() if self.kylin_provider else {"enabled": False},
+            "kylin_rerank_budget_ms": self.kylin_rerank_budget_ms,
         }
 
     def _score_with_vectors(self, query: str, record: Dict[str, str], query_vector: List[float], text_vector: List[float]) -> float:
@@ -234,14 +244,19 @@ class HybridRetriever:
         if self.kylin_provider is None or not scored:
             return self._tag_backend(scored[:limit], "hash")
 
+        sdk_started = time.perf_counter()
         kylin_query_vector = self.kylin_provider.vector(query)
         if kylin_query_vector is None:
+            return self._tag_backend(scored[:limit], "hash")
+        if self._kylin_budget_exceeded(sdk_started):
             return self._tag_backend(scored[:limit], "hash")
 
         rerank_pool = scored[: max(limit * 2, min(10, len(scored)))]
         reranked = []
         for _, record in rerank_pool:
             text = "%s %s %s" % (record.get("type", ""), record.get("summary", ""), record.get("content", ""))
+            if self._kylin_budget_exceeded(sdk_started):
+                return self._tag_backend(scored[:limit], "hash")
             kylin_text_vector = self.kylin_provider.vector(text)
             if kylin_text_vector is None or len(kylin_text_vector) != len(kylin_query_vector):
                 return self._tag_backend(scored[:limit], "hash")
@@ -249,6 +264,17 @@ class HybridRetriever:
         reranked.sort(key=lambda item: item[0], reverse=True)
         self.last_backend_used = "kylin_sdk"
         return self._tag_backend(reranked[:limit], "kylin_sdk")
+
+    def _kylin_budget_exceeded(self, started: float) -> bool:
+        if self.requested_backend in {"kylin", "kylin_sdk"} or self.kylin_rerank_budget_ms <= 0:
+            return False
+        elapsed_ms = (time.perf_counter() - started) * 1000.0
+        if elapsed_ms <= self.kylin_rerank_budget_ms:
+            return False
+        if self.kylin_provider is not None:
+            self.kylin_provider.disabled_reason = "Kylin rerank exceeded latency budget; using stable fallback"
+            self.kylin_provider.disabled_until = float(self.kylin_provider.clock()) + self.kylin_provider.cooldown_seconds
+        return True
 
     @staticmethod
     def _tag_backend(scored: List[Tuple[float, Dict[str, str]]], backend: str) -> List[Tuple[float, Dict[str, str]]]:

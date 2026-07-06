@@ -313,12 +313,19 @@ def _embedding_product_state(
         warmup_label = "not_warmed"
     else:
         warmup_label = "unavailable"
+    last_failure_reason = ""
+    last_failure_at = ""
+    if warmup_state and not warmup_state.get("ok"):
+        last_failure_reason = str(warmup_state.get("recommendation") or warmup_state.get("error") or "")
+        last_failure_at = str(warmup_state.get("completed_at", ""))
     return {
         "installed": installed,
         "last_probe_success": ready,
-        "last_success_at": str(warmup_state.get("completed_at", "")),
+        "last_success_at": str(warmup_state.get("completed_at", "")) if ready else "",
         "last_success_dim": dim or None,
         "last_success_model": str(warmup_state.get("model", "")),
+        "last_failure_at": last_failure_at,
+        "last_failure_reason": last_failure_reason,
         "warmup_state": warmup_label,
         "fallback": fallback,
         "user_message": (

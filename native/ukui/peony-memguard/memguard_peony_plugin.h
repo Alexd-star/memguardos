@@ -30,4 +30,5 @@ private:
     void runPreview(const QStringList &arguments);
     void showPreviewDialog(const QJsonObject &preview);
     void runApply(const QStringList &arguments);
+    void runForgetImport(const QStringList &memoryIds);
 };
