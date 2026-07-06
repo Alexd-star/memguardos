@@ -101,8 +101,10 @@ private:
                 } else {
                     const QJsonObject summary = payload.value(QStringLiteral("summary")).toObject();
                     const QString overall = summary.value(QStringLiteral("overall")).toString(QStringLiteral("red"));
-                    const QString title = overall == QStringLiteral("green") ? QStringLiteral("运行正常") : QStringLiteral("需要处理");
-                    const QString body = QStringLiteral("正常 %1 项，需要注意 %2 项，不可用 %3 项。")
+                    const QString title = overall == QStringLiteral("green")
+                        ? QStringLiteral("运行正常")
+                        : (overall == QStringLiteral("yellow") ? QStringLiteral("建议确认") : QStringLiteral("需要处理"));
+                    const QString body = QStringLiteral("正常 %1 项，建议确认 %2 项，不可用 %3 项。")
                         .arg(summary.value(QStringLiteral("green")).toInt())
                         .arg(summary.value(QStringLiteral("yellow")).toInt())
                         .arg(summary.value(QStringLiteral("red")).toInt());

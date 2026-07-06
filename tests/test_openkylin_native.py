@@ -478,7 +478,8 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "addRecommendationRow" in source
     assert "handleRecommendationAction" in source
     assert "setItemWidget" in source
-    assert "检查端侧能力" in source
+    assert "立即检查 SDK" in source
+    assert "端侧 SDK 建议确认" in source
     assert "校验审计链" in source
     assert "去服务控制" in source
     assert "setCurrentIndex(serviceTabIndex_)" in source

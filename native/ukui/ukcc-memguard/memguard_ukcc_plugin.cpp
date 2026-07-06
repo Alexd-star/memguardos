@@ -68,7 +68,7 @@ QString levelText(const QString &level)
     if (level == QStringLiteral("green"))
         return QStringLiteral("正常");
     if (level == QStringLiteral("yellow"))
-        return QStringLiteral("需要注意");
+        return QStringLiteral("需确认");
     return QStringLiteral("不可用");
 }
 
@@ -171,6 +171,17 @@ bool containsAny(const QString &text, const QStringList &keywords)
             return true;
     }
     return false;
+}
+
+QString friendlyRecommendationText(const QString &text)
+{
+    if (containsAny(text, {QStringLiteral("SDK"), QStringLiteral("Kylin"), QStringLiteral("embedding"), QStringLiteral("vector"), QStringLiteral("向量")})) {
+        if (containsAny(text, {QStringLiteral("未执行推理探针"), QStringLiteral("按需检查"), QStringLiteral("未进入真实推理就绪状态")})) {
+            return QStringLiteral("端侧 SDK 建议确认：核心记忆服务可正常使用；如需启用 Kylin 端侧增强，请点击右侧按钮，系统会切换到【服务与安全】并执行完整检查。首次检查可能较慢。");
+        }
+        return QStringLiteral("端侧 SDK 状态需要确认：请点击右侧按钮执行完整检查；如果仍异常，可在【服务与安全】中点击【预热 Kylin SDK】后重新检查。");
+    }
+    return text;
 }
 
 } // namespace
@@ -755,8 +766,10 @@ void MemGuardUkccPlugin::renderStatus(const QJsonObject &payload)
     const QJsonObject summary = payload.value(QStringLiteral("summary")).toObject();
     const QString overall = summary.value(QStringLiteral("overall")).toString(QStringLiteral("red"));
     summaryIcon_->setPixmap(levelIcon(overall).pixmap(32, 32));
-    summaryTitle_->setText(overall == QStringLiteral("green") ? QStringLiteral("本机记忆安全状态正常") : QStringLiteral("有项目需要处理"));
-    summaryDescription_->setText(QStringLiteral("正常 %1 项，需要注意 %2 项，不可用 %3 项。")
+    summaryTitle_->setText(overall == QStringLiteral("green")
+        ? QStringLiteral("本机记忆安全状态正常")
+        : (overall == QStringLiteral("yellow") ? QStringLiteral("有项目建议确认") : QStringLiteral("有项目需要处理")));
+    summaryDescription_->setText(QStringLiteral("正常 %1 项，建议确认 %2 项，不可用 %3 项。")
         .arg(summary.value(QStringLiteral("green")).toInt())
         .arg(summary.value(QStringLiteral("yellow")).toInt())
         .arg(summary.value(QStringLiteral("red")).toInt()));
@@ -810,7 +823,7 @@ void MemGuardUkccPlugin::renderStatus(const QJsonObject &payload)
         ? QStringLiteral("green")
         : (embeddingAvailable ? QStringLiteral("yellow") : QStringLiteral("red"));
     const QString sdkLabel = userMessage.isEmpty()
-        ? (embeddingReady ? QStringLiteral("推理就绪") : (embeddingAvailable ? QStringLiteral("SDK 可检测，完整推理按需检查") : QStringLiteral("未检测到")))
+        ? (embeddingReady ? QStringLiteral("推理就绪") : (embeddingAvailable ? QStringLiteral("SDK 已安装，完整检查按需执行") : QStringLiteral("未检测到")))
         : userMessage;
     setStatusBadge(
         sdkStatusIcon_,
@@ -821,7 +834,7 @@ void MemGuardUkccPlugin::renderStatus(const QJsonObject &payload)
         .arg(boolText(embedding.value(QStringLiteral("available")).toBool()))
         .arg(inferenceKnown ? boolText(embeddingReady) : (fastSdkStatus ? QStringLiteral("已安装，未执行推理探针") : QStringLiteral("未执行推理探针")))
         .arg(embedding.value(QStringLiteral("model_info")).toObject().value(QStringLiteral("name")).toString(QStringLiteral("未识别")))
-        .arg(nextAction.isEmpty() ? QStringLiteral("日常使用可保持稳定检索路径") : nextAction));
+        .arg(nextAction.isEmpty() ? QStringLiteral("日常使用可保持稳定检索路径；需要端侧增强时点击【检查端侧向量能力】或【预热 Kylin SDK】") : nextAction));
     const QJsonObject security = payload.value(QStringLiteral("security")).toObject();
     const bool auditReady = security.value(QStringLiteral("auditd")).toObject().value(QStringLiteral("rules_tool_available")).toBool();
     setStatusBadge(
@@ -867,7 +880,7 @@ void MemGuardUkccPlugin::addRecommendationRow(const QString &text, const QString
         actionText = QStringLiteral("去服务控制");
         actionIcon = QStringLiteral("preferences-system");
     } else if (containsAny(text, {QStringLiteral("SDK"), QStringLiteral("Kylin"), QStringLiteral("embedding"), QStringLiteral("vector"), QStringLiteral("向量")})) {
-        actionText = QStringLiteral("检查端侧能力");
+        actionText = QStringLiteral("立即检查 SDK");
         actionIcon = QStringLiteral("system-search");
     } else if (containsAny(text, {QStringLiteral("audit"), QStringLiteral("审计")})) {
         actionText = QStringLiteral("校验审计链");
@@ -895,7 +908,7 @@ void MemGuardUkccPlugin::addRecommendationRow(const QString &text, const QString
     icon->setPixmap(levelIcon(overall).pixmap(22, 22));
     icon->setAccessibleName(QStringLiteral("建议状态图标"));
 
-    auto *message = new QLabel(text);
+    auto *message = new QLabel(friendlyRecommendationText(text));
     message->setWordWrap(true);
     message->setAccessibleName(QStringLiteral("处理建议内容"));
 
@@ -924,6 +937,7 @@ void MemGuardUkccPlugin::handleRecommendationAction(const QString &text)
     if (containsAny(text, {QStringLiteral("SDK"), QStringLiteral("Kylin"), QStringLiteral("embedding"), QStringLiteral("vector"), QStringLiteral("向量")})) {
         if (tabs_)
             tabs_->setCurrentIndex(serviceTabIndex_);
+        appendHistory(QStringLiteral("处理建议"), true, QStringLiteral("已切换到【服务与安全】并开始【检查端侧向量能力】；首次 Kylin SDK 检查可能较慢，完成后结果会显示在【系统维护】>【详细结果】。"));
         runMemctl({QStringLiteral("sdk-status"), QStringLiteral("--probe-embedding"), QStringLiteral("--probe-timeout"), QStringLiteral("90")}, QStringLiteral("details"));
         return;
     }
