@@ -12,23 +12,35 @@ fi
 
 if ! OUTPUT="$("${MEMCTL[@]}" sdk-status --probe-embedding --probe-timeout "${TIMEOUT}" 2>&1)"; then
   python3 - <<'PY' "${OUTPUT}"
+from datetime import datetime, timezone
+from pathlib import Path
 import json
+import os
 import sys
 
-print(json.dumps({
+payload = {
     "schema": "memguardos-kylin-sdk-warmup-v1",
     "ok": False,
     "inference_ready": False,
     "fallback": "hash_embedding",
     "error": sys.argv[1][-2000:],
     "recommendation": "保留 MemGuardOS 稳定 fallback，并检查 kylin-ai-runtime、kytensor.service 和模型仓库。",
-}, ensure_ascii=False, indent=2))
+    "completed_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
+}
+state_home = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state")
+state_path = state_home / "memguardos" / "kylin-sdk-warmup.json"
+state_path.parent.mkdir(parents=True, exist_ok=True)
+state_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+print(json.dumps(payload, ensure_ascii=False, indent=2))
 PY
   exit 0
 fi
 
 python3 - <<'PY' "${OUTPUT}"
+from datetime import datetime, timezone
+from pathlib import Path
 import json
+import os
 import sys
 
 raw = sys.argv[1]
@@ -37,7 +49,7 @@ payload = json.loads(raw[start:]) if start >= 0 else {}
 embedding = payload.get("embedding", {})
 probe = embedding.get("embedding_probe") or {}
 ready = bool(embedding.get("inference_ready") or probe.get("ok"))
-print(json.dumps({
+payload = {
     "schema": "memguardos-kylin-sdk-warmup-v1",
     "ok": True,
     "available": bool(embedding.get("available")),
@@ -50,5 +62,11 @@ print(json.dumps({
         if ready else
         "SDK 元数据可达但真实推理未就绪，默认继续使用稳定 fallback。"
     ),
-}, ensure_ascii=False, indent=2))
+    "completed_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
+}
+state_home = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state")
+state_path = state_home / "memguardos" / "kylin-sdk-warmup.json"
+state_path.parent.mkdir(parents=True, exist_ok=True)
+state_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+print(json.dumps(payload, ensure_ascii=False, indent=2))
 PY

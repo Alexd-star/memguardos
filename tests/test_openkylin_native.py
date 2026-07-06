@@ -46,7 +46,8 @@ def test_openkylin_status_fast_uses_light_sdk_status(tmp_path, monkeypatch, caps
     assert payload["sdk"]["embedding"]["embedding_probe"] is None
     assert payload["sdk"]["embedding"]["inference_ready"] is None
     assert payload["sdk"]["embedding"]["capability_state"] in {
-        "installed_not_probed",
+        "installed_unwarmed",
+        "recently_ready",
         "not_installed",
         "metadata_incomplete",
     }
@@ -83,6 +84,7 @@ def test_openkylin_status_default_uses_light_product_status(tmp_path, monkeypatc
 
 def test_fast_openkylin_status_does_not_mark_installed_embedding_as_fault(monkeypatch, tmp_path):
     monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
 
     monkeypatch.setattr(
         openkylin_native,
@@ -146,11 +148,59 @@ def test_fast_openkylin_status_does_not_mark_installed_embedding_as_fault(monkey
 
     assert components["kylin_embedding"]["level"] == "green"
     assert components["kylin_embedding"]["ready"] is True
-    assert components["kylin_embedding"]["user_message"] == "已安装，未执行推理探针"
-    assert components["kylin_embedding"]["next_action"] == "需要端侧增强时点击“预热 Kylin SDK”"
+    assert components["kylin_embedding"]["user_message"] == "已安装，当前未预热"
+    assert components["kylin_embedding"]["next_action"] == "首次使用可能稍慢，可点击“预热 Kylin SDK”"
     assert payload["summary"]["overall"] == "green"
     assert payload["recommendations"] == []
     assert not any("未进入真实推理就绪状态" in item for item in payload["recommendations"])
+
+
+def test_fast_openkylin_status_reports_recent_kylin_warmup_without_probe(monkeypatch, tmp_path):
+    state_home = tmp_path / "state"
+    warmup_dir = state_home / "memguardos"
+    warmup_dir.mkdir(parents=True)
+    (warmup_dir / "kylin-sdk-warmup.json").write_text(
+        json.dumps(
+            {
+                "schema": "memguardos-kylin-sdk-warmup-v1",
+                "ok": True,
+                "inference_ready": True,
+                "dim": 768,
+                "model": "ensemble-embd_gte-base_uint8-text",
+                "completed_at": "2026-07-06T10:30:00+08:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("XDG_STATE_HOME", str(state_home))
+    monkeypatch.setattr(
+        openkylin_native,
+        "_fast_sdk_status",
+        lambda services: {
+            "embedding": {
+                "status_mode": "fast",
+                "available": True,
+                "inference_ready": None,
+                "embedding_probe": None,
+                "model_info": {"name": "ensemble-embd_gte-base_uint8-text", "dim": 768, "ondevice": True},
+                "fallback": "hash_embedding",
+                "diagnosis": {},
+            },
+            "vector_store": {"available": False},
+        },
+    )
+
+    payload = openkylin_native.openkylin_native_status(namespace="default", fast=True)
+    embedding = payload["sdk"]["embedding"]
+    components = {item["name"]: item for item in payload["components"]}
+
+    assert embedding["product_state"]["installed"] is True
+    assert embedding["product_state"]["last_probe_success"] is True
+    assert embedding["product_state"]["warmup_state"] == "ready"
+    assert embedding["product_state"]["last_success_dim"] == 768
+    assert embedding["capability_state"] == "recently_ready"
+    assert components["kylin_embedding"]["level"] == "green"
+    assert components["kylin_embedding"]["user_message"] == "已安装，最近一次端侧向量预热成功"
 
 
 def test_fast_openkylin_status_treats_vector_socket_as_ready(monkeypatch, tmp_path):
@@ -459,6 +509,17 @@ def test_peony_plugin_uses_preview_confirmation_contract():
     assert "selectionUris.first" not in source
     assert "/tmp/memguardos_peony_plugin.log" not in source
     assert "QTextStream out(&log)" not in source
+    assert "JSON 结果" not in source
+    assert "结果解析失败" not in source
+    assert "没有收到有效的检查结果" in source
+    assert "检查结果暂时无法读取" in source
+    assert "已导入 %1 个安全文件" in source
+    assert "记忆候选" in source
+    assert "可导入" in source
+    assert "已阻断" in source
+    assert "仅审计" in source
+    assert "查看结果" in source
+    assert "立即遗忘" in source
 
 
 def test_ukui_control_center_uses_structured_native_product_ui():
@@ -468,8 +529,9 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "QTabWidget" in source
     assert "QTreeWidget" in source
     assert "QJsonDocument" in source
-    assert "详细结果" in source
-    assert "查看详细结果" in source
+    assert "维护结果" in source
+    assert "查看维护结果" in source
+    assert "详细结果" not in source
     assert "高级信息" not in source
     assert "高级运行信息" not in source
     assert "原始输出" not in source
@@ -481,10 +543,10 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "operationGuide_" in source
     assert "updateOperationGuide" in source
     assert "轻量操作" in source
-    assert "完整检查" in source
+    assert "完整检查" not in source
     assert "导出快速报告" in source
     assert "快速刷新、日志、审计校验通常在数秒内完成" in source
-    assert "端侧 SDK 完整检查和授权操作可能需要更久" in source
+    assert "端侧能力检查和授权操作可能需要更久" in source
     assert "操作历史" in source
     assert "资源快照" in source
     assert "QProgressBar" in source
@@ -493,13 +555,21 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "readinessValueLabel_" in source
     assert "服务健康" in source
     assert "任务入口" in source
+    assert "普通用户" in source
+    assert "文件安全" in source
+    assert "敏感阻断" in source
+    assert "精准遗忘" in source
     assert "处理建议" in source
     assert "recommendations" in source
     assert "addRecommendationRow" in source
     assert "handleRecommendationAction" in source
     assert "setItemWidget" in source
-    assert "立即检查 SDK" in source
-    assert "端侧 SDK 建议确认" in source
+    assert "立即检查 SDK" not in source
+    assert "检查端侧能力" in source
+    assert "端侧 SDK 建议确认" not in source
+    assert "首次检查可能较慢" not in source
+    assert "首次 Kylin SDK 检查可能较慢" not in source
+    assert "正在执行操作，请稍候" not in source
     assert "校验审计链" in source
     assert "去服务控制" in source
     assert "setCurrentIndex(serviceTabIndex_)" in source
@@ -685,6 +755,8 @@ def test_ukui_tray_follows_system_theme_and_deduplicates_notifications():
     assert "QSystemTrayIcon" in source
     assert "openkylin-status" in source
     assert "--fast" in source
+    assert "void openControlCenter()" in source
+    assert "openControlCenter();" in source
     assert "QIcon::fromTheme" in source
     assert "lastState_" in source
     assert "showMessage" in source

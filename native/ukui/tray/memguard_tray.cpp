@@ -58,13 +58,13 @@ public:
         menu->addSeparator();
         auto *quit = menu->addAction(themedIcon(QStringLiteral("application-exit"), QStyle::SP_DialogCloseButton), QStringLiteral("退出托盘"));
         tray_.setContextMenu(menu);
-        connect(openCenter, &QAction::triggered, this, []() { QProcess::startDetached(QStringLiteral("ukui-control-center"), {}); });
+        connect(openCenter, &QAction::triggered, this, &TrayController::openControlCenter);
         connect(openDashboardAction, &QAction::triggered, this, &TrayController::openDashboard);
         connect(refresh, &QAction::triggered, this, &TrayController::refresh);
         connect(quit, &QAction::triggered, qApp, &QApplication::quit);
         connect(&tray_, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
             if (reason == QSystemTrayIcon::Trigger)
-                openDashboard();
+                openControlCenter();
         });
         timer_.setInterval(60000);
         connect(&timer_, &QTimer::timeout, this, &TrayController::refresh);
@@ -127,6 +127,11 @@ private:
         if (!lastState_.isEmpty() && lastState_ != state)
             tray_.showMessage(QStringLiteral("MemGuardOS：%1").arg(title), body, tray_.icon(), 6000);
         lastState_ = state;
+    }
+
+    void openControlCenter()
+    {
+        QProcess::startDetached(QStringLiteral("ukui-control-center"), {});
     }
 
     void openDashboard()

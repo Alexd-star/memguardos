@@ -48,6 +48,7 @@ def build_package_plan(version: str, architecture: str, multiarch: str) -> Dict[
                 f"/usr/lib/{multiarch}/ukui-control-center/libmemguardos-ukcc-plugin.so",
                 "/usr/bin/memguardos-tray",
                 "/etc/xdg/autostart/memguardos-tray.desktop",
+                "/usr/share/applications/memguardos-center.desktop",
             ],
         },
         "memguardos-agent-bridge": {
@@ -182,6 +183,7 @@ class DebianPackageBuilder:
             if source.exists():
                 self._copy_file(source, destination, executable=True)
         self._copy_file(self.root / "packaging/desktop/memguardos-tray.desktop", stage / "etc/xdg/autostart/memguardos-tray.desktop")
+        self._copy_file(self.root / "packaging/desktop/memguardos-center.desktop", stage / "usr/share/applications/memguardos-center.desktop")
 
     def _stage_agent(self, stage: Path) -> None:
         self._copy_file(self.root / "scripts/memguard-agent@.service", stage / "lib/systemd/system/memguard-agent@.service")
@@ -242,12 +244,36 @@ class DebianPackageBuilder:
         md5_lines = [f"{hashlib.md5(path.read_bytes()).hexdigest()}  {path.relative_to(stage).as_posix()}" for path in sorted(files)]
         (stage / "DEBIAN/md5sums").write_text("\n".join(md5_lines) + ("\n" if md5_lines else ""), encoding="utf-8")
         if package == "memguardos-core":
-            self._write_maintainer_script(stage / "DEBIAN/postinst", "command -v systemctl >/dev/null 2>&1 && systemctl daemon-reload || true")
-            self._write_maintainer_script(stage / "DEBIAN/prerm", '[ "$1" != remove ] || { command -v systemctl >/dev/null 2>&1 && systemctl stop memguardd.service >/dev/null 2>&1 || true; }')
+            self._write_maintainer_script(
+                stage / "DEBIAN/postinst",
+                "\n".join(
+                    [
+                        "command -v systemctl >/dev/null 2>&1 && systemctl daemon-reload || true",
+                        "command -v systemctl >/dev/null 2>&1 && systemctl enable --now memguardd.service >/dev/null 2>&1 || true",
+                        "command -v systemctl >/dev/null 2>&1 && systemctl --global enable memguard-kylin-warmup.service >/dev/null 2>&1 || true",
+                    ]
+                ),
+            )
+            self._write_maintainer_script(
+                stage / "DEBIAN/prerm",
+                "\n".join(
+                    [
+                        "# 用户数据保留：卸载服务包只停止服务，不删除 namespace、段文件、SQLite、审计链或用户状态目录。",
+                        '[ "$1" != remove ] || { command -v systemctl >/dev/null 2>&1 && systemctl stop memguardd.service >/dev/null 2>&1 || true; }',
+                    ]
+                ),
+            )
             self._write_maintainer_script(stage / "DEBIAN/postrm", "command -v systemctl >/dev/null 2>&1 && systemctl daemon-reload || true")
         elif package == "memguardos-ukui":
-            self._write_maintainer_script(stage / "DEBIAN/postinst", "command -v ldconfig >/dev/null 2>&1 && ldconfig || true")
-            self._write_maintainer_script(stage / "DEBIAN/postrm", "command -v ldconfig >/dev/null 2>&1 && ldconfig || true")
+            desktop_refresh = "\n".join(
+                [
+                    "command -v ldconfig >/dev/null 2>&1 && ldconfig || true",
+                    "command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database /usr/share/applications >/dev/null 2>&1 || true",
+                    "command -v peony >/dev/null 2>&1 && peony -q >/dev/null 2>&1 || true",
+                ]
+            )
+            self._write_maintainer_script(stage / "DEBIAN/postinst", desktop_refresh)
+            self._write_maintainer_script(stage / "DEBIAN/postrm", desktop_refresh)
 
     def _build_one(self, package: str, stage: Path) -> None:
         architecture = str(self.plan[package]["architecture"])

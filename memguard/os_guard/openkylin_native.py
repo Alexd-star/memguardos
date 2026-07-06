@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Dict, List
+import json
 import os
 import platform
 import shutil
@@ -95,6 +96,8 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
     model_entries = sorted({entry.name for repo in repositories if repo.exists() for entry in repo.iterdir()})
     has_text_models = any(name in model_entries for name in text_models)
     library_file = next((str(path) for path in embedding_library_candidates if path.exists()), "")
+    warmup_state = _read_kylin_warmup_state()
+    warmup_ready = _warmup_state_is_ready(warmup_state)
     runtime_base = Path(f"/tmp/.kylin-ai-runtime-unix/{uid}")
     runtime_sockets = {
         "core-textembedding.sock": str(runtime_base / "core-textembedding.sock"),
@@ -105,17 +108,27 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
     vector_header = Path("/usr/include/kysdk-vector-engine-client/Database.h")
     embedding_available = bool(library_file or any(embedding_headers.values()) or has_text_models)
     if has_text_models and embedding_available:
-        capability_state = "installed_not_probed"
-        user_message = "已安装，未执行推理探针"
-        next_action = "需要端侧增强时点击“预热 Kylin SDK”"
+        if warmup_ready:
+            capability_state = "recently_ready"
+            user_message = "已安装，最近一次端侧向量预热成功"
+            next_action = "可继续使用；需要复核时点击“检查端侧向量能力”"
+        else:
+            capability_state = "installed_unwarmed"
+            user_message = "已安装，当前未预热"
+            next_action = "首次使用可能稍慢，可点击“预热 Kylin SDK”"
     elif embedding_available:
         capability_state = "metadata_incomplete"
         user_message = "已检测到部分 SDK 文件，模型或运行时信息不完整"
-        next_action = "进入端侧能力页运行完整检查"
+        next_action = "进入端侧能力页运行检查"
     else:
         capability_state = "not_installed"
         user_message = "未检测到 Kylin embedding SDK"
         next_action = "可继续使用稳定检索路径，或安装 openKylin AI 组件"
+    product_state = _embedding_product_state(
+        installed=bool(has_text_models and embedding_available),
+        warmup_state=warmup_state,
+        fallback="hash_embedding",
+    )
     vector_service = services.get("kylin-ai-vector-engine.service", {}) if isinstance(services.get("kylin-ai-vector-engine.service"), dict) else {}
     vector_socket_exists = vector_socket.exists()
     vector_available = vector_binary.exists() or vector_header.exists() or vector_socket_exists
@@ -167,7 +180,8 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
             "inference_ready": None,
             "ready_for_default_retrieval": False,
             "capability_state": capability_state,
-            "component_ready": capability_state == "installed_not_probed",
+            "component_ready": capability_state in {"installed_unwarmed", "recently_ready"},
+            "product_state": product_state,
             "user_message": user_message,
             "next_action": next_action,
             "fallback": "hash_embedding",
@@ -199,11 +213,21 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
 
 def _augment_embedding_product_state(embedding: Dict[str, object]) -> None:
     if embedding.get("capability_state"):
+        embedding.setdefault(
+            "product_state",
+            _embedding_product_state(
+                installed=bool(embedding.get("available") and embedding.get("model_info")),
+                warmup_state=_read_kylin_warmup_state(),
+                fallback=str(embedding.get("fallback", "hash_embedding")),
+            ),
+        )
         return
     available = bool(embedding.get("available"))
     inference_value = embedding.get("inference_ready")
     probe = embedding.get("embedding_probe")
     model_info = embedding.get("model_info")
+    warmup_state = _read_kylin_warmup_state()
+    warmup_ready = _warmup_state_is_ready(warmup_state)
     if inference_value is True:
         embedding["capability_state"] = "inference_ready"
         embedding["component_ready"] = True
@@ -213,26 +237,96 @@ def _augment_embedding_product_state(embedding: Dict[str, object]) -> None:
         embedding["capability_state"] = "probe_failed"
         embedding["component_ready"] = False
         embedding["user_message"] = "已安装，但真实推理未通过"
-        embedding["next_action"] = "进入端侧能力页查看完整检查结果并执行预热"
-    elif available and model_info:
-        embedding["capability_state"] = "installed_not_probed"
+        embedding["next_action"] = "进入端侧能力页查看检查结果并执行预热"
+    elif available and model_info and warmup_ready:
+        embedding["capability_state"] = "recently_ready"
         embedding["component_ready"] = True
-        embedding["user_message"] = "已安装，未执行推理探针"
-        embedding["next_action"] = "需要端侧增强时点击“预热 Kylin SDK”"
+        embedding["user_message"] = "已安装，最近一次端侧向量预热成功"
+        embedding["next_action"] = "可继续使用；需要复核时点击“检查端侧向量能力”"
+    elif available and model_info:
+        embedding["capability_state"] = "installed_unwarmed"
+        embedding["component_ready"] = True
+        embedding["user_message"] = "已安装，当前未预热"
+        embedding["next_action"] = "首次使用可能稍慢，可点击“预热 Kylin SDK”"
     elif available:
         embedding["capability_state"] = "metadata_incomplete"
         embedding["component_ready"] = False
         embedding["user_message"] = "已检测到部分 SDK 文件，模型或运行时信息不完整"
-        embedding["next_action"] = "进入端侧能力页运行完整检查"
+        embedding["next_action"] = "进入端侧能力页运行检查"
     else:
         embedding["capability_state"] = "not_installed"
         embedding["component_ready"] = False
         embedding["user_message"] = "未检测到 Kylin embedding SDK"
         embedding["next_action"] = "可继续使用稳定检索路径，或安装 openKylin AI 组件"
-    if probe is None and embedding["capability_state"] == "installed_not_probed":
+    embedding["product_state"] = _embedding_product_state(
+        installed=bool(available and model_info),
+        warmup_state=warmup_state,
+        fallback=str(embedding.get("fallback", "hash_embedding")),
+        inference_ready=inference_value is True,
+        probe=probe if isinstance(probe, dict) else None,
+    )
+    if probe is None and embedding["capability_state"] == "installed_unwarmed":
         diagnosis = embedding.setdefault("diagnosis", {})
         if isinstance(diagnosis, dict):
-            diagnosis["product_status_meaning"] = "未执行推理探针不是故障；快速状态用于保持 UKUI 设置页流畅。"
+            diagnosis["product_status_meaning"] = "未预热不是故障；快速状态用于保持 UKUI 设置页流畅。"
+
+
+def _kylin_warmup_state_path() -> Path:
+    state_home = os.environ.get("XDG_STATE_HOME")
+    if state_home:
+        return Path(state_home) / "memguardos" / "kylin-sdk-warmup.json"
+    return Path.home() / ".local" / "state" / "memguardos" / "kylin-sdk-warmup.json"
+
+
+def _read_kylin_warmup_state() -> Dict[str, object]:
+    path = _kylin_warmup_state_path()
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"read_error": True, "path": str(path)}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _warmup_state_is_ready(state: Dict[str, object]) -> bool:
+    return bool(state.get("ok") and state.get("inference_ready") and int(state.get("dim") or 0) == 768)
+
+
+def _embedding_product_state(
+    *,
+    installed: bool,
+    warmup_state: Dict[str, object],
+    fallback: str,
+    inference_ready: bool = False,
+    probe: Dict[str, object] | None = None,
+) -> Dict[str, object]:
+    ready = inference_ready or _warmup_state_is_ready(warmup_state)
+    dim = 0
+    if probe:
+        dim = int(probe.get("dim") or 0)
+    if not dim:
+        dim = int(warmup_state.get("dim") or 0)
+    if ready:
+        warmup_label = "ready"
+    elif installed:
+        warmup_label = "not_warmed"
+    else:
+        warmup_label = "unavailable"
+    return {
+        "installed": installed,
+        "last_probe_success": ready,
+        "last_success_at": str(warmup_state.get("completed_at", "")),
+        "last_success_dim": dim or None,
+        "last_success_model": str(warmup_state.get("model", "")),
+        "warmup_state": warmup_label,
+        "fallback": fallback,
+        "user_message": (
+            "已安装，最近一次端侧向量预热成功"
+            if ready
+            else ("已安装，当前未预热" if installed else "未检测到端侧向量组件")
+        ),
+    }
 
 
 def _augment_vector_product_state(vector_store: Dict[str, object]) -> None:

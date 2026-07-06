@@ -44,10 +44,27 @@ def test_split_debian_package_plan_has_enterprise_ownership_boundaries():
     assert plan["memguardos"]["files"] == []
     assert "/usr/bin/memctl" in plan["memguardos-core"]["files"]
     assert "/usr/bin/memguardos-tray" in plan["memguardos-ukui"]["files"]
+    assert "/usr/share/applications/memguardos-center.desktop" in plan["memguardos-ukui"]["files"]
     assert "/lib/systemd/system/memguard-agent@.service" in plan["memguardos-agent-bridge"]["files"]
     assert "/usr/share/doc/memguardos-doc/README.md" in plan["memguardos-doc"]["files"]
     assert validate_no_overlap(plan) == []
     assert (ROOT / "scripts/verify_deb_lifecycle.sh").exists()
+
+
+def test_debian_packages_apply_openkylin_native_install_lifecycle():
+    builder = (ROOT / "scripts/build_deb_packages.py").read_text(encoding="utf-8")
+    menu = (ROOT / "packaging/desktop/memguardos-center.desktop").read_text(encoding="utf-8")
+
+    assert "systemctl enable --now memguardd.service" in builder
+    assert "systemctl --global enable memguard-kylin-warmup.service" in builder
+    assert "用户数据保留" in builder
+    assert "update-desktop-database" in builder
+    assert "peony -q" in builder
+    assert "rm -rf /var/lib/memguardos" not in builder
+    assert "rm -rf /opt/memguardos/data" not in builder
+    assert "Name=MemGuardOS 记忆安全" in menu
+    assert "Exec=ukui-control-center" in menu
+    assert "Categories=Settings;Security;" in menu
 
 
 def test_native_evidence_revision_rejects_unknown_and_mismatch(tmp_path):

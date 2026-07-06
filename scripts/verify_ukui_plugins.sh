@@ -39,6 +39,6 @@ cat <<'EOF'
 3. Confirm the menu item "使用 MemGuardOS 检查记忆内容" is visible.
 4. Click the menu item, review the file preview dialog, select safe text files, and confirm the result dialog.
 5. Open UKUI control center, security category, and confirm "MemGuardOS 记忆安全" is visible.
-6. Confirm the tabs "总览", "服务与安全", and "系统维护" are visible. Use "重新检查状态", "校验审计链", "检查端侧向量能力", and "导出系统报告"; confirm the operation history and "详细结果" area update.
+6. Confirm the tabs "总览", "服务与安全", and "系统维护" are visible. Use "重新检查状态", "校验审计链", "检查端侧向量能力", and "导出系统报告"; confirm the operation history and "维护结果" area update.
 7. Click "打开本地控制台"; confirm http://127.0.0.1:8765 opens.
 EOF

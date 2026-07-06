@@ -3,6 +3,7 @@
 #include <QAction>
 #include <QAbstractItemView>
 #include <QCheckBox>
+#include <QDesktopServices>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QFile>
@@ -44,13 +45,13 @@ QJsonObject parseJsonOutput(const QByteArray &raw, QString *error)
     const int first = raw.indexOf('{');
     const int last = raw.lastIndexOf('}');
     if (first < 0 || last < first) {
-        *error = QStringLiteral("命令没有返回可识别的 JSON 结果。");
+        *error = QStringLiteral("没有收到有效的检查结果，请稍后重试；如仍失败，请在记忆安全中心导出诊断报告。");
         return {};
     }
     QJsonParseError parseError;
     const QJsonDocument document = QJsonDocument::fromJson(raw.mid(first, last - first + 1), &parseError);
     if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
-        *error = QStringLiteral("结果解析失败：%1").arg(parseError.errorString());
+        *error = QStringLiteral("检查结果暂时无法读取，请重新检查或在记忆安全中心导出诊断报告。");
         return {};
     }
     return document.object();
@@ -59,12 +60,27 @@ QJsonObject parseJsonOutput(const QByteArray &raw, QString *error)
 QString actionLabel(const QString &action)
 {
     if (action == QStringLiteral("import_text"))
-        return QStringLiteral("可以导入");
+        return QStringLiteral("可导入");
     if (action == QStringLiteral("block_sensitive"))
-        return QStringLiteral("敏感内容，已阻断");
+        return QStringLiteral("已阻断");
     if (action == QStringLiteral("missing_path"))
         return QStringLiteral("文件不存在");
-    return QStringLiteral("仅记录，不导入");
+    return QStringLiteral("仅审计");
+}
+
+QString candidateReason(const QJsonObject &item)
+{
+    const QString action = item.value(QStringLiteral("recommended_action")).toString();
+    const QString level = item.value(QStringLiteral("sensitivity")).toObject().value(QStringLiteral("level")).toString();
+    if (action == QStringLiteral("block_sensitive") || level == QStringLiteral("high"))
+        return QStringLiteral("敏感风险");
+    if (action == QStringLiteral("import_text"))
+        return QStringLiteral("文本候选，可能形成偏好或知识记忆");
+    if (action == QStringLiteral("audit_only"))
+        return QStringLiteral("仅记录文件选择，不读取内容");
+    if (action == QStringLiteral("missing_path"))
+        return QStringLiteral("路径不可用");
+    return QStringLiteral("不适合导入记忆");
 }
 
 QString riskLabel(const QJsonObject &item)
@@ -84,6 +100,16 @@ QString humanSize(qint64 bytes)
     if (bytes < 1024 * 1024)
         return QStringLiteral("%1 KB").arg(QString::number(bytes / 1024.0, 'f', 1));
     return QStringLiteral("%1 MB").arg(QString::number(bytes / (1024.0 * 1024.0), 'f', 1));
+}
+
+void openLocalConsole(const QString &fragment = QString())
+{
+    const Command command = memctlCommand({QStringLiteral("web"), QStringLiteral("--host"), QStringLiteral("127.0.0.1"), QStringLiteral("--port"), QStringLiteral("8765")});
+    QProcess::startDetached(command.program, command.arguments);
+    QTimer::singleShot(800, [fragment]() {
+        const QString suffix = fragment.isEmpty() ? QString() : fragment;
+        QDesktopServices::openUrl(QUrl(QStringLiteral("http://127.0.0.1:8765%1").arg(suffix)));
+    });
 }
 
 } // namespace
@@ -234,13 +260,29 @@ void MemGuardPeonyPlugin::showPreviewDialog(const QJsonObject &preview)
     dialog.resize(880, 480);
     dialog.setAccessibleName(QStringLiteral("MemGuardOS 文件检查结果"));
     auto *layout = new QVBoxLayout(&dialog);
-    auto *description = new QLabel(QStringLiteral("选择要写入 Agent 记忆的安全文本。敏感、超限或非文本内容不会被导入。"));
+    const QJsonArray items = preview.value(QStringLiteral("items")).toArray();
+    int importable = 0;
+    int blocked = 0;
+    int auditOnly = 0;
+    for (const QJsonValue &value : items) {
+        const QString action = value.toObject().value(QStringLiteral("recommended_action")).toString();
+        if (action == QStringLiteral("import_text"))
+            ++importable;
+        else if (action == QStringLiteral("block_sensitive"))
+            ++blocked;
+        else
+            ++auditOnly;
+    }
+    auto *description = new QLabel(QStringLiteral("记忆候选 %1 个：可导入 %2 个，已阻断 %3 个，仅审计 %4 个。选择要写入 Agent 记忆的安全文本；敏感、超限或非文本内容不会被导入。")
+            .arg(items.size())
+            .arg(importable)
+            .arg(blocked)
+            .arg(auditOnly));
     description->setWordWrap(true);
     layout->addWidget(description);
 
-    const QJsonArray items = preview.value(QStringLiteral("items")).toArray();
-    auto *table = new QTableWidget(items.size(), 6, &dialog);
-    table->setHorizontalHeaderLabels({QStringLiteral("选择"), QStringLiteral("文件"), QStringLiteral("大小"), QStringLiteral("风险"), QStringLiteral("处理建议"), QStringLiteral("内容预览")});
+    auto *table = new QTableWidget(items.size(), 7, &dialog);
+    table->setHorizontalHeaderLabels({QStringLiteral("选择"), QStringLiteral("文件"), QStringLiteral("大小"), QStringLiteral("风险"), QStringLiteral("处理建议"), QStringLiteral("原因"), QStringLiteral("内容预览")});
     table->verticalHeader()->setVisible(false);
     table->setSelectionBehavior(QAbstractItemView::SelectRows);
     table->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -251,7 +293,8 @@ void MemGuardPeonyPlugin::showPreviewDialog(const QJsonObject &preview)
     table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
     table->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
-    table->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Stretch);
+    table->horizontalHeader()->setSectionResizeMode(5, QHeaderView::ResizeToContents);
+    table->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Stretch);
 
     QList<QCheckBox *> checkBoxes;
     for (int row = 0; row < items.size(); ++row) {
@@ -271,9 +314,10 @@ void MemGuardPeonyPlugin::showPreviewDialog(const QJsonObject &preview)
         table->setItem(row, 2, new QTableWidgetItem(humanSize(item.value(QStringLiteral("size_bytes")).toVariant().toLongLong())));
         table->setItem(row, 3, new QTableWidgetItem(riskLabel(item)));
         table->setItem(row, 4, new QTableWidgetItem(actionLabel(item.value(QStringLiteral("recommended_action")).toString())));
+        table->setItem(row, 5, new QTableWidgetItem(candidateReason(item)));
         auto *content = new QTableWidgetItem(item.value(QStringLiteral("preview")).toString());
         content->setToolTip(item.value(QStringLiteral("preview")).toString());
-        table->setItem(row, 5, content);
+        table->setItem(row, 6, content);
     }
     layout->addWidget(table, 1);
 
@@ -324,16 +368,31 @@ void MemGuardPeonyPlugin::runApply(const QStringList &arguments)
                 QMessageBox::critical(nullptr, QStringLiteral("导入失败"), error);
             } else {
                 const QJsonObject summary = result.value(QStringLiteral("summary")).toObject();
-                const QString message = QStringLiteral("已导入 %1 个，阻断 %2 个，跳过 %3 个，失败 %4 个。\n审计链：%5")
+                const QString message = QStringLiteral("已导入 %1 个安全文件；%2 个敏感或不适合导入的项目已被保护性跳过；%3 个未选择；%4 个未完成。\n审计记录：%5")
                     .arg(summary.value(QStringLiteral("stored")).toInt())
                     .arg(summary.value(QStringLiteral("blocked")).toInt())
                     .arg(summary.value(QStringLiteral("skipped")).toInt())
                     .arg(summary.value(QStringLiteral("failed")).toInt())
                     .arg(result.value(QStringLiteral("audit_chain")).toObject().value(QStringLiteral("ok")).toBool() ? QStringLiteral("完整") : QStringLiteral("需要检查"));
-                if (result.value(QStringLiteral("ok")).toBool())
-                    QMessageBox::information(nullptr, QStringLiteral("导入完成"), message);
-                else
-                    QMessageBox::warning(nullptr, QStringLiteral("部分内容未导入"), message);
+                QStringList storedIds;
+                const QJsonArray results = result.value(QStringLiteral("results")).toArray();
+                for (const QJsonValue &value : results) {
+                    const QString memoryId = value.toObject().value(QStringLiteral("ingest")).toObject().value(QStringLiteral("memory_id")).toString();
+                    if (!memoryId.isEmpty())
+                        storedIds << memoryId;
+                }
+                QMessageBox box(result.value(QStringLiteral("ok")).toBool() ? QMessageBox::Information : QMessageBox::Warning,
+                    result.value(QStringLiteral("ok")).toBool() ? QStringLiteral("导入完成") : QStringLiteral("部分内容未导入"),
+                    message);
+                auto *view = box.addButton(QStringLiteral("查看结果"), QMessageBox::ActionRole);
+                auto *forget = box.addButton(QStringLiteral("撤销导入 / 立即遗忘"), QMessageBox::ActionRole);
+                forget->setEnabled(!storedIds.isEmpty());
+                box.addButton(QStringLiteral("关闭"), QMessageBox::RejectRole);
+                box.exec();
+                if (box.clickedButton() == view)
+                    openLocalConsole();
+                else if (box.clickedButton() == forget)
+                    openLocalConsole(QStringLiteral("#forget"));
             }
             progress->deleteLater();
             process->deleteLater();
