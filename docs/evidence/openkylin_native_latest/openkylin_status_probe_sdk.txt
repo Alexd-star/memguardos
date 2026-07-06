@@ -1,5 +1,5 @@
 $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
-Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock: Could not connect: Connection refused
+[1783312143103] [32minfo [0m Proxy init engine sessionId:1189073218.
 {
   "schema": "memguardos-openkylin-native-status-v1",
   "system": {
@@ -221,22 +221,32 @@ Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/cor
       },
       "session": {
         "created": true,
-        "init_code": 3,
-        "init_ok": false,
-        "init_code_hint": "runtime connection error; recreate session after checking kylin-ai-runtime"
+        "init_code": 0,
+        "init_ok": true,
+        "init_code_hint": "success",
+        "model_info_ok": true
       },
-      "model_info": null,
+      "model_info": {
+        "dim": 768,
+        "name": "ensemble-embd_gte-base_uint8-text",
+        "ondevice": true
+      },
       "embedding_probe": {
-        "ok": false,
-        "error": "failed to initialize text embedding session",
-        "init_code": 3,
-        "init_code_hint": "runtime connection error; recreate session after checking kylin-ai-runtime",
+        "ok": true,
+        "dim": 768,
+        "sample": [
+          -0.086721,
+          -0.023629,
+          -0.007548,
+          0.027401,
+          0.011692
+        ],
         "subprocess_returncode": 0,
-        "stderr_tail": "Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock: Could not connect: Connection refused"
+        "stderr_tail": "[1783312143171] \u001b[32minfo \u001b[0m Proxy init engine sessionId:713267222."
       },
-      "available": false,
-      "inference_ready": false,
-      "ready_for_default_retrieval": false,
+      "available": true,
+      "inference_ready": true,
+      "ready_for_default_retrieval": true,
       "fallback": "hash_embedding",
       "diagnosis": {
         "success_condition": "library_loadable and model_info and embedding_probe.ok",
@@ -244,10 +254,10 @@ Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/cor
         "probe_meaning": "embedding_probe is null when sdk-status runs without --probe-embedding; use --probe-embedding to verify real inference readiness.",
         "timeout_hint": "If model_info is present but embedding_probe returns 'Timeout was reached', inspect kylin-ai-runtime sockets, kytensor.service, Triton repository index, ondevice plugin logs, and model repository links."
       },
-      "capability_state": "probe_failed",
-      "component_ready": false,
-      "user_message": "已安装，但真实推理未通过",
-      "next_action": "进入端侧能力页查看完整检查结果并执行预热"
+      "capability_state": "inference_ready",
+      "component_ready": true,
+      "user_message": "推理就绪，可作为端侧检索增强",
+      "next_action": "可继续使用，也可定期导出诊断报告"
     },
     "vector_store": {
       "backend": "kysdk_vector_engine_client",
@@ -320,14 +330,14 @@ Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/cor
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 652964,
-        "user_usec": 429342,
-        "system_usec": 223622,
+        "usage_usec": 860523,
+        "user_usec": 566880,
+        "system_usec": 293642,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 156,
-        "nr_throttled": 4,
-        "throttled_usec": 123914,
+        "nr_periods": 220,
+        "nr_throttled": 5,
+        "throttled_usec": 126243,
         "nr_bursts": 0,
         "burst_usec": 0
       }
@@ -347,18 +357,18 @@ Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/cor
     "store_exists": true,
     "db_exists": true,
     "custom_patterns_exists": false,
-    "store_bytes": 209547,
-    "db_bytes": 688128,
-    "record_count": 77,
-    "live_record_count": 77,
-    "audit_event_count": 675
+    "store_bytes": 219568,
+    "db_bytes": 708608,
+    "record_count": 81,
+    "live_record_count": 81,
+    "audit_event_count": 682
   },
   "summary": {
-    "overall": "yellow",
-    "readiness_score": 0.8571,
-    "green": 6,
+    "overall": "green",
+    "readiness_score": 1.0,
+    "green": 7,
     "yellow": 0,
-    "red": 1
+    "red": 0
   },
   "components": [
     {
@@ -378,12 +388,12 @@ Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/cor
     {
       "name": "kylin_embedding",
       "label": "Kylin embedding SDK",
-      "available": false,
-      "ready": false,
-      "level": "red",
-      "user_message": "已安装，但真实推理未通过",
-      "next_action": "进入端侧能力页查看完整检查结果并执行预热",
-      "capability_state": "probe_failed"
+      "available": true,
+      "ready": true,
+      "level": "green",
+      "user_message": "推理就绪，可作为端侧检索增强",
+      "next_action": "可继续使用，也可定期导出诊断报告",
+      "capability_state": "inference_ready"
     },
     {
       "name": "kylin_vector",
@@ -417,7 +427,5 @@ Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/cor
       "level": "green"
     }
   ],
-  "recommendations": [
-    "Kylin embedding SDK 未进入真实推理就绪状态时，保持稳定 fallback；需要端侧增强时先运行 warmup_kylin_sdk.sh。"
-  ]
+  "recommendations": []
 }

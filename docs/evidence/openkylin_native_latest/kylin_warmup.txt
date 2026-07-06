@@ -2,10 +2,10 @@ $ bash scripts/warmup_kylin_sdk.sh
 {
   "schema": "memguardos-kylin-sdk-warmup-v1",
   "ok": true,
-  "available": false,
-  "inference_ready": false,
-  "model": "",
-  "dim": null,
+  "available": true,
+  "inference_ready": true,
+  "model": "ensemble-embd_gte-base_uint8-text",
+  "dim": 768,
   "fallback": "hash_embedding",
-  "recommendation": "SDK 元数据可达但真实推理未就绪，默认继续使用稳定 fallback。"
+  "recommendation": "Kylin embedding SDK 已预热，可作为端侧检索增强。"
 }

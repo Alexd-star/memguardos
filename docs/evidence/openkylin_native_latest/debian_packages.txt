@@ -37,39 +37,39 @@ dpkg-deb: 正在 '/home/luo/memguardos-product-head/dist/memguardos_0.1.0-2_all.
       "architecture": "amd64",
       "path": "/home/luo/memguardos-product-head/dist/memguardos-core_0.1.0-2_amd64.deb",
       "bytes": 126232,
-      "sha256": "3560fbadca7e143f1aac8e3b5f307d49fee5d5eac3ef6883ef102e24612a98be"
+      "sha256": "6aeb7a2efba8c9f34b37b593182dd7a9bc24380202d933c212103c87fad86bb4"
     },
     {
       "package": "memguardos-ukui",
       "version": "0.1.0-2",
       "architecture": "amd64",
       "path": "/home/luo/memguardos-product-head/dist/memguardos-ukui_0.1.0-2_amd64.deb",
-      "bytes": 82488,
-      "sha256": "54146e43648aa13063e497612d5b370e7758c1bdb91f1f2c9bf4dd176dd6d8ec"
+      "bytes": 82600,
+      "sha256": "7cb0a97e9fafdb33864dcc8b6c875cfdc8bee1be5ffb0348af447ac0f4270dce"
     },
     {
       "package": "memguardos-agent-bridge",
       "version": "0.1.0-2",
       "architecture": "amd64",
       "path": "/home/luo/memguardos-product-head/dist/memguardos-agent-bridge_0.1.0-2_amd64.deb",
-      "bytes": 7472,
-      "sha256": "6974edcce5b35ec2ab57a3c08f8436f2902c704edd280eda3ac1d7aeb9fb862b"
+      "bytes": 7468,
+      "sha256": "c6746826946f1ec69bfa7c48d1d05703d4e609a3325944b66bb7f78379fc90a9"
     },
     {
       "package": "memguardos-doc",
       "version": "0.1.0-2",
       "architecture": "all",
       "path": "/home/luo/memguardos-product-head/dist/memguardos-doc_0.1.0-2_all.deb",
-      "bytes": 171068,
-      "sha256": "74e1ab22c588c676a8800044ab56c11bb834864a9256361ade904c9327d67c0f"
+      "bytes": 171048,
+      "sha256": "a4ac1b629a03ff2e4c9bd45e4e641864facb690356e6418e2aa5f321b326c6be"
     },
     {
       "package": "memguardos",
       "version": "0.1.0-2",
       "architecture": "all",
       "path": "/home/luo/memguardos-product-head/dist/memguardos_0.1.0-2_all.deb",
-      "bytes": 888,
-      "sha256": "6da68c4b11d8e28c70f770deed01b48639d10d3b3c99b436b56a9d0ab0df75ed"
+      "bytes": 884,
+      "sha256": "4a050c18a9a93d15a5882e1e2701a03a9c823e484bdec2bf36db9b832fd4ed5f"
     }
   ]
 }
