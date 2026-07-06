@@ -4,6 +4,7 @@
 #include <QColor>
 #include <QDesktopServices>
 #include <QDialog>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -176,10 +177,10 @@ bool containsAny(const QString &text, const QStringList &keywords)
 QString friendlyRecommendationText(const QString &text)
 {
     if (containsAny(text, {QStringLiteral("SDK"), QStringLiteral("Kylin"), QStringLiteral("embedding"), QStringLiteral("vector"), QStringLiteral("向量")})) {
-        if (containsAny(text, {QStringLiteral("未执行推理探针"), QStringLiteral("按需检查"), QStringLiteral("未进入真实推理就绪状态")})) {
-            return QStringLiteral("端侧能力建议确认：核心记忆服务可正常使用；如需启用 Kylin 端侧增强，请点击右侧按钮，系统会切换到【服务与安全】并检查端侧向量能力。");
+        if (containsAny(text, {QStringLiteral("按需检查"), QStringLiteral("端侧能力待确认"), QStringLiteral("端侧增强待确认")})) {
+            return QStringLiteral("端侧能力建议确认：核心记忆服务可正常使用；如需启用 Kylin 端侧增强，请点击右侧按钮，系统会切换到【管理员】并检查端侧向量能力。");
         }
-        return QStringLiteral("端侧能力需要确认：请点击右侧按钮检查端侧向量能力；如果仍异常，可在【服务与安全】中点击【预热 Kylin SDK】后重新检查。");
+        return QStringLiteral("端侧能力需要确认：请点击右侧按钮检查端侧向量能力；如果仍异常，可在【管理员】中点击【预热 Kylin SDK】后重新检查。");
     }
     return text;
 }
@@ -442,8 +443,8 @@ QWidget *MemGuardUkccPlugin::pluginUi()
 
     tabs_ = new QTabWidget;
     tabs_->setAccessibleName(QStringLiteral("MemGuardOS 设置分类"));
-    overviewTabIndex_ = tabs_->addTab(buildOverviewTab(), QIcon::fromTheme(QStringLiteral("view-list-details")), QStringLiteral("总览"));
-    serviceTabIndex_ = tabs_->addTab(buildServiceTab(), QIcon::fromTheme(QStringLiteral("preferences-system")), QStringLiteral("服务与安全"));
+    overviewTabIndex_ = tabs_->addTab(buildOverviewTab(), QIcon::fromTheme(QStringLiteral("user-home")), QStringLiteral("日常使用"));
+    serviceTabIndex_ = tabs_->addTab(buildServiceTab(), QIcon::fromTheme(QStringLiteral("preferences-system")), QStringLiteral("管理员"));
     diagnosticsTabIndex_ = tabs_->addTab(buildDiagnosticsTab(), QIcon::fromTheme(QStringLiteral("preferences-system")), QStringLiteral("系统维护"));
     layout->addWidget(tabs_, 1);
 
@@ -464,7 +465,7 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
 {
     auto *scroll = new QScrollArea;
     scroll->setWidgetResizable(true);
-    scroll->setAccessibleName(QStringLiteral("MemGuardOS 总览滚动区域"));
+    scroll->setAccessibleName(QStringLiteral("MemGuardOS 日常使用滚动区域"));
     auto *tab = new QWidget;
     auto *layout = new QVBoxLayout(tab);
 
@@ -499,14 +500,14 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     auto *taskBox = new QGroupBox(QStringLiteral("任务入口"));
     auto *taskLayout = new QGridLayout(taskBox);
     auto *openConsole = makeOperationButton(QStringLiteral("applications-internet"), QStringLiteral("打开本地控制台"), QStringLiteral("打开 MemGuardOS 本地控制台"));
-    auto *verifyAudit = makeOperationButton(QStringLiteral("security-high"), QStringLiteral("校验审计链"), QStringLiteral("校验 MemGuardOS 审计链"));
-    auto *exportReport = makeOperationButton(QStringLiteral("document-save"), QStringLiteral("导出快速报告"), QStringLiteral("导出 MemGuardOS 系统报告"));
-    auto *serviceLogs = makeOperationButton(QStringLiteral("text-x-log"), QStringLiteral("查看服务日志"), QStringLiteral("查看 memguardd 服务日志"));
+    auto *openFiles = makeOperationButton(QStringLiteral("system-file-manager"), QStringLiteral("打开文件管理器"), QStringLiteral("打开文件管理器后可右键文件进行记忆扫描"));
+    auto *forgetEntry = makeOperationButton(QStringLiteral("edit-delete"), QStringLiteral("查看遗忘入口"), QStringLiteral("打开本地控制台查看记忆遗忘入口"));
+    auto *refreshNow = makeOperationButton(QStringLiteral("view-refresh"), QStringLiteral("重新检查状态"), QStringLiteral("重新检查 MemGuardOS 状态"));
     taskLayout->addWidget(openConsole, 0, 0);
-    taskLayout->addWidget(verifyAudit, 0, 1);
-    taskLayout->addWidget(exportReport, 0, 2);
-    taskLayout->addWidget(serviceLogs, 0, 3);
-    taskLayout->addWidget(makeMutedLabel(QStringLiteral("轻量操作：快速刷新、日志、审计校验通常在数秒内完成；端侧能力检查和授权操作可能需要更久，可通过【停止当前操作】中断。")), 1, 0, 1, 4);
+    taskLayout->addWidget(openFiles, 0, 1);
+    taskLayout->addWidget(forgetEntry, 0, 2);
+    taskLayout->addWidget(refreshNow, 0, 3);
+    taskLayout->addWidget(makeMutedLabel(QStringLiteral("日常操作：查看服务状态、用文件管理器右键扫描文件、在本地控制台预览遗忘影响范围。审计、日志、BPF 和授权操作放在【管理员】页。")), 1, 0, 1, 4);
     layout->addWidget(taskBox);
 
     auto *flowBox = new QGroupBox(QStringLiteral("记忆治理流程"));
@@ -608,14 +609,20 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     detailGrid->addWidget(historyBox, 0, 1);
     layout->addLayout(detailGrid);
 
-    auto *hint = new QLabel(QStringLiteral("状态来自本机实时检查。选择【重新检查状态】可刷新服务、端侧能力、审计和资源信息。"));
+    auto *hint = new QLabel(QStringLiteral("状态来自本机实时检查。选择【重新检查状态】可刷新服务、端侧能力、审计和资源信息。管理员维护入口位于【管理员】和【系统维护】页。"));
     hint->setWordWrap(true);
     layout->addWidget(hint);
-    actionButtons_ << openConsole << verifyAudit << exportReport << serviceLogs;
+    actionButtons_ << openConsole << openFiles << forgetEntry << refreshNow;
     connect(openConsole, &QPushButton::clicked, this, &MemGuardUkccPlugin::openDashboard);
-    connect(verifyAudit, &QPushButton::clicked, this, [this]() { runMemctl({QStringLiteral("verify-audit")}, QStringLiteral("details")); });
-    connect(exportReport, &QPushButton::clicked, this, [this]() { runMemctl({QStringLiteral("diagnostics")}, QStringLiteral("export")); });
-    connect(serviceLogs, &QPushButton::clicked, this, [this]() { runProgram(QStringLiteral("journalctl"), {QStringLiteral("-u"), QStringLiteral("memguardd.service"), QStringLiteral("-n"), QStringLiteral("100"), QStringLiteral("--no-pager")}, QStringLiteral("details")); });
+    connect(openFiles, &QPushButton::clicked, this, [this]() {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(QDir::homePath()));
+        appendHistory(QStringLiteral("打开文件管理器"), true, QStringLiteral("已打开文件管理器。选择文本文件后可通过 Peony 右键执行 MemGuardOS 记忆扫描。"));
+    });
+    connect(forgetEntry, &QPushButton::clicked, this, [this]() {
+        appendHistory(QStringLiteral("查看遗忘入口"), true, QStringLiteral("已打开本地控制台。进入记忆列表后可先预览影响范围，再确认遗忘。"));
+        openDashboard();
+    });
+    connect(refreshNow, &QPushButton::clicked, this, &MemGuardUkccPlugin::refreshStatus);
     scroll->setWidget(tab);
     return scroll;
 }
@@ -624,7 +631,7 @@ QWidget *MemGuardUkccPlugin::buildServiceTab()
 {
     auto *scroll = new QScrollArea;
     scroll->setWidgetResizable(true);
-    scroll->setAccessibleName(QStringLiteral("MemGuardOS 服务与安全滚动区域"));
+    scroll->setAccessibleName(QStringLiteral("MemGuardOS 管理员滚动区域"));
     auto *tab = new QWidget;
     auto *layout = new QVBoxLayout(tab);
     auto *serviceBox = new QGroupBox(QStringLiteral("服务控制"));
@@ -1019,28 +1026,39 @@ void MemGuardUkccPlugin::renderStatus(const QJsonObject &payload)
     const bool embeddingAvailable = embedding.value(QStringLiteral("available")).toBool();
     const QJsonValue inferenceValue = embedding.value(QStringLiteral("inference_ready"));
     const bool inferenceKnown = !inferenceValue.isUndefined() && !inferenceValue.isNull();
-    const bool embeddingReady = inferenceKnown && inferenceValue.toBool();
-    const bool fastSdkStatus = embedding.value(QStringLiteral("status_mode")).toString() == QStringLiteral("fast");
+    const bool inferenceReady = inferenceKnown && inferenceValue.toBool();
     const QString capabilityState = embedding.value(QStringLiteral("capability_state")).toString();
     const QString userMessage = embedding.value(QStringLiteral("user_message")).toString();
     const QString nextAction = embedding.value(QStringLiteral("next_action")).toString();
+    const bool installed_unwarmed = capabilityState == QStringLiteral("installed_unwarmed");
+    const bool recently_ready = capabilityState == QStringLiteral("recently_ready");
     const bool installedNotProbed = capabilityState == QStringLiteral("installed_not_probed");
-    const QString sdkLevel = embeddingReady || installedNotProbed
+    const bool sdkUsable = installed_unwarmed || recently_ready || inferenceReady || installedNotProbed;
+    const QString sdkLevel = sdkUsable
         ? QStringLiteral("green")
         : (embeddingAvailable ? QStringLiteral("yellow") : QStringLiteral("red"));
     const QString sdkLabel = userMessage.isEmpty()
-        ? (embeddingReady ? QStringLiteral("推理就绪") : (embeddingAvailable ? QStringLiteral("端侧能力按需检查") : QStringLiteral("未检测到")))
+        ? (inferenceReady ? QStringLiteral("推理就绪") : (embeddingAvailable ? QStringLiteral("端侧能力按需检查") : QStringLiteral("未检测到")))
         : userMessage;
     setStatusBadge(
         sdkStatusIcon_,
         sdkStatusLabel_,
         sdkLevel,
         sdkLabel);
-    sdkState_->setText(QStringLiteral("安装状态：%1；推理状态：%2；模型：%3；建议：%4")
-        .arg(boolText(embedding.value(QStringLiteral("available")).toBool()))
-        .arg(inferenceKnown ? boolText(embeddingReady) : (fastSdkStatus ? QStringLiteral("已安装，未执行推理探针") : QStringLiteral("未执行推理探针")))
+    QString sdkHumanState;
+    if (inferenceReady || recently_ready) {
+        sdkHumanState = QStringLiteral("端侧向量最近验证可用，可作为检索增强。");
+    } else if (installed_unwarmed || installedNotProbed) {
+        sdkHumanState = QStringLiteral("端侧组件已安装，当前未预热；未预热不是故障，首次使用可能稍慢。");
+    } else if (embeddingAvailable) {
+        sdkHumanState = QStringLiteral("端侧组件已检测到，但需要进一步检查模型或运行时。");
+    } else {
+        sdkHumanState = QStringLiteral("未检测到端侧向量组件，系统会继续使用稳定 fallback。");
+    }
+    sdkState_->setText(QStringLiteral("%1\n模型：%2\n建议：%3")
+        .arg(sdkHumanState)
         .arg(embedding.value(QStringLiteral("model_info")).toObject().value(QStringLiteral("name")).toString(QStringLiteral("未识别")))
-        .arg(nextAction.isEmpty() ? QStringLiteral("日常使用可保持稳定检索路径；需要端侧增强时点击【检查端侧向量能力】或【预热 Kylin SDK】") : nextAction));
+        .arg(nextAction.isEmpty() ? QStringLiteral("日常使用可保持稳定检索路径；需要端侧增强时点击【检查端侧向量能力】或【预热 Kylin SDK】。") : nextAction));
     const QJsonObject security = payload.value(QStringLiteral("security")).toObject();
     const bool auditReady = security.value(QStringLiteral("auditd")).toObject().value(QStringLiteral("rules_tool_available")).toBool();
     setStatusBadge(
@@ -1136,14 +1154,14 @@ void MemGuardUkccPlugin::handleRecommendationAction(const QString &text)
     if (containsAny(text, {QStringLiteral("memguardd"), QStringLiteral("systemd"), QStringLiteral("服务")})) {
         if (tabs_)
             tabs_->setCurrentIndex(serviceTabIndex_);
-        appendHistory(QStringLiteral("处理建议"), true, QStringLiteral("已定位到【服务与安全】>【服务控制】，可启动、重启或查看 memguardd 日志。"));
+        appendHistory(QStringLiteral("处理建议"), true, QStringLiteral("已定位到【管理员】>【服务控制】，可启动、重启或查看 memguardd 日志。"));
         return;
     }
 
     if (containsAny(text, {QStringLiteral("SDK"), QStringLiteral("Kylin"), QStringLiteral("embedding"), QStringLiteral("vector"), QStringLiteral("向量")})) {
         if (tabs_)
             tabs_->setCurrentIndex(serviceTabIndex_);
-        appendHistory(QStringLiteral("处理建议"), true, QStringLiteral("已切换到【服务与安全】并开始【检查端侧向量能力】；完成后结果会显示在【系统维护】>【维护结果】。"));
+        appendHistory(QStringLiteral("处理建议"), true, QStringLiteral("已切换到【管理员】并开始【检查端侧向量能力】；完成后结果会显示在【系统维护】>【维护结果】。"));
         runMemctl({QStringLiteral("sdk-status"), QStringLiteral("--probe-embedding"), QStringLiteral("--probe-timeout"), QStringLiteral("90")}, QStringLiteral("details"));
         return;
     }
@@ -1158,7 +1176,7 @@ void MemGuardUkccPlugin::handleRecommendationAction(const QString &text)
     if (containsAny(text, {QStringLiteral("Polkit"), QStringLiteral("授权"), QStringLiteral("权限")})) {
         if (tabs_)
             tabs_->setCurrentIndex(serviceTabIndex_);
-        appendHistory(QStringLiteral("处理建议"), true, QStringLiteral("已定位到【服务与安全】>【授权边界】，请检查 Polkit policy 和 native helper。"));
+        appendHistory(QStringLiteral("处理建议"), true, QStringLiteral("已定位到【管理员】>【授权边界】，请检查 Polkit policy 和 native helper。"));
         return;
     }
 
@@ -1176,7 +1194,7 @@ void MemGuardUkccPlugin::handleRecommendationAction(const QString &text)
     if (containsAny(text, {QStringLiteral("cgroup"), QStringLiteral("CPU"), QStringLiteral("内存"), QStringLiteral("资源")})) {
         if (tabs_)
             tabs_->setCurrentIndex(overviewTabIndex_);
-        appendHistory(QStringLiteral("处理建议"), true, QStringLiteral("已定位到【总览】>【资源快照】，可查看 memguardd 服务 cgroup、内存和 CPU 配额。"));
+        appendHistory(QStringLiteral("处理建议"), true, QStringLiteral("已定位到【日常使用】>【资源快照】，可查看 memguardd 服务 cgroup、内存和 CPU 配额。"));
         return;
     }
 

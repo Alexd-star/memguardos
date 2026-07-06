@@ -203,6 +203,75 @@ def test_fast_openkylin_status_reports_recent_kylin_warmup_without_probe(monkeyp
     assert components["kylin_embedding"]["user_message"] == "已安装，最近一次端侧向量预热成功"
 
 
+def test_openkylin_sdk_recommendation_uses_user_facing_copy(monkeypatch, tmp_path):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+
+    monkeypatch.setattr(
+        openkylin_native,
+        "_service_status",
+        lambda units: {
+            "systemd": {"available": True, "active": True},
+            "memguardd.service": {"available": True, "active": True, "state": "active"},
+            "kylin-ai-vector-engine.service": {"available": True, "active": True, "state": "active"},
+            "kytensor.service": {"available": True, "active": True, "state": "active"},
+        },
+    )
+    monkeypatch.setattr(
+        openkylin_native,
+        "kylin_sdk_status",
+        lambda probe_embedding=False, probe_timeout=45.0: {
+            "embedding": {
+                "available": True,
+                "inference_ready": False,
+                "embedding_probe": {"ok": False, "error": "timeout"},
+                "model_info": {"name": "ensemble-embd_gte-base_uint8-text", "dim": 768},
+                "fallback": "hash_embedding",
+                "diagnosis": {},
+            },
+            "vector_store": {"available": True, "user_service": {"active": True}},
+        },
+    )
+    monkeypatch.setattr(
+        openkylin_native,
+        "_desktop_status",
+        lambda: {
+            "peony": {"available": True, "plugin_installed": True},
+            "ukui_control_center": {"available": True, "plugin_installed": True},
+            "notify_send": {"available": True},
+        },
+    )
+    monkeypatch.setattr(
+        openkylin_native,
+        "_security_status",
+        lambda: {
+            "auditd": {"available": True, "rules_tool_available": True},
+            "polkit": {"policy_installed": True},
+            "bpf_lsm": {},
+        },
+    )
+    monkeypatch.setattr(
+        openkylin_native,
+        "_resource_status",
+        lambda namespace: {
+            "cgroup_v2": True,
+            "service_managed": True,
+            "control_group": "/system.slice/memguardd.service",
+            "memory": {},
+            "cpu": {},
+            "namespace": namespace,
+        },
+    )
+
+    payload = openkylin_native.openkylin_native_status(namespace="default", probe_sdk=True)
+    recommendations = "\n".join(payload["recommendations"])
+
+    assert "真实推理" not in recommendations
+    assert "warmup_kylin_sdk.sh" not in recommendations
+    assert "预热 Kylin SDK" in recommendations
+    assert "默认检索不受影响" in recommendations
+
+
 def test_fast_openkylin_status_treats_vector_socket_as_ready(monkeypatch, tmp_path):
     monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
 
@@ -570,17 +639,20 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "结果位置" in source
     assert "operationGuide_" in source
     assert "updateOperationGuide" in source
-    assert "轻量操作" in source
+    assert "日常操作" in source
     assert "完整检查" not in source
     assert "导出快速报告" in source
-    assert "快速刷新、日志、审计校验通常在数秒内完成" in source
-    assert "端侧能力检查和授权操作可能需要更久" in source
+    assert "审计、日志、BPF 和授权操作放在【管理员】页" in source
     assert "操作历史" in source
     assert "资源快照" in source
     assert "QProgressBar" in source
     assert "QScrollArea" in source
     assert "setTextVisible(false)" in source
     assert "readinessValueLabel_" in source
+    assert "日常使用" in source
+    assert "管理员" in source
+    assert "打开文件管理器" in source
+    assert "查看遗忘入口" in source
     assert "服务健康" in source
     assert "任务入口" in source
     assert "普通用户" in source
@@ -643,7 +715,13 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "capability_state" in source
     assert "user_message" in source
     assert "next_action" in source
-    assert "已安装，未执行推理探针" in source
+    assert "installed_unwarmed" in source
+    assert "recently_ready" in source
+    assert "inference_ready" in source
+    assert "installed_unwarmed || recently_ready || inferenceReady" in source
+    assert "未预热不是故障" in source
+    assert "当前未预热" in source
+    assert "未执行推理探针" not in source
     assert "预热 Kylin SDK" in source
     assert "启动服务" in source
     assert "停止服务" in source

@@ -236,8 +236,8 @@ def _augment_embedding_product_state(embedding: Dict[str, object]) -> None:
     elif inference_value is False:
         embedding["capability_state"] = "probe_failed"
         embedding["component_ready"] = False
-        embedding["user_message"] = "已安装，但真实推理未通过"
-        embedding["next_action"] = "进入端侧能力页查看检查结果并执行预热"
+        embedding["user_message"] = "已安装，但端侧增强检查未通过"
+        embedding["next_action"] = "默认检索不受影响；需要端侧增强时请点击“预热 Kylin SDK”后重试"
     elif available and model_info and warmup_ready:
         embedding["capability_state"] = "recently_ready"
         embedding["component_ready"] = True
@@ -537,7 +537,7 @@ def _recommendations(components: List[Dict[str, object]], sdk: Dict[str, object]
     by_name = {str(item["name"]): item for item in components}
     embedding_state = str(sdk["embedding"].get("capability_state", ""))
     if embedding_state != "installed_not_probed" and by_name["kylin_embedding"]["level"] != "green":
-        recommendations.append("Kylin embedding SDK 未进入真实推理就绪状态时，保持稳定 fallback；需要端侧增强时先运行 warmup_kylin_sdk.sh。")
+        recommendations.append("Kylin embedding SDK 端侧增强暂未就绪，默认检索不受影响；需要端侧增强时请点击“预热 Kylin SDK”后重试。")
     if by_name["peony"]["level"] != "green" or by_name["ukui_control_center"]["level"] != "green":
         recommendations.append("如需桌面原生体验，请安装 memguardos UKUI/Peony 插件并重启 Peony 或 UKUI 控制中心。")
     if not security["polkit"]["policy_installed"]:

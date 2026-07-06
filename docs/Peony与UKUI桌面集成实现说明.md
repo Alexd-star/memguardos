@@ -86,9 +86,9 @@ UKUI 控制中心插件的定位是“MemGuardOS 记忆安全中心”。它不�
 
 页面包括：
 
-- **总览**：展示服务状态、SDK 状态、审计链状态、资源状态和建议操作。
-- **服务**：启动、停止、重启 `memguardd.service`，查看服务日志，检查 systemd/cgroup 状态。
-- **端侧智能**：检查 Kylin embedding/vector SDK，执行 SDK 预热，显示当前是否使用 fallback。
+- **日常使用**：面向普通桌面用户，展示服务状态、文件扫描入口、本地控制台入口、遗忘入口、资源快照和处理建议。
+- **管理员**：启动、停止、重启 `memguardd.service`，查看服务日志，检查 systemd/cgroup 状态、Kylin embedding/vector SDK、审计链、Polkit 和 BPF LSM 可选验证。
+- **端侧智能**：管理员页可检查 Kylin embedding/vector SDK，执行 SDK 预热，显示当前是否使用 fallback；日常页只显示用户能理解的可用、未预热或需处理状态。
 - **安全审计**：校验审计链，安装 auditd 规则，运行 BPF LSM 安全验证。
 - **诊断**：导出诊断报告，打开本地 Web 控制台，查看技术详情。
 

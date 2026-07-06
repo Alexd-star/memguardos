@@ -38,7 +38,7 @@ MemGuardOS 面向 openKylin 的适配目标分为四层。
 python -m memguard.cli.memctl openkylin-status
 ```
 
-控制中心、托盘和日常状态刷新默认使用快速状态。快速状态只检查 SDK 文件、头文件、模型仓库、socket、systemd 服务和插件文件，不执行真实 embedding 推理。这样可以避免用户打开【设置】>【安全】时被端侧模型冷启动拖慢。快速状态下，如果 Kylin embedding SDK、模型和运行路径已经可检测，系统会显示“已安装，未执行推理探针”，并给出“需要端侧增强时点击预热”的下一步建议；这不是故障，也不会影响默认 FTS/hash/graph 稳定检索路径。
+控制中心、托盘和日常状态刷新默认使用快速状态。快速状态只检查 SDK 文件、头文件、模型仓库、socket、systemd 服务和插件文件，不执行完整 embedding 推理。这样可以避免用户打开【设置】>【安全】时被端侧模型冷启动拖慢。快速状态下，如果 Kylin embedding SDK、模型和运行路径已经可检测，系统会显示“已安装，当前未预热”，并给出“首次使用可能稍慢，可点击预热”的下一步建议；这不是故障，也不会影响默认 FTS/hash/graph 稳定检索路径。
 
 Kylin vector engine 在不同 openKylin 安装形态中可能表现为 systemd user service，也可能只暴露用户态 socket。快速状态不会只因为 `kylin-ai-vector-engine.service` 未登记就把整机状态判为异常；只要 `/tmp/kylin-ai-vector-engine-<uid>.sock` 可连接，就显示为“向量服务接口可连接”。这更符合桌面用户的实际感知：用户关心端侧向量能力是否可用，管理员才需要进一步查看服务单元是否完整登记。
 
