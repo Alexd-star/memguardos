@@ -1,5 +1,5 @@
 $ bash scripts/verify_deb_lifecycle.sh
-[1783499312221] [32minfo [0m Proxy init engine sessionId:998112250.
+Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock: Could not connect: Connection refused
 package_count=5
 offline_install=ok
 desktop_remove_core_preserved=ok

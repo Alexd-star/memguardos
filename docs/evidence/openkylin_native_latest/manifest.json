@@ -4,23 +4,23 @@
   "files": [
     {
       "path": "deb_lifecycle.txt",
-      "bytes": 224,
-      "sha256": "65ab1e2f915444298fb2b8cbd098057571eb9290fb88482c0cbd581a64266f74"
+      "bytes": 294,
+      "sha256": "3eea316f04f3cb84752401e7d218858a2db9438f6da4caaf7dc73685620862aa"
     },
     {
       "path": "debian_packages.txt",
-      "bytes": 9843,
-      "sha256": "6ef7ea6b5778a75a2c08e61d5cf32678e8ba719c791de7cfd4b01bb3d5cc575b"
+      "bytes": 9707,
+      "sha256": "136e08f1a18983ad1b74d047ca111168d19424578a8a1d3e9ae329b8ff7b5216"
     },
     {
       "path": "desktop_build.txt",
-      "bytes": 7444,
-      "sha256": "588e7e50f7af942ae9f47cd8107556910df77fa84221de4330cd03ec98e136d6"
+      "bytes": 7388,
+      "sha256": "61901921a5b3d2a5d00bb3268aa0b763819d1387d9091db2a16d32a63469de27"
     },
     {
       "path": "desktop_plugins.txt",
       "bytes": 5975,
-      "sha256": "c98cb6633b3553c0c9d563c25a98a68136147a90f93854c382670a499983978a"
+      "sha256": "0ce2d4e42e7e2e616ceced7ebf8b9dd4ef6f51b9c9bd5b4173ed345d1d2adaae"
     },
     {
       "path": "environment.txt",
@@ -39,63 +39,63 @@
     },
     {
       "path": "kylin_warmup.txt",
-      "bytes": 373,
-      "sha256": "d140affdcda865b7961ec0b5347ac516804258303ce4b5bf953d52fe5adeb94e"
+      "bytes": 363,
+      "sha256": "a13bd924408bafc8d0bb0a89a3225c6b527512b63d9c5ac5cab64bf93d6af604"
     },
     {
       "path": "manifest_refresh.txt",
-      "bytes": 85,
-      "sha256": "3ca93f9dc4bf2492d4bc840ba6d9f1958a3ec03d0ee01e2665bb4bd64490ab9a"
+      "bytes": 122,
+      "sha256": "75fb651d62d9d0e4021504cf7db81a1971dcb098f6cd71d87f2956e310568463"
     },
     {
       "path": "openkylin_status.txt",
-      "bytes": 8816,
-      "sha256": "9c3df9ee218c6ece7b2d194c08869798dd60448b08dce866ecf8c6acfada598a"
+      "bytes": 8689,
+      "sha256": "6776a879e67ee64d1324e0dde325ab7484087b73dfb7076a1408ffa09ed65ddb"
     },
     {
       "path": "openkylin_status_probe_sdk.txt",
-      "bytes": 14362,
-      "sha256": "04a03fda6ce4d1e3b070746bd3169e0bf4b916c275102992f92d78f53316090f"
+      "bytes": 14630,
+      "sha256": "b7a0ccb0698e7e47891ca257354d2f6e5048d4d8245074514f2b0751112b890d"
     },
     {
       "path": "peony_batch_apply.json",
       "bytes": 2171,
-      "sha256": "8cb8b3facb805d6d4189f49a71fb8983c7a87931ac52e712fd9d00266e398798"
+      "sha256": "70062a0d84728a0db54fa9a4063fa1c2be1db226899ac77b478110d609f659a5"
     },
     {
       "path": "peony_batch_preview.json",
-      "bytes": 2469,
-      "sha256": "4f4ae3455d9c3355b6ed2bc2b3eb6badbcd85151f3bb4654851cc0d256d3b323"
+      "bytes": 2467,
+      "sha256": "319de16b24fdbb54196cfdbda1bb90c0544ab955c3e6370ad1fbf8b612646fc4"
     },
     {
       "path": "peony_sensitive_preview.json",
       "bytes": 1697,
-      "sha256": "c3dec26507855a3d4e867e80e8a28fb17ebe4b8ceef2acdb7a661d67c254965f"
+      "sha256": "0606c2342c61588d4740ecb9cf27b70304970b842932a33aea478e0f319ecabc"
     },
     {
       "path": "polkit_assets.txt",
       "bytes": 3099,
-      "sha256": "1da267322d065a5d924ce1ad732d689cd086a73f6dd4a8415d1aa7fb42827d2b"
+      "sha256": "5afbad08bd0bd4695efd5e569ade8628fe294ec604dd538751547a9793de5ab2"
     },
     {
       "path": "pytest_openkylin.txt",
       "bytes": 474,
-      "sha256": "75ff2de1fc7f3adf5b2f73a8ae80375f5c044328d459dae9f5895abe047fdefa"
+      "sha256": "62e1c585e2df5948c5f6eaf069d530fb4bbd157f6d7111e57bc166fcbbd90cd8"
     },
     {
       "path": "source_revision.json",
       "bytes": 163,
-      "sha256": "52a598acb9578215ecef4db99fab96921724d06eb0e649f0450fe1c428364654"
+      "sha256": "20abb0af5e5f3eca5be46f34d25dc7eb989f4ed623a115b4b4a6993ea3604011"
     },
     {
       "path": "systemd_cgroup.txt",
       "bytes": 783,
-      "sha256": "82da9d7a1bdfcfcf9b6d06b605505f78cf56a230036e31d4e6031d2e7d7f8fe0"
+      "sha256": "32fe1012a049b2298157eeeaa94f2ed5111fbb1860a36bc4e235d79f25707c23"
     },
     {
       "path": "tray_assets.txt",
       "bytes": 3148,
-      "sha256": "ea3b8d7be3f09797a36c5af1049959af120c49b6d400bb72ab2aeb79964faab9"
+      "sha256": "1dba449465b607826cd3f9587492221c24361a4cfee8935a8236c208dd30e5b4"
     }
   ]
 }
