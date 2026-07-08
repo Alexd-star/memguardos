@@ -1491,7 +1491,7 @@ def _revision_delta_paths(source_revision: str, target_revision: str) -> Optiona
         if ancestor.returncode != 0:
             return None
         completed = subprocess.run(
-            ["git", "diff", "--name-only", f"{source_revision}..{target_revision}"],
+            ["git", "-c", "core.quotePath=false", "diff", "--name-only", f"{source_revision}..{target_revision}"],
             cwd=ROOT,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,

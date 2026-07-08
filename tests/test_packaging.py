@@ -113,6 +113,12 @@ def test_native_evidence_revision_allows_generated_readiness_reports(monkeypatch
     assert "追加/更新原生证据" in result.detail
 
 
+def test_native_evidence_revision_reads_unquoted_non_ascii_delta_paths():
+    source = (ROOT / "scripts/check_competition_ready.py").read_text(encoding="utf-8")
+
+    assert "core.quotePath=false" in source
+
+
 def test_competition_package_keeps_formal_and_process_materials_separate():
     formal_paths = [
         "memguard/service.py",
