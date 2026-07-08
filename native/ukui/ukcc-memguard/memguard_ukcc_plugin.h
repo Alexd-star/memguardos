@@ -90,6 +90,6 @@ private:
     void appendHistory(const QString &operation, bool ok, const QString &message);
     bool exportDiagnostics(const QString &text);
     void openDashboard();
-    void setBusy(bool busy, const QString &message);
+    void setBusy(bool busy, const QString &message, bool lockActions = true);
     void showError(const QString &title, const QString &message);
 };

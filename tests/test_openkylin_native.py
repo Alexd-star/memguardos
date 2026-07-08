@@ -813,6 +813,21 @@ def test_ukui_control_center_has_spacious_native_layout_tokens():
     assert "处理进度：" in source
 
 
+def test_ukui_control_center_does_not_block_user_actions_on_background_refresh():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
+    header = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.h").read_text(encoding="utf-8")
+
+    assert 'process->setProperty("purpose", purpose)' in source
+    assert 'activePurpose == QStringLiteral("refresh")' in source
+    assert "已让位给你刚选择的操作" in source
+    assert 'setBusy(true, operationStartMessage(arguments, purpose), purpose != QStringLiteral("refresh"))' in source
+    assert "button->setEnabled(!(busy && lockActions))" in source
+    assert "void setBusy(bool busy, const QString &message, bool lockActions = true)" in header
+    assert "最近 50 条服务日志" in source
+    assert 'QStringLiteral("-n"), QStringLiteral("50")' in source
+
+
 def test_privileged_actions_are_fixed_and_report_structured_result(monkeypatch):
     calls = []
     monkeypatch.setattr("memguard.os_guard.privileged_actions.shutil.which", lambda name: "/usr/bin/pkexec" if name == "pkexec" else None)

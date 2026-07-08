@@ -840,7 +840,7 @@ QWidget *MemGuardUkccPlugin::buildServiceTab()
             runMemctl({QStringLiteral("native-action"), QStringLiteral("stop-service")}, QStringLiteral("action"));
     });
     connect(restart, &QPushButton::clicked, this, [this]() { runMemctl({QStringLiteral("native-action"), QStringLiteral("restart-service")}, QStringLiteral("action")); });
-    connect(logs, &QPushButton::clicked, this, [this]() { runProgram(QStringLiteral("journalctl"), {QStringLiteral("-u"), QStringLiteral("memguardd.service"), QStringLiteral("-n"), QStringLiteral("100"), QStringLiteral("--no-pager")}, QStringLiteral("details")); });
+    connect(logs, &QPushButton::clicked, this, [this]() { runProgram(QStringLiteral("journalctl"), {QStringLiteral("-u"), QStringLiteral("memguardd.service"), QStringLiteral("-n"), QStringLiteral("50"), QStringLiteral("--no-pager")}, QStringLiteral("details")); });
     connect(sdkCheck, &QPushButton::clicked, this, [this]() { runMemctl({QStringLiteral("sdk-status"), QStringLiteral("--probe-embedding"), QStringLiteral("--probe-timeout"), QStringLiteral("90")}, QStringLiteral("details")); });
     connect(warmup, &QPushButton::clicked, this, [this]() { runMemctl({QStringLiteral("openkylin-status"), QStringLiteral("--probe-sdk"), QStringLiteral("--probe-timeout"), QStringLiteral("90")}, QStringLiteral("refresh")); });
     connect(verifyAudit, &QPushButton::clicked, this, [this]() { runMemctl({QStringLiteral("verify-audit")}, QStringLiteral("details")); });
@@ -935,7 +935,7 @@ QWidget *MemGuardUkccPlugin::buildDiagnosticsTab()
     connect(dashboard, &QPushButton::clicked, this, &MemGuardUkccPlugin::openDashboard);
     connect(refresh, &QPushButton::clicked, this, &MemGuardUkccPlugin::refreshStatus);
     connect(verifyAudit, &QPushButton::clicked, this, [this]() { runMemctl({QStringLiteral("verify-audit")}, QStringLiteral("details")); });
-    connect(logs, &QPushButton::clicked, this, [this]() { runProgram(QStringLiteral("journalctl"), {QStringLiteral("-u"), QStringLiteral("memguardd.service"), QStringLiteral("-n"), QStringLiteral("100"), QStringLiteral("--no-pager")}, QStringLiteral("details")); });
+    connect(logs, &QPushButton::clicked, this, [this]() { runProgram(QStringLiteral("journalctl"), {QStringLiteral("-u"), QStringLiteral("memguardd.service"), QStringLiteral("-n"), QStringLiteral("50"), QStringLiteral("--no-pager")}, QStringLiteral("details")); });
     scroll->setWidget(tab);
     return scroll;
 }
@@ -966,13 +966,22 @@ void MemGuardUkccPlugin::runMemctl(const QStringList &arguments, const QString &
 void MemGuardUkccPlugin::runProgram(const QString &program, const QStringList &arguments, const QString &purpose)
 {
     if (currentProcess_ && currentProcess_->state() != QProcess::NotRunning) {
-        QMessageBox::information(page_, QStringLiteral("已有操作正在处理"), QStringLiteral("上一个操作尚未结束。可以等待完成，或点击【停止当前操作】后再执行新的操作。"));
-        return;
+        const QString activePurpose = currentProcess_->property("purpose").toString();
+        if (activePurpose == QStringLiteral("refresh") && purpose != QStringLiteral("refresh")) {
+            currentProcess_->setProperty("handled", true);
+            currentProcess_->kill();
+            currentProcess_.clear();
+            appendHistory(QStringLiteral("状态刷新"), true, QStringLiteral("后台刷新已让位给你刚选择的操作。"));
+        } else {
+            QMessageBox::information(page_, QStringLiteral("已有操作正在处理"), QStringLiteral("上一个操作尚未结束。可以等待完成，或点击【停止当前操作】后再执行新的操作。"));
+            return;
+        }
     }
-    setBusy(true, operationStartMessage(arguments, purpose));
+    setBusy(true, operationStartMessage(arguments, purpose), purpose != QStringLiteral("refresh"));
     auto *process = new QProcess(this);
     currentProcess_ = process;
     QPointer<QProcess> guard(process);
+    process->setProperty("purpose", purpose);
     process->setProcessChannelMode(QProcess::MergedChannels);
     connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError) {
         process->setProperty("handled", true);
@@ -1039,7 +1048,7 @@ QString MemGuardUkccPlugin::operationStartMessage(const QStringList &arguments, 
 {
     const QString joined = arguments.join(QLatin1Char(' '));
     if (joined.contains(QStringLiteral("journalctl")) || joined.contains(QStringLiteral("memguardd.service")))
-        return QStringLiteral("正在读取最近 100 条服务日志，结果会显示在【系统维护】。");
+        return QStringLiteral("正在读取最近 50 条服务日志，结果会显示在【系统维护】。");
     if (joined.contains(QStringLiteral("verify-audit")))
         return QStringLiteral("正在校验操作记录完整性，完成后会打开结果。");
     if (joined.contains(QStringLiteral("sdk-status")) || joined.contains(QStringLiteral("--probe-sdk")))
@@ -1483,7 +1492,7 @@ void MemGuardUkccPlugin::openDashboard()
     }
 }
 
-void MemGuardUkccPlugin::setBusy(bool busy, const QString &message)
+void MemGuardUkccPlugin::setBusy(bool busy, const QString &message, bool lockActions)
 {
     if (!message.isEmpty())
         summaryDescription_->setText(message);
@@ -1493,7 +1502,7 @@ void MemGuardUkccPlugin::setBusy(bool busy, const QString &message)
         cancelOperationButton_->setEnabled(busy);
     }
     for (QPushButton *button : actionButtons_)
-        button->setEnabled(!busy);
+        button->setEnabled(!(busy && lockActions));
 }
 
 void MemGuardUkccPlugin::showError(const QString &title, const QString &message)

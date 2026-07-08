@@ -34,7 +34,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地功能分支单元测试 | 292 passed, 1 skipped |
+| 本地功能分支单元测试 | 293 passed, 1 skipped |
 | openKylin 全量测试 | 290 passed |
 | openKylin 真实 Agent | OpenHands 1.28.1；原 12 组真实会话 12/12，新增 R13-R20 扩展 8/8，新增 holdout 留出盲测 8/8；合计 28 组均有证据 |
 | 本地 1k 负载 P95 | 0.429 ms |
