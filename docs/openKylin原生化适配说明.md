@@ -40,7 +40,7 @@ python -m memguard.cli.memctl openkylin-status
 
 控制中心、托盘和日常状态刷新默认使用快速状态。快速状态只检查 SDK 文件、头文件、模型仓库、socket、systemd 服务和插件文件，不执行完整 embedding 推理。这样可以避免用户打开【设置】>【安全】时被端侧模型冷启动拖慢。快速状态下，如果 Kylin embedding SDK、模型和运行路径已经可检测，系统会显示“已安装，当前未预热”，并给出“首次使用可能稍慢，可点击预热”的下一步建议；这不是故障，也不会影响默认 FTS/hash/graph 稳定检索路径。
 
-Kylin vector engine 在不同 openKylin 安装形态中可能表现为 systemd user service，也可能只暴露用户态 socket。快速状态不会只因为 `kylin-ai-vector-engine.service` 未登记就把整机状态判为异常；只要 `/tmp/kylin-ai-vector-engine-<uid>.sock` 可连接，就显示为“向量服务接口可连接”。这更符合桌面用户的实际感知：用户关心端侧向量能力是否可用，管理员才需要进一步查看服务单元是否完整登记。
+Kylin vector engine 在不同 openKylin 安装形态中可能表现为 systemd user service，也可能只暴露用户态 socket。快速状态不会只因为 `kylin-ai-vector-engine.service` 未登记就把整机状态判为异常；只要 `/tmp/kylin-ai-vector-engine-<uid>.sock` 可连接，就显示为“向量服务接口可连接”。这更符合桌面用户的实际感知：用户关心本机智能检索是否可用，管理员才需要进一步查看服务单元是否完整登记。
 
 需要证明 Kylin embedding 真实推理可用时，应主动运行完整探针：
 
@@ -66,7 +66,7 @@ python -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
 python -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
 ```
 
-真实推理可能触发 Kylin AI runtime 冷启动，因此控制中心默认先显示元数据和服务状态，再把推理探针放在用户主动点击的“检查端侧向量能力”操作中。这样既符合端侧稳定性，也避免打开控制中心时出现无意义等待。
+真实推理可能触发 Kylin AI runtime 冷启动，因此控制中心默认先显示元数据和服务状态，再把推理探针放在用户主动点击的“检查本机智能检索”操作中。这样既符合端侧稳定性，也避免打开控制中心时出现无意义等待。
 
 ## 4. Peony 右键文件闭环
 
@@ -109,7 +109,7 @@ UKUI 控制中心插件遵循 openKylin/UKUI 原生桌面风格：使用系统�
 - 安全页：审计链校验、auditd 规则安装、BPF 安全验证、Polkit 授权入口。
 - 诊断页：导出诊断包、打开本地 Web 控制台、查看服务日志。
 
-托盘程序使用 `QSystemTrayIcon`，只在 UKUI 会话中自动启动。它低频轮询 `memctl openkylin-status`，只在状态变化时发送通知，避免持续打扰用户。托盘菜单提供【打开记忆安全中心】、【查看端侧向量能力】、【查看审计状态】、【查看最近一次阻断记录】、【打开本地控制台】和【重新检查状态】。SDK 和审计入口会在打开控制中心前写入轻量目标文件，使控制中心直接定位到对应管理员工具；敏感阻断入口会打开本地控制台审计页，便于用户查看最近阻断记录。托盘退出不会停止核心服务，符合系统组件的最小惊扰原则。
+托盘程序使用 `QSystemTrayIcon`，只在 UKUI 会话中自动启动。它低频轮询 `memctl openkylin-status`，只在状态变化时发送通知，避免持续打扰用户。托盘菜单提供【打开记忆安全中心】、【查看本机智能检索】、【查看审计状态】、【查看最近一次阻断记录】、【打开本地控制台】和【重新检查状态】。SDK 和审计入口会在打开控制中心前写入轻量目标文件，使控制中心直接定位到对应管理员工具；敏感阻断入口会打开本地控制台审计页，便于用户查看最近阻断记录。托盘退出不会停止核心服务，符合系统组件的最小惊扰原则。
 
 ## 6. Polkit 与高权限边界
 

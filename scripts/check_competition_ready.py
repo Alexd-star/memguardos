@@ -67,6 +67,7 @@ REQUIRED_DOCS = [
     "docs/答辩提纲.md",
     "docs/答辩稿.md",
     "docs/演示视频脚本.md",
+    "docs/超标准交付评分矩阵.md",
     "docs/供应链与SBOM说明.md",
     "docs/安全扫描报告.md",
     "docs/外部标准基准说明.md",
@@ -351,6 +352,83 @@ def check_formal_doc_consistency() -> List[Check]:
             "Web 控制台安全响应头",
             bool(dashboard_text) and not missing_headers,
             "包含 CSP、frame、opener 和权限策略响应头" if dashboard_text and not missing_headers else "缺少：%s" % "、".join(missing_headers),
+        )
+    )
+    current_docs = [
+        "README.md",
+        "docs/13_测试说明.md",
+        "docs/15_更新日志.md",
+        "docs/平台摘要.md",
+        "docs/最终提交说明.md",
+        "docs/测试报告.md",
+        "docs/真实Agent闭环测试报告.md",
+        "docs/真实Agent记忆价值评测报告.md",
+        "docs/赛题要求逐句符合性核查.md",
+        "docs/赛题符合性说明.md",
+        "docs/评委证据包索引.md",
+        "docs/答辩提纲.md",
+        "docs/答辩稿.md",
+        "docs/项目介绍总览.md",
+        "docs/交付文档/MemGuardOS中文操作手册.md",
+    ]
+    stale_test_hits = []
+    for rel in current_docs:
+        text = _read_text_if_exists(ROOT / rel)
+        for token in ("283 passed", "284 passed", "289 passed"):
+            if token in text:
+                stale_test_hits.append(f"{rel}:{token}")
+    checks.append(
+        Check(
+            "中文文档",
+            "正式文档测试数字口径",
+            not stale_test_hits,
+            "正式材料使用当前 292/290 测试口径" if not stale_test_hits else "过期数字：%s" % "、".join(stale_test_hits),
+        )
+    )
+    product_docs = [
+        "README.md",
+        "native/ukui/README.md",
+        "docs/openKylin验证记录.md",
+        "docs/openKylin原生化适配说明.md",
+        "docs/Peony与UKUI桌面集成实现说明.md",
+        "docs/部署手册.md",
+        "docs/操作系统机制说明.md",
+        "docs/交付文档/MemGuardOS中文操作手册.md",
+    ]
+    awkward_hits = []
+    for rel in product_docs:
+        text = _read_text_if_exists(ROOT / rel)
+        for token in ("端侧向量能力", "端侧向量能力检查", "检查端侧向量能力", "预热 Kylin SDK", "【当前任务】"):
+            if token in text:
+                awkward_hits.append(f"{rel}:{token}")
+    checks.append(
+        Check(
+            "中文文档",
+            "openKylin 桌面产品话术",
+            not awkward_hits,
+            "桌面文档使用本机智能检索、操作进度等成熟产品表达" if not awkward_hits else "仍包含：%s" % "、".join(awkward_hits),
+        )
+    )
+    scorecard = ROOT / "docs/超标准交付评分矩阵.md"
+    scorecard_text = _read_text_if_exists(scorecard)
+    required_scorecard_terms = [
+        "MemGuardOS 超标准交付评分矩阵",
+        "49.48x",
+        "OWASP Agentic AI",
+        "NIST AI RMF",
+        "LangMem",
+        "OpenAI Agents SDK",
+        "不能夸大",
+    ]
+    missing_scorecard_terms = [
+        term for term in required_scorecard_terms if term not in scorecard_text
+    ]
+    checks.append(
+        Check(
+            "中文文档",
+            "超标准交付评分矩阵",
+            bool(scorecard_text) and not missing_scorecard_terms,
+            "评分矩阵覆盖指标余量、外部最佳实践和边界声明" if scorecard_text and not missing_scorecard_terms else "缺少：%s" % "、".join(missing_scorecard_terms),
         )
     )
     return checks
