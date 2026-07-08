@@ -190,12 +190,12 @@ $ python3 -m memguard.cli.memctl openkylin-status
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 1327756,
-        "user_usec": 735576,
-        "system_usec": 592180,
+        "usage_usec": 1362775,
+        "user_usec": 751485,
+        "system_usec": 611289,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 665,
+        "nr_periods": 685,
         "nr_throttled": 1,
         "throttled_usec": 4916,
         "nr_bursts": 0,
@@ -217,11 +217,11 @@ $ python3 -m memguard.cli.memctl openkylin-status
     "store_exists": true,
     "db_exists": true,
     "custom_patterns_exists": false,
-    "store_bytes": 389279,
-    "db_bytes": 1036288,
-    "record_count": 149,
-    "live_record_count": 149,
-    "audit_event_count": 865
+    "store_bytes": 399287,
+    "db_bytes": 1056768,
+    "record_count": 153,
+    "live_record_count": 153,
+    "audit_event_count": 872
   },
   "summary": {
     "overall": "green",

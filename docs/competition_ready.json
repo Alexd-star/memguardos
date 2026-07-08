@@ -375,7 +375,7 @@
       "category": "中文文档",
       "name": "正式文档测试数字口径",
       "ok": true,
-      "detail": "正式材料使用当前 294/295 测试口径",
+      "detail": "正式材料使用当前 295/296 测试口径",
       "severity": "P0"
     },
     {
@@ -1327,7 +1327,7 @@
       "category": "openKylin原生证据",
       "name": "证据对应当前 Git HEAD",
       "ok": true,
-      "detail": "source=4d7fec738aae41b6d2c3af956e401387253bb481；当前 HEAD 仅追加/更新原生证据文件 17 个",
+      "detail": "662890027cc89dab2e1be62598b99fb3b8a22c56",
       "severity": "P0"
     },
     {
