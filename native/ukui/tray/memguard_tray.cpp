@@ -17,10 +17,10 @@
 
 namespace {
 
-QIcon themedIcon(const QString &name, QStyle::StandardPixmap fallback)
+QIcon themedIcon(const QString &name, QStyle::StandardPixmap defaultIcon)
 {
     const QIcon icon = QIcon::fromTheme(name);
-    return icon.isNull() ? QApplication::style()->standardIcon(fallback) : icon;
+    return icon.isNull() ? QApplication::style()->standardIcon(defaultIcon) : icon;
 }
 
 QJsonObject parseObject(const QByteArray &raw)
@@ -61,7 +61,7 @@ QString targetFromRecommendation(const QString &recommendation)
         return QStringLiteral("audit");
     if (containsAny(recommendation, {QStringLiteral("敏感"), QStringLiteral("阻断"), QStringLiteral("Peony"), QStringLiteral("文件")}))
         return QStringLiteral("sensitive");
-    if (containsAny(recommendation, {QStringLiteral("memguardd"), QStringLiteral("systemd"), QStringLiteral("服务")}))
+    if (containsAny(recommendation, {QStringLiteral("systemd"), QStringLiteral("服务")}))
         return QStringLiteral("service");
     if (containsAny(recommendation, {QStringLiteral("cgroup"), QStringLiteral("CPU"), QStringLiteral("内存"), QStringLiteral("资源")}))
         return QStringLiteral("resources");
@@ -99,9 +99,9 @@ public:
         tray_.setIcon(themedIcon(QStringLiteral("security-high"), QStyle::SP_MessageBoxInformation));
         auto *menu = new QMenu;
         auto *openCenter = menu->addAction(themedIcon(QStringLiteral("preferences-system"), QStyle::SP_FileDialogDetailedView), QStringLiteral("打开记忆安全中心"));
-        auto *openSdk = menu->addAction(themedIcon(QStringLiteral("system-search"), QStyle::SP_FileDialogContentsView), QStringLiteral("查看端侧向量能力"));
-        auto *openAudit = menu->addAction(themedIcon(QStringLiteral("security-high"), QStyle::SP_DialogApplyButton), QStringLiteral("查看审计状态"));
-        auto *openSensitive = menu->addAction(themedIcon(QStringLiteral("dialog-warning"), QStyle::SP_MessageBoxWarning), QStringLiteral("查看最近一次阻断记录"));
+        auto *openSdk = menu->addAction(themedIcon(QStringLiteral("system-search"), QStyle::SP_FileDialogContentsView), QStringLiteral("查看本机智能检索"));
+        auto *openAudit = menu->addAction(themedIcon(QStringLiteral("security-high"), QStyle::SP_DialogApplyButton), QStringLiteral("查看操作记录"));
+        auto *openSensitive = menu->addAction(themedIcon(QStringLiteral("dialog-warning"), QStyle::SP_MessageBoxWarning), QStringLiteral("查看已保护内容"));
         auto *openDashboardAction = menu->addAction(themedIcon(QStringLiteral("applications-internet"), QStyle::SP_DesktopIcon), QStringLiteral("打开本地控制台"));
         auto *refresh = menu->addAction(themedIcon(QStringLiteral("view-refresh"), QStyle::SP_BrowserReload), QStringLiteral("重新检查状态"));
         menu->addSeparator();

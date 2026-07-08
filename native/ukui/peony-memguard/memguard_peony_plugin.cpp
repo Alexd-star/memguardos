@@ -62,10 +62,10 @@ QString actionLabel(const QString &action)
     if (action == QStringLiteral("import_text"))
         return QStringLiteral("可导入");
     if (action == QStringLiteral("block_sensitive"))
-        return QStringLiteral("已阻断");
+        return QStringLiteral("已保护");
     if (action == QStringLiteral("missing_path"))
         return QStringLiteral("文件不存在");
-    return QStringLiteral("仅审计");
+    return QStringLiteral("只记录");
 }
 
 QString candidateReason(const QJsonObject &item)
@@ -75,9 +75,9 @@ QString candidateReason(const QJsonObject &item)
     if (action == QStringLiteral("block_sensitive") || level == QStringLiteral("high"))
         return QStringLiteral("敏感风险");
     if (action == QStringLiteral("import_text"))
-        return QStringLiteral("文本候选，可能形成偏好或知识记忆");
+        return QStringLiteral("可保存内容，适合形成偏好或知识记忆");
     if (action == QStringLiteral("audit_only"))
-        return QStringLiteral("仅记录文件选择，不读取内容");
+        return QStringLiteral("只记录选择，不保存内容");
     if (action == QStringLiteral("missing_path"))
         return QStringLiteral("路径不可用");
     return QStringLiteral("不适合导入记忆");
@@ -161,7 +161,7 @@ QList<QAction *> MemGuardPeonyPlugin::menuActions(
         return actions;
 
     lastSelection_ = selectionUris;
-    fallbackUri_ = uri;
+    primaryUri_ = uri;
     auto *action = new QAction(
         QIcon::fromTheme(QStringLiteral("security-high")),
         QStringLiteral("使用 MemGuardOS 检查记忆内容"));
@@ -175,8 +175,8 @@ QList<QAction *> MemGuardPeonyPlugin::menuActions(
 void MemGuardPeonyPlugin::sendSelectionToMemGuard()
 {
     QStringList uris = lastSelection_;
-    if (uris.isEmpty() && !fallbackUri_.isEmpty())
-        uris << fallbackUri_;
+    if (uris.isEmpty() && !primaryUri_.isEmpty())
+        uris << primaryUri_;
     QStringList paths;
     for (const QString &uri : uris) {
         const QUrl url(uri);
@@ -273,7 +273,7 @@ void MemGuardPeonyPlugin::showPreviewDialog(const QJsonObject &preview)
         else
             ++auditOnly;
     }
-    auto *description = new QLabel(QStringLiteral("记忆候选 %1 个：可导入 %2 个，已阻断 %3 个，仅审计 %4 个。选择要写入 Agent 记忆的安全文本；敏感、超限或非文本内容不会被导入。")
+    auto *description = new QLabel(QStringLiteral("已检查 %1 个项目：可保存 %2 个，已保护 %3 个，只记录 %4 个。选择要保存给 Agent 使用的安全文本；敏感、超限或非文本内容不会被保存。")
             .arg(items.size())
             .arg(importable)
             .arg(blocked)
@@ -282,7 +282,7 @@ void MemGuardPeonyPlugin::showPreviewDialog(const QJsonObject &preview)
     layout->addWidget(description);
 
     auto *table = new QTableWidget(items.size(), 7, &dialog);
-    table->setHorizontalHeaderLabels({QStringLiteral("选择"), QStringLiteral("文件"), QStringLiteral("大小"), QStringLiteral("风险"), QStringLiteral("处理建议"), QStringLiteral("原因"), QStringLiteral("内容预览")});
+    table->setHorizontalHeaderLabels({QStringLiteral("选择"), QStringLiteral("文件"), QStringLiteral("大小"), QStringLiteral("风险"), QStringLiteral("系统建议"), QStringLiteral("原因"), QStringLiteral("内容预览")});
     table->verticalHeader()->setVisible(false);
     table->setSelectionBehavior(QAbstractItemView::SelectRows);
     table->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -353,7 +353,7 @@ void MemGuardPeonyPlugin::runApply(const QStringList &arguments)
 {
     const Command command = memctlCommand(arguments);
     auto *process = new QProcess(this);
-    auto *progress = new QProgressDialog(QStringLiteral("正在导入所选内容并写入审计记录…"), QString(), 0, 0);
+    auto *progress = new QProgressDialog(QStringLiteral("正在保存所选内容并写入操作记录…"), QString(), 0, 0);
     progress->setWindowTitle(QStringLiteral("MemGuardOS"));
     progress->setWindowModality(Qt::ApplicationModal);
     progress->setMinimumDuration(0);
@@ -368,7 +368,7 @@ void MemGuardPeonyPlugin::runApply(const QStringList &arguments)
                 QMessageBox::critical(nullptr, QStringLiteral("导入失败"), error);
             } else {
                 const QJsonObject summary = result.value(QStringLiteral("summary")).toObject();
-                const QString message = QStringLiteral("已导入 %1 个安全文件；%2 个敏感或不适合导入的项目已被保护性跳过；%3 个未选择；%4 个未完成。\n审计记录：%5")
+                const QString message = QStringLiteral("已保存 %1 个安全文件；%2 个敏感或不适合保存的项目已被保护性跳过；%3 个未选择；%4 个未完成。\n操作记录：%5")
                     .arg(summary.value(QStringLiteral("stored")).toInt())
                     .arg(summary.value(QStringLiteral("blocked")).toInt())
                     .arg(summary.value(QStringLiteral("skipped")).toInt())
@@ -385,7 +385,7 @@ void MemGuardPeonyPlugin::runApply(const QStringList &arguments)
                     result.value(QStringLiteral("ok")).toBool() ? QStringLiteral("导入完成") : QStringLiteral("部分内容未导入"),
                     message);
                 auto *view = box.addButton(QStringLiteral("查看结果"), QMessageBox::ActionRole);
-                auto *forget = box.addButton(QStringLiteral("撤销导入 / 立即遗忘"), QMessageBox::ActionRole);
+                auto *forget = box.addButton(QStringLiteral("撤销本次导入"), QMessageBox::ActionRole);
                 forget->setEnabled(!storedIds.isEmpty());
                 box.addButton(QStringLiteral("关闭"), QMessageBox::RejectRole);
                 box.exec();
@@ -430,7 +430,7 @@ void MemGuardPeonyPlugin::runForgetImport(const QStringList &memoryIds)
                 const QJsonObject summary = result.value(QStringLiteral("summary")).toObject();
                 const QJsonObject audit = result.value(QStringLiteral("audit_chain")).toObject();
                 const bool ok = result.value(QStringLiteral("ok")).toBool();
-                const QString message = QStringLiteral("已遗忘 %1 条本次导入记忆；%2 条未找到；%3 条此前已遗忘。\n审计记录：%4")
+                const QString message = QStringLiteral("已遗忘 %1 条本次导入记忆；%2 条未找到；%3 条此前已遗忘。\n操作记录：%4")
                     .arg(summary.value(QStringLiteral("forgotten")).toInt())
                     .arg(summary.value(QStringLiteral("missing")).toInt())
                     .arg(summary.value(QStringLiteral("already_deleted")).toInt())
@@ -438,7 +438,7 @@ void MemGuardPeonyPlugin::runForgetImport(const QStringList &memoryIds)
                 QMessageBox box(ok ? QMessageBox::Information : QMessageBox::Warning,
                     ok ? QStringLiteral("遗忘完成") : QStringLiteral("遗忘结果需要确认"),
                     message);
-                auto *view = box.addButton(QStringLiteral("查看审计记录"), QMessageBox::ActionRole);
+                auto *view = box.addButton(QStringLiteral("查看操作记录"), QMessageBox::ActionRole);
                 box.addButton(QStringLiteral("关闭"), QMessageBox::RejectRole);
                 box.exec();
                 if (box.clickedButton() == view)

@@ -642,13 +642,13 @@ def test_peony_plugin_uses_preview_confirmation_contract():
     assert "结果解析失败" not in source
     assert "没有收到有效的检查结果" in source
     assert "检查结果暂时无法读取" in source
-    assert "已导入 %1 个安全文件" in source
-    assert "记忆候选" in source
+    assert "已保存 %1 个安全文件" in source
+    assert "可保存内容" in source
     assert "可导入" in source
-    assert "已阻断" in source
-    assert "仅审计" in source
+    assert "已保护" in source
+    assert "只记录" in source
     assert "查看结果" in source
-    assert "立即遗忘" in source
+    assert "撤销本次导入" in source
     assert "forget-import" in source
     assert "--memory-id" in source
     assert "遗忘本次导入内容" in source
@@ -679,7 +679,7 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "日常操作" in source
     assert "完整检查" not in source
     assert "导出快速报告" in source
-    assert "审计、日志、BPF 和授权操作放在【管理员】页" in source
+    assert "日志、内核保护和系统授权放在【管理员】页" in source
     assert "操作历史" in source
     assert "资源快照" in source
     assert "QProgressBar" in source
@@ -695,20 +695,20 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "任务入口" not in source
     assert "普通用户" in source
     assert "文件安全" in source
-    assert "敏感阻断" in source
-    assert "精准遗忘" in source
+    assert "已保护敏感内容" in source
+    assert "遗忘指定记忆" in source
     assert "处理建议" in source
     assert "recommendations" in source
     assert "addRecommendationRow" in source
     assert "handleRecommendationAction" in source
     assert "setItemWidget" in source
     assert "立即检查 SDK" not in source
-    assert "检查端侧能力" in source
+    assert "检查本机智能检索" in source
     assert "端侧 SDK 建议确认" not in source
     assert "首次检查可能较慢" not in source
     assert "首次 Kylin SDK 检查可能较慢" not in source
     assert "正在执行操作，请稍候" not in source
-    assert "校验审计链" in source
+    assert "校验操作记录" in source
     assert "去服务控制" in source
     assert "setCurrentIndex(serviceTabIndex_)" in source
     assert "operationStartMessage" in source
@@ -724,7 +724,7 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "服务日志已显示在【系统维护】" in source
     assert "summaryDescription_->setText(message)" in source
     assert 'runMemctl({QStringLiteral("diagnostics")}, QStringLiteral("export"))' in source
-    assert "采集 → 抽取 → 上下文 → 遗忘" in source
+    assert "保存 → 理解 → 使用 → 遗忘" in source
     assert "服务运行" in source
     assert "桌面集成" in source
     assert "setStatusBadge" in source
@@ -733,7 +733,7 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "QFrame" in source
     assert "QPalette::WindowText" in source
     assert "服务控制" in source
-    assert "端侧能力" in source
+    assert "本机智能检索" in source
     assert "安全审计" in source
     assert "维护工具" in source
     assert "报告与控制台" in source
@@ -757,10 +757,10 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "recently_ready" in source
     assert "inference_ready" in source
     assert "installed_unwarmed || recently_ready || inferenceReady" in source
-    assert "未预热不是故障" in source
-    assert "当前未预热" in source
+    assert "这不是故障" in source
+    assert "未提前准备" in source
     assert "未执行推理探针" not in source
-    assert "预热 Kylin SDK" in source
+    assert "预热本机智能检索" in source
     assert "启动服务" in source
     assert "停止服务" in source
     assert "重启服务" in source
@@ -921,7 +921,7 @@ def test_ukui_tray_follows_system_theme_and_deduplicates_notifications():
     assert "openControlCenter(QStringLiteral(\"audit\"))" in source
     assert "openDashboard(QStringLiteral(\"#audit\"))" in source
     assert "connect(openDashboardAction, &QAction::triggered, this, [this]() { openDashboard(); });" in source
-    assert "最近一次阻断记录" in source
+    assert "查看已保护内容" in source
     assert "setStyleSheet" not in source
     assert "QSystemTrayIcon::isSystemTrayAvailable" in source
     assert "Exec=/usr/bin/memguardos-tray" in desktop
@@ -941,4 +941,38 @@ def test_ukui_control_center_keeps_user_ui_product_facing():
     assert "调试" not in source
     assert "当前没有需要处理的建议" in source
     assert "不影响日常记忆检索" in source
+
+
+def test_desktop_user_copy_uses_plain_product_language():
+    root = Path(__file__).resolve().parents[1]
+    ukcc = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
+    peony = (root / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
+    tray = (root / "native/ukui/tray/memguard_tray.cpp").read_text(encoding="utf-8")
+
+    overview = ukcc[ukcc.index("QWidget *MemGuardUkccPlugin::buildOverviewTab") : ukcc.index("QWidget *MemGuardUkccPlugin::buildServiceTab")]
+    busy_copy = ukcc[ukcc.index("void MemGuardUkccPlugin::updateOperationGuide") : ukcc.index("void MemGuardUkccPlugin::renderStatus")]
+
+    for user_surface in (overview, busy_copy, peony, tray):
+        for awkward_term in (
+            "端侧向量",
+            "fallback",
+            "审计链",
+            "memguardd",
+            "仅审计",
+            "立即遗忘",
+            "阻断记录",
+            "敏感阻断",
+        ):
+            assert awkward_term not in user_surface
+
+    assert "本机智能检索" in overview
+    assert "操作记录完整性" in overview
+    assert "已保护敏感内容" in overview
+    assert "遗忘指定记忆" in overview
+    assert "本机智能检索" in tray
+    assert "查看操作记录" in tray
+    assert "查看已保护内容" in tray
+    assert "可保存内容" in peony
+    assert "只记录选择" in peony
+    assert "撤销本次导入" in peony
 

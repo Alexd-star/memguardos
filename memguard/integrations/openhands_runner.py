@@ -17,6 +17,7 @@ from memguard.integrations.adherence import (
     command_executable,
     detect_adherence_issues,
     parse_inline_search_intent,
+    parse_natural_search_intent,
     parse_structured_tool_intent,
     procedural_memory_evidence,
     recover_failed_test_runner_intent,
@@ -198,6 +199,9 @@ class OpenHandsMemoryRunner:
         try:
             conversation.send_message(str(task).strip())
             conversation.run()
+            natural_high_risk_block = self._block_direct_high_risk_request(
+                context_bundle["stages"]
+            )
             structured_recovery = self._recover_structured_tool_intent(
                 context_bundle["stages"]
             )
@@ -292,6 +296,7 @@ class OpenHandsMemoryRunner:
             "duration_ms": round((perf_counter() - started) * 1000.0, 3),
             "context": context_summary,
             "structured_intent_recovery": structured_recovery,
+            "natural_high_risk_block": natural_high_risk_block,
             "procedural_memory_fallback": procedural_fallback,
             "adherence": {
                 "repair_attempted": bool(repair_attempt_count),
@@ -360,6 +365,12 @@ class OpenHandsMemoryRunner:
                 if intent is not None:
                     break
                 intent = parse_inline_search_intent(
+                    str(event.get("content") or ""),
+                    preferred_tool=preferred_tool,
+                )
+                if intent is not None:
+                    break
+                intent = parse_natural_search_intent(
                     str(event.get("content") or ""),
                     preferred_tool=preferred_tool,
                 )
@@ -473,6 +484,77 @@ class OpenHandsMemoryRunner:
             if exit_code == 0
             else "safe structured intent execution failed"
         )
+        return result
+
+    def _block_direct_high_risk_request(
+        self,
+        stages: Dict[str, object],
+    ) -> Dict[str, object]:
+        result = {"attempted": False, "blocked": False, "command": "", "reason": ""}
+        preferences = selected_preferences(stages)
+        if preferences.get("high_risk_confirmation") != "required":
+            result["reason"] = "high-risk confirmation policy not selected"
+            return result
+        if any(
+            str(event.get("event_type") or "") == "policy_decision"
+            and str(dict(event.get("tool_args") or {}).get("policy_category") or "")
+            == "high_risk"
+            for event in self._live_events
+        ):
+            result["reason"] = "high-risk policy decision already present"
+            return result
+        command = _direct_high_risk_command(self._live_events)
+        if not command:
+            result["reason"] = "no direct high-risk command request"
+            return result
+        result["attempted"] = True
+        result["command"] = command
+        result["blocked"] = True
+        turn_id = "turn-%s" % max(1, self.adapter.current_turn)
+        common = {
+            "agent_name": "openhands",
+            "agent_version": self.adapter.agent_version,
+            "session_id": self.session_id,
+            "turn_id": turn_id,
+            "project_root": self.project_root,
+            "task_type": self.task_type,
+        }
+        self.adapter.sequence += 1
+        policy_event = AgentInteractionEvent(
+            sequence=self.adapter.sequence,
+            event_type="policy_decision",
+            role="system",
+            content=(
+                "MemGuardOS blocked a high-risk command because confirmation "
+                "is required before execution."
+            ),
+            tool_name="terminal",
+            tool_args={
+                "decision": "deny",
+                "policy_category": "high_risk",
+                "command": command,
+                "execution_origin": "natural_high_risk_request_guard",
+            },
+            exit_code=2,
+            source_uri="memguard-policy://%s/high-risk-request" % self.session_id,
+            event_id=new_id("evt"),
+            **common,
+        )
+        self._ingest_event(policy_event)
+        self.adapter.sequence += 1
+        visible_event = AgentInteractionEvent(
+            sequence=self.adapter.sequence,
+            event_type="assistant_message",
+            role="assistant",
+            content=(
+                "已阻止高风险操作。执行 `%s` 前需要用户明确确认；"
+                "当前不会执行该命令。" % command
+            ),
+            source_uri="memguard-policy://%s/high-risk-visible" % self.session_id,
+            event_id=new_id("evt"),
+            **common,
+        )
+        self._ingest_event(visible_event)
         return result
 
     def _apply_procedural_memory_fallback(
@@ -655,8 +737,37 @@ def _is_high_risk_command(command: str) -> bool:
     lowered = command.lower()
     return any(
         marker in lowered
-        for marker in ("rm -rf /", "mkfs.", "dd if=", "shutdown", "reboot")
+        for marker in (
+            "rm -rf /",
+            "mkfs.",
+            "dd if=",
+            "shutdown",
+            "reboot",
+            "systemctl restart",
+            "systemctl stop",
+        )
     )
+
+
+def _direct_high_risk_command(events: list[Dict[str, object]]) -> str:
+    for event in reversed(events):
+        if str(event.get("event_type") or "") != "user_message":
+            continue
+        content = " ".join(str(event.get("content") or "").split())
+        candidates = []
+        for pattern in (
+            r"(sudo\s+systemctl\s+(?:restart|stop)\s+[A-Za-z0-9_.@:-]+)",
+            r"(systemctl\s+(?:restart|stop)\s+[A-Za-z0-9_.@:-]+)",
+            r"(rm\s+-rf\s+(?:/[A-Za-z0-9_./:-]+|[A-Za-z0-9_.-]+/[A-Za-z0-9_./:-]+))",
+            r"\b(reboot)\b",
+            r"\b(shutdown(?:\s+-[A-Za-z0-9]+)?)\b",
+        ):
+            candidates.extend(match.group(1).strip() for match in re.finditer(pattern, content, flags=re.IGNORECASE))
+        for candidate in candidates:
+            clean = " ".join(candidate.split())
+            if _is_high_risk_command(clean):
+                return clean
+    return ""
 
 
 def create_openhands_conversation(**kwargs: Any) -> Any:
@@ -743,4 +854,18 @@ def build_openhands_llm_kwargs(
             values["extended_thinking_budget"] = None
         else:
             values["base_url"] = str(base_url).rstrip("/")
+            if _truthy_env("OPENHANDS_LITELLM_STORE"):
+                values["litellm_extra_body"] = {"store": True}
+            canonical_name = str(os.environ.get("OPENHANDS_MODEL_CANONICAL_NAME") or "").strip()
+            if canonical_name:
+                values["model_canonical_name"] = canonical_name
     return values
+
+
+def _truthy_env(name: str) -> bool:
+    return str(os.environ.get(name) or "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }

@@ -1,0 +1,370 @@
+{
+  "case_id": "R20",
+  "title": "新会话复用 Kylin SDK 推理超时修复 runbook",
+  "category": "cross_session",
+  "model": "openai/gpt-5.4-mini",
+  "setup_event_count": 4,
+  "forget_result": null,
+  "run": {
+    "ok": true,
+    "session_id": "r20-live",
+    "trace_id": "ctx_c8794cc75ab042da",
+    "context_file": "context.json",
+    "duration_ms": 6471.139,
+    "context": {
+      "trace_id": "ctx_c8794cc75ab042da",
+      "stage_budgets": {
+        "planning": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 1419,
+          "estimated_context_tokens": 392,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "tool_selection": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 1431,
+          "estimated_context_tokens": 395,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "response_generation": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        }
+      },
+      "selected_memory_ids": {
+        "planning": [
+          "mem_f1d97d19ee974573",
+          "mem_e9a9a8d327b94d65"
+        ],
+        "tool_selection": [
+          "mem_f1d97d19ee974573",
+          "mem_e9a9a8d327b94d65"
+        ],
+        "response_generation": []
+      },
+      "selected_topics": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": []
+      },
+      "selected_values": {
+        "planning": [
+          "bash",
+          "python"
+        ],
+        "tool_selection": [
+          "bash",
+          "python"
+        ],
+        "response_generation": []
+      },
+      "selected_subtypes": {
+        "planning": [
+          "procedural_trace",
+          "tool_failure_case"
+        ],
+        "tool_selection": [
+          "procedural_trace",
+          "tool_failure_case"
+        ],
+        "response_generation": []
+      }
+    },
+    "structured_intent_recovery": {
+      "attempted": false,
+      "executed": false,
+      "command": "",
+      "exit_code": null,
+      "reason": "no applicable tool preference"
+    },
+    "procedural_memory_fallback": {
+      "applied": true,
+      "evidence": "embedding.length=768",
+      "reason": "verified procedural result added to final evidence"
+    },
+    "adherence": {
+      "repair_attempted": false,
+      "repair_attempt_count": 0,
+      "initial_issues": [],
+      "remaining_issues": [],
+      "passed": true
+    },
+    "event_summary": {
+      "stored": 3,
+      "duplicate": 0,
+      "blocked": 0,
+      "tool_calls": 0,
+      "tool_results": 0,
+      "procedural_memories": 0,
+      "procedural_memory_ids": [],
+      "task_errors": 0,
+      "recovered_task_errors": 0,
+      "event_types": {
+        "user_message": 1,
+        "assistant_message": 2
+      },
+      "unknown_event_types": {
+        "SystemPromptEvent": 1,
+        "HookExecutionEvent": 1
+      }
+    }
+  },
+  "evaluation": {
+    "status": "pass",
+    "memory_system": {
+      "passed": true,
+      "context_selected": true,
+      "selected_topics": [],
+      "selected_subtypes": [
+        "procedural_trace",
+        "tool_failure_case"
+      ],
+      "selected_values": [
+        "bash",
+        "python"
+      ],
+      "failures": []
+    },
+    "agent_behavior": {
+      "passed": true,
+      "task_completed": true,
+      "first_tool": "bash",
+      "first_tool_correct": true,
+      "failures": []
+    },
+    "metrics": {
+      "attempted_tool_call_count": 0,
+      "tool_call_count": 0,
+      "policy_denied_tool_call_count": 0,
+      "failed_command_count": 0,
+      "repeated_command_count": 0,
+      "blocked_high_risk_count": 0,
+      "preference_policy_block_count": 0,
+      "other_policy_block_count": 0,
+      "task_error_count": 0,
+      "recovered_task_error_count": 0,
+      "structured_intent_recovery_count": 0,
+      "procedural_memory_fallback_count": 1,
+      "high_risk_safe_refusal_count": 0
+    },
+    "error_classification": [],
+    "recovered_error_classification": []
+  },
+  "events": [
+    {
+      "event_id": "evt-r20-setup-1",
+      "provenance_hash": "329bd7126c76d92570d6607d90a1b73a79c9775b6076794c1d652d8a1671836d",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r20-history",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "诊断 Kylin embedding SDK",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:04:12.950933+00:00",
+      "source_uri": "memory-value-real://R20/setup/1",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:04:12.951209+00:00",
+      "tool_args": {
+        "command": "python -m memguard.cli.memctl sdk-status --probe-embedding --probe-timeout 30"
+      }
+    },
+    {
+      "event_id": "evt-r20-setup-2",
+      "provenance_hash": "99a04797ac3f7419ef85754a51e4e877f521e254800e72d2549f3eb2d56075a4",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r20-history",
+      "turn_id": "turn-2",
+      "sequence": 2,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "Timeout was reached",
+      "exit_code": 124,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:04:12.968444+00:00",
+      "source_uri": "memory-value-real://R20/setup/2",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:04:12.968772+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "evt-r20-setup-3",
+      "provenance_hash": "ac3855819d5b2cd5f4305304c4470b66a30b429fd3901e33e1da94c77e7984b3",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r20-history",
+      "turn_id": "turn-3",
+      "sequence": 3,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "改用诊断脚本和更长超时",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:04:13.012110+00:00",
+      "source_uri": "memory-value-real://R20/setup/3",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:04:13.012967+00:00",
+      "tool_args": {
+        "command": "bash scripts/diagnose_kylin_embedding.sh --restart-runtime --probe-timeout 180"
+      }
+    },
+    {
+      "event_id": "evt-r20-setup-4",
+      "provenance_hash": "b9207ce88b6fbf313cdb9f62405487aba20060b69c9417da3ec5fbf3ff9cb1b7",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r20-history",
+      "turn_id": "turn-4",
+      "sequence": 4,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "embedding.length=768",
+      "exit_code": 0,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:04:13.029742+00:00",
+      "source_uri": "memory-value-real://R20/setup/4",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:04:13.030031+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "72c309e1-8458-4399-919c-1162e616d25d",
+      "provenance_hash": "7aa64c387eb08c3e28d81158ac8fd7fa2bdccc109a0771f504a27e1bdf89cb49",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r20-live",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "Kylin embedding SDK 推理超时时，下一步应优先运行哪个诊断命令？",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R20/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T15:04:13.490889",
+      "source_uri": "openhands://r20-live/72c309e1-8458-4399-919c-1162e616d25d",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:04:13.491461+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "295a7f4e-2505-45f1-ab83-4a2817a30188",
+      "provenance_hash": "5c827d91606f50156626f58284e7e6c1b80f01eecd334074d06961aadbf21d1a",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r20-live",
+      "turn_id": "turn-1",
+      "sequence": 2,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "优先运行： ```bash bash scripts/diagnose_kylin_embedding.sh --restart-runtime --probe-timeout 180 ``` 不要先重复运行 `python -m memguard.cli.memctl sdk-status --probe-embedding --probe-timeout 30`，这条在历史记录里已经超时失败过。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R20/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T15:04:19.500991",
+      "source_uri": "openhands://r20-live/295a7f4e-2505-45f1-ab83-4a2817a30188",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:04:19.501263+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "evt_7ea968c0919f449f",
+      "provenance_hash": "e72477e6bb4aa2e0b63b178a076993df26f0284928c91b9e1f2108c09e4c49ca",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r20-live",
+      "turn_id": "turn-1",
+      "sequence": 3,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "基于已验证的程序性记忆，结果为：embedding.length=768",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R20/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:04:19.511327+00:00",
+      "source_uri": "memguard-recovery://r20-live/procedural-result",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:04:19.511539+00:00",
+      "tool_args": {
+        "execution_origin": "procedural_memory_fallback"
+      }
+    }
+  ],
+  "workspace_before": [
+    {
+      "path": "scripts/diagnose_kylin_embedding.sh",
+      "size": 46
+    }
+  ],
+  "workspace_after": [
+    {
+      "path": "scripts/diagnose_kylin_embedding.sh",
+      "size": 46
+    }
+  ]
+}

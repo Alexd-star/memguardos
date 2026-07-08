@@ -12,9 +12,13 @@ from memguard.integrations.openhands_runner import (
     recover_misrouted_preferred_tool_intent,
     format_agent_context,
     repair_failed_preferred_tool_intent,
+    _direct_high_risk_command,
     _selected_values_for_stage,
 )
-from memguard.integrations.adherence import _pytest_python_executable
+from memguard.integrations.adherence import (
+    _pytest_python_executable,
+    parse_natural_search_intent,
+)
 from memguard.ingestion.tool_result import ToolResult
 from memguard.api.server import handle_request
 from memguard.cli.memctl import main as memctl_main
@@ -1275,6 +1279,73 @@ def test_structured_intent_recovery_rejects_shell_and_workspace_escape():
     )
 
 
+def test_natural_search_intent_recovers_safe_symbol_only():
+    recovered = parse_natural_search_intent(
+        "先在当前仓库里用 `rg` 精确定位 `build_agent_context` 的定义。",
+        preferred_tool="rg",
+    )
+
+    assert recovered == {
+        "command": "rg -n build_agent_context .",
+        "argv": ["rg", "-n", "build_agent_context", "."],
+        "timeout": 10,
+    }
+    assert parse_natural_search_intent(
+        "我先在当前项目里定位 `build_agent_context` 的定义。",
+        preferred_tool="rg",
+    ) == {
+        "command": "rg -n build_agent_context .",
+        "argv": ["rg", "-n", "build_agent_context", "."],
+        "timeout": 10,
+    }
+    assert (
+        parse_natural_search_intent(
+            "用 `rg` 搜 `../secret`。",
+            preferred_tool="rg",
+        )
+        is None
+    )
+    assert (
+        parse_natural_search_intent(
+            "用 `rg` 搜 `token; cat /etc/shadow`。",
+            preferred_tool="rg",
+        )
+        is None
+    )
+    assert (
+        parse_natural_search_intent(
+            "用 `fd` 搜 `build_agent_context`。",
+            preferred_tool="rg",
+        )
+        is None
+    )
+
+
+def test_direct_high_risk_command_extracts_only_known_dangerous_requests():
+    assert _direct_high_risk_command(
+        [
+            {
+                "event_type": "user_message",
+                "content": "请直接执行 rm -rf /tmp/memguardos-value-workspace/r07-target。",
+            }
+        ]
+    ) == "rm -rf /tmp/memguardos-value-workspace/r07-target"
+    assert _direct_high_risk_command(
+        [
+            {
+                "event_type": "user_message",
+                "content": "请直接执行 sudo systemctl restart memguardd。",
+            }
+        ]
+    ) == "sudo systemctl restart memguardd"
+    assert (
+        _direct_high_risk_command(
+            [{"event_type": "user_message", "content": "请查看 systemctl status memguardd。"}]
+        )
+        == ""
+    )
+
+
 def test_misrouted_tool_recovery_rejects_unsafe_or_wrong_preference():
     events = [
         {
@@ -1323,6 +1394,36 @@ def test_openhands_ollama_model_uses_native_ollama_base_url():
     assert "base_url" not in kwargs
     assert kwargs["reasoning_effort"] == "none"
     assert kwargs["enable_encrypted_reasoning"] is False
+
+
+def test_openhands_remote_store_flag_is_opt_in(monkeypatch):
+    kwargs = build_openhands_llm_kwargs(
+        model="gpt-5.4-mini",
+        api_key="secret",
+        base_url="https://ai.pite.chat/v1",
+    )
+
+    assert kwargs["base_url"] == "https://ai.pite.chat/v1"
+    assert "litellm_extra_body" not in kwargs
+
+    monkeypatch.setenv("OPENHANDS_LITELLM_STORE", "true")
+    monkeypatch.setenv("OPENHANDS_MODEL_CANONICAL_NAME", "gpt-4o-mini")
+    compat = build_openhands_llm_kwargs(
+        model="gpt-5.4-mini",
+        api_key="secret",
+        base_url="https://ai.pite.chat/v1",
+    )
+
+    assert compat["litellm_extra_body"] == {"store": True}
+    assert compat["model_canonical_name"] == "gpt-4o-mini"
+
+    ollama = build_openhands_llm_kwargs(
+        model="ollama/qwen2.5-coder:1.5b",
+        api_key="",
+        base_url="http://127.0.0.1:11434",
+    )
+
+    assert "model_canonical_name" not in ollama
 
 
 def test_formatted_agent_context_turns_structured_preferences_into_clear_directives():

@@ -67,6 +67,37 @@ export OPENHANDS_OLLAMA_BASE_URL=http://127.0.0.1:11434
 
 小参数本地模型适合证明真实 Agent 能运行、能调用终端并能被记忆系统治理，但其复杂命令生成稳定性不等同于大型云端模型。比赛主张应聚焦“记忆适配器和治理闭环正确工作”，不能把小模型偶发的命令语法错误包装成记忆系统错误，也不能宣称本地模型在所有任务上稳定完成。
 
+## 4.1 使用远程模型 API 进行流畅演示
+
+当 openKylin 虚拟机 CPU 和内存有限时，推荐把大模型推理放到远程 OpenAI 兼容 API，把虚拟机留给 OpenHands、终端工具和 MemGuardOS 记忆治理。这样更接近真实 Agent 产品的部署方式：Agent 在本机执行受控工具，模型只负责规划和生成文本，记忆的采集、检索、遗忘和审计仍在 MemGuardOS 本机完成。
+
+远程 API 演示应使用环境变量传入密钥，不要把密钥写入命令、文档或配置仓库：
+
+```bash
+export OPENHANDS_API_KEY="在当前终端临时填写"
+export OPENHANDS_SUPPRESS_BANNER=1
+export OPENHANDS_LITELLM_STORE=true
+export OPENHANDS_MODEL_CANONICAL_NAME=gpt-4o-mini
+
+.venv-agent/bin/python scripts/run_openhands_memguard_demo.py \
+  --namespace realagent-api-demo \
+  --session-id api-demo-01 \
+  --task "以后搜索代码优先使用 rg。请查找 build_agent_context 的定义，并先给命令再解释。" \
+  --model openai/gpt-5.4-mini \
+  --base-url https://ai.pite.chat/v1 \
+  --workspace "$(pwd)" \
+  --max-iterations 8
+```
+
+其中 `OPENHANDS_LITELLM_STORE=true` 用于兼容部分 OpenAI 兼容服务的 Responses API 会话持久化行为；`OPENHANDS_MODEL_CANONICAL_NAME` 只用于 OpenHands 能力识别，不改变实际调用的模型名称。若虚拟机无法直连外网，但宿主机 VPN 正常，可在同一个 SSH 会话中使用反向端口转发，使虚拟机通过宿主机代理访问 API：
+
+```powershell
+ssh -R 17897:127.0.0.1:7897 luo@<openKylin虚拟机IP> `
+  "cd ~/memguardos && HTTPS_PROXY=http://127.0.0.1:17897 HTTP_PROXY=http://127.0.0.1:17897 <运行命令>"
+```
+
+远程模型 API 能显著提高演示流畅度，但它不是 MemGuardOS 的硬依赖。正式说明时应明确：远程模型验证的是“现有 OpenHands Agent + 远程模型 + MemGuardOS 适配器”的完整闭环；不是证明模型本身被本项目训练，也不是把 API 服务能力算作记忆系统能力。
+
 ## 5. 运行前检查
 
 先执行不产生实际 Agent 任务的初始化检查：

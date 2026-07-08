@@ -331,6 +331,57 @@ def parse_inline_search_intent(
     return None
 
 
+def parse_natural_search_intent(
+    content: str,
+    *,
+    preferred_tool: str,
+) -> Optional[Dict[str, object]]:
+    if preferred_tool not in {"rg", "grep"}:
+        return None
+    text = str(content or "")
+    if preferred_tool not in text and not re.search(
+        r"(检索|定位|查找|搜索|search|find|locate)",
+        text,
+        flags=re.IGNORECASE,
+    ):
+        return None
+    terms = []
+    patterns = [
+        r"`([^`\n]+)`",
+        r"['\"]([A-Za-z_][A-Za-z0-9_./:-]{1,128})['\"]",
+    ]
+    for pattern in patterns:
+        for match in re.finditer(pattern, text):
+            candidate = match.group(1).strip()
+            if candidate == preferred_tool:
+                continue
+            if _safe_search_term(candidate):
+                terms.append(candidate)
+    if not terms:
+        return None
+    term = terms[0]
+    command = f"{preferred_tool} -n {shlex.quote(term)} ."
+    return {
+        "command": command,
+        "argv": [preferred_tool, "-n", term, "."],
+        "timeout": 10,
+    }
+
+
+def _safe_search_term(value: str) -> bool:
+    text = str(value or "")
+    if not text or len(text) > 128:
+        return False
+    if any(marker in text for marker in (";", "|", ">", "<", "`", "\n", "\r")):
+        return False
+    if text.startswith("-"):
+        return False
+    path = Path(text)
+    if path.is_absolute() or ".." in path.parts:
+        return False
+    return bool(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_./:-]{1,128}", text))
+
+
 def repair_failed_preferred_tool_intent(
     events: list[Dict[str, object]],
     *,
