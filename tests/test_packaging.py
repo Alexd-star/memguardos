@@ -19,6 +19,7 @@ from scripts.check_competition_ready import (
     check_security_scan_artifacts,
     check_supply_chain_artifacts,
 )
+import scripts.check_competition_ready as readiness
 from scripts.generate_sbom import generate_sbom
 from scripts.build_deb_packages import build_package_plan, validate_no_overlap
 
@@ -89,6 +90,27 @@ def test_native_evidence_revision_rejects_unknown_and_mismatch(tmp_path):
     assert ci_result.ok is False
     assert ci_result.severity == "P1"
     assert "不一致" in ci_result.detail
+
+
+def test_native_evidence_revision_allows_generated_readiness_reports(monkeypatch, tmp_path):
+    expected = "b" * 40
+    revision = tmp_path / "source_revision.json"
+    revision.write_text(json.dumps({"source_revision": "a" * 40, "dirty": False}), encoding="utf-8")
+    monkeypatch.setattr(
+        readiness,
+        "_revision_delta_paths",
+        lambda _source, _target: [
+            "docs/evidence/openkylin_native_latest/openkylin_status.txt",
+            "docs/competition_ready.json",
+            "docs/竞赛就绪自检报告.md",
+            "docs/超标准交付评分矩阵.md",
+        ],
+    )
+
+    result = readiness.check_native_evidence_revision(tmp_path, expected)
+
+    assert result.ok is True
+    assert "追加/更新原生证据" in result.detail
 
 
 def test_competition_package_keeps_formal_and_process_materials_separate():

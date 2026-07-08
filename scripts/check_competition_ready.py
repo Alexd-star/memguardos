@@ -24,6 +24,12 @@ IGNORED_HYGIENE_PARTS = {
     "outputs",
 }
 
+POST_NATIVE_EVIDENCE_ALLOWED_PATHS = {
+    "docs/competition_ready.json",
+    "docs/竞赛就绪自检报告.md",
+    "docs/超标准交付评分矩阵.md",
+}
+
 REQUIRED_DOCS = [
     "README.md",
     "PROJECT_INDEX.md",
@@ -504,8 +510,7 @@ def check_native_evidence_revision(evidence_dir: Path, expected_revision: str, s
         return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, f"本地 Git HEAD 无效：{expected_revision}", severity=severity)
     if revision != expected_revision:
         delta_paths = _revision_delta_paths(revision, expected_revision)
-        allowed_prefix = "docs/evidence/openkylin_native_latest/"
-        if delta_paths is None or not delta_paths or any(not path.startswith(allowed_prefix) for path in delta_paths):
+        if delta_paths is None or not delta_paths or any(not _is_allowed_native_evidence_delta(path) for path in delta_paths):
             return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, f"证据 {revision[:12]} 与当前 {expected_revision[:12]} 不一致", severity=severity)
         return Check(
             "openKylin原生证据",
@@ -517,6 +522,10 @@ def check_native_evidence_revision(evidence_dir: Path, expected_revision: str, s
     if dirty:
         return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, "证据采集树包含未提交修改", severity=severity)
     return Check("openKylin原生证据", "证据对应当前 Git HEAD", True, revision, severity=severity)
+
+
+def _is_allowed_native_evidence_delta(path: str) -> bool:
+    return path.startswith("docs/evidence/openkylin_native_latest/") or path in POST_NATIVE_EVIDENCE_ALLOWED_PATHS
 
 
 def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, severity: str) -> List[Check]:
