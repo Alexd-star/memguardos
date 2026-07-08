@@ -1,30 +1,30 @@
 $ bash scripts/build_deb.sh
-Info: creating stash file /home/luo/memguardos-product-head/native/ukui/build/peony-memguard/.qmake.stash
+Info: creating stash file /home/luo/memguardos-product-head-e065189/native/ukui/build/peony-memguard/.qmake.stash
 g++ -c -pipe -O2 -std=gnu++1z -pthread -Wall -Wextra -D_REENTRANT -fPIC -DQT_WIDGETS_LIB -DQT_NETWORK_LIB -D_REENTRANT -DQT_GUI_LIB -DQT_CORE_LIB -DQT_NO_DEBUG -DQT_PLUGIN -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -I../../peony-memguard -I. -I/usr/include/peony-qt/fileop -I/usr/include/peony-qt/model -I/usr/include/peony-qt/controls -I/usr/include/peony-qt -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/gio-unix-2.0 -I/usr/include/poppler/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QGSettings -I/usr/include/udisks2 -I/usr/include/gudev-1.0 -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/gdk-pixbuf-2.0 -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/poppler -I/usr/include/libpng16 -I/usr/include/x86_64-linux-gnu -I/usr/include/webp -I/usr/include/libmount -I/usr/include/blkid -I. -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -o memguard_peony_plugin.o ../../peony-memguard/memguard_peony_plugin.cpp
 g++ -pipe -O2 -std=gnu++1z -pthread -Wall -Wextra -dM -E -o moc_predefs.h /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
-/usr/lib/qt5/bin/moc -DQT_WIDGETS_LIB -DQT_NETWORK_LIB -D_REENTRANT -DQT_GUI_LIB -DQT_CORE_LIB -DQT_NO_DEBUG -DQT_PLUGIN -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB --include /home/luo/memguardos-product-head/native/ukui/build/peony-memguard/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/luo/memguardos-product-head/native/ukui/peony-memguard -I/usr/include/peony-qt/fileop -I/usr/include/peony-qt/model -I/usr/include/peony-qt/controls -I/usr/include/peony-qt -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/gio-unix-2.0 -I/usr/include/poppler/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QGSettings -I/usr/include/udisks2 -I/usr/include/gudev-1.0 -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/gdk-pixbuf-2.0 -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/poppler -I/usr/include/libpng16 -I/usr/include/x86_64-linux-gnu -I/usr/include/webp -I/usr/include/libmount -I/usr/include/blkid -I. -I/usr/include/c++/12 -I/usr/include/x86_64-linux-gnu/c++/12 -I/usr/include/c++/12/backward -I/usr/lib/gcc/x86_64-linux-gnu/12/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../peony-memguard/memguard_peony_plugin.h -o moc_memguard_peony_plugin.cpp
+/usr/lib/qt5/bin/moc -DQT_WIDGETS_LIB -DQT_NETWORK_LIB -D_REENTRANT -DQT_GUI_LIB -DQT_CORE_LIB -DQT_NO_DEBUG -DQT_PLUGIN -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB --include /home/luo/memguardos-product-head-e065189/native/ukui/build/peony-memguard/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/luo/memguardos-product-head-e065189/native/ukui/peony-memguard -I/usr/include/peony-qt/fileop -I/usr/include/peony-qt/model -I/usr/include/peony-qt/controls -I/usr/include/peony-qt -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/gio-unix-2.0 -I/usr/include/poppler/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QGSettings -I/usr/include/udisks2 -I/usr/include/gudev-1.0 -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/gdk-pixbuf-2.0 -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/poppler -I/usr/include/libpng16 -I/usr/include/x86_64-linux-gnu -I/usr/include/webp -I/usr/include/libmount -I/usr/include/blkid -I. -I/usr/include/c++/12 -I/usr/include/x86_64-linux-gnu/c++/12 -I/usr/include/c++/12/backward -I/usr/lib/gcc/x86_64-linux-gnu/12/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../peony-memguard/memguard_peony_plugin.h -o moc_memguard_peony_plugin.cpp
 g++ -c -pipe -O2 -std=gnu++1z -pthread -Wall -Wextra -D_REENTRANT -fPIC -DQT_WIDGETS_LIB -DQT_NETWORK_LIB -D_REENTRANT -DQT_GUI_LIB -DQT_CORE_LIB -DQT_NO_DEBUG -DQT_PLUGIN -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -I../../peony-memguard -I. -I/usr/include/peony-qt/fileop -I/usr/include/peony-qt/model -I/usr/include/peony-qt/controls -I/usr/include/peony-qt -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/gio-unix-2.0 -I/usr/include/poppler/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QGSettings -I/usr/include/udisks2 -I/usr/include/gudev-1.0 -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/gdk-pixbuf-2.0 -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/poppler -I/usr/include/libpng16 -I/usr/include/x86_64-linux-gnu -I/usr/include/webp -I/usr/include/libmount -I/usr/include/blkid -I. -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -o moc_memguard_peony_plugin.o moc_memguard_peony_plugin.cpp
 rm -f libpeony-menu-plugin-memguardos.so
 g++ -Wl,-O1 -shared -o libpeony-menu-plugin-memguardos.so memguard_peony_plugin.o moc_memguard_peony_plugin.o  -lpeony -lQt5Widgets -lQt5Network -lpoppler-qt5 -lgsettings-qt -ludisks2 -lnotify -lcanberra -lgudev-1.0 -lQt5Gui -lgdk_pixbuf-2.0 -lQt5Core -lgio-2.0 -lgobject-2.0 -lglib-2.0 /usr/lib/x86_64-linux-gnu/libQt5Widgets.so /usr/lib/x86_64-linux-gnu/libQt5Gui.so /usr/lib/x86_64-linux-gnu/libQt5Core.so -lGL -lpthread    
-Info: creating stash file /home/luo/memguardos-product-head/native/ukui/build/ukcc-memguard/.qmake.stash
+Info: creating stash file /home/luo/memguardos-product-head-e065189/native/ukui/build/ukcc-memguard/.qmake.stash
 g++ -c -pipe -O2 -std=gnu++1z -Wall -Wextra -D_REENTRANT -fPIC -DQT_NO_DEBUG -DQT_PLUGIN -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -I../../ukcc-memguard -I. -I/usr/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -o memguard_ukcc_plugin.o ../../ukcc-memguard/memguard_ukcc_plugin.cpp
 g++ -pipe -O2 -std=gnu++1z -Wall -Wextra -dM -E -o moc_predefs.h /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
-/usr/lib/qt5/bin/moc -DQT_NO_DEBUG -DQT_PLUGIN -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB --include /home/luo/memguardos-product-head/native/ukui/build/ukcc-memguard/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/luo/memguardos-product-head/native/ukui/ukcc-memguard -I/usr/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/12 -I/usr/include/x86_64-linux-gnu/c++/12 -I/usr/include/c++/12/backward -I/usr/lib/gcc/x86_64-linux-gnu/12/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../ukcc-memguard/memguard_ukcc_plugin.h -o moc_memguard_ukcc_plugin.cpp
+/usr/lib/qt5/bin/moc -DQT_NO_DEBUG -DQT_PLUGIN -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB --include /home/luo/memguardos-product-head-e065189/native/ukui/build/ukcc-memguard/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/luo/memguardos-product-head-e065189/native/ukui/ukcc-memguard -I/usr/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/12 -I/usr/include/x86_64-linux-gnu/c++/12 -I/usr/include/c++/12/backward -I/usr/lib/gcc/x86_64-linux-gnu/12/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../ukcc-memguard/memguard_ukcc_plugin.h -o moc_memguard_ukcc_plugin.cpp
 g++ -c -pipe -O2 -std=gnu++1z -Wall -Wextra -D_REENTRANT -fPIC -DQT_NO_DEBUG -DQT_PLUGIN -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -I../../ukcc-memguard -I. -I/usr/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -o moc_memguard_ukcc_plugin.o moc_memguard_ukcc_plugin.cpp
 rm -f libmemguardos-ukcc-plugin.so
 g++ -Wl,-O1 -shared -o libmemguardos-ukcc-plugin.so memguard_ukcc_plugin.o moc_memguard_ukcc_plugin.o  -lukcc /usr/lib/x86_64-linux-gnu/libQt5Widgets.so /usr/lib/x86_64-linux-gnu/libQt5Gui.so /usr/lib/x86_64-linux-gnu/libQt5Core.so -lGL -lpthread    
-Info: creating stash file /home/luo/memguardos-product-head/native/ukui/build/tray/.qmake.stash
+Info: creating stash file /home/luo/memguardos-product-head-e065189/native/ukui/build/tray/.qmake.stash
 g++ -c -pipe -O2 -std=gnu++1z -Wall -Wextra -D_REENTRANT -fPIC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -I../../tray -I. -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -o memguard_tray.o ../../tray/memguard_tray.cpp
 g++ -Wl,-O1 -o memguardos-tray memguard_tray.o   /usr/lib/x86_64-linux-gnu/libQt5Widgets.so /usr/lib/x86_64-linux-gnu/libQt5Gui.so /usr/lib/x86_64-linux-gnu/libQt5Core.so -lGL -lpthread   
 UKUI desktop build completed:
 native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so
 native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so
 native/ukui/build/tray/memguardos-tray
-dpkg-deb: 正在 '/home/luo/memguardos-product-head/dist/memguardos-core_0.1.0-2_amd64.deb' 中构建软件包 'memguardos-core'。
-dpkg-deb: 正在 '/home/luo/memguardos-product-head/dist/memguardos-ukui_0.1.0-2_amd64.deb' 中构建软件包 'memguardos-ukui'。
-dpkg-deb: 正在 '/home/luo/memguardos-product-head/dist/memguardos-agent-bridge_0.1.0-2_amd64.deb' 中构建软件包 'memguardos-agent-bridge'。
-dpkg-deb: 正在 '/home/luo/memguardos-product-head/dist/memguardos-doc_0.1.0-2_all.deb' 中构建软件包 'memguardos-doc'。
-dpkg-deb: 正在 '/home/luo/memguardos-product-head/dist/memguardos_0.1.0-2_all.deb' 中构建软件包 'memguardos'。
+dpkg-deb: 正在 '/home/luo/memguardos-product-head-e065189/dist/memguardos-core_0.1.0-2_amd64.deb' 中构建软件包 'memguardos-core'。
+dpkg-deb: 正在 '/home/luo/memguardos-product-head-e065189/dist/memguardos-ukui_0.1.0-2_amd64.deb' 中构建软件包 'memguardos-ukui'。
+dpkg-deb: 正在 '/home/luo/memguardos-product-head-e065189/dist/memguardos-agent-bridge_0.1.0-2_amd64.deb' 中构建软件包 'memguardos-agent-bridge'。
+dpkg-deb: 正在 '/home/luo/memguardos-product-head-e065189/dist/memguardos-doc_0.1.0-2_all.deb' 中构建软件包 'memguardos-doc'。
+dpkg-deb: 正在 '/home/luo/memguardos-product-head-e065189/dist/memguardos_0.1.0-2_all.deb' 中构建软件包 'memguardos'。
 {
   "schema": "memguardos-debian-package-set-v1",
   "version": "0.1.0-2",
@@ -35,41 +35,41 @@ dpkg-deb: 正在 '/home/luo/memguardos-product-head/dist/memguardos_0.1.0-2_all.
       "package": "memguardos-core",
       "version": "0.1.0-2",
       "architecture": "amd64",
-      "path": "/home/luo/memguardos-product-head/dist/memguardos-core_0.1.0-2_amd64.deb",
-      "bytes": 129344,
-      "sha256": "5c3bde7fe3d53fa9bfdc436ad68d22428b15c7a183818db1448006e2914f4f80"
+      "path": "/home/luo/memguardos-product-head-e065189/dist/memguardos-core_0.1.0-2_amd64.deb",
+      "bytes": 130228,
+      "sha256": "0203bba9245a1082afd467b0fa6bf2e4d51b7ac4478f529d5864f060b5780590"
     },
     {
       "package": "memguardos-ukui",
       "version": "0.1.0-2",
       "architecture": "amd64",
-      "path": "/home/luo/memguardos-product-head/dist/memguardos-ukui_0.1.0-2_amd64.deb",
-      "bytes": 99952,
-      "sha256": "2794dbc21d4b76c8dedf55c01022976c11b71e52b34fa3f509a8a5c3725305ce"
+      "path": "/home/luo/memguardos-product-head-e065189/dist/memguardos-ukui_0.1.0-2_amd64.deb",
+      "bytes": 99660,
+      "sha256": "b2a44718492ee4784d060267491f087c47fb948a672db09e4682c83d7aff7b24"
     },
     {
       "package": "memguardos-agent-bridge",
       "version": "0.1.0-2",
       "architecture": "amd64",
-      "path": "/home/luo/memguardos-product-head/dist/memguardos-agent-bridge_0.1.0-2_amd64.deb",
-      "bytes": 7476,
-      "sha256": "00df32ec2ecc61badda03c8661b309b10e24e1aea4526ed4599d998405ad23f2"
+      "path": "/home/luo/memguardos-product-head-e065189/dist/memguardos-agent-bridge_0.1.0-2_amd64.deb",
+      "bytes": 7468,
+      "sha256": "2d5948bd359c7b69a1fe2e50fe6099912dbe2d8debb1f6d6c2a8c24bc79800fa"
     },
     {
       "package": "memguardos-doc",
       "version": "0.1.0-2",
       "architecture": "all",
-      "path": "/home/luo/memguardos-product-head/dist/memguardos-doc_0.1.0-2_all.deb",
-      "bytes": 172440,
-      "sha256": "b6d1fb4049b9ce0184f3495e710dae2d045362702c2adeff09ccf45a667e9d39"
+      "path": "/home/luo/memguardos-product-head-e065189/dist/memguardos-doc_0.1.0-2_all.deb",
+      "bytes": 174684,
+      "sha256": "92228be2c42f1c92dccaabdb128275a9ee13e68f89a4faf3737a517a5b792e99"
     },
     {
       "package": "memguardos",
       "version": "0.1.0-2",
       "architecture": "all",
-      "path": "/home/luo/memguardos-product-head/dist/memguardos_0.1.0-2_all.deb",
-      "bytes": 888,
-      "sha256": "42dab27e561482de33f54561d00e19012009b9a1e5fd6f974df4eaf7ccaa7530"
+      "path": "/home/luo/memguardos-product-head-e065189/dist/memguardos_0.1.0-2_all.deb",
+      "bytes": 884,
+      "sha256": "9846c6282e0f9805558c197a21dce09e6b0fda6f24dbe7624385f41537a6db06"
     }
   ]
 }

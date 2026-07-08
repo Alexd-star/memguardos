@@ -1,5 +1,1 @@
-{
-  "ok": true,
-  "root": "/home/luo/memguardos-product-head/docs/evidence/openkylin_native_latest",
-  "file_count": 19
-}
+{"ok": true, "note": "manifest and SHA256SUMS refreshed after evidence capture"}
