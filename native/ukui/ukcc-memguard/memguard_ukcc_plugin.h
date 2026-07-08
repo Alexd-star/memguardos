@@ -65,6 +65,8 @@ private:
     QTreeWidget *operationHistory_ = nullptr;
     QTextEdit *details_ = nullptr;
     QToolButton *detailsToggle_ = nullptr;
+    QToolButton *overviewDetailsToggle_ = nullptr;
+    QWidget *overviewDetailsPanel_ = nullptr;
     QPointer<QProcess> currentProcess_;
     QList<QPushButton *> actionButtons_;
 

@@ -672,7 +672,8 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "技术详情" not in source
     assert "命令与诊断技术详情" not in source
     assert "操作结果" in source
-    assert "当前任务" in source
+    assert "当前任务" not in source[source.index("QWidget *MemGuardUkccPlugin::pluginUi") :]
+    assert "处理进度" in source
     assert "结果位置" in source
     assert "operationGuide_" in source
     assert "updateOperationGuide" in source
@@ -682,6 +683,10 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "日志、内核保护和系统授权放在【管理员】页" in source
     assert "操作历史" in source
     assert "资源快照" in source
+    assert "更多状态" in source
+    assert "查看组件、资源和操作历史" in source
+    assert "overviewDetailsToggle_" in source
+    assert "overviewDetailsPanel_->setVisible(false)" in source
     assert "QProgressBar" in source
     assert "QScrollArea" in source
     assert "setTextVisible(false)" in source
@@ -738,6 +743,10 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "维护工具" in source
     assert "报告与控制台" in source
     assert "系统维护说明" in source
+    assert "adminGrid->addWidget(serviceBox, 0, 0)" in source
+    assert "adminGrid->addWidget(sdkBox, 0, 1)" in source
+    assert "maintenanceGrid->addWidget(reportBox, 0, 0)" in source
+    assert "maintenanceGrid->addWidget(maintenanceBox, 0, 1)" in source
     assert "openkylin-status" in source
     assert "--fast" in source
     assert "管理员授权" in source
@@ -767,13 +776,41 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "查看服务日志" in source
     assert "系统维护" in source
     assert "导出系统报告" in source
-    assert "导出验收证据" in source
+    assert "导出本机证据" in source
+    assert "验收证据" not in source[source.index("QWidget *MemGuardUkccPlugin::pluginUi") :]
     assert "collect-openkylin-evidence" in source
     assert "报告保存已取消，系统状态未改变" in source
     assert "检查内核保护状态" in source
     assert "native-action" in source
     assert "setStyleSheet" not in source
     assert "QPalette" in source
+
+
+def test_ukui_control_center_has_spacious_native_layout_tokens():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
+
+    assert "applyPageSpacing" in source
+    assert "applyPanelSpacing" in source
+    assert "setContentsMargins(18, 16, 18, 18)" in source
+    assert "setSpacing(14)" in source
+    assert "setHorizontalSpacing(12)" in source
+    assert "setVerticalSpacing(12)" in source
+    assert "setColumnStretch(0, 1)" in source
+    assert "setColumnStretch(1, 1)" in source
+    assert "QSizePolicy::Expanding" in source
+    assert "makeSectionHeader" in source
+    assert "makeDisclosureButton" in source
+    assert "日常使用概览" in source
+    assert "常用操作" in source
+    assert "管理员控制台" in source
+    assert "维护与报告" in source
+    assert "setFrameShape(QFrame::NoFrame)" in source
+    assert "setMinimumHeight(44)" in source
+    assert "setMaximumHeight(52)" in source
+    assert "setMaximumWidth(220)" in source
+    assert "当前任务：" not in source[source.index("QWidget *MemGuardUkccPlugin::pluginUi") :]
+    assert "处理进度：" in source
 
 
 def test_privileged_actions_are_fixed_and_report_structured_result(monkeypatch):

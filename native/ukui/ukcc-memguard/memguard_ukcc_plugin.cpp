@@ -30,6 +30,7 @@
 #include <QRegularExpression>
 #include <QScrollArea>
 #include <QSize>
+#include <QSizePolicy>
 #include <QStandardPaths>
 #include <QTabWidget>
 #include <QTextEdit>
@@ -105,6 +106,8 @@ QGroupBox *makeStatusCard(const QString &title, const QString &description, QLab
 {
     auto *box = new QGroupBox(title);
     auto *layout = new QHBoxLayout(box);
+    layout->setContentsMargins(14, 12, 14, 12);
+    layout->setSpacing(12);
     auto *icon = new QLabel;
     icon->setFixedSize(30, 30);
     icon->setPixmap(QIcon::fromTheme(QStringLiteral("emblem-system")).pixmap(30, 30));
@@ -128,6 +131,63 @@ QGroupBox *makeStatusCard(const QString &title, const QString &description, QLab
     if (statusOut)
         *statusOut = status;
     return box;
+}
+
+void applyPageSpacing(QVBoxLayout *layout)
+{
+    if (!layout)
+        return;
+    layout->setContentsMargins(18, 16, 18, 18);
+    layout->setSpacing(14);
+}
+
+void applyPanelSpacing(QLayout *layout)
+{
+    if (!layout)
+        return;
+    layout->setContentsMargins(16, 14, 16, 14);
+    layout->setSpacing(12);
+}
+
+void applyGridRhythm(QGridLayout *layout)
+{
+    if (!layout)
+        return;
+    layout->setHorizontalSpacing(12);
+    layout->setVerticalSpacing(12);
+    layout->setColumnStretch(0, 1);
+    layout->setColumnStretch(1, 1);
+}
+
+QLabel *makeMutedLabel(const QString &text);
+
+QWidget *makeSectionHeader(const QString &iconName, const QString &title, const QString &description)
+{
+    auto *widget = new QWidget;
+    auto *layout = new QHBoxLayout(widget);
+    layout->setContentsMargins(0, 0, 0, 2);
+    layout->setSpacing(12);
+
+    auto *icon = new QLabel;
+    icon->setFixedSize(28, 28);
+    icon->setPixmap(QIcon::fromTheme(iconName).pixmap(28, 28));
+    icon->setAccessibleName(title + QStringLiteral("图标"));
+
+    auto *texts = new QVBoxLayout;
+    texts->setContentsMargins(0, 0, 0, 0);
+    texts->setSpacing(2);
+    auto *titleLabel = new QLabel(title);
+    QFont titleFont = titleLabel->font();
+    titleFont.setBold(true);
+    titleFont.setPointSizeF(titleFont.pointSizeF() * 1.08);
+    titleLabel->setFont(titleFont);
+    auto *body = makeMutedLabel(description);
+    texts->addWidget(titleLabel);
+    texts->addWidget(body);
+
+    layout->addWidget(icon);
+    layout->addLayout(texts, 1);
+    return widget;
 }
 
 QColor levelColor(const QString &level)
@@ -157,10 +217,25 @@ QFrame *makeSeparator()
     return line;
 }
 
+QToolButton *makeDisclosureButton(const QString &text, const QString &accessibleName)
+{
+    auto *button = new QToolButton;
+    button->setText(text);
+    button->setCheckable(true);
+    button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    button->setArrowType(Qt::RightArrow);
+    button->setAccessibleName(accessibleName);
+    button->setMinimumHeight(36);
+    return button;
+}
+
 QPushButton *makeOperationButton(const QString &iconName, const QString &text, const QString &accessibleName)
 {
     auto *button = new QPushButton(QIcon::fromTheme(iconName), text);
-    button->setMinimumHeight(48);
+    button->setMinimumHeight(44);
+    button->setMaximumHeight(52);
+    button->setMaximumWidth(220);
+    button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     button->setIconSize(QSize(22, 22));
     button->setAccessibleName(accessibleName);
     return button;
@@ -390,18 +465,15 @@ QWidget *MemGuardUkccPlugin::pluginUi()
     const QPalette palette = page_->palette();
     Q_UNUSED(palette);
     auto *layout = new QVBoxLayout(page_);
-    auto *title = new QLabel(QStringLiteral("MemGuardOS 记忆安全"));
-    QFont titleFont = title->font();
-    titleFont.setPointSizeF(titleFont.pointSizeF() * 1.25);
-    titleFont.setBold(true);
-    title->setFont(titleFont);
-    auto *description = new QLabel(QStringLiteral("管理本机 Agent 记忆、操作记录完整性、本机智能检索和桌面入口。"));
-    description->setWordWrap(true);
-    layout->addWidget(title);
-    layout->addWidget(description);
+    applyPageSpacing(layout);
+    layout->addWidget(makeSectionHeader(
+        QStringLiteral("security-high"),
+        QStringLiteral("MemGuardOS 记忆安全"),
+        QStringLiteral("管理本机 Agent 记忆、操作记录完整性、本机智能检索和桌面入口。")));
 
     auto *summaryBox = new QGroupBox(QStringLiteral("当前状态"));
     auto *summaryLayout = new QHBoxLayout(summaryBox);
+    applyPanelSpacing(summaryLayout);
     summaryIcon_ = new QLabel;
     summaryIcon_->setFixedSize(32, 32);
     summaryIcon_->setScaledContents(true);
@@ -446,12 +518,9 @@ QWidget *MemGuardUkccPlugin::pluginUi()
     resultSummary_->setAccessibleName(QStringLiteral("最近一次操作结果摘要"));
     layout->addWidget(resultSummary_);
 
-    auto *guideBox = new QGroupBox(QStringLiteral("当前任务"));
-    auto *guideLayout = new QVBoxLayout(guideBox);
-    operationGuide_ = makeMutedLabel(QStringLiteral("当前任务：暂无后台操作。\n结果位置：快速状态显示在本页；日志、操作记录、本机智能检索和报告结果会显示在【系统维护】>【维护结果】或保存为文件。"));
-    operationGuide_->setAccessibleName(QStringLiteral("当前任务和结果位置说明"));
-    guideLayout->addWidget(operationGuide_);
-    layout->addWidget(guideBox);
+    operationGuide_ = makeMutedLabel(QStringLiteral("暂无后台操作。状态会显示在本页；日志、操作记录、本机智能检索和报告结果会显示在【系统维护】>【维护结果】或保存为文件。"));
+    operationGuide_->setAccessibleName(QStringLiteral("操作进度和结果位置说明"));
+    layout->addWidget(operationGuide_);
 
     tabs_ = new QTabWidget;
     tabs_->setAccessibleName(QStringLiteral("MemGuardOS 设置分类"));
@@ -478,12 +547,20 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
 {
     auto *scroll = new QScrollArea;
     scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
     scroll->setAccessibleName(QStringLiteral("MemGuardOS 日常使用滚动区域"));
     auto *tab = new QWidget;
     auto *layout = new QVBoxLayout(tab);
+    applyPageSpacing(layout);
+    layout->addWidget(makeSectionHeader(
+        QStringLiteral("user-home"),
+        QStringLiteral("日常使用概览"),
+        QStringLiteral("查看本机记忆安全状态，完成文件扫描、遗忘预览和常用入口操作。")));
 
     auto *healthBox = new QGroupBox(QStringLiteral("服务健康"));
     auto *healthLayout = new QGridLayout(healthBox);
+    applyPanelSpacing(healthLayout);
+    applyGridRhythm(healthLayout);
     healthLayout->addWidget(makeStatusCard(
                                 QStringLiteral("服务运行"),
                                 QStringLiteral("记忆后台服务和本地接口是否可用。"),
@@ -510,21 +587,25 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
         1, 1);
     layout->addWidget(healthBox);
 
-    auto *taskBox = new QGroupBox(QStringLiteral("普通用户常用入口"));
+    auto *taskBox = new QGroupBox(QStringLiteral("常用操作"));
+    taskBox->setAccessibleName(QStringLiteral("普通用户常用入口"));
     auto *taskLayout = new QGridLayout(taskBox);
+    applyPanelSpacing(taskLayout);
+    applyGridRhythm(taskLayout);
     auto *openConsole = makeOperationButton(QStringLiteral("applications-internet"), QStringLiteral("打开本地控制台"), QStringLiteral("打开 MemGuardOS 本地控制台"));
     auto *openFiles = makeOperationButton(QStringLiteral("system-file-manager"), QStringLiteral("打开文件管理器"), QStringLiteral("打开文件管理器后可右键文件进行记忆扫描"));
     auto *forgetEntry = makeOperationButton(QStringLiteral("edit-delete"), QStringLiteral("查看遗忘入口"), QStringLiteral("打开本地控制台查看记忆遗忘入口"));
     auto *refreshNow = makeOperationButton(QStringLiteral("view-refresh"), QStringLiteral("重新检查状态"), QStringLiteral("重新检查 MemGuardOS 状态"));
     taskLayout->addWidget(openConsole, 0, 0);
     taskLayout->addWidget(openFiles, 0, 1);
-    taskLayout->addWidget(forgetEntry, 0, 2);
-    taskLayout->addWidget(refreshNow, 0, 3);
-    taskLayout->addWidget(makeMutedLabel(QStringLiteral("日常操作只保留常用入口：查看服务状态、用文件管理器右键扫描文件、在本地控制台预览遗忘影响范围。日志、内核保护和系统授权放在【管理员】页。")), 1, 0, 1, 4);
+    taskLayout->addWidget(forgetEntry, 1, 0);
+    taskLayout->addWidget(refreshNow, 1, 1);
+    taskLayout->addWidget(makeMutedLabel(QStringLiteral("日常操作只保留常用入口：查看服务状态、用文件管理器右键扫描文件、在本地控制台预览遗忘影响范围。日志、内核保护和系统授权放在【管理员】页。")), 2, 0, 1, 2);
     layout->addWidget(taskBox);
 
     auto *flowBox = new QGroupBox(QStringLiteral("记忆治理流程"));
     auto *flowLayout = new QVBoxLayout(flowBox);
+    applyPanelSpacing(flowLayout);
     auto *flowTitle = new QLabel(QStringLiteral("保存 → 理解 → 使用 → 遗忘"));
     QFont flowFont = flowTitle->font();
     flowFont.setBold(true);
@@ -539,6 +620,8 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
 
     auto *userBox = new QGroupBox(QStringLiteral("普通用户关注项"));
     auto *userLayout = new QGridLayout(userBox);
+    applyPanelSpacing(userLayout);
+    applyGridRhythm(userLayout);
     userLayout->addWidget(makeStatusCard(
                               QStringLiteral("记忆服务"),
                               QStringLiteral("确认 Agent 是否可以读写本机记忆。"),
@@ -567,6 +650,7 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
 
     auto *recommendationBox = new QGroupBox(QStringLiteral("处理建议"));
     auto *recommendationLayout = new QVBoxLayout(recommendationBox);
+    applyPanelSpacing(recommendationLayout);
     recommendations_ = new QListWidget;
     recommendations_->setWordWrap(true);
     recommendations_->setAlternatingRowColors(true);
@@ -577,8 +661,20 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     recommendationLayout->addWidget(makeMutedLabel(QStringLiteral("点击每条建议右侧按钮，可跳转到具体处理区，或直接执行操作记录校验、本机智能检索检查等安全动作。")));
     layout->addWidget(recommendationBox);
 
+    auto *moreBox = new QGroupBox(QStringLiteral("更多状态"));
+    auto *moreLayout = new QVBoxLayout(moreBox);
+    applyPanelSpacing(moreLayout);
+    overviewDetailsToggle_ = makeDisclosureButton(QStringLiteral("查看组件、资源和操作历史"), QStringLiteral("展开或收起更多状态"));
+    moreLayout->addWidget(overviewDetailsToggle_);
+    overviewDetailsPanel_ = new QWidget;
+    auto *detailsPanelLayout = new QVBoxLayout(overviewDetailsPanel_);
+    detailsPanelLayout->setContentsMargins(0, 8, 0, 0);
+    detailsPanelLayout->setSpacing(12);
+    overviewDetailsPanel_->setVisible(false);
+
     auto *componentsBox = new QGroupBox(QStringLiteral("组件状态详情"));
     auto *componentsLayout = new QVBoxLayout(componentsBox);
+    applyPanelSpacing(componentsLayout);
     components_ = new QTreeWidget;
     components_->setColumnCount(3);
     components_->setHeaderLabels({QStringLiteral("组件"), QStringLiteral("状态"), QStringLiteral("说明")});
@@ -590,12 +686,14 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     components_->header()->setSectionResizeMode(2, QHeaderView::Stretch);
     components_->setAccessibleName(QStringLiteral("本机组件状态列表"));
     componentsLayout->addWidget(components_);
-    layout->addWidget(componentsBox);
+    detailsPanelLayout->addWidget(componentsBox);
 
     auto *detailGrid = new QGridLayout;
+    applyGridRhythm(detailGrid);
 
     auto *resourceBox = new QGroupBox(QStringLiteral("资源快照"));
     auto *resourceLayout = new QVBoxLayout(resourceBox);
+    applyPanelSpacing(resourceLayout);
     resourceSnapshot_ = new QTreeWidget;
     resourceSnapshot_->setColumnCount(2);
     resourceSnapshot_->setHeaderLabels({QStringLiteral("项目"), QStringLiteral("当前值")});
@@ -609,6 +707,7 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
 
     auto *historyBox = new QGroupBox(QStringLiteral("操作历史"));
     auto *historyLayout = new QVBoxLayout(historyBox);
+    applyPanelSpacing(historyLayout);
     operationHistory_ = new QTreeWidget;
     operationHistory_->setColumnCount(3);
     operationHistory_->setHeaderLabels({QStringLiteral("操作"), QStringLiteral("结果"), QStringLiteral("说明")});
@@ -620,12 +719,18 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     operationHistory_->setAccessibleName(QStringLiteral("MemGuardOS 最近操作历史"));
     historyLayout->addWidget(operationHistory_);
     detailGrid->addWidget(historyBox, 0, 1);
-    layout->addLayout(detailGrid);
+    detailsPanelLayout->addLayout(detailGrid);
 
     auto *hint = new QLabel(QStringLiteral("状态来自本机实时检查。选择【重新检查状态】可刷新服务、本机智能检索、操作记录和资源信息。管理员维护入口位于【管理员】和【系统维护】页。"));
     hint->setWordWrap(true);
-    layout->addWidget(hint);
+    detailsPanelLayout->addWidget(hint);
+    moreLayout->addWidget(overviewDetailsPanel_);
+    layout->addWidget(moreBox);
     actionButtons_ << openConsole << openFiles << forgetEntry << refreshNow;
+    connect(overviewDetailsToggle_, &QToolButton::toggled, this, [this](bool checked) {
+        overviewDetailsToggle_->setArrowType(checked ? Qt::DownArrow : Qt::RightArrow);
+        overviewDetailsPanel_->setVisible(checked);
+    });
     connect(openConsole, &QPushButton::clicked, this, &MemGuardUkccPlugin::openDashboard);
     connect(openFiles, &QPushButton::clicked, this, [this]() {
         QDesktopServices::openUrl(QUrl::fromLocalFile(QDir::homePath()));
@@ -644,17 +749,28 @@ QWidget *MemGuardUkccPlugin::buildServiceTab()
 {
     auto *scroll = new QScrollArea;
     scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
     scroll->setAccessibleName(QStringLiteral("MemGuardOS 管理员滚动区域"));
     auto *tab = new QWidget;
     auto *layout = new QVBoxLayout(tab);
+    applyPageSpacing(layout);
+    layout->addWidget(makeSectionHeader(
+        QStringLiteral("preferences-system"),
+        QStringLiteral("管理员控制台"),
+        QStringLiteral("集中处理服务控制、本机智能检索、安全审计和系统授权。")));
+    auto *adminGrid = new QGridLayout;
+    applyGridRhythm(adminGrid);
+
     auto *serviceBox = new QGroupBox(QStringLiteral("管理员工具：服务控制"));
     auto *serviceLayout = new QVBoxLayout(serviceBox);
+    applyPanelSpacing(serviceLayout);
     serviceLayout->addWidget(makeMutedLabel(QStringLiteral("管理记忆后台服务。日常使用时保持服务运行；维护前可查看日志，确认问题后再重启。")));
     serviceLayout->addWidget(makeSeparator());
     serviceState_ = new QLabel(QStringLiteral("等待检查"));
     serviceState_->setWordWrap(true);
     serviceLayout->addWidget(serviceState_);
     auto *serviceButtons = new QGridLayout;
+    applyGridRhythm(serviceButtons);
     auto *start = makeOperationButton(QStringLiteral("media-playback-start"), QStringLiteral("启动服务"), QStringLiteral("启动 MemGuardOS 记忆服务"));
     auto *stop = makeOperationButton(QStringLiteral("media-playback-stop"), QStringLiteral("停止服务"), QStringLiteral("停止 MemGuardOS 记忆服务"));
     auto *restart = makeOperationButton(QStringLiteral("view-refresh"), QStringLiteral("重启服务"), QStringLiteral("重启 MemGuardOS 记忆服务"));
@@ -667,31 +783,35 @@ QWidget *MemGuardUkccPlugin::buildServiceTab()
     auto *serviceHint = makeMutedLabel(QStringLiteral("启动、停止和重启属于管理员授权操作，会通过 Polkit 显示系统授权窗口。"));
     serviceHint->setAccessibleName(QStringLiteral("管理员授权说明"));
     serviceLayout->addWidget(serviceHint);
-    layout->addWidget(serviceBox);
+    adminGrid->addWidget(serviceBox, 0, 0);
 
     auto *sdkBox = new QGroupBox(QStringLiteral("管理员工具：本机智能检索"));
     auto *sdkLayout = new QVBoxLayout(sdkBox);
+    applyPanelSpacing(sdkLayout);
     sdkLayout->addWidget(makeMutedLabel(QStringLiteral("检查系统自带 AI 检索能力和本地模型状态。该能力未就绪时，系统会自动使用备用检索，不影响普通记忆检索。")));
     sdkLayout->addWidget(makeMutedLabel(QStringLiteral("该检查会调用本机模型；日常状态页只做轻量检查，避免拖慢设置界面。")));
     sdkLayout->addWidget(makeSeparator());
     sdkState_ = new QLabel(QStringLiteral("等待检查"));
     sdkState_->setWordWrap(true);
     auto *sdkButtons = new QGridLayout;
+    applyGridRhythm(sdkButtons);
     auto *sdkCheck = makeOperationButton(QStringLiteral("system-search"), QStringLiteral("检查本机智能检索"), QStringLiteral("检查本机 AI 检索能力"));
     auto *warmup = makeOperationButton(QStringLiteral("media-playback-start"), QStringLiteral("预热本机智能检索"), QStringLiteral("预热本机智能检索能力"));
     sdkButtons->addWidget(sdkCheck, 0, 0);
     sdkButtons->addWidget(warmup, 0, 1);
     sdkLayout->addWidget(sdkState_);
     sdkLayout->addLayout(sdkButtons);
-    layout->addWidget(sdkBox);
+    adminGrid->addWidget(sdkBox, 0, 1);
 
     auto *securityBox = new QGroupBox(QStringLiteral("管理员工具：安全审计"));
     auto *securityLayout = new QVBoxLayout(securityBox);
+    applyPanelSpacing(securityLayout);
     securityLayout->addWidget(makeMutedLabel(QStringLiteral("校验操作记录完整性、安装本机记录规则，并检查可选内核保护路径。高风险操作需要管理员授权。")));
     securityLayout->addWidget(makeSeparator());
     auditState_ = new QLabel(QStringLiteral("等待检查"));
     auditState_->setWordWrap(true);
     auto *securityButtons = new QGridLayout;
+    applyGridRhythm(securityButtons);
     auto *verifyAudit = makeOperationButton(QStringLiteral("security-high"), QStringLiteral("校验操作记录"), QStringLiteral("校验 MemGuardOS 操作记录完整性"));
     auto *installAudit = makeOperationButton(QStringLiteral("list-add"), QStringLiteral("安装审计规则"), QStringLiteral("安装 MemGuardOS 审计规则"));
     auto *bpfTest = makeOperationButton(QStringLiteral("dialog-warning"), QStringLiteral("检查内核保护状态"), QStringLiteral("检查 MemGuardOS 内核保护状态"));
@@ -702,13 +822,15 @@ QWidget *MemGuardUkccPlugin::buildServiceTab()
     securityLayout->addLayout(securityButtons);
     auto *securityHint = makeMutedLabel(QStringLiteral("安装审计规则和内核保护检查会触发管理员授权；未知动作会被白名单 helper 拒绝。"));
     securityLayout->addWidget(securityHint);
-    layout->addWidget(securityBox);
+    adminGrid->addWidget(securityBox, 1, 0);
 
     auto *permissionBox = new QGroupBox(QStringLiteral("系统授权"));
     auto *permissionLayout = new QVBoxLayout(permissionBox);
+    applyPanelSpacing(permissionLayout);
     permissionLayout->addWidget(makeMutedLabel(QStringLiteral("控制中心只暴露固定白名单操作：服务启停、审计规则安装、内核保护检查和状态诊断。普通记忆写入、检索和遗忘预览不需要提升权限。")));
     permissionLayout->addWidget(makeMutedLabel(QStringLiteral("如果授权弹窗未出现，请确认 Polkit policy 和 native helper 已安装，再重新打开控制中心。")));
-    layout->addWidget(permissionBox);
+    adminGrid->addWidget(permissionBox, 1, 1);
+    layout->addLayout(adminGrid);
     layout->addStretch();
 
     actionButtons_ << start << stop << restart << logs << sdkCheck << warmup << verifyAudit << installAudit << bpfTest;
@@ -735,33 +857,47 @@ QWidget *MemGuardUkccPlugin::buildDiagnosticsTab()
 {
     auto *scroll = new QScrollArea;
     scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
     scroll->setAccessibleName(QStringLiteral("MemGuardOS 系统维护滚动区域"));
     auto *tab = new QWidget;
     auto *layout = new QVBoxLayout(tab);
+    applyPageSpacing(layout);
+    layout->addWidget(makeSectionHeader(
+        QStringLiteral("document-save"),
+        QStringLiteral("维护与报告"),
+        QStringLiteral("导出系统报告、打开本地控制台、查看维护结果和本机证据。")));
 
     auto *introBox = new QGroupBox(QStringLiteral("系统维护说明"));
     auto *introLayout = new QVBoxLayout(introBox);
+    applyPanelSpacing(introLayout);
     introLayout->addWidget(makeMutedLabel(QStringLiteral("这里用于导出系统报告、打开本地控制台、刷新状态和查看维护结果。报告默认不包含记忆正文，适合用于问题排查和提交前自检。")));
     introLayout->addWidget(makeSeparator());
     layout->addWidget(introBox);
 
+    auto *maintenanceGrid = new QGridLayout;
+    applyGridRhythm(maintenanceGrid);
+
     auto *reportBox = new QGroupBox(QStringLiteral("报告与控制台"));
     auto *reportLayout = new QVBoxLayout(reportBox);
-    reportLayout->addWidget(makeMutedLabel(QStringLiteral("导出系统报告会聚合服务、本机智能检索、资源、授权和操作记录状态；验收证据会生成带 SHA256 清单的本机证据目录；本地控制台提供更完整的记忆写入、检索、上下文和遗忘预览流程。")));
+    applyPanelSpacing(reportLayout);
+    reportLayout->addWidget(makeMutedLabel(QStringLiteral("导出系统报告会聚合服务、本机智能检索、资源、授权和操作记录状态；本机证据会生成带 SHA256 清单的状态目录；本地控制台提供更完整的记忆写入、检索、上下文和遗忘预览流程。")));
     auto *reportButtons = new QGridLayout;
+    applyGridRhythm(reportButtons);
     auto *diagnostics = makeOperationButton(QStringLiteral("document-save"), QStringLiteral("导出快速报告"), QStringLiteral("导出 MemGuardOS 系统报告"));
-    auto *evidence = makeOperationButton(QStringLiteral("document-send"), QStringLiteral("导出验收证据"), QStringLiteral("导出 MemGuardOS openKylin 验收证据包"));
+    auto *evidence = makeOperationButton(QStringLiteral("document-send"), QStringLiteral("导出本机证据"), QStringLiteral("导出 MemGuardOS openKylin 本机证据包"));
     auto *dashboard = makeOperationButton(QStringLiteral("applications-internet"), QStringLiteral("打开本地控制台"), QStringLiteral("打开 MemGuardOS 本地控制台"));
     reportButtons->addWidget(diagnostics, 0, 0);
     reportButtons->addWidget(evidence, 0, 1);
     reportButtons->addWidget(dashboard, 0, 2);
     reportLayout->addLayout(reportButtons);
-    layout->addWidget(reportBox);
+    maintenanceGrid->addWidget(reportBox, 0, 0);
 
     auto *maintenanceBox = new QGroupBox(QStringLiteral("维护工具"));
     auto *maintenanceLayout = new QVBoxLayout(maintenanceBox);
+    applyPanelSpacing(maintenanceLayout);
     maintenanceLayout->addWidget(makeMutedLabel(QStringLiteral("这些工具用于快速确认当前页面状态和后台服务状态。需要查看处理结果时再展开下方维护结果。")));
     auto *maintenanceButtons = new QGridLayout;
+    applyGridRhythm(maintenanceButtons);
     auto *refresh = makeOperationButton(QStringLiteral("view-refresh"), QStringLiteral("重新检查状态"), QStringLiteral("重新检查 MemGuardOS 状态"));
     auto *verifyAudit = makeOperationButton(QStringLiteral("security-high"), QStringLiteral("校验操作记录"), QStringLiteral("校验 MemGuardOS 操作记录完整性"));
     auto *logs = makeOperationButton(QStringLiteral("text-x-log"), QStringLiteral("查看服务日志"), QStringLiteral("查看记忆后台服务日志"));
@@ -769,10 +905,12 @@ QWidget *MemGuardUkccPlugin::buildDiagnosticsTab()
     maintenanceButtons->addWidget(verifyAudit, 0, 1);
     maintenanceButtons->addWidget(logs, 0, 2);
     maintenanceLayout->addLayout(maintenanceButtons);
-    layout->addWidget(maintenanceBox);
+    maintenanceGrid->addWidget(maintenanceBox, 0, 1);
+    layout->addLayout(maintenanceGrid);
 
     auto *detailsBox = new QGroupBox(QStringLiteral("维护结果"));
     auto *detailsLayout = new QVBoxLayout(detailsBox);
+    applyPanelSpacing(detailsLayout);
     detailsToggle_ = new QToolButton;
     detailsToggle_->setText(QStringLiteral("查看维护结果"));
     detailsToggle_->setCheckable(true);
@@ -828,7 +966,7 @@ void MemGuardUkccPlugin::runMemctl(const QStringList &arguments, const QString &
 void MemGuardUkccPlugin::runProgram(const QString &program, const QStringList &arguments, const QString &purpose)
 {
     if (currentProcess_ && currentProcess_->state() != QProcess::NotRunning) {
-        QMessageBox::information(page_, QStringLiteral("已有任务正在处理"), QStringLiteral("当前任务尚未结束。可以等待完成，或点击【停止当前操作】后再执行新的操作。"));
+        QMessageBox::information(page_, QStringLiteral("已有操作正在处理"), QStringLiteral("上一个操作尚未结束。可以等待完成，或点击【停止当前操作】后再执行新的操作。"));
         return;
     }
     setBusy(true, operationStartMessage(arguments, purpose));
@@ -892,7 +1030,7 @@ void MemGuardUkccPlugin::runProgram(const QString &program, const QStringList &a
             currentProcess_.clear();
         setBusy(false, QStringLiteral("操作超时，已停止后台任务。"));
         appendHistory(purposeText(purpose), false, QStringLiteral("操作超时，已自动停止。"));
-        showError(QStringLiteral("操作超时"), QStringLiteral("当前任务长时间没有完成，系统已自动停止。请查看服务日志或导出系统报告后重试。"));
+        showError(QStringLiteral("操作超时"), QStringLiteral("本次操作长时间没有完成，系统已自动停止。请查看服务日志或导出系统报告后重试。"));
     });
     process->start(program, arguments);
 }
@@ -909,14 +1047,14 @@ QString MemGuardUkccPlugin::operationStartMessage(const QStringList &arguments, 
     if (joined.contains(QStringLiteral("diagnostics")))
         return QStringLiteral("正在生成系统报告，完成后请选择保存位置。");
     if (joined.contains(QStringLiteral("collect-openkylin-evidence")))
-        return QStringLiteral("正在导出验收证据，完成后会显示保存位置。");
+        return QStringLiteral("正在导出本机证据，完成后会显示保存位置。");
     if (joined.contains(QStringLiteral("native-action")))
         return QStringLiteral("正在等待系统授权并执行操作。");
     if (joined.contains(QStringLiteral("openkylin-status")) && joined.contains(QStringLiteral("--fast")))
         return QStringLiteral("正在快速刷新本机状态。");
     if (purpose == QStringLiteral("details"))
         return QStringLiteral("正在读取详情，结果会显示在【系统维护】。");
-    return QStringLiteral("正在处理当前任务，窗口可保持打开。");
+    return QStringLiteral("正在处理本次操作，窗口可保持打开。");
 }
 
 QString MemGuardUkccPlugin::operationCompleteMessage(const QStringList &arguments, const QString &purpose, int exitCode) const
@@ -934,7 +1072,7 @@ QString MemGuardUkccPlugin::operationCompleteMessage(const QStringList &argument
     if (joined.contains(QStringLiteral("diagnostics")))
         return QStringLiteral("系统报告已生成。");
     if (joined.contains(QStringLiteral("collect-openkylin-evidence")))
-        return QStringLiteral("验收证据已导出，保存位置已显示在【系统维护】。");
+        return QStringLiteral("本机证据已导出，保存位置已显示在【系统维护】。");
     if (purpose == QStringLiteral("refresh"))
         return QStringLiteral("状态刷新已完成，可以继续操作。");
     if (purpose == QStringLiteral("action"))
@@ -976,15 +1114,15 @@ void MemGuardUkccPlugin::updateOperationGuide(const QString &message, bool busy)
     if (!operationGuide_)
         return;
     if (busy) {
-        operationGuide_->setText(QStringLiteral("当前任务：%1\n结果位置：轻量状态会更新在本页；日志、操作记录、本机智能检索和报告结果会进入【系统维护】>【维护结果】。可点击【停止当前操作】取消。")
+        operationGuide_->setText(QStringLiteral("处理进度：%1\n结果位置：状态会更新在本页；日志、操作记录、本机智能检索和报告结果会进入【系统维护】>【维护结果】。可点击【停止当前操作】取消。")
             .arg(message));
         return;
     }
     if (message.isEmpty()) {
-        operationGuide_->setText(QStringLiteral("当前任务：暂无后台操作。\n结果位置：快速状态显示在本页；日志、操作记录、本机智能检索和报告结果会显示在【系统维护】>【维护结果】或保存为文件。"));
+        operationGuide_->setText(QStringLiteral("处理进度：暂无后台操作。\n结果位置：状态显示在本页；日志、操作记录、本机智能检索和报告结果会显示在【系统维护】>【维护结果】或保存为文件。"));
         return;
     }
-    operationGuide_->setText(QStringLiteral("当前任务：暂无后台操作。\n结果位置：%1").arg(message));
+    operationGuide_->setText(QStringLiteral("处理进度：暂无后台操作。\n结果位置：%1").arg(message));
 }
 
 void MemGuardUkccPlugin::renderStatus(const QJsonObject &payload)
