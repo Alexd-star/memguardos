@@ -46,7 +46,7 @@ bash scripts/collect_agent_evidence.sh
 
 最新结果：
 
-- 最新同 HEAD 单元测试：`295 passed`
+- 最新同 HEAD 单元测试：`296 passed`
 - 真实 Agent：OpenHands 实际执行 `rg -n build_agent_context memguard` 并返回真实文件与行号
 - Agent 专项 benchmark：200 条，提取/遗忘/跨会话指标 1.0000，污染率/泄漏率 0，P95 113.97 ms
 - 负载评测：1000 条记忆，120 次检索请求

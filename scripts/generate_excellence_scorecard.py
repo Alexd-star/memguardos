@@ -8,7 +8,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-LOCAL_PYTEST_CURRENT = "294 passed, 1 skipped"
+LOCAL_PYTEST_CURRENT = "295 passed, 1 skipped"
 OPENKYLIN_PYTEST_PATH = ROOT / "docs/evidence/openkylin_native_latest/pytest_openkylin.txt"
 SCORECARD_PATH = ROOT / "docs/超标准交付评分矩阵.md"
 
