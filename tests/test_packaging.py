@@ -117,6 +117,8 @@ def test_native_evidence_revision_reads_unquoted_non_ascii_delta_paths():
     source = (ROOT / "scripts/check_competition_ready.py").read_text(encoding="utf-8")
 
     assert "core.quotePath=false" in source
+    assert 'encoding="utf-8"' in source
+    assert 'errors="replace"' in source
 
 
 def test_competition_package_keeps_formal_and_process_materials_separate():

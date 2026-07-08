@@ -1496,6 +1496,8 @@ def _revision_delta_paths(source_revision: str, target_revision: str) -> Optiona
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=10,
             check=False,
         )
