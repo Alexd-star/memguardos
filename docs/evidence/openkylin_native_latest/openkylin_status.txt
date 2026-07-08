@@ -95,22 +95,22 @@ $ python3 -m memguard.cli.memctl openkylin-status
       "available": true,
       "inference_ready": null,
       "ready_for_default_retrieval": false,
-      "capability_state": "installed_unwarmed",
+      "capability_state": "recently_ready",
       "component_ready": true,
       "product_state": {
         "installed": true,
-        "last_probe_success": false,
-        "last_success_at": "",
-        "last_success_dim": null,
-        "last_success_model": "",
+        "last_probe_success": true,
+        "last_success_at": "2026-07-08T15:32:06+08:00",
+        "last_success_dim": 768,
+        "last_success_model": "ensemble-embd_gte-base_uint8-text",
         "last_failure_at": "",
         "last_failure_reason": "",
-        "warmup_state": "not_warmed",
+        "warmup_state": "ready",
         "fallback": "hash_embedding",
-        "user_message": "已安装，当前未预热"
+        "user_message": "已安装，最近一次端侧向量预热成功"
       },
-      "user_message": "已安装，当前未预热",
-      "next_action": "首次使用可能稍慢，可点击“预热 Kylin SDK”",
+      "user_message": "已安装，最近一次端侧向量预热成功",
+      "next_action": "可继续使用；需要复核时点击“检查端侧向量能力”",
       "fallback": "hash_embedding",
       "diagnosis": {
         "availability_meaning": "fast mode checks files, sockets and services only; run sdk-status --probe-embedding for real inference.",
@@ -183,19 +183,19 @@ $ python3 -m memguard.cli.memctl openkylin-status
     "diagnosis_code": "ready",
     "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": "17862656",
+      "cgroup_memory_current": "17870848",
       "cgroup_memory_max": "536870912"
     },
     "cpu": {
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 706434,
-        "user_usec": 443747,
-        "system_usec": 262686,
+        "usage_usec": 1361583,
+        "user_usec": 789652,
+        "system_usec": 571931,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 288,
+        "nr_periods": 686,
         "nr_throttled": 1,
         "throttled_usec": 6900,
         "nr_bursts": 0,
@@ -217,11 +217,11 @@ $ python3 -m memguard.cli.memctl openkylin-status
     "store_exists": true,
     "db_exists": true,
     "custom_patterns_exists": false,
-    "store_bytes": 309137,
-    "db_bytes": 901120,
-    "record_count": 117,
-    "live_record_count": 117,
-    "audit_event_count": 809
+    "store_bytes": 319158,
+    "db_bytes": 917504,
+    "record_count": 121,
+    "live_record_count": 121,
+    "audit_event_count": 816
   },
   "summary": {
     "overall": "green",
@@ -251,9 +251,9 @@ $ python3 -m memguard.cli.memctl openkylin-status
       "available": true,
       "ready": true,
       "level": "green",
-      "user_message": "已安装，当前未预热",
-      "next_action": "首次使用可能稍慢，可点击“预热 Kylin SDK”",
-      "capability_state": "installed_unwarmed"
+      "user_message": "已安装，最近一次端侧向量预热成功",
+      "next_action": "可继续使用；需要复核时点击“检查端侧向量能力”",
+      "capability_state": "recently_ready"
     },
     {
       "name": "kylin_vector",

@@ -4,23 +4,23 @@
   "files": [
     {
       "path": "deb_lifecycle.txt",
-      "bytes": 225,
-      "sha256": "3fb22e51f47be3fa313db639e4dd694ef7cb7ad42f0cba0de259329e054382ab"
+      "bytes": 224,
+      "sha256": "65ab1e2f915444298fb2b8cbd098057571eb9290fb88482c0cbd581a64266f74"
     },
     {
       "path": "debian_packages.txt",
-      "bytes": 9842,
-      "sha256": "77262b5ce2bf2f8bc7b4cd81ae610ec7dfd683bdb42358e1159a06499c8e467f"
+      "bytes": 9843,
+      "sha256": "6ef7ea6b5778a75a2c08e61d5cf32678e8ba719c791de7cfd4b01bb3d5cc575b"
     },
     {
       "path": "desktop_build.txt",
       "bytes": 7444,
-      "sha256": "3d158177fca5e0b9cfb89cc8f6bf38950ac33637e7d189e815052112ac8569bd"
+      "sha256": "588e7e50f7af942ae9f47cd8107556910df77fa84221de4330cd03ec98e136d6"
     },
     {
       "path": "desktop_plugins.txt",
       "bytes": 5975,
-      "sha256": "e6c484398bdb56780028d7e0f856458212e84965efea784cc4e0f977b1abc9bb"
+      "sha256": "c98cb6633b3553c0c9d563c25a98a68136147a90f93854c382670a499983978a"
     },
     {
       "path": "environment.txt",
@@ -40,62 +40,62 @@
     {
       "path": "kylin_warmup.txt",
       "bytes": 373,
-      "sha256": "7ecdd3e42eb9fccd99ed3210c41a187a65b51b08a5a6ba5e9b286fbe99a0caea"
+      "sha256": "d140affdcda865b7961ec0b5347ac516804258303ce4b5bf953d52fe5adeb94e"
     },
     {
       "path": "manifest_refresh.txt",
-      "bytes": 82,
-      "sha256": "09b5dd021861be1e76154dd827fff0592ea4b60d83c3e05d6854fad04aaf8819"
+      "bytes": 85,
+      "sha256": "3ca93f9dc4bf2492d4bc840ba6d9f1958a3ec03d0ee01e2665bb4bd64490ab9a"
     },
     {
       "path": "openkylin_status.txt",
-      "bytes": 8687,
-      "sha256": "f5eabf1f259ff7a9136cb4c4aa6f9ff14eabf0544cd85c682438934097cf2cc7"
+      "bytes": 8816,
+      "sha256": "9c3df9ee218c6ece7b2d194c08869798dd60448b08dce866ecf8c6acfada598a"
     },
     {
       "path": "openkylin_status_probe_sdk.txt",
-      "bytes": 14328,
-      "sha256": "1dc108c8aad4288cff66348e5c7827e33d899ec011d83d16a5b699347c37f62f"
+      "bytes": 14362,
+      "sha256": "04a03fda6ce4d1e3b070746bd3169e0bf4b916c275102992f92d78f53316090f"
     },
     {
       "path": "peony_batch_apply.json",
       "bytes": 2171,
-      "sha256": "50ebcef162767ed3fd2b5b241daad47a6c61fe0c4c055fe63b6393c6dbe32162"
+      "sha256": "8cb8b3facb805d6d4189f49a71fb8983c7a87931ac52e712fd9d00266e398798"
     },
     {
       "path": "peony_batch_preview.json",
-      "bytes": 2461,
-      "sha256": "aac0727c8e7d54dcfed9a62db87ab3b85f2fa3d2026418e6cb9d2a6cca2272fe"
+      "bytes": 2469,
+      "sha256": "4f4ae3455d9c3355b6ed2bc2b3eb6badbcd85151f3bb4654851cc0d256d3b323"
     },
     {
       "path": "peony_sensitive_preview.json",
-      "bytes": 1693,
-      "sha256": "0f2086317e9402c489654957d5c2536bc3dd778c80ba707be4b88e684763d85a"
+      "bytes": 1697,
+      "sha256": "c3dec26507855a3d4e867e80e8a28fb17ebe4b8ceef2acdb7a661d67c254965f"
     },
     {
       "path": "polkit_assets.txt",
       "bytes": 3099,
-      "sha256": "a84cdcf1b70f574545ec3870861bd37086e38e557735c3e9b4addd59d95abe1b"
+      "sha256": "1da267322d065a5d924ce1ad732d689cd086a73f6dd4a8415d1aa7fb42827d2b"
     },
     {
       "path": "pytest_openkylin.txt",
       "bytes": 474,
-      "sha256": "8654fb0ccf2f34560a3ecf9755fd2a8aac66de062ddcbf42248bf8829f20c2aa"
+      "sha256": "75ff2de1fc7f3adf5b2f73a8ae80375f5c044328d459dae9f5895abe047fdefa"
     },
     {
       "path": "source_revision.json",
       "bytes": 163,
-      "sha256": "f1ac265c2860f5448486159119013886e5720a0d3891f614da2e06823fc24d91"
+      "sha256": "52a598acb9578215ecef4db99fab96921724d06eb0e649f0450fe1c428364654"
     },
     {
       "path": "systemd_cgroup.txt",
-      "bytes": 782,
-      "sha256": "b1f8de7a46ff4da651d135677ced6aa8b97445a95954d014b98ccaf13a9ff447"
+      "bytes": 783,
+      "sha256": "82da9d7a1bdfcfcf9b6d06b605505f78cf56a230036e31d4e6031d2e7d7f8fe0"
     },
     {
       "path": "tray_assets.txt",
       "bytes": 3148,
-      "sha256": "ac7c82f5e110b414419c83c96e97ac75ce876a2637e2d2b856f5ee181325f299"
+      "sha256": "ea3b8d7be3f09797a36c5af1049959af120c49b6d400bb72ab2aeb79964faab9"
     }
   ]
 }

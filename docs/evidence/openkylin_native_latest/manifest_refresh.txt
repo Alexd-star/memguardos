@@ -1,1 +1,5 @@
-{"ok": true, "note": "manifest and SHA256SUMS refreshed after evidence capture"}
+{
+  "ok": true,
+  "root": "/home/luo/openkylin_native_7b54031",
+  "file_count": 19
+}
