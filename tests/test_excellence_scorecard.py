@@ -54,7 +54,8 @@ def test_excellence_scorecard_is_generated_from_current_evidence(tmp_path: Path)
     text = output.read_text(encoding="utf-8")
     assert "MemGuardOS 超标准交付评分矩阵" in text
     assert "293 passed, 1 skipped" in text
-    assert "290 passed" in text
+    assert "openKylin 自动化测试" in text
+    assert "passed" in text
     assert "49.48x" in text
     assert "OWASP Agentic AI" in text
     assert "NIST AI RMF" in text
@@ -64,7 +65,7 @@ def test_excellence_scorecard_is_generated_from_current_evidence(tmp_path: Path)
 
 
 def test_formal_docs_do_not_keep_stale_test_counts() -> None:
-    stale_tokens = ["283 passed", "284 passed", "289 passed", "292 passed"]
+    stale_tokens = ["283 passed", "284 passed", "289 passed", "290 passed", "292 passed"]
     offenders: list[str] = []
     for rel in FORMAL_DOCS:
         text = (ROOT / rel).read_text(encoding="utf-8")
