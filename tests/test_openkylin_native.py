@@ -839,6 +839,17 @@ def test_ukui_control_center_formats_service_logs_for_product_ui():
     assert "return text.isEmpty() ? summary : text;" not in source
 
 
+def test_native_evidence_collector_refreshes_manifest_after_manifest_log_write():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "scripts/collect_openkylin_native_evidence.sh").read_text(encoding="utf-8")
+
+    first = 'python3 scripts/refresh_evidence_manifest.py "${OUT_DIR}" >"${OUT_DIR}/manifest_refresh.txt"'
+    second = 'python3 scripts/refresh_evidence_manifest.py "${OUT_DIR}" >/dev/null'
+    assert first in source
+    assert second in source
+    assert source.index(first) < source.index(second)
+
+
 def test_privileged_actions_are_fixed_and_report_structured_result(monkeypatch):
     calls = []
     monkeypatch.setattr("memguard.os_guard.privileged_actions.shutil.which", lambda name: "/usr/bin/pkexec" if name == "pkexec" else None)
@@ -1038,5 +1049,6 @@ def test_desktop_user_copy_uses_plain_product_language():
     assert "可保存内容" in peony
     assert "只记录选择" in peony
     assert "撤销本次导入" in peony
+
 
 

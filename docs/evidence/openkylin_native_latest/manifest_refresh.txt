@@ -1,5 +1,5 @@
 {
   "ok": true,
-  "root": "/home/luo/memguardos-product-head/docs/evidence/openkylin_native_latest",
+  "root": "D:\\Luo_docs\\竞赛\\研创赛\\memguardos\\.worktrees\\real-agent-foundation\\docs\\evidence\\openkylin_native_latest",
   "file_count": 19
 }

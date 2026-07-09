@@ -183,4 +183,6 @@ run_capture installed_packages.txt bash -lc 'dpkg-query -W -f="\${Package} \${Ve
 run_capture installed_desktop.txt bash -lc 'find /usr/lib -path "*peony-extensions*memguardos*.so" -o -path "*ukui-control-center*memguardos*.so" 2>/dev/null || true; command -v memguardos-tray || true; pgrep -a memguardos-tray || true'
 
 python3 scripts/refresh_evidence_manifest.py "${OUT_DIR}" >"${OUT_DIR}/manifest_refresh.txt"
+python3 scripts/refresh_evidence_manifest.py "${OUT_DIR}" >/dev/null
 echo "openkylin_native_evidence=${OUT_DIR}"
+
