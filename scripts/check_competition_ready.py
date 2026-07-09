@@ -404,7 +404,7 @@ def check_formal_doc_consistency() -> List[Check]:
             "中文文档",
             "正式文档测试数字口径",
             not stale_test_hits,
-            "正式材料使用当前 312/313 测试口径" if not stale_test_hits else "过期数字：%s" % "、".join(stale_test_hits),
+            "正式材料使用当前 317/318 测试口径" if not stale_test_hits else "过期数字：%s" % "、".join(stale_test_hits),
         )
     )
     product_docs = [
@@ -550,6 +550,7 @@ def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, 
         "environment.txt",
         "openkylin_status.txt",
         "openkylin_status_probe_sdk.txt",
+        "user_cli.txt",
         "peony_batch_preview.json",
         "peony_batch_apply.json",
         "peony_sensitive_preview.json",
@@ -568,6 +569,16 @@ def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, 
         path = evidence_dir / name
         checks.append(Check("openKylin原生证据", name, path.exists() and path.stat().st_size > 0, "存在且非空" if path.exists() and path.stat().st_size > 0 else "缺失或为空", severity=severity))
     checks.append(check_native_evidence_revision(evidence_dir, expected_revision, severity=severity))
+    user_cli_text = _read_text_if_exists(evidence_dir / "user_cli.txt")
+    checks.append(
+        Check(
+            "openKylin原生证据",
+            "用户友好 memguard 入口",
+            all(token in user_cli_text for token in ("记忆注入", "工具调用", "新增记忆", "遗忘验证")),
+            "memguard demo 输出完整闭环" if "记忆注入" in user_cli_text else "缺少 memguard demo 闭环输出",
+            severity=severity,
+        )
+    )
     polkit_text = _read_text_if_exists(evidence_dir / "polkit_assets.txt")
     polkit_values = _parse_result_key_values(polkit_text)
     readonly_polkit_staged = (
@@ -1542,6 +1553,7 @@ def _sha256_file(path: Path) -> str:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 
 
 
