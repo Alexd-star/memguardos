@@ -53,6 +53,12 @@ def main() -> int:
         retrieval = _http_get_json(base + "/api/retrieval-status", auth_token=auth_token)
         policy = _http_get_json(base + "/api/memory-policy", auth_token=auth_token)
         diagnostics = _http_get_json(base + "/api/diagnostics", auth_token=auth_token)
+        acceptance_plan = _http_get_json(base + "/api/acceptance-plan", auth_token=auth_token)
+        acceptance_run = _http_post(
+            base + "/api/acceptance-run",
+            {"item_id": "A21_VERIFY_AUDIT"},
+            auth_token=auth_token,
+        )
         exported = _http_get_json(base + "/api/export-diagnostics", auth_token=auth_token)
         agent_overview = _http_get_json(
             base + "/api/agent-overview?session_id=web-smoke-session&task=%E6%9F%A5%E6%89%BE%E4%BB%A3%E7%A0%81",
@@ -77,7 +83,13 @@ def main() -> int:
             "product_workbench_ok": "治理闭环" in page and "今日工作流" in page and "系统报告内容清单" in page,
             "memory_value_visual_ok": "记忆价值指标" in page and "重复尝试" in page and "工具选择命中" in page,
             "forget_confirmation_copy_ok": "遗忘二次确认" in page and "影响范围预览" in page,
-            "competition_copy_absent": "benchmark 用例/种子" not in page and "能力证据总览" not in page and "演示" not in page and "验收" not in page,
+            "competition_copy_absent": "benchmark 用例/种子" not in page and "能力证据总览" not in page and "演示" not in page,
+            "acceptance_review_ok": "复核中心" in page
+            and "acceptanceList" in page
+            and acceptance_plan.get("ok") is True
+            and acceptance_plan.get("result", {}).get("summary", {}).get("manual", 0) >= 1
+            and acceptance_run.get("ok") is True
+            and acceptance_run.get("result", {}).get("status") == "passed",
             "traffic_light_status_ok": "红黄绿状态" in page,
             "rag_visual_ok": "候选选择轨迹" in page,
             "forget_candidate_visual_ok": "候选会以卡片形式列出" in page,
@@ -116,6 +128,7 @@ def main() -> int:
             and result["memory_value_visual_ok"]
             and result["forget_confirmation_copy_ok"]
             and result["competition_copy_absent"]
+            and result["acceptance_review_ok"]
             and result["traffic_light_status_ok"]
             and result["rag_visual_ok"]
             and result["forget_candidate_visual_ok"]

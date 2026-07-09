@@ -8,11 +8,11 @@ def test_dashboard_uses_role_oriented_product_navigation_without_contest_copy():
     assert "普通用户" in page
     assert "系统维护" in page
     assert "管理员视图" in page
+    assert "复核中心" in page
     assert "详细记录" in page
     assert "MemGuardOS 控制台" not in page
     assert "一键验收路径" not in page
     assert "演示" not in page
-    assert "验收" not in page
     assert "benchmark" not in page.lower()
     assert "JSON 证据" not in page
     assert "证据详情" not in page
@@ -45,3 +45,7 @@ def test_dashboard_has_visual_product_affordances_not_only_text_blocks():
     assert "memory-funnel" in page
     assert "服务健康" in page
     assert "采集" in page and "抽取" in page and "上下文" in page and "遗忘" in page
+    assert "acceptanceList" in page
+    assert "acceptanceManualList" in page
+    assert "acceptanceProgress" in page
+    assert "任意命令" not in page

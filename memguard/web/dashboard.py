@@ -9,6 +9,7 @@ import json
 from memguard.api.server import handle_request
 from memguard.os_guard.cgroup import cgroup_status
 from memguard.service import MemGuardService
+from memguard.web.acceptance import acceptance_plan, acceptance_report, report_to_markdown, run_acceptance_item
 
 
 def run_dashboard(
@@ -68,6 +69,9 @@ class _DashboardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/diagnostics":
             self._send_json({"ok": True, "result": self._diagnostics_payload(probe_sdk=False)})
+            return
+        if parsed.path == "/api/acceptance-plan":
+            self._send_json({"ok": True, "result": acceptance_plan()})
             return
         if parsed.path == "/api/agent-overview":
             params = parse_qs(parsed.query)
@@ -199,6 +203,31 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                     "reason": str(payload.get("reason", "")),
                 }
             )
+            return
+        if parsed.path == "/api/acceptance-run":
+            if not self._require_role("admin"):
+                return
+            item_id = str(payload.get("item_id", ""))
+            service = self._service()
+            try:
+                try:
+                    result = run_acceptance_item(service, item_id)
+                except KeyError:
+                    self._send_json({"ok": False, "error": "unknown_acceptance_item"}, status=400)
+                    return
+            finally:
+                service.close()
+            self._send_json({"ok": bool(result.get("ok")), "result": result}, status=200 if result.get("ok") else 400)
+            return
+        if parsed.path == "/api/acceptance-report":
+            if not self._require_role("admin"):
+                return
+            results = payload.get("results") if isinstance(payload.get("results"), list) else []
+            report = acceptance_report([item for item in results if isinstance(item, dict)])
+            if payload.get("format") == "markdown":
+                self._send_json({"ok": True, "result": {"markdown": report_to_markdown(report), "summary": report["summary"]}})
+            else:
+                self._send_json({"ok": True, "result": report})
             return
         self.send_error(404, "not found")
 
@@ -521,6 +550,7 @@ def _dashboard_html() -> str:
       <div class="nav-group">管理员视图</div>
       <button data-tab="audit">审计记录</button>
       <button data-tab="diagnostics">系统维护</button>
+      <button data-tab="acceptance">复核中心</button>
     </nav>
     <div>
       <div id="errorBox" class="error"></div>
@@ -753,6 +783,46 @@ def _dashboard_html() -> str:
         </div>
         <details open><summary>详细记录：操作回执</summary><pre id="diagnosticsOut" class="advanced-output"></pre></details>
       </section>
+      <section id="acceptance">
+        <h2>本机验收复核</h2>
+        <p class="lead">复核中心把环境、记忆、安全、桌面集成、测试和证据目录整理成可点击步骤。自动项目由本地白名单检查执行，桌面菜单和弹窗类项目保留人工截图确认，便于管理员按同一顺序完成最终复核。</p>
+        <div class="grid three">
+          <div class="panel emphasis">
+            <div class="item-title">复核进度</div>
+            <div class="metric" id="acceptanceProgress">0/0</div>
+            <div class="progress"><span id="acceptanceProgressBar"></span></div>
+            <div id="acceptanceAdvice" class="muted" style="margin-top:8px">加载复核清单中</div>
+          </div>
+          <div class="panel">
+            <div class="item-title">推荐顺序</div>
+            <div class="list">
+              <div class="item"><div class="item-title">1. 基础环境</div><div class="muted">先确认服务、资源和本机状态。</div></div>
+              <div class="item"><div class="item-title">2. 记忆闭环</div><div class="muted">再检查写入、检索、上下文、遗忘和审计。</div></div>
+              <div class="item"><div class="item-title">3. 桌面确认</div><div class="muted">最后补拍 Peony、UKUI 和托盘人工截图。</div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="item-title">结果说明</div>
+            <p class="muted">“通过”表示本机检查满足通过标准；“需人工确认”表示必须在桌面会话里点开对应入口并保存截图；“警告”表示功能可继续使用，但建议管理员查看详细记录。</p>
+          </div>
+        </div>
+        <div class="toolbar">
+          <button class="primary" onclick="loadAcceptancePlan(event)">刷新复核清单</button>
+          <button class="secondary" onclick="runAcceptanceGroup(event)">运行基础自动项</button>
+          <button class="secondary" onclick="exportAcceptanceReport(event)">生成复核报告</button>
+        </div>
+        <div class="grid two">
+          <div class="panel">
+            <div class="item-title">自动复核项</div>
+            <div id="acceptanceList" class="list" style="margin-top:12px"></div>
+          </div>
+          <div class="panel">
+            <div class="item-title">人工截图项</div>
+            <div id="acceptanceManualList" class="list" style="margin-top:12px"></div>
+          </div>
+        </div>
+        <details open><summary>详细记录：复核回执</summary><pre id="acceptanceOut" class="advanced-output"></pre></details>
+      </section>
     </div>
   </main>
   <script>
@@ -873,6 +943,102 @@ def _dashboard_html() -> str:
       const entries = Object.entries(obj || {});
       if (!entries.length) return '<div class="muted">暂无数据</div>';
       return entries.map(([k,v]) => '<div class="health"><span>' + esc(k) + '</span><b>' + esc(v) + '</b></div>').join('');
+    }
+    let acceptanceItems = [];
+    let acceptanceResults = {};
+    function resultLabel(status) {
+      if (status === 'passed') return '通过';
+      if (status === 'failed') return '不通过';
+      if (status === 'warning') return '警告';
+      if (status === 'manual') return '需人工确认';
+      if (status === 'skipped') return '已跳过';
+      return '未运行';
+    }
+    function renderAcceptancePlan(plan) {
+      acceptanceItems = (plan.items || []);
+      const automatic = acceptanceItems.filter(item => item.mode !== 'manual');
+      const manual = acceptanceItems.filter(item => item.mode === 'manual');
+      document.getElementById('acceptanceList').innerHTML = automatic.map(item => renderAcceptanceItem(item, false)).join('');
+      document.getElementById('acceptanceManualList').innerHTML = manual.map(item => renderAcceptanceItem(item, true)).join('');
+      updateAcceptanceSummary();
+    }
+    function renderAcceptanceItem(item, manual) {
+      const result = acceptanceResults[item.id] || {};
+      const status = result.status || (manual ? 'manual' : 'idle');
+      const badgeClass = status === 'passed' ? 'ok' : (status === 'failed' ? 'bad' : 'warn');
+      const action = manual
+        ? '<button class="secondary" onclick="markManualAcceptance(event,\\'' + esc(item.id) + '\\',\\'passed\\')">标记通过</button><button class="secondary" onclick="markManualAcceptance(event,\\'' + esc(item.id) + '\\',\\'warning\\')">待复核</button>'
+        : '<button class="secondary" onclick="runAcceptanceItem(event,\\'' + esc(item.id) + '\\')">运行检查</button>';
+      return '<div class="item acceptance-item" data-acceptance-id="' + esc(item.id) + '">'
+        + '<div class="health-title"><span class="status-dot ' + badgeClass + '"></span><span class="item-title">' + esc(item.id) + ' · ' + esc(item.title) + '</span><span class="badge ' + badgeClass + '">' + esc(resultLabel(status)) + '</span></div>'
+        + '<div class="muted">' + esc(item.purpose) + '</div>'
+        + '<div class="muted">通过标准：' + esc(item.pass_standard) + '</div>'
+        + '<div class="actions">' + action + '</div>'
+        + (result.summary ? '<div class="muted" style="margin-top:8px">' + esc(result.summary) + '</div>' : '')
+        + '</div>';
+    }
+    function updateAcceptanceSummary() {
+      const total = acceptanceItems.length;
+      const results = Object.values(acceptanceResults);
+      const passed = results.filter(item => item.status === 'passed').length;
+      const failed = results.filter(item => item.status === 'failed').length;
+      const manual = acceptanceItems.filter(item => item.mode === 'manual' && !acceptanceResults[item.id]).length;
+      const pct = total ? Math.round((passed / total) * 100) : 0;
+      document.getElementById('acceptanceProgress').textContent = passed + '/' + total;
+      document.getElementById('acceptanceProgressBar').style.width = pct + '%';
+      document.getElementById('acceptanceAdvice').textContent = failed
+        ? '存在不通过项目，请先查看详细回执并修复。'
+        : (manual ? '还有 ' + manual + ' 项桌面截图需要人工确认。' : '复核项目已完成，可导出报告。');
+    }
+    async function loadAcceptancePlan(event) {
+      await withBusy(event, async () => {
+        const payload = await getJson('/api/acceptance-plan');
+        renderAcceptancePlan(payload.result || {});
+        acceptanceOut.textContent = pretty(payload);
+      });
+    }
+    async function runAcceptanceItem(event, itemId) {
+      await withBusy(event, async () => {
+        const payload = await postJson('/api/acceptance-run', {item_id:itemId});
+        if (payload.result) acceptanceResults[itemId] = payload.result;
+        renderAcceptancePlan({items: acceptanceItems});
+        acceptanceOut.textContent = pretty(payload);
+      });
+    }
+    async function runAcceptanceGroup(event) {
+      await withBusy(event, async () => {
+        if (!acceptanceItems.length) {
+          const payload = await getJson('/api/acceptance-plan');
+          acceptanceItems = (payload.result || {}).items || [];
+        }
+        const quick = acceptanceItems.filter(item => item.mode !== 'manual').slice(0, 8);
+        const results = [];
+        for (const item of quick) {
+          const payload = await postJson('/api/acceptance-run', {item_id:item.id});
+          if (payload.result) {
+            acceptanceResults[item.id] = payload.result;
+            results.push(payload.result);
+          }
+          renderAcceptancePlan({items: acceptanceItems});
+        }
+        acceptanceOut.textContent = pretty({ok:true, result:{ran:results.length, results:results}});
+      });
+    }
+    function markManualAcceptance(event, itemId, status) {
+      acceptanceResults[itemId] = {
+        id:itemId,
+        status:status,
+        ok:status !== 'failed',
+        summary:status === 'passed' ? '已由人工确认并保存截图。' : '已标记为待复核，请补充截图或备注。'
+      };
+      renderAcceptancePlan({items: acceptanceItems});
+      if (event && event.currentTarget) event.currentTarget.blur();
+    }
+    async function exportAcceptanceReport(event) {
+      await withBusy(event, async () => {
+        const payload = await postJson('/api/acceptance-report', {results:Object.values(acceptanceResults), format:'markdown'});
+        acceptanceOut.textContent = (payload.result && payload.result.markdown) || pretty(payload);
+      });
     }
     function renderForgetCards(payload, confirmed) {
       const plan = payload.result || {};
@@ -1073,7 +1239,7 @@ def _dashboard_html() -> str:
       if (event && event.currentTarget) event.currentTarget.blur();
       window.location.href = '/api/export-diagnostics';
     }
-    refresh(); audit(null); loadAgentOverview(null);
+    refresh(); audit(null); loadAgentOverview(null); loadAcceptancePlan(null);
   </script>
 </body>
 </html>"""

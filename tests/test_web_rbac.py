@@ -67,6 +67,7 @@ def test_viewer_can_read_but_cannot_mutate(tmp_path):
     service, base = start_dashboard(tmp_path)
     try:
         read_status, _ = request_json(base + "/api/status", "viewer-secret")
+        plan_status, plan = request_json(base + "/api/acceptance-plan", "viewer-secret")
         write_status, body = request_json(
             base + "/api/ingest",
             "viewer-secret",
@@ -75,6 +76,10 @@ def test_viewer_can_read_but_cannot_mutate(tmp_path):
         )
 
         assert read_status == 200
+        assert plan_status == 200
+        assert plan["ok"] is True
+        assert plan["result"]["summary"]["total"] >= 10
+        assert any(item["id"] == "A21_VERIFY_AUDIT" for item in plan["result"]["items"])
         assert write_status == 403
         assert body["error"] == "forbidden"
         assert body["required_role"] == "operator"
@@ -114,6 +119,41 @@ def test_operator_can_ingest_and_preview_but_only_admin_confirms_forgetting(tmp_
         assert preview_status == 200
         assert confirm_status == 403 and forbidden["required_role"] == "admin"
         assert admin_status == 200
+    finally:
+        service.close()
+
+
+def test_acceptance_run_is_admin_only_and_uses_whitelist(tmp_path):
+    service, base = start_dashboard(tmp_path)
+    try:
+        operator_status, operator_body = request_json(
+            base + "/api/acceptance-run",
+            "operator-secret",
+            method="POST",
+            payload={"item_id": "A21_VERIFY_AUDIT"},
+        )
+        admin_status, admin_body = request_json(
+            base + "/api/acceptance-run",
+            "admin-secret",
+            method="POST",
+            payload={"item_id": "A21_VERIFY_AUDIT"},
+        )
+        unknown_status, unknown_body = request_json(
+            base + "/api/acceptance-run",
+            "admin-secret",
+            method="POST",
+            payload={"item_id": "rm -rf /"},
+        )
+
+        assert operator_status == 403
+        assert operator_body["required_role"] == "admin"
+        assert admin_status == 200
+        assert admin_body["ok"] is True
+        assert admin_body["result"]["id"] == "A21_VERIFY_AUDIT"
+        assert admin_body["result"]["status"] == "passed"
+        assert "command" not in admin_body["result"]
+        assert unknown_status == 400
+        assert unknown_body["error"] == "unknown_acceptance_item"
     finally:
         service.close()
 
