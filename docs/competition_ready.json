@@ -1327,7 +1327,7 @@
       "category": "openKylin原生证据",
       "name": "证据对应当前 Git HEAD",
       "ok": true,
-      "detail": "ac17c84ec44ae71e6ace31d1bab255d0e87b81e1",
+      "detail": "source=ac17c84ec44ae71e6ace31d1bab255d0e87b81e1；当前 HEAD 仅追加/更新原生证据文件 18 个",
       "severity": "P0"
     },
     {
