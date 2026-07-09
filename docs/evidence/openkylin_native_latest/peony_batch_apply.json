@@ -1,7 +1,7 @@
 {
   "schema": "memguardos-desktop-scan-apply-v1",
   "ok": true,
-  "manifest_id": "16967697-d720-49a9-82e1-817a8e9d6b4a",
+  "manifest_id": "4dd3866e-8e50-4557-a408-9dd4f395dffe",
   "summary": {
     "selected": 2,
     "stored": 2,
@@ -12,7 +12,7 @@
   "results": [
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.1YV9B1qC0M/peony_preference.md",
+      "path": "/var/tmp/tmp.jn8BwuJrOd/peony_preference.md",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 57,
@@ -34,7 +34,7 @@
         "attempted": true,
         "stored": true,
         "reason": "",
-        "memory_id": "mem_a23ccb76b2e74292",
+        "memory_id": "mem_0ec73e5d58b7455c",
         "type": "preference",
         "subtype": "tool_preference",
         "tier": "long_term"
@@ -45,7 +45,7 @@
     },
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.1YV9B1qC0M/peony_knowledge.txt",
+      "path": "/var/tmp/tmp.jn8BwuJrOd/peony_knowledge.txt",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 61,
@@ -67,7 +67,7 @@
         "attempted": true,
         "stored": true,
         "reason": "",
-        "memory_id": "mem_0aab7769cdc244b7",
+        "memory_id": "mem_d5a6498a50c5431f",
         "type": "knowledge",
         "subtype": "fact",
         "tier": "long_term"
@@ -79,7 +79,7 @@
   ],
   "audit_chain": {
     "ok": true,
-    "checked": 1427,
-    "head_hash": "01161b39caa9a4ab70fac6bc905d1d89f4f5b8d425a6dca88c7b785b0b9baca2"
+    "checked": 1433,
+    "head_hash": "e064f8c8733614ba1c72a3d0488ffb70ff57e2c547eaa63e1aa502e48eefaf88"
   }
 }
