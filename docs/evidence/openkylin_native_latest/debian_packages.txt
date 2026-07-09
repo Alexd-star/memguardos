@@ -36,16 +36,16 @@ dpkg-deb: 正在 '/home/luo/memguardos-product-head/dist/memguardos_0.1.0-2_all.
       "version": "0.1.0-2",
       "architecture": "amd64",
       "path": "/home/luo/memguardos-product-head/dist/memguardos-core_0.1.0-2_amd64.deb",
-      "bytes": 137660,
-      "sha256": "23af270bebc367503088fdcd7af1aec745ec86bb577269b4791c585abd5ed611"
+      "bytes": 139420,
+      "sha256": "7138b672d5c188a8b9ce5d31144426ddd1fb67ddc54e3175b1d39668295e77f8"
     },
     {
       "package": "memguardos-ukui",
       "version": "0.1.0-2",
       "architecture": "amd64",
       "path": "/home/luo/memguardos-product-head/dist/memguardos-ukui_0.1.0-2_amd64.deb",
-      "bytes": 105316,
-      "sha256": "afde656ce89ca6f28b8d5910fee11491a91bd61d3c61a29dde1519d35f819363"
+      "bytes": 105136,
+      "sha256": "cbdf019f2cc8d001e2023415cd9008655cb6f05773654a1fa17250a5e16084f4"
     },
     {
       "package": "memguardos-agent-bridge",
@@ -53,15 +53,15 @@ dpkg-deb: 正在 '/home/luo/memguardos-product-head/dist/memguardos_0.1.0-2_all.
       "architecture": "amd64",
       "path": "/home/luo/memguardos-product-head/dist/memguardos-agent-bridge_0.1.0-2_amd64.deb",
       "bytes": 7472,
-      "sha256": "ed1ea4fce72fee5073944680bd363a0a53bdca367e1e8612fdb21cf5ea517a87"
+      "sha256": "b55de1b33b8116f4b47b12be2caa576527b5e7209d01d88b1acfde29abf73469"
     },
     {
       "package": "memguardos-doc",
       "version": "0.1.0-2",
       "architecture": "all",
       "path": "/home/luo/memguardos-product-head/dist/memguardos-doc_0.1.0-2_all.deb",
-      "bytes": 182724,
-      "sha256": "9a85b79d7f6b1d2ae70ab52bd65779e63efcbed08c1c9fdd290ff3fb5ec86b88"
+      "bytes": 184336,
+      "sha256": "a4aacaee7325c93de5e47c5c96da4d3031f275b3e3d6e9fbad5fdebae3177762"
     },
     {
       "package": "memguardos",
@@ -69,7 +69,7 @@ dpkg-deb: 正在 '/home/luo/memguardos-product-head/dist/memguardos_0.1.0-2_all.
       "architecture": "all",
       "path": "/home/luo/memguardos-product-head/dist/memguardos_0.1.0-2_all.deb",
       "bytes": 888,
-      "sha256": "306a12640e4e93e0d5245a394df7bcc264def8c03a0317f12e9699bd88758a89"
+      "sha256": "e2f81755e566235f4e5e47b430b7c21c6f5d290eb8b679d653786c648c3ccc72"
     }
   ]
 }

@@ -53,7 +53,7 @@ def test_excellence_scorecard_is_generated_from_current_evidence(tmp_path: Path)
 
     text = output.read_text(encoding="utf-8")
     assert "MemGuardOS 超标准交付评分矩阵" in text
-    assert "308 passed, 1 skipped" in text
+    assert "312 passed, 1 skipped" in text
     assert "openKylin 自动化测试" in text
     assert "passed" in text
     assert "49.48x" in text
@@ -90,6 +90,7 @@ def test_openkylin_product_docs_use_mature_user_language() -> None:
             if token in text:
                 offenders.append(f"{rel}: {token}")
     assert offenders == []
+
 
 
 

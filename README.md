@@ -34,8 +34,8 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地功能分支单元测试 | 308 passed, 1 skipped |
-| openKylin 全量测试 | 309 passed |
+| 本地功能分支单元测试 | 312 passed, 1 skipped |
+| openKylin 全量测试 | 313 passed |
 | openKylin 真实 Agent | OpenHands 1.28.1；原 12 组真实会话 12/12，新增 R13-R20 扩展 8/8，新增 holdout 留出盲测 8/8；合计 28 组均有证据 |
 | 本地 1k 负载 P95 | 0.429 ms |
 | openKylin 1k 负载 P95 | 8.904 ms |
@@ -383,6 +383,7 @@ dist/memguardos_full_repository_<时间戳>_manifest.json
 ## 许可证
 
 MemGuardOS 使用 MIT License，见 [LICENSE](LICENSE)。
+
 
 
 

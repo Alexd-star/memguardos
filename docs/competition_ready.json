@@ -151,7 +151,7 @@
       "category": "中文文档",
       "name": "docs/最终提交说明.md",
       "ok": true,
-      "detail": "中文字符数 3569",
+      "detail": "中文字符数 3655",
       "severity": "P0"
     },
     {
@@ -165,7 +165,7 @@
       "category": "中文文档",
       "name": "docs/项目介绍总览.md",
       "ok": true,
-      "detail": "中文字符数 6042",
+      "detail": "中文字符数 6049",
       "severity": "P0"
     },
     {
@@ -333,7 +333,7 @@
       "category": "中文文档",
       "name": "docs/安全与遗忘保证边界.md",
       "ok": true,
-      "detail": "中文字符数 1379",
+      "detail": "中文字符数 1451",
       "severity": "P0"
     },
     {
@@ -375,7 +375,7 @@
       "category": "中文文档",
       "name": "正式文档测试数字口径",
       "ok": true,
-      "detail": "正式材料使用当前 308/309 测试口径",
+      "detail": "正式材料使用当前 312/313 测试口径",
       "severity": "P0"
     },
     {
@@ -1075,21 +1075,21 @@
       "category": "openKylin指标",
       "name": "10k 负载 P95 < 500ms",
       "ok": true,
-      "detail": "当前 10.8440，要求 <= 500.0000",
+      "detail": "当前 10.1050，要求 <= 500.0000",
       "severity": "P0"
     },
     {
       "category": "openKylin指标",
       "name": "10k 负载 P99 < 500ms",
       "ok": true,
-      "detail": "当前 106.0950，要求 <= 500.0000",
+      "detail": "当前 75.2550，要求 <= 500.0000",
       "severity": "P0"
     },
     {
       "category": "openKylin指标",
       "name": "10k 进程 RSS < 256MB",
       "ok": true,
-      "detail": "当前 149284.0000，要求 <= 262144.0000",
+      "detail": "当前 130444.0000，要求 <= 262144.0000",
       "severity": "P0"
     },
     {
@@ -1117,7 +1117,7 @@
       "category": "openKylin指标",
       "name": "10k Agent 批量检索 P95 < 100ms",
       "ok": true,
-      "detail": "当前 15.4270，要求 <= 100.0000",
+      "detail": "当前 11.6990，要求 <= 100.0000",
       "severity": "P0"
     },
     {
@@ -1327,7 +1327,7 @@
       "category": "openKylin原生证据",
       "name": "证据对应当前 Git HEAD",
       "ok": true,
-      "detail": "source=ac17c84ec44ae71e6ace31d1bab255d0e87b81e1；当前 HEAD 仅追加/更新原生证据文件 18 个",
+      "detail": "836ed39619b4f5dd15cccf8c423508020c3fa0f7",
       "severity": "P0"
     },
     {
