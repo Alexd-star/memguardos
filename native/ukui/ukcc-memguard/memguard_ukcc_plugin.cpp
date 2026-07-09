@@ -350,11 +350,81 @@ QString statusTextFromBool(bool ok)
     return ok ? QStringLiteral("通过") : QStringLiteral("需要处理");
 }
 
+bool looksLikeServiceLog(const QString &text)
+{
+    if (text.isEmpty())
+        return false;
+    if (containsAny(text, {QStringLiteral("journal"), QStringLiteral("memguardd"), QStringLiteral("systemd"), QStringLiteral("Traceback"), QStringLiteral("No entries")}))
+        return true;
+    const QRegularExpression syslogPattern(QStringLiteral("^\\w{3}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}"));
+    for (const QString &line : text.split(QLatin1Char('\n'))) {
+        if (syslogPattern.match(line.trimmed()).hasMatch())
+            return true;
+    }
+    return false;
+}
+
+QString stripServiceLogPrefix(QString line)
+{
+    line = line.trimmed();
+    line.remove(QRegularExpression(QStringLiteral("^--\\s+.*\\s+--$")));
+    line.replace(QRegularExpression(QStringLiteral("^\\w{3}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}\\s+\\S+\\s+[^:]+:\\s*")), QString());
+    line.replace(QRegularExpression(QStringLiteral("^\\d{4}-\\d{2}-\\d{2}[^ ]*\\s+\\S+\\s+[^:]+:\\s*")), QString());
+    line.replace(QRegularExpression(QStringLiteral("\\s+")), QStringLiteral(" "));
+    return line.trimmed();
+}
+
+QString formatServiceLogResult(const QString &text, const QString &summary)
+{
+    QStringList highlights;
+    QStringList warnings;
+    for (const QString &rawLine : text.split(QLatin1Char('\n'))) {
+        QString line = stripServiceLogPrefix(rawLine);
+        if (line.isEmpty() || line == QStringLiteral("--"))
+            continue;
+        if (line.contains(QStringLiteral("No entries"), Qt::CaseInsensitive)) {
+            highlights << QStringLiteral("当前没有可显示的服务日志。");
+            continue;
+        }
+        if (line.contains(QStringLiteral("Proxy init engine sessionId")))
+            continue;
+        const bool important = containsAny(line, {QStringLiteral("error"), QStringLiteral("failed"), QStringLiteral("denied"), QStringLiteral("timeout"), QStringLiteral("Traceback"), QStringLiteral("错误"), QStringLiteral("失败"), QStringLiteral("拒绝"), QStringLiteral("超时")});
+        if (important)
+            warnings << line.left(220);
+        if (highlights.size() < 8)
+            highlights << line.left(220);
+    }
+
+    QStringList lines;
+    lines << QStringLiteral("最近服务日志");
+    if (!summary.isEmpty())
+        lines << QStringLiteral("操作说明：%1").arg(summary.simplified().left(160));
+    lines << (warnings.isEmpty()
+            ? QStringLiteral("摘要：未发现明显错误信息。")
+            : QStringLiteral("摘要：发现 %1 条需要关注的信息。").arg(warnings.size()));
+    if (!warnings.isEmpty()) {
+        lines << QStringLiteral("需要关注：");
+        for (const QString &line : warnings.mid(0, 5))
+            lines << QStringLiteral("• %1").arg(line);
+    } else if (!highlights.isEmpty()) {
+        lines << QStringLiteral("最近信息：");
+        for (const QString &line : highlights.mid(0, 6))
+            lines << QStringLiteral("• %1").arg(line);
+    }
+    lines << QStringLiteral("下一步：如果服务状态仍异常，请点击【重新检查状态】；仍无法恢复时，导出系统报告交给管理员排查。");
+    return lines.join(QLatin1Char('\n'));
+}
+
 QString formatMaintenanceResult(const QString &text, const QString &summary)
 {
     const QJsonObject payload = parsedObject(text);
-    if (payload.isEmpty())
-        return text.isEmpty() ? summary : text;
+    if (payload.isEmpty()) {
+        if (looksLikeServiceLog(text))
+            return formatServiceLogResult(text, summary);
+        if (text.isEmpty())
+            return summary.isEmpty() ? QStringLiteral("本次操作没有返回可显示内容。") : summary;
+        return QStringLiteral("维护结果\n%1").arg(text.left(4000));
+    }
 
     QStringList lines;
     lines << QStringLiteral("结果摘要");
@@ -1509,3 +1579,4 @@ void MemGuardUkccPlugin::showError(const QString &title, const QString &message)
 {
     QMessageBox::critical(page_, title, message.left(1600));
 }
+

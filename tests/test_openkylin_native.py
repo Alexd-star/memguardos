@@ -828,6 +828,17 @@ def test_ukui_control_center_does_not_block_user_actions_on_background_refresh()
     assert 'QStringLiteral("-n"), QStringLiteral("50")' in source
 
 
+def test_ukui_control_center_formats_service_logs_for_product_ui():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
+
+    assert "formatServiceLogResult" in source
+    assert "looksLikeServiceLog" in source
+    assert "最近服务日志" in source
+    assert "QRegularExpression(QStringLiteral(\"^\\\\w{3}\\\\s+\\\\d{1,2}\\\\s+\\\\d{2}:\\\\d{2}:\\\\d{2}" in source
+    assert "return text.isEmpty() ? summary : text;" not in source
+
+
 def test_privileged_actions_are_fixed_and_report_structured_result(monkeypatch):
     calls = []
     monkeypatch.setattr("memguard.os_guard.privileged_actions.shutil.which", lambda name: "/usr/bin/pkexec" if name == "pkexec" else None)
@@ -1027,4 +1038,5 @@ def test_desktop_user_copy_uses_plain_product_language():
     assert "可保存内容" in peony
     assert "只记录选择" in peony
     assert "撤销本次导入" in peony
+
 
