@@ -100,7 +100,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
       "product_state": {
         "installed": true,
         "last_probe_success": true,
-        "last_success_at": "2026-07-09T18:03:38+08:00",
+        "last_success_at": "2026-07-09T18:26:53+08:00",
         "last_success_dim": 768,
         "last_success_model": "ensemble-embd_gte-base_uint8-text",
         "last_failure_at": "",
@@ -190,12 +190,12 @@ $ python3 -m memguard.cli.memctl openkylin-status
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 5448289,
-        "user_usec": 2978889,
-        "system_usec": 2469400,
+        "usage_usec": 5530816,
+        "user_usec": 3027757,
+        "system_usec": 2503058,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 2958,
+        "nr_periods": 3002,
         "nr_throttled": 5,
         "throttled_usec": 200007,
         "nr_bursts": 0,
@@ -217,11 +217,11 @@ $ python3 -m memguard.cli.memctl openkylin-status
     "store_exists": true,
     "db_exists": true,
     "custom_patterns_exists": false,
-    "store_bytes": 422482,
+    "store_bytes": 432503,
     "db_bytes": 1363968,
-    "record_count": 189,
-    "live_record_count": 151,
-    "audit_event_count": 1433
+    "record_count": 193,
+    "live_record_count": 155,
+    "audit_event_count": 1439
   },
   "summary": {
     "overall": "green",

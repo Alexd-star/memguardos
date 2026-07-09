@@ -6,18 +6,18 @@ LoadState=loaded
 ActiveState=active
 SubState=running
 --- memory.current ---
-17657856
+17629184
 --- memory.max ---
 536870912
 --- cpu.max ---
 50000 100000
 --- cpu.stat ---
-usage_usec 5448941
-user_usec 2979245
-system_usec 2469695
+usage_usec 5531381
+user_usec 3028067
+system_usec 2503313
 nice_usec 0
 core_sched.force_idle_usec 0
-nr_periods 2958
+nr_periods 3002
 nr_throttled 5
 throttled_usec 200007
 nr_bursts 0
