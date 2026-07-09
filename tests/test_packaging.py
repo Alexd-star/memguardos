@@ -104,6 +104,7 @@ def test_native_evidence_revision_allows_generated_readiness_reports(monkeypatch
             "docs/competition_ready.json",
             "docs/竞赛就绪自检报告.md",
             "docs/超标准交付评分矩阵.md",
+            "docs/真实Agent记忆价值评测报告.md",
         ],
     )
 
@@ -796,3 +797,4 @@ def test_competition_ready_accepts_real_agent_holdout_evidence(tmp_path):
     assert by_name["8 组留出真实 OpenHands 案例"].ok is True
     assert by_name["manifest.json"].ok is True
     assert by_name["SHA256SUMS.txt"].ok is True
+

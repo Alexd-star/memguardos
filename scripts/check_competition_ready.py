@@ -28,6 +28,7 @@ POST_NATIVE_EVIDENCE_ALLOWED_PATHS = {
     "docs/competition_ready.json",
     "docs/竞赛就绪自检报告.md",
     "docs/超标准交付评分矩阵.md",
+    "docs/真实Agent记忆价值评测报告.md",
 }
 
 REQUIRED_DOCS = [
@@ -1526,5 +1527,6 @@ def _sha256_file(path: Path) -> str:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 
 
