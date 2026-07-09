@@ -1297,6 +1297,10 @@ class MemGuardService:
             item["score"] = round(score, 4)
             item["match_source"] = "hybrid"
             item["vector_backend"] = item.pop("_vector_backend", self.retriever.last_backend_used)
+            if "_score_breakdown" in item:
+                item["score_breakdown"] = item.pop("_score_breakdown")
+            if "_expansion_trace" in item:
+                item["expansion_trace"] = item.pop("_expansion_trace")
             results.append(item)
             seen.add(item["memory_id"])
         for record in self.meta.graph_search(query, limit=limit):

@@ -29,6 +29,15 @@ SENSITIVE_LABELS = [
     ("姓名", "person_name_cn"),
 ]
 
+PREFERENCE_TOPIC_ALIASES = {
+    "high_risk_confirmation": ("高风险命令", "危险操作", "二次确认", "安全确认", "高风险安全策略"),
+    "code_search_tool": ("查代码", "代码搜索", "rg", "grep", "ripgrep"),
+    "response_order": ("先给命令", "先给结论", "先命令后解释", "回答顺序"),
+    "response_language": ("中文回答", "用中文", "中文"),
+    "response_verbosity": ("简洁回答", "简短", "少废话"),
+    "test_runner_command": ("pytest", "测试命令", "单元测试"),
+}
+
 
 @dataclass
 class ErasureIntentCompiler:
@@ -46,6 +55,8 @@ class ErasureIntentCompiler:
         agent_name = self._agent_name(text, context)
         topic = self._topic(text, memory_types)
         preference_topic = self._preference_topic(text, topic)
+        normalized_preference_topic = self._normalized_preference_topic(text, preference_topic)
+        topic_aliases = self._topic_aliases(text, topic, normalized_preference_topic or preference_topic)
         project_hint = self._project_hint(text, context, topic)
         unresolved_slots = []
         if not has_forget_verb:
@@ -77,6 +88,8 @@ class ErasureIntentCompiler:
             "execution_mode": "dry_run",
             "memory_types": memory_types,
             "topic": topic,
+            "topic_aliases": topic_aliases,
+            "normalized_preference_topic": normalized_preference_topic,
             "agent_name": agent_name,
             "session_id": str(context.get("session_id") or ""),
             "project_hint": project_hint,
@@ -111,8 +124,9 @@ class ErasureIntentCompiler:
 
     def to_forget_request(self, intent: Dict[str, Any]) -> str:
         topic = str(intent.get("topic") or intent.get("preference_topic") or "").strip()
+        aliases = [str(alias) for alias in intent.get("topic_aliases") or [] if str(alias).strip()]
         labels = " ".join(str(label) for label in intent.get("sensitive_labels") or [])
-        text = " ".join(part for part in [topic, labels] if part)
+        text = " ".join(part for part in [topic, " ".join(aliases), labels] if part)
         return "忘掉 %s" % text if text else str(intent.get("source_text") or "忘掉目标记忆")
 
     def _now(self) -> datetime:
@@ -180,6 +194,8 @@ class ErasureIntentCompiler:
         project_match = re.search(r"忘(?:记|掉)?\s*([^，。,；;]+?项目)的偏好", text)
         if project_match:
             return project_match.group(1).strip()
+        if "高风险命令" in text or "危险操作" in text or "二次确认" in text:
+            return "高风险命令需要二次确认"
         if "高风险安全策略" in text:
             return "高风险安全策略"
         if "安全确认策略" in text:
@@ -198,13 +214,70 @@ class ErasureIntentCompiler:
 
     @staticmethod
     def _preference_topic(text: str, topic: str) -> str:
-        if "回答风格" in text:
+        target_text = text.split("保留", 1)[0]
+        lowered = target_text.lower()
+        if "回答风格" in target_text:
             return "回答风格"
-        if "pytest" in text and "偏好" in text:
+        if "pytest" in lowered and "偏好" in target_text:
             return "pytest"
-        if "偏好" in text:
+        if (
+            "rg" in lowered
+            and "工具偏好" in target_text
+            and "代码搜索" not in target_text
+            and "查代码" not in target_text
+        ):
+            return "rg"
+        if "高风险命令" in target_text or "危险操作" in target_text or "二次确认" in target_text:
+            return "high_risk_confirmation"
+        if "代码搜索" in target_text or "查代码" in target_text:
+            return "code_search_tool"
+        if "先给命令" in target_text or "先给结论" in target_text or "先命令后解释" in target_text:
+            return "response_order"
+        if "中文回答" in target_text or "用中文" in target_text:
+            return "response_language"
+        if "简洁回答" in target_text or "简短" in target_text or "少废话" in target_text:
+            return "response_verbosity"
+        if "测试命令" in target_text or "单元测试" in target_text:
+            return "test_runner_command"
+        if "偏好" in target_text:
             return topic
         return ""
+
+    @staticmethod
+    def _normalized_preference_topic(text: str, preference_topic: str) -> str:
+        if preference_topic in PREFERENCE_TOPIC_ALIASES:
+            return preference_topic
+        target_text = text.split("保留", 1)[0]
+        lowered = target_text.lower()
+        if preference_topic == "回答风格":
+            return "response_order"
+        if preference_topic == "pytest":
+            return "test_runner_command"
+        if preference_topic == "rg":
+            return "code_search_tool"
+        for canonical, aliases in PREFERENCE_TOPIC_ALIASES.items():
+            if any(alias.lower() in lowered for alias in aliases):
+                return canonical
+        return ""
+
+    @staticmethod
+    def _topic_aliases(text: str, topic: str, preference_topic: str) -> List[str]:
+        aliases: List[str] = []
+        if topic:
+            aliases.append(topic)
+        if preference_topic and preference_topic in PREFERENCE_TOPIC_ALIASES:
+            aliases.extend(PREFERENCE_TOPIC_ALIASES[preference_topic])
+        lowered = text.lower()
+        for canonical, values in PREFERENCE_TOPIC_ALIASES.items():
+            if canonical == preference_topic:
+                continue
+            if any(value.lower() in lowered for value in values):
+                aliases.extend(values)
+        unique: List[str] = []
+        for alias in aliases:
+            if alias and alias not in unique:
+                unique.append(alias)
+        return unique
 
     @staticmethod
     def _project_hint(text: str, context: Dict[str, Any], topic: str) -> str:

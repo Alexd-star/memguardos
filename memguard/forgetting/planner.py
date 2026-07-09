@@ -1,6 +1,7 @@
 from typing import Dict, Iterable, List
 import re
 
+from memguard.forgetting.natural_intent import ErasureIntentCompiler
 from memguard.retrieval.hybrid import HybridRetriever, tokenize
 
 
@@ -49,6 +50,7 @@ WEAK_MATCH_TERMS = GENERIC_MATCH_TERMS | {
 class ForgetPlanner:
     def __init__(self):
         self.retriever = HybridRetriever()
+        self.intent_compiler = ErasureIntentCompiler()
 
     def keywords(self, request: str) -> List[str]:
         rough = tokenize(request)
@@ -69,7 +71,10 @@ class ForgetPlanner:
         return unique[:12]
 
     def candidates(self, request: str, records: Iterable[Dict[str, str]], limit: int = 20) -> List[Dict[str, object]]:
-        keywords = self.keywords(request)
+        intent = self.intent_compiler.compile(request)
+        aliases = [str(alias).lower() for alias in intent.get("topic_aliases") or [] if str(alias).strip()]
+        preference_topic = str(intent.get("normalized_preference_topic") or intent.get("preference_topic") or "")
+        keywords = self.keywords(request + " " + " ".join(aliases) + " " + preference_topic)
         distinctive_keywords = [keyword for keyword in keywords if keyword not in GENERIC_MATCH_TERMS]
         ranked = self.retriever.rank(" ".join(keywords) or request, records, limit=limit)
         if not ranked:
@@ -89,10 +94,20 @@ class ForgetPlanner:
             if not matched:
                 continue
             matched_distinctive = [keyword for keyword in distinctive_keywords if keyword and keyword.lower() in text.lower()]
+            if aliases:
+                matched_distinctive.extend(alias for alias in aliases if alias and alias in text.lower() and alias not in matched_distinctive)
+            if preference_topic and (
+                preference_topic == str(record.get("preference_topic") or "")
+                or preference_topic in text.lower()
+                or _preference_topic_matches(preference_topic, text)
+            ):
+                matched_distinctive.append(preference_topic)
             if distinctive_keywords and not matched_distinctive:
                 continue
             strong_matches = [keyword for keyword in matched_distinctive if keyword not in WEAK_MATCH_TERMS and len(keyword) >= 2]
             if not _anchor_policy_passes(request, matched_distinctive, strong_matches):
+                continue
+            if _violates_retention_constraints(intent, record, text):
                 continue
             results.append(
                 {
@@ -105,6 +120,36 @@ class ForgetPlanner:
                 }
             )
         return results
+
+
+def _preference_topic_matches(preference_topic: str, text: str) -> bool:
+    lowered = text.lower()
+    mapping = {
+        "high_risk_confirmation": ["高风险命令", "危险操作", "二次确认", "安全策略"],
+        "code_search_tool": ["代码搜索", "查代码", " rg", "grep", "ripgrep"],
+        "response_order": ["先给命令", "先给结论", "回答顺序"],
+        "response_language": ["中文回答", "用中文"],
+        "response_verbosity": ["简洁回答", "简短"],
+        "test_runner_command": ["pytest", "测试命令"],
+    }
+    return any(marker.lower() in lowered for marker in mapping.get(preference_topic, []))
+
+
+def _violates_retention_constraints(intent: Dict[str, object], record: Dict[str, str], text: str) -> bool:
+    if "保留不相关记忆" in str(intent.get("source_text") or "") and str(record.get("source_uri") or "").startswith("neg_"):
+        return True
+    for constraint in intent.get("retention_constraints") or []:
+        if not isinstance(constraint, dict):
+            continue
+        memory_types = set(str(item) for item in constraint.get("memory_types") or [])
+        if memory_types and str(record.get("type") or "") in memory_types:
+            return True
+        if constraint.get("scope") == "other_agents" and ("其他 agent" in text.lower() or "其他agent" in text.lower()):
+            return True
+        topic = str(constraint.get("topic") or "")
+        if topic and topic in text:
+            return True
+    return False
 
 
 def _anchor_policy_passes(request: str, matched_distinctive: List[str], strong_matches: List[str]) -> bool:
@@ -127,6 +172,8 @@ def _anchor_policy_passes(request: str, matched_distinctive: List[str], strong_m
         return "linux" in matched
     if "rg" in lowered_request:
         return "rg" in matched
+    if "高风险命令" in request or "二次确认" in request or "危险操作" in request:
+        return bool({"高风险命令", "高风", "风险", "命令", "二次确认", "二次", "确认", "high_risk_confirmation"} & matched)
     if "shell history" in lowered_request:
         if "pytest" in lowered_request:
             return "pytest" in matched and "shell" in matched and "history" in matched

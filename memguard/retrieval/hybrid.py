@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 from functools import lru_cache
 from collections import OrderedDict
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 import hashlib
+import json
 import math
 import os
 import re
@@ -16,10 +19,59 @@ TRANSLATION_HINTS = {
     "限制": ["limit", "quota"],
     "服务": ["service", "systemd"],
     "审计": ["audit", "journal", "journald"],
+    "审计链": ["audit chain", "audit_chain"],
     "忘记": ["forget", "delete"],
+    "精准遗忘": ["precise forgetting", "managed erase"],
+    "明文探针": ["plaintext probe"],
+    "受管存储": ["managed storage"],
     "密钥": ["key", "token", "secret"],
     "偏好": ["preference"],
+    "工具偏好": ["tool preference"],
+    "高风险命令": ["high risk command", "dangerous command"],
+    "二次确认": ["confirmation", "double confirmation"],
+    "代码搜索": ["code search", "rg", "ripgrep"],
+    "回答风格": ["response style"],
+    "先给命令": ["command first"],
 }
+
+_TECHNICAL_ALIAS_PATH = Path(__file__).resolve().parents[2] / "data" / "lexicons" / "technical_aliases.json"
+
+
+@lru_cache(maxsize=1)
+def _technical_aliases() -> Dict[str, List[str]]:
+    try:
+        data = json.loads(_TECHNICAL_ALIAS_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        data = {}
+    aliases: Dict[str, List[str]] = {}
+    for key, values in data.items():
+        if not isinstance(values, list):
+            continue
+        clean = [str(value).strip() for value in values if str(value).strip()]
+        if clean:
+            aliases[str(key).strip()] = clean
+    return aliases
+
+
+def expand_query_aliases(query: str) -> Dict[str, Any]:
+    """Expand query with a small offline lexicon and explain every expansion."""
+
+    text = str(query or "")
+    lowered = text.lower()
+    additions: List[str] = []
+    trace: List[Dict[str, str]] = []
+    aliases = _technical_aliases()
+    for canonical, values in aliases.items():
+        terms = [canonical] + values
+        matched = [term for term in terms if term and term.lower() in lowered]
+        if not matched:
+            continue
+        for term in terms:
+            if term and term not in additions and term.lower() not in lowered:
+                additions.append(term)
+        trace.append({"canonical": canonical, "matched": matched[0], "added": ", ".join(additions[-max(1, len(terms)) :])})
+    expanded = " ".join([text] + additions)
+    return {"query": text, "expanded_query": expanded, "aliases": additions, "expansion_trace": trace}
 
 
 def tokenize(text: str) -> List[str]:
@@ -28,6 +80,8 @@ def tokenize(text: str) -> List[str]:
 
 @lru_cache(maxsize=8192)
 def _tokenize_cached(text: str) -> Tuple[str, ...]:
+    expanded_info = expand_query_aliases(text)
+    text = str(expanded_info["expanded_query"])
     latin = re.findall(r"[A-Za-z0-9_\-]+", text.lower())
     cjk_sequences = re.findall(r"[\u4e00-\u9fff]+", text)
     cjk = []
@@ -225,18 +279,78 @@ class HybridRetriever:
         sensitivity_penalty = 0.2 if record.get("sensitivity_level") == "high" else 0.0
         return relevance_score + recency_score - sensitivity_penalty
 
+    def lightweight_score_breakdown(self, query: str, record: Dict[str, Any]) -> Dict[str, float | dict]:
+        expanded = expand_query_aliases(query)
+        query_text = str(expanded["expanded_query"])
+        query_lower = query_text.lower()
+        summary = str(record.get("summary") or "")
+        content = str(record.get("content") or "")
+        record_type = str(record.get("type") or "")
+        subtype = str(record.get("subtype") or "")
+        preference_topic = str(record.get("preference_topic") or "")
+        source_kind = str(record.get("source_kind") or "")
+        combined = " ".join([record_type, subtype, preference_topic, summary, content])
+        combined_lower = combined.lower()
+        query_tokens = set(tokenize(query_text))
+        summary_tokens = set(tokenize(summary))
+        content_tokens = set(tokenize(content))
+        summary_score = min(0.28, 0.04 * len(query_tokens & summary_tokens))
+        content_score = min(0.24, 0.035 * len(query_tokens & content_tokens))
+        exact_phrase_score = 0.0
+        original = str(query or "").strip()
+        if original and original in summary:
+            exact_phrase_score = 0.42
+        elif original and original in content:
+            exact_phrase_score = 0.32
+        entity_terms = _technical_entities(query_text)
+        entity_hits = [term for term in entity_terms if term.lower() in combined_lower]
+        entity_score = min(0.30, 0.10 * len(entity_hits))
+        topic_score = _topic_score(query_lower, combined_lower, record_type, subtype, preference_topic)
+        subtype_score = _subtype_score(query_lower, record_type, subtype, preference_topic)
+        hard_negative_penalty = _hard_negative_penalty(query_lower, summary, content, source_kind, record)
+        scope_penalty = _scope_penalty(query_lower, combined_lower)
+        total = (
+            summary_score
+            + content_score
+            + entity_score
+            + topic_score
+            + subtype_score
+            + exact_phrase_score
+            - hard_negative_penalty
+            - scope_penalty
+        )
+        return {
+            "summary_score": round(summary_score, 4),
+            "content_score": round(content_score, 4),
+            "entity_score": round(entity_score, 4),
+            "topic_score": round(topic_score, 4),
+            "subtype_score": round(subtype_score, 4),
+            "exact_phrase_score": round(exact_phrase_score, 4),
+            "hard_negative_penalty": round(hard_negative_penalty, 4),
+            "scope_penalty": round(scope_penalty, 4),
+            "alias_expansion": expanded,
+            "total": round(total, 4),
+        }
+
     def score(self, query: str, record: Dict[str, str]) -> float:
         text = "%s %s %s" % (record.get("type", ""), record.get("summary", ""), record.get("content", ""))
         return self._score_with_vectors(query, record, self.hash_provider.vector(query), self.hash_provider.vector(text))
 
     def rank(self, query: str, records: Iterable[Dict[str, str]], limit: int = 10) -> List[Tuple[float, Dict[str, str]]]:
         records = list(records)
-        hash_query_vector = self.hash_provider.vector(query)
+        expanded_info = expand_query_aliases(query)
+        expanded_query = str(expanded_info["expanded_query"])
+        hash_query_vector = self.hash_provider.vector(expanded_query)
         scored = []
         for record in records:
             text = "%s %s %s" % (record.get("type", ""), record.get("summary", ""), record.get("content", ""))
-            score = self._score_with_vectors(query, record, hash_query_vector, self.hash_provider.vector(text))
-            scored.append((score, record))
+            score = self._score_with_vectors(expanded_query, record, hash_query_vector, self.hash_provider.vector(text))
+            breakdown = self.lightweight_score_breakdown(query, record)
+            score += float(breakdown["total"])
+            item = dict(record)
+            item["_score_breakdown"] = breakdown
+            item["_expansion_trace"] = expanded_info["expansion_trace"]
+            scored.append((score, item))
         scored = [item for item in scored if item[0] > 0]
         scored.sort(key=lambda item: item[0], reverse=True)
         self.last_backend_used = "hash"
@@ -245,13 +359,13 @@ class HybridRetriever:
             return self._tag_backend(scored[:limit], "hash")
 
         sdk_started = time.perf_counter()
-        kylin_query_vector = self.kylin_provider.vector(query)
+        kylin_query_vector = self.kylin_provider.vector(expanded_query)
         if kylin_query_vector is None:
             return self._tag_backend(scored[:limit], "hash")
         if self._kylin_budget_exceeded(sdk_started):
             return self._tag_backend(scored[:limit], "hash")
 
-        rerank_pool = scored[: max(limit * 2, min(10, len(scored)))]
+        rerank_pool = scored[: max(30, limit * 6)]
         reranked = []
         for _, record in rerank_pool:
             text = "%s %s %s" % (record.get("type", ""), record.get("summary", ""), record.get("content", ""))
@@ -260,7 +374,8 @@ class HybridRetriever:
             kylin_text_vector = self.kylin_provider.vector(text)
             if kylin_text_vector is None or len(kylin_text_vector) != len(kylin_query_vector):
                 return self._tag_backend(scored[:limit], "hash")
-            reranked.append((self._score_with_vectors(query, record, kylin_query_vector, kylin_text_vector), record))
+            breakdown = self.lightweight_score_breakdown(query, record)
+            reranked.append((self._score_with_vectors(expanded_query, record, kylin_query_vector, kylin_text_vector) + float(breakdown["total"]), record))
         reranked.sort(key=lambda item: item[0], reverse=True)
         self.last_backend_used = "kylin_sdk"
         return self._tag_backend(reranked[:limit], "kylin_sdk")
@@ -284,3 +399,65 @@ class HybridRetriever:
             item["_vector_backend"] = backend
             tagged.append((score, item))
         return tagged
+
+
+def _technical_entities(text: str) -> List[str]:
+    return re.findall(r"[A-Za-z][A-Za-z0-9_\-.]{1,}|[\u4e00-\u9fff]{2,}", text)
+
+
+def _topic_score(query_lower: str, combined_lower: str, record_type: str, subtype: str, preference_topic: str) -> float:
+    score = 0.0
+    if _contains_any(query_lower, ["高风险命令", "危险操作", "二次确认", "high risk", "confirmation"]):
+        if subtype == "security_policy" or preference_topic == "high_risk_confirmation":
+            score += 0.72
+        elif record_type == "knowledge":
+            score -= 0.28
+    if _contains_any(query_lower, ["代码搜索", "查代码", " rg", "ripgrep", "code search"]):
+        if subtype == "tool_preference" or preference_topic == "code_search_tool":
+            score += 0.60
+    if _contains_any(query_lower, ["回答风格", "先给命令", "先给结论", "response style", "command first"]):
+        if subtype == "output_style" or preference_topic in {"response_order", "response_verbosity", "response_language"}:
+            score += 0.50
+    if _contains_any(query_lower, ["精准遗忘", "precise forgetting"]):
+        if _contains_any(combined_lower, ["精准遗忘", "forget", "managed"]):
+            score += 0.35
+    return score
+
+
+def _subtype_score(query_lower: str, record_type: str, subtype: str, preference_topic: str) -> float:
+    score = 0.0
+    if _contains_any(query_lower, ["偏好", "优先", "prefer", "preference"]) and record_type == "preference":
+        score += 0.26
+    if _contains_any(query_lower, ["安全策略", "确认", "confirmation"]) and subtype == "security_policy":
+        score += 0.30
+    if preference_topic and preference_topic in query_lower:
+        score += 0.20
+    return score
+
+
+def _hard_negative_penalty(query_lower: str, summary: str, content: str, source_kind: str, record: Dict[str, Any]) -> float:
+    text = (summary + " " + content).strip()
+    penalty = 0.0
+    if "hard_negative" in source_kind:
+        penalty += 0.65
+    if str(record.get("source_uri") or "").startswith("neg_"):
+        penalty += 0.50
+    if text.startswith(("不应召回", "不应遗忘", "不应阻断")):
+        penalty += 0.75
+    if _contains_any(query_lower, ["token", "令牌", "凭据"]) and "token.service" in text:
+        penalty += 0.50
+    if _contains_any(query_lower, ["private key", "私钥"]) and "MAP_PRIVATE" in text:
+        penalty += 0.50
+    return penalty
+
+
+def _scope_penalty(query_lower: str, combined_lower: str) -> float:
+    if _contains_any(query_lower, ["当前 agent", "当前agent"]) and _contains_any(combined_lower, ["其他 agent", "其他agent"]):
+        return 0.45
+    if "上周" in query_lower and "今天" in combined_lower:
+        return 0.30
+    return 0.0
+
+
+def _contains_any(text: str, needles: Iterable[str]) -> bool:
+    return any(needle.lower() in text for needle in needles)

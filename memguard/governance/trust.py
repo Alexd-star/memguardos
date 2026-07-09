@@ -63,6 +63,8 @@ def assess_memory_source(text: str, source_kind: str, source_uri: str = "") -> G
     kind = str(source_kind or "unknown").strip().casefold()
     material = "%s\n%s" % (text, source_uri)
     signals = [name for name, pattern in INJECTION_PATTERNS.items() if pattern.search(material)]
+    if "policy_bypass" in signals and _is_defensive_policy_statement(material):
+        signals = [signal for signal in signals if signal != "policy_bypass"]
     explicitly_untrusted = any(marker in kind for marker in UNTRUSTED_SOURCE_MARKERS)
     if signals:
         return GovernanceDecision(
@@ -103,3 +105,19 @@ def assess_memory_source(text: str, source_kind: str, source_uri: str = "") -> G
         reason="local source accepted with limited trust",
         signals=[],
     )
+
+
+def _is_defensive_policy_statement(text: str) -> bool:
+    lowered = text.lower()
+    defensive_markers = (
+        "不因",
+        "不得",
+        "不能",
+        "不要",
+        "需要二次确认",
+        "require confirmation",
+        "requires confirmation",
+        "must not bypass",
+        "do not bypass",
+    )
+    return ("绕过" in text or "bypass" in lowered) and any(marker in lowered or marker in text for marker in defensive_markers)

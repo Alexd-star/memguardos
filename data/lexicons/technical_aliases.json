@@ -1,0 +1,16 @@
+{
+  "高风险命令": ["high risk command", "dangerous command", "危险操作"],
+  "二次确认": ["confirmation", "double confirmation", "确认后执行"],
+  "代码搜索": ["code search", "查代码", "rg", "ripgrep"],
+  "回答风格": ["response style", "answer style"],
+  "先给命令": ["command first", "先命令后解释"],
+  "先给结论": ["conclusion first", "先结论后证据"],
+  "精准遗忘": ["precise forgetting", "managed forgetting"],
+  "明文探针": ["plaintext probe", "plaintext verification"],
+  "受管存储": ["managed storage", "managed store"],
+  "审计链": ["audit chain", "audit_chain"],
+  "工具偏好": ["tool preference", "tool-preference"],
+  "本机智能检索": ["local retrieval", "on-device retrieval", "Kylin embedding"],
+  "服务排障": ["service troubleshooting", "systemd troubleshooting"],
+  "操作记录完整性": ["audit integrity", "audit verification"]
+}

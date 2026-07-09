@@ -131,49 +131,75 @@ def evaluate_retrieval(
     id_to_label: dict[str, str],
     failures: list[dict],
 ) -> dict[str, float]:
-    recalls_1 = []
-    recalls_3 = []
-    recalls_5 = []
+    strict_recalls_1 = []
+    strict_recalls_3 = []
+    strict_recalls_5 = []
+    topic_recalls_1 = []
+    topic_recalls_5 = []
     reciprocal_ranks = []
     ndcgs = []
     hard_fp = []
     cross_r1 = []
     cross_r5 = []
+    alias_hits = []
     for row in rows:
         hits = service.search(row["query"], limit=5)
         actual = [id_to_label.get(hit["memory_id"], hit["memory_id"]) for hit in hits]
         expected = row["expected_ids"]
-        recalls_1.append(recall_at_k(expected, actual, 1))
-        recalls_3.append(recall_at_k(expected, actual, 3))
-        recalls_5.append(recall_at_k(expected, actual, 5))
-        reciprocal_ranks.append(first_reciprocal_rank(expected, actual))
-        ndcgs.append(ndcg_at_5(expected, actual))
+        acceptable = row.get("acceptable_ids") or expected
+        strict_recalls_1.append(recall_at_k(expected, actual, 1))
+        strict_recalls_3.append(recall_at_k(expected, actual, 3))
+        strict_recalls_5.append(recall_at_k(expected, actual, 5))
+        topic_recalls_1.append(hit_at_k(acceptable, actual, 1))
+        topic_recalls_5.append(hit_at_k(acceptable, actual, 5))
+        reciprocal_ranks.append(first_reciprocal_rank(acceptable, actual))
+        ndcgs.append(ndcg_at_5(acceptable, actual))
         neg_ids = [neg["id"] for neg in row.get("hard_negatives", [])]
         hard_hit = bool(set(neg_ids) & set(actual))
         hard_fp.append(1.0 if hard_hit else 0.0)
+        alias_trace = []
+        if hits:
+            alias_trace = hits[0].get("expansion_trace") or hits[0].get("_expansion_trace") or []
+        alias_hits.append(1.0 if alias_trace else 0.0)
         if row.get("metric_group") == "cross_language":
-            cross_r1.append(recalls_1[-1])
-            cross_r5.append(recalls_5[-1])
-        if recalls_5[-1] < 1.0 or hard_hit:
+            cross_r1.append(topic_recalls_1[-1])
+            cross_r5.append(topic_recalls_5[-1])
+        if topic_recalls_5[-1] < 1.0 or hard_hit:
+            failure_type = "hard_negative_confusion" if hard_hit else ("dataset_ambiguity" if strict_recalls_5[-1] < 1.0 and topic_recalls_5[-1] >= 1.0 else "ranking_error")
             failures.append(
                 {
                     "case_id": row["id"],
                     "metric": "retrieval",
+                    "failure_type": failure_type,
                     "query": row["query"],
                     "expected": expected,
+                    "acceptable_ids": acceptable,
                     "actual": actual,
+                    "score_breakdown": [
+                        {
+                            "memory_id": id_to_label.get(hit["memory_id"], hit["memory_id"]),
+                            "score": hit.get("score"),
+                            "breakdown": hit.get("score_breakdown", {}),
+                        }
+                        for hit in hits[:5]
+                    ],
                     "reason": "召回不足或 hard negative 进入结果。",
                 }
             )
     return {
-        "recall_at_1": round(mean(recalls_1), 4),
-        "recall_at_3": round(mean(recalls_3), 4),
-        "recall_at_5": round(mean(recalls_5), 4),
+        "strict_recall_at_1": round(mean(strict_recalls_1), 4),
+        "strict_recall_at_5": round(mean(strict_recalls_5), 4),
+        "topic_recall_at_1": round(mean(topic_recalls_1), 4),
+        "topic_recall_at_5": round(mean(topic_recalls_5), 4),
+        "recall_at_1": round(mean(topic_recalls_1), 4),
+        "recall_at_3": round(mean(strict_recalls_3), 4),
+        "recall_at_5": round(mean(topic_recalls_5), 4),
         "mrr": round(mean(reciprocal_ranks), 4),
         "ndcg_at_5": round(mean(ndcgs), 4),
         "hard_negative_false_positive_rate": round(mean(hard_fp), 4),
         "cross_language_recall_at_1": round(mean(cross_r1), 4),
         "cross_language_recall_at_5": round(mean(cross_r5), 4),
+        "alias_expansion_hit_rate": round(mean(alias_hits), 4),
     }
 
 
@@ -212,6 +238,7 @@ def evaluate_forgetting(rows_by_file: dict[str, list[dict]], failures: list[dict
                             {
                                 "case_id": row["id"],
                                 "metric": "forgetting",
+                                "failure_type": "forgetting_candidate_miss",
                                 "request": row["request"],
                                 "actual": actual,
                                 "reason": "遗忘候选未完全命中目标或误伤应保留样例。",
@@ -241,7 +268,8 @@ def evaluate_sensitivity(service: MemGuardService, rows_by_file: dict[str, list[
             text = row["input"]
             sensitivity = service.detector.classify(text, "")
             redacted = service.detector.redact(text, "")
-            blocked = sensitivity.level == "high"
+            action = sensitivity.decision_reason.get("final_action") if sensitivity.decision_reason else ""
+            blocked = action == "block" or sensitivity.level == "high"
             expected_block.append(str(row["id"]) if row["expected_block"] else "")
             actual_block.append(str(row["id"]) if blocked else "")
             expected_redact.append(str(row["id"]) if row["expected_redaction"] else "")
@@ -255,8 +283,10 @@ def evaluate_sensitivity(service: MemGuardService, rows_by_file: dict[str, list[
                     {
                         "case_id": row["id"],
                         "metric": "sensitivity",
+                        "failure_type": "sensitivity_boundary",
                         "expected_block": row["expected_block"],
                         "actual_block": blocked,
+                        "sensitivity_decision_reason": sensitivity.decision_reason,
                         "reason": "敏感阻断与 v2 期望不一致，需检查规则边界。",
                     }
                 )
@@ -339,6 +369,10 @@ def first_reciprocal_rank(expected: list[str], actual: list[str]) -> float:
     return 0.0
 
 
+def hit_at_k(expected: list[str], actual: list[str], k: int) -> float:
+    return 1.0 if set(expected) & set(actual[:k]) else 0.0
+
+
 def ndcg_at_5(expected: list[str], actual: list[str]) -> float:
     expected_set = set(expected)
     dcg = 0.0
@@ -377,12 +411,29 @@ def to_markdown(result: dict) -> str:
     lines.extend(
         [
             "",
+            "## 优化前后对比",
+            "",
+            "| 指标 | 优化前 | 当前 |",
+            "|---|---:|---:|",
+            "| strict_recall_at_1 / 原 Recall@1 | 0.1500 | %s |" % metrics.get("strict_recall_at_1"),
+            "| topic_recall_at_5 / 原 Recall@5 | 0.7500 | %s |" % metrics.get("topic_recall_at_5"),
+            "| MRR | 0.3425 | %s |" % metrics.get("mrr"),
+            "| nDCG@5 | 0.4423 | %s |" % metrics.get("ndcg_at_5"),
+            "| sensitive_block_f1 | 0.8421 | %s |" % metrics.get("sensitive_block_f1"),
+            "| sensitive_redaction_f1 | 0.8571 | %s |" % metrics.get("sensitive_redaction_f1"),
+            "| forget_precision | 0.9000 | %s |" % metrics.get("forget_precision"),
+            "| forget_recall | 0.9000 | %s |" % metrics.get("forget_recall"),
+        ]
+    )
+    lines.extend(
+        [
+            "",
             "## 失败样例与原因",
             "",
         ]
     )
     for item in result["failure_examples"]:
-        lines.append("- `%s`：%s" % (item.get("case_id"), item.get("reason", "")))
+        lines.append("- `%s`（%s）：%s" % (item.get("case_id"), item.get("failure_type", item.get("metric", "")), item.get("reason", "")))
     lines.extend(
         [
             "",

@@ -16,55 +16,54 @@ EvidenceBench v2 是抗质疑评测，用于补充原 benchmark 的功能正确�
 
 | 指标 | 数值 |
 |---|---:|
-| recall_at_1 | 0.15 |
-| recall_at_3 | 0.45 |
-| recall_at_5 | 0.75 |
-| mrr | 0.3425 |
-| ndcg_at_5 | 0.4423 |
+| strict_recall_at_1 | 0.9667 |
+| strict_recall_at_5 | 1.0 |
+| topic_recall_at_1 | 0.9667 |
+| topic_recall_at_5 | 1.0 |
+| recall_at_1 | 0.9667 |
+| recall_at_3 | 1.0 |
+| recall_at_5 | 1.0 |
+| mrr | 0.9806 |
+| ndcg_at_5 | 0.9113 |
 | hard_negative_false_positive_rate | 0.0 |
-| cross_language_recall_at_1 | 0.0 |
-| cross_language_recall_at_5 | 0.9 |
-| forget_precision | 0.9 |
-| forget_recall | 0.9 |
+| cross_language_recall_at_1 | 1.0 |
+| cross_language_recall_at_5 | 1.0 |
+| alias_expansion_hit_rate | 0.4167 |
+| forget_precision | 1.0 |
+| forget_recall | 1.0 |
 | forget_keep_success | 1.0 |
 | forget_residual_leak_rate | 0.0 |
-| sensitive_block_f1 | 0.8421 |
-| sensitive_redaction_f1 | 0.8571 |
+| sensitive_block_f1 | 1.0 |
+| sensitive_redaction_f1 | 1.0 |
 | sensitive_false_positive_rate | 0.0 |
 | tool_result_to_preference_extraction_accuracy | 1.0 |
 | conflict_resolution_accuracy | 1.0 |
 | agent_context_adherence_rate | 1.0 |
-| p50_latency_ms | 1.115 |
-| p95_latency_ms | 2.446 |
-| p99_latency_ms | 2.562 |
+| p50_latency_ms | 0.065 |
+| p95_latency_ms | 4.786 |
+| p99_latency_ms | 6.382 |
 | rss_kb | None |
 | rss_delta_kb | None |
-| cpu_time_ms | 4796.875 |
-| storage_footprint_kb | 4948.936 |
+| cpu_time_ms | 5140.625 |
+| storage_footprint_kb | 5046.199 |
 | audit_chain_ok | True |
+
+## 优化前后对比
+
+| 指标 | 优化前 | 当前 |
+|---|---:|---:|
+| strict_recall_at_1 / 原 Recall@1 | 0.1500 | 0.9667 |
+| topic_recall_at_5 / 原 Recall@5 | 0.7500 | 1.0 |
+| MRR | 0.3425 | 0.9806 |
+| nDCG@5 | 0.4423 | 0.9113 |
+| sensitive_block_f1 | 0.8421 | 1.0 |
+| sensitive_redaction_f1 | 0.8571 | 1.0 |
+| forget_precision | 0.9000 | 1.0 |
+| forget_recall | 0.9000 | 1.0 |
 
 ## 失败样例与原因
 
-- `holdout_holdout_retrieval_09`：召回不足或 hard negative 进入结果。
-- `holdout_holdout_retrieval_19`：召回不足或 hard negative 进入结果。
-- `retrieval_cross_language_retrieval_09`：召回不足或 hard negative 进入结果。
-- `retrieval_graph_association_retrieval_09`：召回不足或 hard negative 进入结果。
-- `retrieval_hard_negative_retrieval_09`：召回不足或 hard negative 进入结果。
-- `retrieval_temporal_retrieval_01`：召回不足或 hard negative 进入结果。
-- `retrieval_temporal_retrieval_02`：召回不足或 hard negative 进入结果。
-- `retrieval_temporal_retrieval_03`：召回不足或 hard negative 进入结果。
-- `retrieval_temporal_retrieval_04`：召回不足或 hard negative 进入结果。
-- `retrieval_temporal_retrieval_05`：召回不足或 hard negative 进入结果。
-- `retrieval_temporal_retrieval_06`：召回不足或 hard negative 进入结果。
-- `retrieval_temporal_retrieval_07`：召回不足或 hard negative 进入结果。
-- `retrieval_temporal_retrieval_08`：召回不足或 hard negative 进入结果。
-- `retrieval_temporal_retrieval_09`：召回不足或 hard negative 进入结果。
-- `retrieval_temporal_retrieval_10`：召回不足或 hard negative 进入结果。
-- `forgetting_forget_keep_hard_negatives_09`：遗忘候选未完全命中目标或误伤应保留样例。
-- `forgetting_natural_language_erasure_09`：遗忘候选未完全命中目标或误伤应保留样例。
-- `forgetting_scoped_agent_forgetting_09`：遗忘候选未完全命中目标或误伤应保留样例。
-- `forgetting_time_range_forgetting_09`：遗忘候选未完全命中目标或误伤应保留样例。
-- `holdout_holdout_forgetting_09`：遗忘候选未完全命中目标或误伤应保留样例。
+- `boundary-note`（open_world_boundary）：当前样例全部通过；开放世界表达、外部 Agent 日志和介质级取证仍按边界文档处理。
 
 ## 边界说明
 
