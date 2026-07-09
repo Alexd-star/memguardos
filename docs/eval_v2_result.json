@@ -1,0 +1,348 @@
+{
+  "dataset": {
+    "files": {
+      "extraction/knowledge_structured_cases.jsonl": 10,
+      "extraction/preference_explicit.jsonl": 10,
+      "extraction/preference_implicit.jsonl": 10,
+      "extraction/tool_result_to_preference.jsonl": 10,
+      "forgetting/forget_keep_hard_negatives.jsonl": 10,
+      "forgetting/natural_language_erasure.jsonl": 10,
+      "forgetting/scoped_agent_forgetting.jsonl": 10,
+      "forgetting/time_range_forgetting.jsonl": 10,
+      "holdout/holdout_agent_tasks.jsonl": 20,
+      "holdout/holdout_forgetting.jsonl": 20,
+      "holdout/holdout_retrieval.jsonl": 20,
+      "os_agent/auditd_bpf_tasks.jsonl": 10,
+      "os_agent/openkylin_service_tasks.jsonl": 10,
+      "os_agent/tool_failure_traces.jsonl": 10,
+      "os_agent/ukui_peony_tasks.jsonl": 10,
+      "retrieval/cross_language_retrieval.jsonl": 10,
+      "retrieval/graph_association_retrieval.jsonl": 10,
+      "retrieval/hard_negative_retrieval.jsonl": 10,
+      "retrieval/temporal_retrieval.jsonl": 10,
+      "sensitivity/credential_synthetic.jsonl": 10,
+      "sensitivity/custom_sensitive_patterns.jsonl": 10,
+      "sensitivity/pii_synthetic_zh.jsonl": 10,
+      "sensitivity/sensitive_hard_negatives.jsonl": 10
+    },
+    "holdout_ratio": 0.2308,
+    "holdout_samples": 60,
+    "total_samples": 260
+  },
+  "failure_examples": [
+    {
+      "actual": [
+        "seed_retrieval_temporal_retrieval_02",
+        "seed_retrieval_hard_negative_retrieval_02",
+        "seed_retrieval_graph_association_retrieval_02",
+        "neg_retrieval_temporal_retrieval_06",
+        "neg_retrieval_hard_negative_retrieval_06"
+      ],
+      "case_id": "holdout_holdout_retrieval_09",
+      "expected": [
+        "seed_holdout_holdout_retrieval_09"
+      ],
+      "metric": "retrieval",
+      "query": "高风险命令需要二次确认",
+      "reason": "召回不足或 hard negative 进入结果。"
+    },
+    {
+      "actual": [
+        "seed_retrieval_temporal_retrieval_02",
+        "seed_retrieval_hard_negative_retrieval_02",
+        "seed_retrieval_graph_association_retrieval_02",
+        "neg_retrieval_temporal_retrieval_06",
+        "neg_retrieval_hard_negative_retrieval_06"
+      ],
+      "case_id": "holdout_holdout_retrieval_19",
+      "expected": [
+        "seed_holdout_holdout_retrieval_19"
+      ],
+      "metric": "retrieval",
+      "query": "高风险命令需要二次确认",
+      "reason": "召回不足或 hard negative 进入结果。"
+    },
+    {
+      "actual": [
+        "seed_retrieval_temporal_retrieval_02",
+        "seed_retrieval_hard_negative_retrieval_02",
+        "seed_retrieval_graph_association_retrieval_02",
+        "neg_retrieval_temporal_retrieval_06",
+        "neg_retrieval_hard_negative_retrieval_06"
+      ],
+      "case_id": "retrieval_cross_language_retrieval_09",
+      "expected": [
+        "seed_retrieval_cross_language_retrieval_09"
+      ],
+      "metric": "retrieval",
+      "query": "高风险命令需要二次确认",
+      "reason": "召回不足或 hard negative 进入结果。"
+    },
+    {
+      "actual": [
+        "seed_retrieval_temporal_retrieval_02",
+        "seed_retrieval_hard_negative_retrieval_02",
+        "seed_retrieval_graph_association_retrieval_02",
+        "neg_retrieval_temporal_retrieval_06",
+        "neg_retrieval_hard_negative_retrieval_06"
+      ],
+      "case_id": "retrieval_graph_association_retrieval_09",
+      "expected": [
+        "seed_retrieval_graph_association_retrieval_09"
+      ],
+      "metric": "retrieval",
+      "query": "高风险命令需要二次确认",
+      "reason": "召回不足或 hard negative 进入结果。"
+    },
+    {
+      "actual": [
+        "seed_retrieval_temporal_retrieval_02",
+        "seed_retrieval_hard_negative_retrieval_02",
+        "seed_retrieval_graph_association_retrieval_02",
+        "neg_retrieval_temporal_retrieval_06",
+        "neg_retrieval_hard_negative_retrieval_06"
+      ],
+      "case_id": "retrieval_hard_negative_retrieval_09",
+      "expected": [
+        "seed_retrieval_hard_negative_retrieval_09"
+      ],
+      "metric": "retrieval",
+      "query": "高风险命令需要二次确认",
+      "reason": "召回不足或 hard negative 进入结果。"
+    },
+    {
+      "actual": [
+        "seed_holdout_holdout_retrieval_01",
+        "seed_holdout_holdout_retrieval_11",
+        "seed_retrieval_cross_language_retrieval_01",
+        "seed_retrieval_graph_association_retrieval_01",
+        "seed_retrieval_hard_negative_retrieval_01"
+      ],
+      "case_id": "retrieval_temporal_retrieval_01",
+      "expected": [
+        "seed_retrieval_temporal_retrieval_01"
+      ],
+      "metric": "retrieval",
+      "query": "openKylin 上 systemd 服务重启前先查看 journalctl 和 cgroup 限制。",
+      "reason": "召回不足或 hard negative 进入结果。"
+    },
+    {
+      "actual": [
+        "seed_holdout_holdout_retrieval_02",
+        "seed_holdout_holdout_retrieval_12",
+        "seed_retrieval_cross_language_retrieval_02",
+        "seed_retrieval_graph_association_retrieval_02",
+        "seed_retrieval_hard_negative_retrieval_02"
+      ],
+      "case_id": "retrieval_temporal_retrieval_02",
+      "expected": [
+        "seed_retrieval_temporal_retrieval_02"
+      ],
+      "metric": "retrieval",
+      "query": "auditd 记录用户态访问",
+      "reason": "召回不足或 hard negative 进入结果。"
+    },
+    {
+      "actual": [
+        "seed_holdout_holdout_retrieval_03",
+        "seed_holdout_holdout_retrieval_13",
+        "seed_retrieval_cross_language_retrieval_03",
+        "seed_retrieval_graph_association_retrieval_03",
+        "seed_retrieval_hard_negative_retrieval_03"
+      ],
+      "case_id": "retrieval_temporal_retrieval_03",
+      "expected": [
+        "seed_retrieval_temporal_retrieval_03"
+      ],
+      "metric": "retrieval",
+      "query": "Peony 右键扫描文件后进入 UKUI 控制中心查看记忆候选。",
+      "reason": "召回不足或 hard negative 进入结果。"
+    },
+    {
+      "actual": [
+        "seed_holdout_holdout_retrieval_04",
+        "seed_holdout_holdout_retrieval_14",
+        "seed_retrieval_cross_language_retrieval_04",
+        "seed_retrieval_graph_association_retrieval_04",
+        "seed_retrieval_hard_negative_retrieval_04"
+      ],
+      "case_id": "retrieval_temporal_retrieval_04",
+      "expected": [
+        "seed_retrieval_temporal_retrieval_04"
+      ],
+      "metric": "retrieval",
+      "query": "Kylin embedding SDK 是本机智能检索增强",
+      "reason": "召回不足或 hard negative 进入结果。"
+    },
+    {
+      "actual": [
+        "seed_holdout_holdout_retrieval_05",
+        "seed_holdout_holdout_retrieval_15",
+        "seed_retrieval_cross_language_retrieval_05",
+        "seed_retrieval_graph_association_retrieval_05",
+        "seed_retrieval_hard_negative_retrieval_05"
+      ],
+      "case_id": "retrieval_temporal_retrieval_05",
+      "expected": [
+        "seed_retrieval_temporal_retrieval_05"
+      ],
+      "metric": "retrieval",
+      "query": "mmap 段文件 compact 后用于验证受管明文不再可读。",
+      "reason": "召回不足或 hard negative 进入结果。"
+    },
+    {
+      "actual": [
+        "seed_holdout_holdout_retrieval_06",
+        "seed_holdout_holdout_retrieval_16",
+        "seed_retrieval_cross_language_retrieval_06",
+        "seed_retrieval_graph_association_retrieval_06",
+        "seed_retrieval_hard_negative_retrieval_06"
+      ],
+      "case_id": "retrieval_temporal_retrieval_06",
+      "expected": [
+        "seed_retrieval_temporal_retrieval_06"
+      ],
+      "metric": "retrieval",
+      "query": "namespace 隔离工作目录",
+      "reason": "召回不足或 hard negative 进入结果。"
+    },
+    {
+      "actual": [
+        "seed_holdout_holdout_retrieval_07",
+        "seed_holdout_holdout_retrieval_17",
+        "seed_retrieval_cross_language_retrieval_07",
+        "seed_retrieval_graph_association_retrieval_07",
+        "seed_retrieval_hard_negative_retrieval_07"
+      ],
+      "case_id": "retrieval_temporal_retrieval_07",
+      "expected": [
+        "seed_retrieval_temporal_retrieval_07"
+      ],
+      "metric": "retrieval",
+      "query": "回答时先给结论",
+      "reason": "召回不足或 hard negative 进入结果。"
+    },
+    {
+      "actual": [
+        "seed_holdout_holdout_retrieval_08",
+        "seed_holdout_holdout_retrieval_18",
+        "seed_retrieval_cross_language_retrieval_08",
+        "seed_retrieval_graph_association_retrieval_08",
+        "seed_retrieval_hard_negative_retrieval_08"
+      ],
+      "case_id": "retrieval_temporal_retrieval_08",
+      "expected": [
+        "seed_retrieval_temporal_retrieval_08"
+      ],
+      "metric": "retrieval",
+      "query": "代码搜索优先使用 rg",
+      "reason": "召回不足或 hard negative 进入结果。"
+    },
+    {
+      "actual": [
+        "seed_retrieval_temporal_retrieval_02",
+        "seed_retrieval_hard_negative_retrieval_02",
+        "seed_retrieval_graph_association_retrieval_02",
+        "neg_retrieval_temporal_retrieval_06",
+        "neg_retrieval_hard_negative_retrieval_06"
+      ],
+      "case_id": "retrieval_temporal_retrieval_09",
+      "expected": [
+        "seed_retrieval_temporal_retrieval_09"
+      ],
+      "metric": "retrieval",
+      "query": "高风险命令需要二次确认",
+      "reason": "召回不足或 hard negative 进入结果。"
+    },
+    {
+      "actual": [
+        "seed_holdout_holdout_retrieval_10",
+        "seed_holdout_holdout_retrieval_20",
+        "seed_retrieval_cross_language_retrieval_10",
+        "seed_retrieval_graph_association_retrieval_10",
+        "seed_retrieval_hard_negative_retrieval_10"
+      ],
+      "case_id": "retrieval_temporal_retrieval_10",
+      "expected": [
+        "seed_retrieval_temporal_retrieval_10"
+      ],
+      "metric": "retrieval",
+      "query": "pytest 失败后先定位最小失败用例",
+      "reason": "召回不足或 hard negative 进入结果。"
+    },
+    {
+      "actual": [],
+      "case_id": "forgetting_forget_keep_hard_negatives_09",
+      "metric": "forgetting",
+      "reason": "遗忘候选未完全命中目标或误伤应保留样例。",
+      "request": "忘记高风险命令需要二次确认，但保留不相关记忆"
+    },
+    {
+      "actual": [],
+      "case_id": "forgetting_natural_language_erasure_09",
+      "metric": "forgetting",
+      "reason": "遗忘候选未完全命中目标或误伤应保留样例。",
+      "request": "忘记高风险命令需要二次确认，但保留不相关记忆"
+    },
+    {
+      "actual": [],
+      "case_id": "forgetting_scoped_agent_forgetting_09",
+      "metric": "forgetting",
+      "reason": "遗忘候选未完全命中目标或误伤应保留样例。",
+      "request": "忘记高风险命令需要二次确认，但保留不相关记忆"
+    },
+    {
+      "actual": [],
+      "case_id": "forgetting_time_range_forgetting_09",
+      "metric": "forgetting",
+      "reason": "遗忘候选未完全命中目标或误伤应保留样例。",
+      "request": "忘记高风险命令需要二次确认，但保留不相关记忆"
+    },
+    {
+      "actual": [],
+      "case_id": "holdout_holdout_forgetting_09",
+      "metric": "forgetting",
+      "reason": "遗忘候选未完全命中目标或误伤应保留样例。",
+      "request": "忘记高风险命令需要二次确认，但保留不相关记忆"
+    }
+  ],
+  "metadata": {
+    "benchmark_name": "MemGuardOS EvidenceBench",
+    "generated_by": "scripts/run_evidencebench_v2.py",
+    "note": "原 benchmark 偏功能正确性；EvidenceBench v2 偏 hard negative、holdout 和边界解释。",
+    "schema": "memguardos-evidencebench-v2-result",
+    "version": "v2"
+  },
+  "metrics": {
+    "agent_context_adherence_rate": 1.0,
+    "audit_chain_ok": true,
+    "conflict_resolution_accuracy": 1.0,
+    "cpu_time_ms": 4968.75,
+    "cross_language_recall_at_1": 0.0,
+    "cross_language_recall_at_5": 0.9,
+    "forget_keep_success": 1.0,
+    "forget_precision": 0.9,
+    "forget_recall": 0.9,
+    "forget_residual_leak_rate": 0.0,
+    "hard_negative_false_positive_rate": 0.0,
+    "mrr": 0.3425,
+    "ndcg_at_5": 0.4423,
+    "p50_latency_ms": 0.088,
+    "p95_latency_ms": 3.102,
+    "p99_latency_ms": 3.498,
+    "recall_at_1": 0.15,
+    "recall_at_3": 0.45,
+    "recall_at_5": 0.75,
+    "rss_delta_kb": null,
+    "rss_kb": null,
+    "sensitive_block_f1": 0.8421,
+    "sensitive_false_positive_rate": 0.0,
+    "sensitive_redaction_f1": 0.8571,
+    "storage_footprint_kb": 4957.006,
+    "tool_result_to_preference_extraction_accuracy": 1.0
+  },
+  "runtime": {
+    "latency_queries": 30,
+    "wall_time_ms": 6343.363
+  }
+}

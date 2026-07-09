@@ -1,0 +1,51 @@
+{
+  "schema": "memguardos-judge-journey-result-v1",
+  "step": {
+    "id": "02_agent_context_reuse",
+    "file": "demo\\judge_journey\\02_agent_context_reuse.yml",
+    "title": "三阶段上下文复用",
+    "goal": "展示 planning、tool_selection、response_generation 三阶段如何使用不同类型的记忆。",
+    "evidence_files": [
+      "docs/evidence/latest/build_context_explainability.txt",
+      "docs/evidence/agent_latest/real-agent-session-b5_context.json"
+    ],
+    "fallback_if_environment_missing": [
+      "若 Web 控制台未启动，使用 CLI/pytest 复核三阶段上下文。"
+    ]
+  },
+  "ok": true,
+  "host": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "system": "Windows",
+    "is_openkylin_hint": false
+  },
+  "commands": [
+    {
+      "argv": [
+        "C:\\Program Files\\Python39\\python.exe",
+        "-m",
+        "pytest",
+        "tests/test_agent_context.py",
+        "-q"
+      ],
+      "ok": true,
+      "status": "passed",
+      "returncode": 0,
+      "duration_ms": 1605.09,
+      "stdout": "........s                                                                [100%]\n8 passed, 1 skipped in 1.10s\n",
+      "stderr": "Error in atexit._run_exitfuncs:\nTraceback (most recent call last):\n  File \"C:\\Program Files\\Python39\\lib\\pathlib.py\", line 206, in resolve\n    s = self._ext_to_normal(_getfinalpathname(s))\nPermissionError: [WinError 5] 拒绝访问。: 'C:\\\\Users\\\\26312\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-26312\\\\pytest-267'\n"
+    },
+    {
+      "argv": [
+        "C:\\Program Files\\Python39\\python.exe",
+        "scripts/web_dashboard_smoke.py"
+      ],
+      "ok": true,
+      "status": "passed",
+      "returncode": 0,
+      "duration_ms": 1869.014,
+      "stdout": "MemGuardOS dashboard listening on http://127.0.0.1:51585\n{\n  \"page_ok\": true,\n  \"diagnostics_tab_ok\": true,\n  \"diagnostics_export_button_ok\": true,\n  \"enterprise_overview_ok\": true,\n  \"delivery_readiness_ok\": true,\n  \"product_workbench_ok\": true,\n  \"memory_value_visual_ok\": true,\n  \"forget_confirmation_copy_ok\": true,\n  \"competition_copy_absent\": true,\n  \"acceptance_review_ok\": true,\n  \"traffic_light_status_ok\": true,\n  \"rag_visual_ok\": true,\n  \"forget_candidate_visual_ok\": true,\n  \"agent_workspace_ok\": true,\n  \"role_split_ok\": true,\n  \"token_session_storage_ok\": true,\n  \"html_security_headers_ok\": true,\n  \"json_security_headers_ok\": true,\n  \"ingest_ok\": true,\n  \"search_hits\": 1,\n  \"extraction_type\": \"preference\",\n  \"live_record_count\": 2,\n  \"audit_ok\": true,\n  \"retrieval_ok\": true,\n  \"policy_ok\": true,\n  \"diagnostics_ok\": true,\n  \"export_ok\": true,\n  \"agent_overview_ok\": true,\n  \"agent_forget_preview_ok\": true,\n  \"auth_required_for_diagnostics\": true,\n  \"invalid_json_rejected\": true,\n  \"large_payload_rejected\": true,\n  \"url\": \"http://127.0.0.1:51585\"\n}\n",
+      "stderr": ""
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+title: "敏感治理与 OS 级证据"
+goal: "展示敏感内容写入前阻断或脱敏，并用 auditd/BPF LSM 说明 OS 级安全能力边界。"
+commands:
+  - "python -m pytest tests/test_core.py::test_sensitive_high_risk_text_is_blocked -q"
+  - "bash scripts/run_bpf_lsm_enforcer.sh"
+expected_outputs:
+  - "高风险 API Key、私钥等不进入普通记忆明文"
+  - "auditd 记录受管访问"
+  - "BPF LSM 只按配置路径拦截，不宣称内核态语义 DLP"
+evidence_files:
+  - "docs/evidence/latest/verify_audit.txt"
+  - "docs/evidence/latest/bpf_lsm_enforcer.txt"
+judge_talking_points:
+  - "应用层敏感检测与 OS 级强制拦截是互补关系。"
+  - "边界明确：默认 BPF LSM 不做任意内容语义识别。"
+fallback_if_environment_missing:
+  - "若内核不支持 BPF LSM，脚本记录为增强项缺失，并展示已生成策略和 auditd 证据。"

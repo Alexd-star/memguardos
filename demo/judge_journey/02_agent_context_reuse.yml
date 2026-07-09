@@ -1,0 +1,17 @@
+title: "三阶段上下文复用"
+goal: "展示 planning、tool_selection、response_generation 三阶段如何使用不同类型的记忆。"
+commands:
+  - "python -m pytest tests/test_agent_context.py -q"
+  - "python scripts/web_dashboard_smoke.py"
+expected_outputs:
+  - "planning 使用工作流、历史案例和少量安全策略"
+  - "tool_selection 强注入工具偏好和失败修复经验"
+  - "response_generation 注入回答风格、语言偏好和安全提示"
+evidence_files:
+  - "docs/evidence/latest/build_context_explainability.txt"
+  - "docs/evidence/agent_latest/real-agent-session-b5_context.json"
+judge_talking_points:
+  - "偏好不是普通知识，不完全依赖向量相似度。"
+  - "每次注入都有 explainability，说明为什么选择和为什么过滤。"
+fallback_if_environment_missing:
+  - "若 Web 控制台未启动，使用 CLI/pytest 复核三阶段上下文。"

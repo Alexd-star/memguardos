@@ -1,0 +1,17 @@
+title: "自然语言精准遗忘与验证"
+goal: "展示 Erasure Intent Compiler 如何把中文遗忘请求编译为结构化过滤器，并通过 dry-run、确认、compact 和 verify 完成闭环。"
+commands:
+  - "python -m pytest tests/test_erasure_intent_compiler.py -q"
+  - "python scripts/run_evidencebench_v2.py --output docs/eval_v2_result.json --markdown docs/eval_v2_report.md"
+expected_outputs:
+  - "自然语言请求先编译为 dry-run intent"
+  - "影响范围预览后才允许确认遗忘"
+  - "compact 后验证受管明文不可继续检索"
+evidence_files:
+  - "docs/eval_v2_result.json"
+  - "docs/eval_v2_report.md"
+judge_talking_points:
+  - "精准遗忘只保证 MemGuardOS 受管存储，不夸大到 VM 快照或块设备取证。"
+  - "hard negative 用于证明保留项不会被过宽请求误伤。"
+fallback_if_environment_missing:
+  - "该步骤完全离线可运行，不依赖云端模型或 GPU。"

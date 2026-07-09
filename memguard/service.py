@@ -16,6 +16,7 @@ from memguard.config import (
 )
 from memguard.extraction.entity import extract_entities, extract_relations
 from memguard.extraction.semantic import HybridMemoryExtractor
+from memguard.forgetting.natural_intent import ErasureIntentCompiler
 from memguard.forgetting.planner import ForgetPlanner
 from memguard.governance.trust import assess_memory_source
 from memguard.ingestion.behavior import BehaviorEvent, load_shell_history
@@ -57,6 +58,7 @@ class MemGuardService:
         self.retriever = HybridRetriever()
         self.conflicts = ConflictResolver()
         self.forget_planner = ForgetPlanner()
+        self.erasure_intent_compiler = ErasureIntentCompiler()
         self.journald = JournaldLogger()
         self._search_cache: OrderedDict[Tuple[str, int, str], List[Dict[str, object]]] = OrderedDict()
         self._search_cache_limit = 128
@@ -1939,6 +1941,50 @@ class MemGuardService:
             "forgotten": forgotten,
             "external_residue": external_residue,
         }
+
+    def compile_erasure_intent(self, request: str, context: Optional[Dict[str, object]] = None) -> Dict[str, object]:
+        compiled = self.erasure_intent_compiler.compile(request, context=context or {})
+        self._audit(
+            "compile_erasure_intent",
+            None,
+            {
+                "confidence": compiled["confidence"],
+                "memory_types": compiled["memory_types"],
+                "scope": compiled["scope"],
+                "requires_confirm": compiled["requires_confirm"],
+            },
+        )
+        return compiled
+
+    def forget_by_intent(
+        self,
+        request: str,
+        context: Optional[Dict[str, object]] = None,
+        confirm: bool = False,
+        compact: bool = True,
+    ) -> Dict[str, object]:
+        compiled = self.compile_erasure_intent(request, context=context or {})
+        agent_filters = self.erasure_intent_compiler.to_agent_filters(compiled)
+        use_agent_route = bool(
+            agent_filters
+            and (
+                compiled.get("agent_name")
+                or compiled.get("session_id")
+                or (compiled.get("scope") or {}).get("level") in {"agent", "session"}
+                or compiled.get("preference_topic")
+            )
+        )
+        if use_agent_route:
+            result = self.forget_agent_interactions(agent_filters, confirm=confirm, compact=compact)
+            route = "agent_interactions"
+        else:
+            result = self.forget(
+                self.erasure_intent_compiler.to_forget_request(compiled),
+                confirm=confirm,
+                compact=compact,
+            )
+            route = "managed_memory"
+        return {"compiled_intent": compiled, "route": route, "result": result}
 
     def forget_memory_ids(self, memory_ids: List[str], reason: str, compact: bool = False) -> Dict[str, object]:
         unique_ids: List[str] = []
