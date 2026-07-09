@@ -67,6 +67,17 @@ def test_dashboard_operations_have_user_feedback_without_debug_timestamps():
     assert "正在执行请稍后" not in page
 
 
+def test_dashboard_initial_load_is_lightweight_and_tab_data_is_lazy_loaded():
+    page = _dashboard_html()
+
+    assert "loadTabData" in page
+    assert "loadedTabs" in page
+    assert "refresh();" in page
+    assert "refresh(); audit(null)" not in page
+    assert "audit(null); loadAgentOverview(null)" not in page
+    assert "loadAgentOverview(null); loadAcceptancePlan(null)" not in page
+
+
 def test_dashboard_declares_click_handlers_for_all_inline_buttons():
     page = _dashboard_html()
     handlers = set()

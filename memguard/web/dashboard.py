@@ -836,14 +836,23 @@ def _dashboard_html() -> str:
   <script>
     const pretty = obj => JSON.stringify(obj, null, 2);
     const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const loadedTabs = new Set(['overview']);
     document.querySelectorAll('nav button').forEach(btn => btn.addEventListener('click', () => {
       openTab(btn.dataset.tab);
+      loadTabData(btn.dataset.tab, null);
     }));
     function openTab(tab) {
       document.querySelectorAll('nav button').forEach(item => item.classList.toggle('active', item.dataset.tab === tab));
       document.querySelectorAll('section').forEach(item => item.classList.toggle('active', item.id === tab));
       const section = document.getElementById(tab);
       if (section) section.scrollIntoView({block:'start'});
+    }
+    function loadTabData(tab, event) {
+      if (!tab || loadedTabs.has(tab)) return;
+      loadedTabs.add(tab);
+      if (tab === 'audit') audit(event);
+      if (tab === 'agent') loadAgentOverview(event);
+      if (tab === 'acceptance') loadAcceptancePlan(event);
     }
     const tokenInput = document.getElementById('apiToken');
     tokenInput.value = sessionStorage.getItem('memguardos_api_token') || '';
@@ -1286,9 +1295,10 @@ def _dashboard_html() -> str:
     }
     function exportDiagnostics(event) {
       if (event && event.currentTarget) event.currentTarget.blur();
+      setOperationStatus('正在准备系统报告。下载开始后可在浏览器下载列表中查看文件。', 'warn');
       window.location.href = '/api/export-diagnostics';
     }
-    refresh(); audit(null); loadAgentOverview(null); loadAcceptancePlan(null);
+    refresh();
   </script>
 </body>
 </html>"""
