@@ -1,0 +1,42 @@
+[Unit]
+Description=MemGuardOS OpenHands Agent bridge for user %i
+After=network-online.target memguardd.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%i
+Group=%i
+WorkingDirectory=/opt/memguardos
+Environment=PYTHONPATH=/opt/memguardos
+Environment=MEMGUARD_HOME=/var/lib/memguardos-agent/%i/memory
+Environment=OPENHANDS_SUPPRESS_BANNER=1
+Environment=LITELLM_LOCAL_MODEL_COST_MAP=True
+EnvironmentFile=-/etc/memguardos/agent-%i.env
+ExecStart=/opt/memguardos/.venv-agent/bin/python /opt/memguardos/scripts/memguard_agent_bridge.py --queue-root /var/lib/memguardos-agent/%i --namespace agent-%i
+Restart=on-failure
+RestartSec=10
+UMask=0077
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/var/lib/memguardos-agent/%i
+MemoryMax=2G
+CPUQuota=100%
+TasksMax=256
+
+[Install]
+WantedBy=multi-user.target

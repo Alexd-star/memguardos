@@ -1,0 +1,246 @@
+{
+  "case_id": "R02",
+  "title": "纠正回答顺序后回答简单命令问题",
+  "category": "user_correction",
+  "model": "openai/gpt-5.4-mini",
+  "setup_event_count": 1,
+  "forget_result": null,
+  "run": {
+    "ok": true,
+    "session_id": "r02-live",
+    "trace_id": "ctx_3a4f10a6f12c4c11",
+    "context_file": "context.json",
+    "duration_ms": 6102.931,
+    "context": {
+      "trace_id": "ctx_3a4f10a6f12c4c11",
+      "stage_budgets": {
+        "planning": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "tool_selection": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "response_generation": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 333,
+          "estimated_context_tokens": 94,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        }
+      },
+      "selected_memory_ids": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "mem_ed66999e1a3a4d58"
+        ]
+      },
+      "selected_topics": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "response_order"
+        ]
+      },
+      "selected_values": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "command_then_explanation"
+        ]
+      },
+      "selected_subtypes": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "output_style"
+        ]
+      }
+    },
+    "structured_intent_recovery": {
+      "attempted": false,
+      "executed": false,
+      "command": "",
+      "exit_code": null,
+      "reason": "no applicable tool preference"
+    },
+    "procedural_memory_fallback": {
+      "applied": false,
+      "evidence": "",
+      "reason": "no selected successful procedural evidence"
+    },
+    "adherence": {
+      "repair_attempted": false,
+      "repair_attempt_count": 0,
+      "initial_issues": [],
+      "remaining_issues": [],
+      "passed": true
+    },
+    "event_summary": {
+      "stored": 2,
+      "duplicate": 0,
+      "blocked": 0,
+      "tool_calls": 0,
+      "tool_results": 0,
+      "procedural_memories": 0,
+      "procedural_memory_ids": [],
+      "task_errors": 0,
+      "recovered_task_errors": 0,
+      "event_types": {
+        "user_message": 1,
+        "assistant_message": 1
+      },
+      "unknown_event_types": {
+        "SystemPromptEvent": 1,
+        "HookExecutionEvent": 1
+      }
+    }
+  },
+  "evaluation": {
+    "status": "pass",
+    "memory_system": {
+      "passed": true,
+      "context_selected": true,
+      "selected_topics": [
+        "response_order"
+      ],
+      "selected_subtypes": [
+        "output_style"
+      ],
+      "selected_values": [
+        "command_then_explanation"
+      ],
+      "failures": []
+    },
+    "agent_behavior": {
+      "passed": true,
+      "task_completed": true,
+      "first_tool": "",
+      "first_tool_correct": false,
+      "failures": []
+    },
+    "metrics": {
+      "attempted_tool_call_count": 0,
+      "tool_call_count": 0,
+      "policy_denied_tool_call_count": 0,
+      "failed_command_count": 0,
+      "repeated_command_count": 0,
+      "blocked_high_risk_count": 0,
+      "preference_policy_block_count": 0,
+      "other_policy_block_count": 0,
+      "task_error_count": 0,
+      "recovered_task_error_count": 0,
+      "structured_intent_recovery_count": 0,
+      "procedural_memory_fallback_count": 0,
+      "high_risk_safe_refusal_count": 0
+    },
+    "error_classification": [],
+    "recovered_error_classification": []
+  },
+  "events": [
+    {
+      "event_id": "evt-r02-setup-1",
+      "provenance_hash": "b84ffe7ea14559d41b6181364bd28c9bccf0e4c16751a74c68d642e39f37c614",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r02-history",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "刚才解释太长，以后回答先给命令，再解释原因。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-06T09:54:35.259269+00:00",
+      "source_uri": "memory-value-real://R02/setup/1",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-06T09:54:35.259676+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "145d0ee1-1caf-466a-a5cc-51612fc13214",
+      "provenance_hash": "4f0ad4dfd65216106eba36399b66de8f6bad5dbfcebe9c37bcb542354dee03ea",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r02-live",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "如何在 Linux 中显示当前工作目录？",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R02/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-06T17:54:37.056649",
+      "source_uri": "openhands://r02-live/145d0ee1-1caf-466a-a5cc-51612fc13214",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-06T09:54:37.056912+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "cc742f0e-4c46-4b88-b308-074a8f376fbf",
+      "provenance_hash": "173618c02a13f8a990674622f5fba8c3c100c279376cea6339de1fd4af4a3c24",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r02-live",
+      "turn_id": "turn-1",
+      "sequence": 2,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "`pwd` `pwd` 会打印当前工作目录的完整路径。 如果你还想同时看目录内容，可以用 `ls`；但显示“当前所在位置”就是 `pwd`。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R02/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-06T17:54:41.359090",
+      "source_uri": "openhands://r02-live/cc742f0e-4c46-4b88-b308-074a8f376fbf",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-06T09:54:41.359578+00:00",
+      "tool_args": {}
+    }
+  ],
+  "workspace_before": [
+    {
+      "path": "README.txt",
+      "size": 21
+    }
+  ],
+  "workspace_after": [
+    {
+      "path": "README.txt",
+      "size": 21
+    }
+  ]
+}

@@ -44,6 +44,18 @@ class SQLiteMetaStore:
                 valid_from TEXT NOT NULL DEFAULT '',
                 valid_to TEXT,
                 superseded_by TEXT,
+                preference_topic TEXT NOT NULL DEFAULT '',
+                preference_value TEXT NOT NULL DEFAULT '',
+                preference_scope TEXT NOT NULL DEFAULT 'global',
+                preference_explicit INTEGER NOT NULL DEFAULT 1,
+                agent_name TEXT NOT NULL DEFAULT '',
+                preference_session_id TEXT NOT NULL DEFAULT '',
+                project_root TEXT NOT NULL DEFAULT '',
+                task_type TEXT NOT NULL DEFAULT '',
+                trust_level TEXT NOT NULL DEFAULT 'trusted',
+                trust_score REAL NOT NULL DEFAULT 1.0,
+                governance_state TEXT NOT NULL DEFAULT 'active',
+                governance_reason TEXT NOT NULL DEFAULT '',
                 deleted INTEGER NOT NULL DEFAULT 0,
                 updated_at TEXT NOT NULL
             )
@@ -55,6 +67,18 @@ class SQLiteMetaStore:
         self._ensure_column("memory", "valid_from", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("memory", "valid_to", "TEXT")
         self._ensure_column("memory", "superseded_by", "TEXT")
+        self._ensure_column("memory", "preference_topic", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory", "preference_value", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory", "preference_scope", "TEXT NOT NULL DEFAULT 'global'")
+        self._ensure_column("memory", "preference_explicit", "INTEGER NOT NULL DEFAULT 1")
+        self._ensure_column("memory", "agent_name", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory", "preference_session_id", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory", "project_root", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory", "task_type", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory", "trust_level", "TEXT NOT NULL DEFAULT 'trusted'")
+        self._ensure_column("memory", "trust_score", "REAL NOT NULL DEFAULT 1.0")
+        self._ensure_column("memory", "governance_state", "TEXT NOT NULL DEFAULT 'active'")
+        self._ensure_column("memory", "governance_reason", "TEXT NOT NULL DEFAULT ''")
         self.conn.execute(
             """
             CREATE TABLE IF NOT EXISTS audit (
@@ -98,6 +122,79 @@ class SQLiteMetaStore:
             )
             """
         )
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS agent_events (
+                event_id TEXT PRIMARY KEY,
+                provenance_hash TEXT NOT NULL UNIQUE,
+                schema_version TEXT NOT NULL,
+                agent_name TEXT NOT NULL,
+                agent_version TEXT NOT NULL,
+                session_id TEXT NOT NULL,
+                turn_id TEXT NOT NULL,
+                sequence INTEGER NOT NULL,
+                event_type TEXT NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                tool_name TEXT NOT NULL,
+                tool_args_json TEXT NOT NULL,
+                tool_result TEXT NOT NULL,
+                exit_code INTEGER,
+                state_before TEXT NOT NULL DEFAULT '',
+                state_after TEXT NOT NULL DEFAULT '',
+                user_feedback TEXT NOT NULL DEFAULT '',
+                project_root TEXT NOT NULL DEFAULT '',
+                task_type TEXT NOT NULL DEFAULT '',
+                timestamp TEXT NOT NULL,
+                source_uri TEXT NOT NULL,
+                forgotten INTEGER NOT NULL DEFAULT 0,
+                forgotten_at TEXT,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        self._ensure_column("agent_events", "project_root", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("agent_events", "task_type", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("agent_events", "forgotten", "INTEGER NOT NULL DEFAULT 0")
+        self._ensure_column("agent_events", "forgotten_at", "TEXT")
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS memory_event_links (
+                memory_id TEXT NOT NULL,
+                event_id TEXT NOT NULL,
+                relation TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY (memory_id, event_id, relation)
+            )
+            """
+        )
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS preference_observations (
+                observation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id TEXT NOT NULL,
+                agent_name TEXT NOT NULL,
+                session_id TEXT NOT NULL,
+                topic TEXT NOT NULL,
+                value TEXT NOT NULL,
+                polarity TEXT NOT NULL,
+                preference_scope TEXT NOT NULL,
+                explicit INTEGER NOT NULL,
+                confidence REAL NOT NULL,
+                project_root TEXT NOT NULL DEFAULT '',
+                task_type TEXT NOT NULL DEFAULT '',
+                scope_agent_name TEXT NOT NULL DEFAULT '',
+                scope_session_id TEXT NOT NULL DEFAULT '',
+                promoted_memory_id TEXT,
+                created_at TEXT NOT NULL,
+                UNIQUE(event_id, topic, value, polarity, preference_scope)
+            )
+            """
+        )
+        self._ensure_column("preference_observations", "project_root", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("preference_observations", "task_type", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("preference_observations", "scope_agent_name", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("preference_observations", "scope_session_id", "TEXT NOT NULL DEFAULT ''")
         try:
             self.conn.execute(
                 """
@@ -110,7 +207,21 @@ class SQLiteMetaStore:
             self._fts_enabled = False
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_live_updated ON memory(deleted, updated_at DESC)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_tier_live ON memory(tier, deleted, updated_at DESC)")
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_governance ON memory(governance_state, deleted, updated_at DESC)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_entity_entity ON memory_entity(entity, memory_id)")
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_agent_events_session_sequence "
+            "ON agent_events(agent_name, session_id, sequence)"
+        )
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_events_type ON agent_events(event_type, created_at DESC)")
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_memory_event_links_event "
+            "ON memory_event_links(event_id, memory_id)"
+        )
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_preference_observations_topic "
+            "ON preference_observations(topic, value, created_at)"
+        )
         self.conn.commit()
 
     def close(self) -> None:
@@ -122,9 +233,12 @@ class SQLiteMetaStore:
             INSERT INTO memory (
                 memory_id, type, scope, tier, summary, content, source_kind, source_uri,
                 sensitivity_level, sensitivity_labels, sensitivity_redacted, version_id,
-                valid_from, valid_to, superseded_by, deleted, updated_at, subtype
+                valid_from, valid_to, superseded_by, preference_topic, preference_value,
+                preference_scope, preference_explicit, agent_name, preference_session_id,
+                project_root, task_type, trust_level, trust_score, governance_state,
+                governance_reason, deleted, updated_at, subtype
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(memory_id) DO UPDATE SET
                 type=excluded.type,
                 subtype=excluded.subtype,
@@ -141,6 +255,18 @@ class SQLiteMetaStore:
                 valid_from=excluded.valid_from,
                 valid_to=excluded.valid_to,
                 superseded_by=excluded.superseded_by,
+                preference_topic=excluded.preference_topic,
+                preference_value=excluded.preference_value,
+                preference_scope=excluded.preference_scope,
+                preference_explicit=excluded.preference_explicit,
+                agent_name=excluded.agent_name,
+                preference_session_id=excluded.preference_session_id,
+                project_root=excluded.project_root,
+                task_type=excluded.task_type,
+                trust_level=excluded.trust_level,
+                trust_score=excluded.trust_score,
+                governance_state=excluded.governance_state,
+                governance_reason=excluded.governance_reason,
                 deleted=excluded.deleted,
                 updated_at=excluded.updated_at
             """,
@@ -160,6 +286,18 @@ class SQLiteMetaStore:
                 record.temporal.valid_from,
                 record.temporal.valid_to,
                 record.temporal.superseded_by,
+                record.preference_topic,
+                record.preference_value,
+                record.preference_scope,
+                1 if record.preference_explicit else 0,
+                record.agent_name,
+                record.preference_session_id,
+                record.project_root,
+                record.task_type,
+                record.trust_level,
+                record.trust_score,
+                record.governance_state,
+                record.governance_reason,
                 1 if record.deleted else 0,
                 utc_now(),
                 record.subtype,
@@ -167,12 +305,16 @@ class SQLiteMetaStore:
         )
         if self._fts_enabled:
             self.conn.execute("DELETE FROM memory_fts WHERE memory_id = ?", (record.memory_id,))
-            if not record.deleted:
+            if not record.deleted and record.governance_state == "active":
                 self.conn.execute(
                     "INSERT INTO memory_fts(memory_id, content, summary, type) VALUES (?, ?, ?, ?)",
                     (record.memory_id, record.content, record.summary + " " + record.subtype, record.type),
                 )
-        self._upsert_graph(record)
+        if not record.deleted and record.governance_state == "active":
+            self._upsert_graph(record)
+        else:
+            self.conn.execute("DELETE FROM memory_entity WHERE memory_id = ?", (record.memory_id,))
+            self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (record.memory_id,))
         self.conn.commit()
 
     def update_tier(self, memory_id: str, tier: str) -> None:
@@ -206,7 +348,7 @@ class SQLiteMetaStore:
         self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (memory_id,))
         self.conn.commit()
 
-    def list_memories(self, include_deleted: bool = False, tier: Optional[str] = None, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    def list_memories(self, include_deleted: bool = False, tier: Optional[str] = None, limit: Optional[int] = None, governance_state: Optional[str] = "active") -> List[Dict[str, Any]]:
         sql = "SELECT * FROM memory"
         clauses = []
         params = []
@@ -215,6 +357,9 @@ class SQLiteMetaStore:
         if tier:
             clauses.append("tier = ?")
             params.append(tier)
+        if governance_state:
+            clauses.append("governance_state = ?")
+            params.append(governance_state)
         if clauses:
             sql += " WHERE " + " AND ".join(clauses)
         sql += " ORDER BY updated_at DESC"
@@ -223,9 +368,432 @@ class SQLiteMetaStore:
             params.append(max(0, int(limit)))
         return [dict(row) for row in self.conn.execute(sql, params)]
 
+    def list_recent_memories(
+        self,
+        limit: int,
+        exclude_ids: Optional[List[str]] = None,
+    ) -> List[Dict[str, Any]]:
+        effective_limit = max(0, int(limit))
+        if effective_limit == 0:
+            return []
+        excluded = list(dict.fromkeys(str(memory_id) for memory_id in (exclude_ids or []) if memory_id))
+        sql = "SELECT * FROM memory WHERE deleted = 0 AND governance_state = 'active'"
+        params: List[Any] = []
+        if excluded:
+            placeholders = ",".join("?" for _ in excluded)
+            sql += " AND memory_id NOT IN (%s)" % placeholders
+            params.extend(excluded)
+        sql += " ORDER BY updated_at DESC LIMIT ?"
+        params.append(effective_limit)
+        return [dict(row) for row in self.conn.execute(sql, params)]
+
     def get_memory(self, memory_id: str) -> Optional[Dict[str, Any]]:
         row = self.conn.execute("SELECT * FROM memory WHERE memory_id = ?", (memory_id,)).fetchone()
         return dict(row) if row else None
+
+    def set_governance_state(
+        self,
+        memory_id: str,
+        state: str,
+        trust_level: str,
+        trust_score: float,
+        reason: str,
+    ) -> None:
+        self.conn.execute(
+            "UPDATE memory SET governance_state = ?, trust_level = ?, trust_score = ?, "
+            "governance_reason = ?, updated_at = ? WHERE memory_id = ?",
+            (state, trust_level, float(trust_score), reason, utc_now(), memory_id),
+        )
+        self.conn.commit()
+
+    def insert_agent_event(self, event: Any) -> Dict[str, Any]:
+        cursor = self.conn.execute(
+            """
+            INSERT OR IGNORE INTO agent_events (
+                event_id, provenance_hash, schema_version, agent_name, agent_version,
+                session_id, turn_id, sequence, event_type, role, content, tool_name,
+                tool_args_json, tool_result, exit_code, state_before, state_after,
+                user_feedback, project_root, task_type, timestamp, source_uri, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                event.event_id,
+                event.provenance_hash,
+                event.schema_version,
+                event.agent_name,
+                event.agent_version,
+                event.session_id,
+                event.turn_id,
+                event.sequence,
+                event.event_type,
+                event.role,
+                event.content,
+                event.tool_name,
+                json.dumps(event.tool_args, ensure_ascii=False, sort_keys=True),
+                event.tool_result,
+                event.exit_code,
+                event.state_before,
+                event.state_after,
+                event.user_feedback,
+                event.project_root,
+                event.task_type,
+                event.timestamp,
+                event.source_uri,
+                utc_now(),
+            ),
+        )
+        self.conn.commit()
+        stored = cursor.rowcount == 1
+        row = self.conn.execute(
+            "SELECT event_id FROM agent_events WHERE provenance_hash = ?",
+            (event.provenance_hash,),
+        ).fetchone()
+        return {
+            "stored": stored,
+            "duplicate": not stored,
+            "event_id": row["event_id"] if row else event.event_id,
+            "provenance_hash": event.provenance_hash,
+        }
+
+    def list_agent_events(
+        self,
+        session_id: Optional[str] = None,
+        event_type: Optional[str] = None,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        clauses = []
+        params: List[Any] = []
+        if session_id:
+            clauses.append("session_id = ?")
+            params.append(session_id)
+        if event_type:
+            clauses.append("event_type = ?")
+            params.append(event_type)
+        sql = "SELECT * FROM agent_events"
+        if clauses:
+            sql += " WHERE " + " AND ".join(clauses)
+        sql += " ORDER BY agent_name, session_id, sequence, event_id LIMIT ?"
+        params.append(max(0, int(limit)))
+        rows = self.conn.execute(sql, params).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["tool_args"] = json.loads(item.pop("tool_args_json"))
+            item["forgotten"] = bool(item.get("forgotten"))
+            result.append(item)
+        return result
+
+    def agent_forget_impact(self, filters: Dict[str, str]) -> Dict[str, Any]:
+        event_clauses = []
+        event_params: List[Any] = []
+        for key in ("agent_name", "session_id", "turn_id"):
+            value = str(filters.get(key) or "").strip()
+            if value:
+                event_clauses.append("e.%s = ?" % key)
+                event_params.append(value)
+        start_time = str(filters.get("start_time") or "").strip()
+        end_time = str(filters.get("end_time") or "").strip()
+        if start_time:
+            event_clauses.append("e.timestamp >= ?")
+            event_params.append(start_time)
+        if end_time:
+            event_clauses.append("e.timestamp <= ?")
+            event_params.append(end_time)
+        topic = str(filters.get("preference_topic") or "").strip()
+
+        if topic:
+            sql = (
+                "SELECT DISTINCT e.event_id FROM preference_observations p "
+                "JOIN agent_events e ON e.event_id = p.event_id "
+                "WHERE p.topic = ?"
+            )
+            params: List[Any] = [topic]
+            if event_clauses:
+                sql += " AND " + " AND ".join(event_clauses)
+                params.extend(event_params)
+        else:
+            sql = "SELECT DISTINCT e.event_id FROM agent_events e"
+            params = list(event_params)
+            if event_clauses:
+                sql += " WHERE " + " AND ".join(event_clauses)
+        sql += " ORDER BY e.event_id"
+        event_ids = [str(row["event_id"]) for row in self.conn.execute(sql, params)]
+        if not event_ids:
+            return {
+                "event_ids": [],
+                "memory_ids": [],
+                "observation_count": 0,
+                "context_usage_count": 0,
+            }
+
+        placeholders = ",".join("?" for _ in event_ids)
+        memory_params: List[Any] = list(event_ids)
+        if topic:
+            memory_rows = self.conn.execute(
+                """
+                SELECT DISTINCT promoted_memory_id AS memory_id
+                FROM preference_observations
+                WHERE event_id IN (%s) AND topic = ? AND promoted_memory_id IS NOT NULL
+                ORDER BY promoted_memory_id
+                """
+                % placeholders,
+                memory_params + [topic],
+            ).fetchall()
+            observation_count = int(
+                self.conn.execute(
+                    "SELECT COUNT(*) AS count FROM preference_observations "
+                    "WHERE event_id IN (%s) AND topic = ?" % placeholders,
+                    memory_params + [topic],
+                ).fetchone()["count"]
+            )
+        else:
+            memory_rows = self.conn.execute(
+                "SELECT DISTINCT memory_id FROM memory_event_links "
+                "WHERE event_id IN (%s) ORDER BY memory_id" % placeholders,
+                memory_params,
+            ).fetchall()
+            observation_count = int(
+                self.conn.execute(
+                    "SELECT COUNT(*) AS count FROM preference_observations "
+                    "WHERE event_id IN (%s)" % placeholders,
+                    memory_params,
+                ).fetchone()["count"]
+            )
+        memory_ids = [str(row["memory_id"]) for row in memory_rows if row["memory_id"]]
+        context_usage_count = 0
+        if memory_ids:
+            for row in self.conn.execute(
+                "SELECT detail FROM audit WHERE event_type = 'agent_context_build'"
+            ):
+                try:
+                    used = json.loads(row["detail"]).get("memory_ids", [])
+                except (json.JSONDecodeError, TypeError, AttributeError):
+                    used = []
+                if any(memory_id in used for memory_id in memory_ids):
+                    context_usage_count += 1
+        return {
+            "event_ids": event_ids,
+            "memory_ids": memory_ids,
+            "observation_count": observation_count,
+            "context_usage_count": context_usage_count,
+        }
+
+    def forget_agent_event_payloads(self, event_ids: List[str]) -> int:
+        if not event_ids:
+            return 0
+        placeholders = ",".join("?" for _ in event_ids)
+        cursor = self.conn.execute(
+            """
+            UPDATE agent_events
+            SET content = '', tool_args_json = '{}', tool_result = '',
+                state_before = '', state_after = '', user_feedback = '',
+                forgotten = 1, forgotten_at = ?
+            WHERE event_id IN (%s)
+            """
+            % placeholders,
+            [utc_now()] + list(event_ids),
+        )
+        self.conn.commit()
+        return int(cursor.rowcount)
+
+    def delete_preference_observations(
+        self,
+        event_ids: List[str],
+        preference_topic: str = "",
+    ) -> int:
+        if not event_ids:
+            return 0
+        placeholders = ",".join("?" for _ in event_ids)
+        sql = "DELETE FROM preference_observations WHERE event_id IN (%s)" % placeholders
+        params: List[Any] = list(event_ids)
+        if preference_topic:
+            sql += " AND topic = ?"
+            params.append(preference_topic)
+        cursor = self.conn.execute(sql, params)
+        self.conn.commit()
+        return int(cursor.rowcount)
+
+    def link_memory_event(self, memory_id: str, event_id: str, relation: str) -> Dict[str, Any]:
+        memory = self.conn.execute(
+            "SELECT memory_id FROM memory WHERE memory_id = ?",
+            (memory_id,),
+        ).fetchone()
+        if memory is None:
+            return {"linked": False, "reason": "memory_not_found", "memory_id": memory_id, "event_id": event_id}
+        event = self.conn.execute(
+            "SELECT event_id FROM agent_events WHERE event_id = ?",
+            (event_id,),
+        ).fetchone()
+        if event is None:
+            return {"linked": False, "reason": "event_not_found", "memory_id": memory_id, "event_id": event_id}
+        cursor = self.conn.execute(
+            """
+            INSERT OR IGNORE INTO memory_event_links(memory_id, event_id, relation, created_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (memory_id, event_id, relation, utc_now()),
+        )
+        self.conn.commit()
+        return {
+            "linked": True,
+            "created": cursor.rowcount == 1,
+            "memory_id": memory_id,
+            "event_id": event_id,
+            "relation": relation,
+        }
+
+    def memory_event_evidence(self, memory_id: str) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT e.*, e.rowid AS ingest_order,
+                   l.relation, l.created_at AS linked_at
+            FROM memory_event_links l
+            JOIN agent_events e ON e.event_id = l.event_id
+            WHERE l.memory_id = ?
+            ORDER BY l.created_at ASC, e.event_id ASC
+            """,
+            (memory_id,),
+        ).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["tool_args"] = json.loads(item.pop("tool_args_json"))
+            result.append(item)
+        return result
+
+    def add_preference_observation(self, observation: Any, event: Any) -> Dict[str, Any]:
+        cursor = self.conn.execute(
+            """
+            INSERT OR IGNORE INTO preference_observations (
+                event_id, agent_name, session_id, topic, value, polarity,
+                preference_scope, explicit, confidence, project_root, task_type,
+                scope_agent_name, scope_session_id, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                event.event_id,
+                event.agent_name,
+                event.session_id,
+                observation.topic,
+                observation.value,
+                observation.polarity,
+                observation.scope,
+                1 if observation.explicit else 0,
+                observation.confidence,
+                event.project_root if observation.scope == "project" else "",
+                event.task_type if observation.scope == "task_type" else "",
+                event.agent_name if observation.scope == "agent" else "",
+                event.session_id if observation.scope == "session" else "",
+                utc_now(),
+            ),
+        )
+        self.conn.commit()
+        return {
+            "created": cursor.rowcount == 1,
+            "event_id": event.event_id,
+            "topic": observation.topic,
+            "value": observation.value,
+        }
+
+    def list_preference_aggregates(self) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT
+                topic,
+                value,
+                preference_scope,
+                project_root,
+                task_type,
+                scope_agent_name,
+                scope_session_id,
+                COUNT(*) AS evidence_count,
+                COUNT(DISTINCT session_id) AS distinct_sessions,
+                SUM(CASE WHEN polarity = 'positive' THEN 1 ELSE 0 END) AS positive_count,
+                MAX(explicit) AS explicit_confirmation,
+                MAX(promoted_memory_id) AS promoted_memory_id,
+                MIN(created_at) AS first_seen_at,
+                MAX(created_at) AS last_seen_at
+            FROM preference_observations
+            GROUP BY topic, value, preference_scope, project_root, task_type, scope_agent_name, scope_session_id
+            ORDER BY topic, value, preference_scope, project_root, task_type, scope_agent_name, scope_session_id
+            """
+        ).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            contradiction = self.conn.execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM preference_observations
+                WHERE topic = ? AND value != ?
+                  AND preference_scope = ?
+                  AND project_root = ?
+                  AND task_type = ?
+                  AND scope_agent_name = ?
+                  AND scope_session_id = ?
+                """,
+                (
+                    item["topic"],
+                    item["value"],
+                    item["preference_scope"],
+                    item["project_root"],
+                    item["task_type"],
+                    item["scope_agent_name"],
+                    item["scope_session_id"],
+                ),
+            ).fetchone()
+            item["contradiction_count"] = int(contradiction["count"] if contradiction else 0)
+            evidence_count = max(1, int(item["evidence_count"]))
+            item["positive_ratio"] = float(item.pop("positive_count") or 0) / evidence_count
+            item["explicit_confirmation"] = bool(item["explicit_confirmation"])
+            result.append(item)
+        return result
+
+    def preference_observation_event_ids(self, aggregate: Dict[str, Any]) -> List[str]:
+        rows = self.conn.execute(
+            """
+            SELECT event_id
+            FROM preference_observations
+            WHERE topic = ? AND value = ? AND preference_scope = ?
+              AND project_root = ? AND task_type = ?
+              AND scope_agent_name = ? AND scope_session_id = ?
+            ORDER BY created_at ASC, event_id ASC
+            """,
+            (
+                aggregate["topic"],
+                aggregate["value"],
+                aggregate["preference_scope"],
+                aggregate["project_root"],
+                aggregate["task_type"],
+                aggregate["scope_agent_name"],
+                aggregate["scope_session_id"],
+            ),
+        ).fetchall()
+        return [str(row["event_id"]) for row in rows]
+
+    def mark_preference_promoted(self, aggregate: Dict[str, Any], memory_id: str) -> None:
+        self.conn.execute(
+            """
+            UPDATE preference_observations
+            SET promoted_memory_id = ?
+            WHERE topic = ? AND value = ? AND preference_scope = ?
+              AND project_root = ? AND task_type = ?
+              AND scope_agent_name = ? AND scope_session_id = ?
+            """,
+            (
+                memory_id,
+                aggregate["topic"],
+                aggregate["value"],
+                aggregate["preference_scope"],
+                aggregate["project_root"],
+                aggregate["task_type"],
+                aggregate["scope_agent_name"],
+                aggregate["scope_session_id"],
+            ),
+        )
+        self.conn.commit()
 
     def search_text(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         query = query.strip()
@@ -240,7 +808,7 @@ class SQLiteMetaStore:
                         SELECT m.*, bm25(memory_fts) AS rank
                         FROM memory_fts
                         JOIN memory m ON m.memory_id = memory_fts.memory_id
-                        WHERE memory_fts MATCH ? AND m.deleted = 0
+                        WHERE memory_fts MATCH ? AND m.deleted = 0 AND m.governance_state = 'active'
                         ORDER BY rank
                         LIMIT ?
                         """,
@@ -254,7 +822,8 @@ class SQLiteMetaStore:
         rows = self.conn.execute(
             """
             SELECT *, 0.0 AS rank FROM memory
-            WHERE deleted = 0 AND (content LIKE ? OR summary LIKE ? OR type LIKE ?)
+            WHERE deleted = 0 AND governance_state = 'active'
+              AND (content LIKE ? OR summary LIKE ? OR type LIKE ?)
             LIMIT ?
             """,
             (pattern, pattern, pattern, limit),
@@ -266,7 +835,7 @@ class SQLiteMetaStore:
             """
             SELECT
                 COUNT(*) AS total_count,
-                SUM(CASE WHEN deleted = 0 THEN 1 ELSE 0 END) AS live_count,
+                SUM(CASE WHEN deleted = 0 AND governance_state = 'active' THEN 1 ELSE 0 END) AS live_count,
                 COALESCE(MAX(updated_at), '') AS max_updated_at
             FROM memory
             """
@@ -287,7 +856,7 @@ class SQLiteMetaStore:
                 + CASE WHEN m.subtype IN ('fact', 'workflow', 'procedure') THEN 1 ELSE 0 END AS graph_rank
             FROM memory_entity me
             JOIN memory m ON m.memory_id = me.memory_id
-            WHERE m.deleted = 0 AND me.entity LIKE ?
+            WHERE m.deleted = 0 AND m.governance_state = 'active' AND me.entity LIKE ?
             ORDER BY graph_rank DESC, m.updated_at ASC
             LIMIT ?
             """,
@@ -302,7 +871,7 @@ class SQLiteMetaStore:
             FROM memory_entity seed
             JOIN memory_entity me ON me.entity = seed.entity AND me.memory_id != seed.memory_id
             JOIN memory m ON m.memory_id = me.memory_id
-            WHERE seed.memory_id = ? AND m.deleted = 0
+            WHERE seed.memory_id = ? AND m.deleted = 0 AND m.governance_state = 'active'
             ORDER BY m.updated_at DESC
             LIMIT ?
             """,

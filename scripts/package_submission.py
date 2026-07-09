@@ -49,6 +49,8 @@ ROLE_DESCRIPTIONS = {
 FORMAL_DOCS = {
     "README.md",
     "PROJECT_INDEX.md",
+    "PRODUCT.md",
+    "DESIGN.md",
     "docs/01_项目简介.md",
     "docs/02_用户手册.md",
     "docs/03_操作手册.md",
@@ -76,16 +78,24 @@ FORMAL_DOCS = {
     "docs/详细设计说明书.md",
     "docs/安全设计说明书.md",
     "docs/操作系统机制说明.md",
+    "docs/openKylin原生化适配说明.md",
     "docs/Peony与UKUI桌面集成实现说明.md",
     "docs/麒麟SDK集成证据.md",
     "docs/openKylin验证记录.md",
     "docs/部署手册.md",
     "docs/用户手册.md",
     "docs/测试报告.md",
+    "docs/真实Agent接入使用说明.md",
+    "docs/真实Agent闭环测试报告.md",
+    "docs/真实Agent记忆价值评测报告.md",
     "docs/评委证据包索引.md",
     "docs/答辩提纲.md",
     "docs/答辩稿.md",
     "docs/演示视频脚本.md",
+    "docs/sbom.json",
+    "docs/供应链与SBOM说明.md",
+    "docs/security_scan.json",
+    "docs/安全扫描报告.md",
     "docs/交付文档/MemGuardOS中文操作手册.md",
     "docs/交付文档/MemGuardOS中文操作手册.docx",
     "docs/交付文档/MemGuardOS中文操作手册.pdf",
@@ -101,18 +111,37 @@ FORMAL_SCRIPTS = {
     "scripts/bpftrace_sensitive_open.bt",
     "scripts/build_ukui_plugins.sh",
     "scripts/build_deb.sh",
+    "scripts/build_deb_packages.py",
+    "scripts/verify_deb_lifecycle.sh",
     "scripts/collect_openkylin_evidence.sh",
+    "scripts/collect_openkylin_native_evidence.sh",
+    "scripts/collect_agent_evidence.sh",
     "scripts/demo_smoke.py",
     "scripts/diagnose_kylin_embedding.sh",
     "scripts/fix_kylin_embedding_runtime.sh",
     "scripts/generate_bpf_lsm_policy.py",
     "scripts/install_auditd_rules.sh",
     "scripts/install_openkylin.sh",
+    "scripts/install_agent_extras_openkylin.sh",
     "scripts/install_ukui_plugins.sh",
     "scripts/kylin_embedding_probe.cpp",
     "scripts/kylin_vector_probe.cpp",
     "scripts/memguardd.service",
     "scripts/memguardd@.service",
+    "scripts/memguard-agent@.service",
+    "scripts/memguard-kylin-warmup.service",
+    "scripts/memguardos-native-helper.sh",
+    "packaging/debian/packages.json",
+    "packaging/desktop/memguardos-tray.desktop",
+    "scripts/warmup_kylin_sdk.sh",
+    "scripts/memguard_agent_bridge.py",
+    "scripts/openhands_memory_hook.py",
+    "scripts/run_openhands_memguard_demo.py",
+    "scripts/evaluate_agent_interactions.py",
+    "scripts/evaluate_memory_value.py",
+    "scripts/run_openhands_behavior_suite.py",
+    "scripts/collect_memory_value_evidence.sh",
+    "scripts/generate_sbom.py",
     "scripts/openkylin_verify.sh",
     "scripts/peony_file_scan_smoke.sh",
     "scripts/probe_ukui_deep_plugins.sh",
@@ -151,6 +180,8 @@ def classify_file(path: Path) -> str:
         return "作品主体/脚本"
     if rel.startswith("scripts/"):
         return "过程与工程支撑文档"
+    if rel.startswith("packaging/"):
+        return "作品主体/原生增强"
     if rel.startswith("native/"):
         return "作品主体/原生增强"
     if rel in PROCESS_TESTS:
@@ -194,7 +225,9 @@ def should_skip(path: Path) -> bool:
     rel = path.relative_to(ROOT).as_posix()
     if rel.startswith("docs/research/"):
         return True
-    if rel.startswith("docs/evidence/openkylin_") or rel.startswith("docs/evidence/kylin_embedding_diag_"):
+    if rel.startswith("docs/evidence/openkylin_") and not rel.startswith("docs/evidence/openkylin_native_latest/"):
+        return True
+    if rel.startswith("docs/evidence/kylin_embedding_diag_"):
         return True
     rel_parts = path.relative_to(ROOT).parts
     if any(part in EXCLUDED_DIRS for part in rel_parts):

@@ -1,0 +1,367 @@
+{
+  "case_id": "R15",
+  "title": "复用 pytest 路径错误后的正确测试命令",
+  "category": "repair_experience",
+  "model": "openai/gpt-5.4-mini",
+  "setup_event_count": 4,
+  "forget_result": null,
+  "run": {
+    "ok": true,
+    "session_id": "r15-live",
+    "trace_id": "ctx_702f111df6274ed9",
+    "context_file": "context.json",
+    "duration_ms": 9733.826,
+    "context": {
+      "trace_id": "ctx_702f111df6274ed9",
+      "stage_budgets": {
+        "planning": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 1289,
+          "estimated_context_tokens": 359,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "tool_selection": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 1301,
+          "estimated_context_tokens": 362,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "response_generation": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        }
+      },
+      "selected_memory_ids": {
+        "planning": [
+          "mem_8bc9691a71cf4f91",
+          "mem_0b4c2535137242d9"
+        ],
+        "tool_selection": [
+          "mem_8bc9691a71cf4f91",
+          "mem_0b4c2535137242d9"
+        ],
+        "response_generation": []
+      },
+      "selected_topics": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": []
+      },
+      "selected_values": {
+        "planning": [
+          "python"
+        ],
+        "tool_selection": [
+          "python"
+        ],
+        "response_generation": []
+      },
+      "selected_subtypes": {
+        "planning": [
+          "tool_failure_case",
+          "procedural_trace"
+        ],
+        "tool_selection": [
+          "tool_failure_case",
+          "procedural_trace"
+        ],
+        "response_generation": []
+      }
+    },
+    "structured_intent_recovery": {
+      "attempted": false,
+      "executed": false,
+      "command": "",
+      "exit_code": null,
+      "reason": "no applicable tool preference"
+    },
+    "procedural_memory_fallback": {
+      "applied": true,
+      "evidence": "passed",
+      "reason": "verified procedural result added to final evidence"
+    },
+    "adherence": {
+      "repair_attempted": false,
+      "repair_attempt_count": 0,
+      "initial_issues": [],
+      "remaining_issues": [],
+      "passed": true
+    },
+    "event_summary": {
+      "stored": 3,
+      "duplicate": 0,
+      "blocked": 0,
+      "tool_calls": 0,
+      "tool_results": 0,
+      "procedural_memories": 0,
+      "procedural_memory_ids": [],
+      "task_errors": 0,
+      "recovered_task_errors": 0,
+      "event_types": {
+        "user_message": 1,
+        "assistant_message": 2
+      },
+      "unknown_event_types": {
+        "SystemPromptEvent": 1,
+        "HookExecutionEvent": 1
+      }
+    }
+  },
+  "evaluation": {
+    "status": "pass",
+    "memory_system": {
+      "passed": true,
+      "context_selected": true,
+      "selected_topics": [],
+      "selected_subtypes": [
+        "procedural_trace",
+        "tool_failure_case"
+      ],
+      "selected_values": [
+        "python"
+      ],
+      "failures": []
+    },
+    "agent_behavior": {
+      "passed": true,
+      "task_completed": true,
+      "first_tool": "python",
+      "first_tool_correct": true,
+      "failures": []
+    },
+    "metrics": {
+      "attempted_tool_call_count": 0,
+      "tool_call_count": 0,
+      "policy_denied_tool_call_count": 0,
+      "failed_command_count": 0,
+      "repeated_command_count": 0,
+      "blocked_high_risk_count": 0,
+      "preference_policy_block_count": 0,
+      "other_policy_block_count": 0,
+      "task_error_count": 0,
+      "recovered_task_error_count": 0,
+      "structured_intent_recovery_count": 0,
+      "procedural_memory_fallback_count": 1,
+      "high_risk_safe_refusal_count": 0
+    },
+    "error_classification": [],
+    "recovered_error_classification": []
+  },
+  "events": [
+    {
+      "event_id": "evt-r15-setup-1",
+      "provenance_hash": "801d989e9923cee59953128d9d0609f67892115690edfa11fbe0f84022aba765",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r15-history",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "尝试运行不存在的测试文件",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:03:43.452795+00:00",
+      "source_uri": "memory-value-real://R15/setup/1",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:03:43.453020+00:00",
+      "tool_args": {
+        "command": "python -m pytest tests/test_missing.py -q"
+      }
+    },
+    {
+      "event_id": "evt-r15-setup-2",
+      "provenance_hash": "510147b04f956cc8703849722109f0000495333a7f110a7f0b4d18479134bd2e",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r15-history",
+      "turn_id": "turn-2",
+      "sequence": 2,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "ERROR: file or directory not found: tests/test_missing.py",
+      "exit_code": 4,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:03:43.461001+00:00",
+      "source_uri": "memory-value-real://R15/setup/2",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:03:43.461188+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "evt-r15-setup-3",
+      "provenance_hash": "53bb2cddcff71fa4bfa703d59b004f6fedce2305ca220fe6b8dd6c688e7962cd",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r15-history",
+      "turn_id": "turn-3",
+      "sequence": 3,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "改用存在的测试文件",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:03:43.478338+00:00",
+      "source_uri": "memory-value-real://R15/setup/3",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:03:43.478525+00:00",
+      "tool_args": {
+        "command": "python -m pytest tests/test_core.py -q"
+      }
+    },
+    {
+      "event_id": "evt-r15-setup-4",
+      "provenance_hash": "f5d0b42bb458a0a5cc6b6eaa5b300f68528204b29e43b282ff9c53620a53c06b",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r15-history",
+      "turn_id": "turn-4",
+      "sequence": 4,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "passed",
+      "exit_code": 0,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:03:43.486582+00:00",
+      "source_uri": "memory-value-real://R15/setup/4",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:03:43.486790+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "76ec889d-da3f-455a-add8-293c8dee662f",
+      "provenance_hash": "21777e8b077f90fd801995958e7baf08ae913a2fa6d28a6b5def38ffe7423a6e",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r15-live",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "请说明应该用哪个 pytest 命令复验核心模块，避免不存在的测试路径。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R15/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T15:03:43.849390",
+      "source_uri": "openhands://r15-live/76ec889d-da3f-455a-add8-293c8dee662f",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:03:43.853513+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "f3595e06-ac5c-41bb-b87a-85ae48639ab9",
+      "provenance_hash": "c0b1ab344dfa7db1c8d11c1520105132b3b5ccaadbee4373d03229f9ea067631",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r15-live",
+      "turn_id": "turn-1",
+      "sequence": 2,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "复验核心模块用这个命令： ```bash python -m pytest tests/test_core.py -q ``` 不要用 `tests/test_missing.py`，那个路径不存在。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R15/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T15:03:53.212867",
+      "source_uri": "openhands://r15-live/f3595e06-ac5c-41bb-b87a-85ae48639ab9",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:03:53.213109+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "evt_347ea3f32e6a4ea0",
+      "provenance_hash": "1e3166ddfee805a9e1701d37f1f51c51ecda1189286f13119846c2351c59e285",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r15-live",
+      "turn_id": "turn-1",
+      "sequence": 3,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "基于已验证的程序性记忆，结果为：passed",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R15/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:03:53.223020+00:00",
+      "source_uri": "memguard-recovery://r15-live/procedural-result",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:03:53.223258+00:00",
+      "tool_args": {
+        "execution_origin": "procedural_memory_fallback"
+      }
+    }
+  ],
+  "workspace_before": [
+    {
+      "path": "tests/test_core.py",
+      "size": 40
+    }
+  ],
+  "workspace_after": [
+    {
+      "path": "tests/test_core.py",
+      "size": 40
+    }
+  ]
+}

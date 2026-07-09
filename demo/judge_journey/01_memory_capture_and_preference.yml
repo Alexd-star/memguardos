@@ -1,0 +1,17 @@
+title: "用户-Agent 交互记忆捕捉"
+goal: "展示 MemGuardOS 如何从用户与 Agent 的交互中抽取偏好，并把工具执行结果沉淀为程序性记忆。"
+commands:
+  - "python scripts/demo_smoke.py"
+  - "python -m pytest tests/test_agent_context.py::test_agent_context_pins_scoped_preferences_before_retrieval -q"
+expected_outputs:
+  - "偏好记忆被写入受管存储"
+  - "工具结果包含 state_before/action/result/state_after/lesson"
+  - "审计链可验证"
+evidence_files:
+  - "docs/evidence/agent_latest/session_a_events.json"
+  - "docs/evidence/agent_latest/audit_verify.json"
+judge_talking_points:
+  - "赛题要求的用户行为是用户与 Agent 的交互习惯，不是全盘监听桌面行为。"
+  - "MemGuardOS 记录的是可复验、可遗忘、可审计的受管记忆。"
+fallback_if_environment_missing:
+  - "若 OpenHands 未运行，使用离线 Agent 事件样例证明抽取链路，不宣称模型实时完成任务。"

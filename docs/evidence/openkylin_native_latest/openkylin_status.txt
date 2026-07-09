@@ -1,0 +1,291 @@
+$ python3 -m memguard.cli.memctl openkylin-status
+{
+  "schema": "memguardos-openkylin-native-status-v1",
+  "system": {
+    "platform": "Linux-6.6.0-19-generic-x86_64-with-glibc2.38",
+    "kernel": "6.6.0-19-generic",
+    "machine": "x86_64",
+    "distribution_id": "openkylin",
+    "distribution_name": "openKylin",
+    "distribution_version": "2.0 SP2 (nile)",
+    "is_openkylin_like": true
+  },
+  "services": {
+    "systemd": {
+      "available": true,
+      "active": true,
+      "note": "systemctl available"
+    },
+    "memguardd.service": {
+      "available": true,
+      "active": true,
+      "state": "active",
+      "enabled": "enabled"
+    },
+    "kylin-ai-vector-engine.service": {
+      "available": false,
+      "active": false,
+      "state": "inactive",
+      "enabled": "not-found"
+    },
+    "kytensor.service": {
+      "available": true,
+      "active": true,
+      "state": "active",
+      "enabled": "enabled"
+    }
+  },
+  "sdk": {
+    "embedding": {
+      "backend": "kylin_coreai_embedding",
+      "status_mode": "fast",
+      "library": "libkysdk-coreai-embedding.so.1",
+      "library_file": "/lib/x86_64-linux-gnu/libkysdk-coreai-embedding.so.1",
+      "library_loadable": null,
+      "headers": {
+        "/usr/include/kylin-ai/coreai/embedding/embedding.h": true,
+        "/usr/include/kylin-ai/plugins/ai-engines/ondeviceembeddingengine.h": true
+      },
+      "runtime": {
+        "binary": "/usr/bin/kylin-ai-runtime",
+        "binary_exists": true,
+        "base_dir": "/tmp/.kylin-ai-runtime-unix/1000",
+        "base_dir_exists": true,
+        "sockets": {
+          "core-textembedding.sock": "/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock",
+          "config.sock": "/tmp/.kylin-ai-runtime-unix/1000/config.sock"
+        },
+        "socket_exists": {
+          "core-textembedding.sock": true,
+          "config.sock": true
+        }
+      },
+      "kytensor": {
+        "service": {
+          "available": true,
+          "active": true,
+          "state": "active",
+          "enabled": "enabled"
+        },
+        "repository_index": {
+          "available": true,
+          "ok": true,
+          "models": [
+            "embd_cn-clip_512-uint8-image",
+            "embd_cn-clip_512-uint8-text",
+            "embd_gte-base_uint8-text",
+            "ensemble-embd_cn-clip_512-uint8-text",
+            "ensemble-embd_gte-base_uint8-text",
+            "matting_portrait",
+            "model_bank",
+            "ocr_ppocr",
+            "tokenizer_cn-clip_512-uint8-text",
+            "tokenizer_gte-base_uint8-text"
+          ],
+          "has_text_embedding_models": true
+        }
+      },
+      "session": null,
+      "model_info": {
+        "name": "gte text embedding model detected",
+        "dim": 768,
+        "ondevice": true
+      },
+      "embedding_probe": null,
+      "available": true,
+      "inference_ready": null,
+      "ready_for_default_retrieval": false,
+      "capability_state": "recently_ready",
+      "component_ready": true,
+      "product_state": {
+        "installed": true,
+        "last_probe_success": true,
+        "last_success_at": "2026-07-09T18:26:53+08:00",
+        "last_success_dim": 768,
+        "last_success_model": "ensemble-embd_gte-base_uint8-text",
+        "last_failure_at": "",
+        "last_failure_reason": "",
+        "warmup_state": "ready",
+        "fallback": "hash_embedding",
+        "user_message": "已安装，最近一次端侧向量预热成功"
+      },
+      "user_message": "已安装，最近一次端侧向量预热成功",
+      "next_action": "可继续使用；需要复核时点击“检查端侧向量能力”",
+      "fallback": "hash_embedding",
+      "diagnosis": {
+        "availability_meaning": "fast mode checks files, sockets and services only; run sdk-status --probe-embedding for real inference.",
+        "probe_meaning": "not executed in fast mode to keep UKUI settings responsive."
+      }
+    },
+    "vector_store": {
+      "backend": "kysdk_vector_engine_client",
+      "status_mode": "fast",
+      "library": "libkysdk-vector-engine-client.so.1",
+      "library_loadable": null,
+      "headers": {
+        "/usr/include/kysdk-vector-engine-client/Database.h": true
+      },
+      "binary": "/usr/bin/kylin-ai-vector-engine",
+      "default_binary": "/usr/bin/kylin-ai-vector-engine-default",
+      "user_service": {
+        "available": false,
+        "active": false,
+        "state": "inactive",
+        "enabled": "not-found"
+      },
+      "socket": "/tmp/kylin-ai-vector-engine-1000.sock",
+      "socket_exists": true,
+      "available": true,
+      "capability_state": "socket_ready",
+      "component_ready": true,
+      "user_message": "向量服务接口可连接",
+      "next_action": "可继续使用；如需服务管理状态，可在系统维护中刷新服务",
+      "fallback": "sqlite_fts_hash_vector"
+    }
+  },
+  "desktop": {
+    "session_desktop": "",
+    "desktop_session": "",
+    "peony": {
+      "available": true,
+      "plugin_path": "/usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so",
+      "plugin_installed": true
+    },
+    "ukui_control_center": {
+      "available": true,
+      "plugin_path": "/usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so",
+      "plugin_installed": true
+    },
+    "notify_send": {
+      "available": true
+    }
+  },
+  "security": {
+    "auditd": {
+      "available": true,
+      "rules_tool_available": true
+    },
+    "bpf_lsm": {
+      "source_available": true,
+      "loader_available": true,
+      "note": "可选强制拦截能力，默认仅用于安全测试路径和可审查 denylist。"
+    },
+    "polkit": {
+      "available": true,
+      "policy_path": "/usr/share/polkit-1/actions/org.memguardos.policy",
+      "policy_installed": true
+    }
+  },
+  "resources": {
+    "cgroup_v2": true,
+    "service_managed": true,
+    "control_group": "/system.slice/memguardd.service",
+    "diagnosis_code": "ready",
+    "advice": "服务级 cgroup 资源状态正常。",
+    "memory": {
+      "cgroup_memory_current": "17657856",
+      "cgroup_memory_max": "536870912"
+    },
+    "cpu": {
+      "cpu_max": "50000 100000",
+      "cpu_quota_per_sec_usec": "500ms",
+      "cpu_stat": {
+        "usage_usec": 5530816,
+        "user_usec": 3027757,
+        "system_usec": 2503058,
+        "nice_usec": 0,
+        "core_sched.force_idle_usec": 0,
+        "nr_periods": 3002,
+        "nr_throttled": 5,
+        "throttled_usec": 200007,
+        "nr_bursts": 0,
+        "burst_usec": 0
+      }
+    },
+    "namespace": "default"
+  },
+  "namespace": {
+    "namespace": "default",
+    "is_default": true,
+    "home": "/home/luo/.memguardos",
+    "home_exists": true,
+    "namespace_home": "/home/luo/.memguardos",
+    "namespace_home_exists": true,
+    "store_path": "/home/luo/.memguardos/memory.segment",
+    "db_path": "/home/luo/.memguardos/memguard.sqlite3",
+    "custom_patterns_path": "/home/luo/.memguardos/sensitive_patterns.json",
+    "store_exists": true,
+    "db_exists": true,
+    "custom_patterns_exists": false,
+    "store_bytes": 432503,
+    "db_bytes": 1363968,
+    "record_count": 193,
+    "live_record_count": 155,
+    "audit_event_count": 1439
+  },
+  "summary": {
+    "overall": "green",
+    "readiness_score": 1.0,
+    "green": 7,
+    "yellow": 0,
+    "red": 0
+  },
+  "components": [
+    {
+      "name": "systemd",
+      "label": "systemd 服务管理",
+      "available": true,
+      "ready": true,
+      "level": "green"
+    },
+    {
+      "name": "auditd",
+      "label": "审计规则工具",
+      "available": true,
+      "ready": true,
+      "level": "green"
+    },
+    {
+      "name": "kylin_embedding",
+      "label": "Kylin embedding SDK",
+      "available": true,
+      "ready": true,
+      "level": "green",
+      "user_message": "已安装，最近一次端侧向量预热成功",
+      "next_action": "可继续使用；需要复核时点击“检查端侧向量能力”",
+      "capability_state": "recently_ready"
+    },
+    {
+      "name": "kylin_vector",
+      "label": "Kylin vector SDK",
+      "available": true,
+      "ready": true,
+      "level": "green",
+      "user_message": "向量服务接口可连接",
+      "next_action": "可继续使用；如需服务管理状态，可在系统维护中刷新服务",
+      "capability_state": "socket_ready"
+    },
+    {
+      "name": "peony",
+      "label": "Peony 右键插件",
+      "available": true,
+      "ready": true,
+      "level": "green"
+    },
+    {
+      "name": "ukui_control_center",
+      "label": "UKUI 控制中心插件",
+      "available": true,
+      "ready": true,
+      "level": "green"
+    },
+    {
+      "name": "cgroup_v2",
+      "label": "cgroup v2 资源治理",
+      "available": true,
+      "ready": true,
+      "level": "green"
+    }
+  ],
+  "recommendations": []
+}

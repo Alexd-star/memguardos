@@ -1,24 +1,22 @@
-$ .venv/bin/python -m memguard.eval.run_eval --latency-size 10000 --latency-queries 150 --output docs/evidence/openkylin_20260607_123336/eval_result_openkylin_10k.json --markdown docs/evidence/openkylin_20260607_123336/eval_report_openkylin_10k.md
-
 {
   "dataset": {
-    "seed_memories": 53,
-    "retrieval_cases": 48,
+    "seed_memories": 59,
+    "retrieval_cases": 54,
     "sensitive_cases": 31,
-    "forgetting_cases": 25,
+    "forgetting_cases": 29,
     "conflict_cases": 10,
-    "graph_cases": 17,
+    "graph_cases": 19,
     "quality_cases": 6,
-    "procedural_cases": 7
+    "procedural_cases": 9
   },
   "preference_and_knowledge_extraction": {
     "type_accuracy": 1.0,
-    "subtype_accuracy": 0.9811,
+    "subtype_accuracy": 1.0,
     "preference_precision": 1.0,
-    "preference_true_positive": 12,
+    "preference_true_positive": 13,
     "preference_false_positive": 0,
     "knowledge_precision": 1.0,
-    "knowledge_true_positive": 39,
+    "knowledge_true_positive": 42,
     "knowledge_false_positive": 0
   },
   "data_quality": {
@@ -29,11 +27,11 @@ $ .venv/bin/python -m memguard.eval.run_eval --latency-size 10000 --latency-quer
   "retrieval": {
     "mean_recall_at_5": 1.0,
     "cross_language_recall_at_5": 1.0,
-    "p50_latency_ms": 12.451,
-    "p95_latency_ms": 13.871
+    "p50_latency_ms": 13.022,
+    "p95_latency_ms": 17.829
   },
   "baseline_comparison": {
-    "text_only_recall_at_5": 0.8229,
+    "text_only_recall_at_5": 0.8426,
     "hybrid_no_graph_recall_at_5": 1.0,
     "full_memguardos_recall_at_5": 1.0
   },
@@ -63,12 +61,12 @@ $ .venv/bin/python -m memguard.eval.run_eval --latency-size 10000 --latency-quer
   "latency_load": {
     "memory_count": 10000,
     "query_count": 150,
-    "p50_latency_ms": 9.185,
-    "p95_latency_ms": 10.844,
-    "p99_latency_ms": 106.095,
-    "segment_kb": 29231.307,
-    "sqlite_kb": 51580.0,
-    "total_store_kb": 85317.4
+    "p50_latency_ms": 9.097,
+    "p95_latency_ms": 10.105,
+    "p99_latency_ms": 75.255,
+    "segment_kb": 31096.541,
+    "sqlite_kb": 51672.0,
+    "total_store_kb": 87230.377
   },
   "concurrent_search": {
     "memory_count": 1000,
@@ -77,9 +75,9 @@ $ .venv/bin/python -m memguard.eval.run_eval --latency-size 10000 --latency-quer
     "read_path_audit": "disabled_for_latency_measurement",
     "errors": [],
     "ok": true,
-    "p50_latency_ms": 0.874,
-    "p95_latency_ms": 654.302,
-    "p99_latency_ms": 782.799,
+    "p50_latency_ms": 0.732,
+    "p95_latency_ms": 139.264,
+    "p99_latency_ms": 206.772,
     "audit_chain_ok": true,
     "audit_events_checked": 1000,
     "policy_eviction_candidates": 5
@@ -94,14 +92,14 @@ $ .venv/bin/python -m memguard.eval.run_eval --latency-size 10000 --latency-quer
       2,
       3
     ],
-    "total_latency_ms": 77.418,
-    "p95_latency_ms": 15.427,
+    "total_latency_ms": 132.457,
+    "p95_latency_ms": 11.699,
     "audit_chain_ok": true,
     "read_path_audit": "single_batch_audit_event"
   },
   "procedural_memory": {
-    "state_action_result_cases": 7,
-    "stored_cases": 7,
+    "state_action_result_cases": 9,
+    "stored_cases": 9,
     "recall_at_5": 1.0,
     "procedural_subtype_hit_rate": 1.0,
     "hierarchical_graph_layers_ok": true,
@@ -119,20 +117,20 @@ $ .venv/bin/python -m memguard.eval.run_eval --latency-size 10000 --latency-quer
     "policy": "仅使用已返回且已脱敏的记忆作为 OS Agent 生成上下文；不得输出被精准遗忘或被敏感策略阻断的明文。"
   },
   "resource_usage": {
-    "eval_wall_time_ms": 191480.781,
-    "eval_cpu_time_ms": 99358.828,
-    "tracemalloc_current_kb": 14015.885,
-    "tracemalloc_peak_kb": 28141.18,
-    "process_rss_kb": 149284.0,
-    "baseline_rss_kb": 28644.0,
-    "rss_delta_kb": 120640.0,
+    "eval_wall_time_ms": 196850.517,
+    "eval_cpu_time_ms": 101576.856,
+    "tracemalloc_current_kb": 7952.589,
+    "tracemalloc_peak_kb": 22977.228,
+    "process_rss_kb": 130444.0,
+    "baseline_rss_kb": 26140.0,
+    "rss_delta_kb": 104304.0,
     "baseline_method": "current process RSS sampled before MemGuardService initialization"
   },
   "storage_footprint": {
-    "main_segment_kb": 147.465,
-    "main_sqlite_kb": 264.0,
-    "total_eval_store_kb": 4580.919,
-    "bytes_per_live_memory": 65150.847
+    "main_segment_kb": 176.594,
+    "main_sqlite_kb": 448.0,
+    "total_eval_store_kb": 4843.144,
+    "bytes_per_live_memory": 63581.782
   },
-  "memory_count": 72
+  "memory_count": 78
 }

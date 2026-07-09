@@ -56,6 +56,8 @@ def _steps(*, include_package: bool) -> list[tuple[str, list[str]]]:
     py = sys.executable
     steps = [
         ("compile", [py, "-m", "compileall", "-q", "memguard", "scripts"]),
+        ("generate sbom", [py, "scripts/generate_sbom.py"]),
+        ("security scan", [py, "scripts/run_security_scan.py"]),
         ("ruff", [py, "-m", "ruff", "check", "."]),
         ("pytest", [py, "-m", "pytest", "-q"]),
         ("docs links", [py, "scripts/check_docs_links.py"]),

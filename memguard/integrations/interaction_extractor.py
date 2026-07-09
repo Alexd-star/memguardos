@@ -1,0 +1,330 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import List
+import re
+
+from memguard.integrations.events import AgentInteractionEvent
+
+
+@dataclass(frozen=True)
+class PreferenceObservation:
+    topic: str
+    value: str
+    polarity: str
+    scope: str
+    explicit: bool
+    confidence: float
+    evidence_event_id: str
+
+
+@dataclass(frozen=True)
+class InteractionExtractionResult:
+    remember_allowed: bool
+    reason: str = ""
+    observations: List[PreferenceObservation] = field(default_factory=list)
+
+
+def extract_interaction_preferences(event: AgentInteractionEvent) -> InteractionExtractionResult:
+    if event.role != "user" or event.event_type not in {"user_message", "user_feedback"}:
+        return InteractionExtractionResult(remember_allowed=True)
+
+    text = " ".join(part for part in (event.content, event.user_feedback) if part).strip()
+    if _requests_no_memory(text):
+        return InteractionExtractionResult(
+            remember_allowed=False,
+            reason="user_requested_no_memory",
+        )
+
+    observations: List[PreferenceObservation] = []
+    lowered = text.lower()
+
+    if _has_one_time_tool_exception(text, lowered):
+        observations.append(_observation(event, "code_search_tool", "grep", scope="session"))
+        observations.append(_observation(event, "code_search_tool", "rg", scope="global"))
+    elif _prefers_rg(text, lowered):
+        observations.append(
+            _observation(
+                event,
+                "code_search_tool",
+                "rg",
+                scope=_scope_for_text(text, lowered),
+                explicit=_explicit_tool_preference(text, lowered),
+            )
+        )
+    elif _prefers_grep(text, lowered):
+        observations.append(
+            _observation(
+                event,
+                "code_search_tool",
+                "grep",
+                scope=_scope_for_text(text, lowered),
+                explicit=_explicit_tool_preference(text, lowered),
+            )
+        )
+
+    if _prefers_python_pytest(text, lowered):
+        observations.append(
+            _observation(
+                event,
+                "test_runner_command",
+                "python -m pytest",
+                scope=_scope_for_text(text, lowered),
+                explicit=_explicit_command_preference(text, lowered),
+            )
+        )
+
+    service_log_command = _preferred_service_log_command(text)
+    if service_log_command:
+        observations.append(
+            _observation(
+                event,
+                "service_log_tool",
+                service_log_command,
+                scope=_scope_for_text(text, lowered),
+                explicit=_explicit_command_preference(text, lowered),
+            )
+        )
+
+    if _command_before_explanation(text, lowered):
+        observations.append(
+            _observation(
+                event,
+                "response_order",
+                "command_then_explanation",
+                scope=_scope_for_text(text, lowered),
+            )
+        )
+    if _prefers_chinese(text, lowered):
+        observations.append(
+            _observation(
+                event,
+                "response_language",
+                "zh-CN",
+                scope=_scope_for_text(text, lowered),
+            )
+        )
+    if _prefers_concise(text, lowered):
+        observations.append(
+            _observation(
+                event,
+                "response_verbosity",
+                "concise",
+                scope=_scope_for_text(text, lowered),
+            )
+        )
+    if _requires_risk_confirmation(text, lowered):
+        observations.append(
+            _observation(
+                event,
+                "high_risk_confirmation",
+                "required",
+                scope=_scope_for_text(text, lowered),
+            )
+        )
+
+    return InteractionExtractionResult(
+        remember_allowed=True,
+        observations=_dedupe_observations(observations),
+    )
+
+
+def _observation(
+    event: AgentInteractionEvent,
+    topic: str,
+    value: str,
+    scope: str = "global",
+    explicit: bool = True,
+) -> PreferenceObservation:
+    return PreferenceObservation(
+        topic=topic,
+        value=value,
+        polarity="positive",
+        scope=scope,
+        explicit=explicit,
+        confidence=0.98 if explicit else 0.72,
+        evidence_event_id=event.event_id,
+    )
+
+
+def _requests_no_memory(text: str) -> bool:
+    lowered = text.lower()
+    return any(
+        marker in lowered
+        for marker in (
+            "不要记住",
+            "不要保存这条",
+            "别记住",
+            "do not remember",
+            "don't remember",
+            "do not store",
+        )
+    )
+
+
+def _has_one_time_tool_exception(text: str, lowered: str) -> bool:
+    return (
+        any(marker in text for marker in ("这次", "仅本次", "本轮"))
+        and "grep" in lowered
+        and any(marker in text for marker in ("下次", "以后", "仍然", "还是"))
+        and "rg" in lowered
+    )
+
+
+def _prefers_rg(text: str, lowered: str) -> bool:
+    return "rg" in lowered and any(
+        marker in lowered
+        for marker in ("优先", "首选", "默认", "prefer", "use rg", "使用 rg", "用 rg")
+    )
+
+
+def _prefers_grep(text: str, lowered: str) -> bool:
+    return "grep" in lowered and any(
+        marker in lowered
+        for marker in ("优先", "首选", "默认", "prefer", "use grep", "使用 grep", "用 grep")
+    )
+
+
+def _prefers_python_pytest(text: str, lowered: str) -> bool:
+    return bool(re.search(r"\bpython\s+-m\s+pytest\b", lowered)) and (
+        any(
+            marker in text
+            for marker in (
+                "以后",
+                "优先",
+                "默认",
+                "不要直接",
+                "别直接",
+                "请使用",
+                "请用",
+                "必须",
+            )
+        )
+        or any(
+            marker in lowered
+            for marker in (
+                "prefer",
+                "always",
+                "by default",
+                "use python -m pytest",
+                "run tests with python -m pytest",
+            )
+        )
+    )
+
+
+def _preferred_service_log_command(text: str) -> str:
+    match = re.search(
+        r"\bjournalctl\s+--user\s+-u\s+([A-Za-z0-9_.@-]+(?:\.service)?)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return ""
+    unit = match.group(1).strip("，。；;,")
+    if not unit:
+        return ""
+    return "journalctl --user -u %s" % unit
+
+
+def _explicit_tool_preference(text: str, lowered: str) -> bool:
+    return any(marker in text for marker in ("以后", "默认", "优先", "首选", "每次", "总是", "本轮", "本次会话")) or any(
+        marker in lowered for marker in ("prefer", "always", "by default")
+    )
+
+
+def _explicit_command_preference(text: str, lowered: str) -> bool:
+    return any(
+        marker in text
+        for marker in (
+            "以后",
+            "默认",
+            "优先",
+            "首选",
+            "必须",
+            "请使用",
+            "请用",
+            "先看",
+            "先查",
+            "继续先",
+            "还是用",
+        )
+    ) or any(marker in lowered for marker in ("prefer", "always", "by default"))
+
+
+def _scope_for_text(text: str, lowered: str) -> str:
+    if any(marker in text for marker in ("本轮", "本次会话", "这个会话")):
+        return "session"
+    if any(marker in text for marker in ("当前项目", "这个项目", "本项目")):
+        return "project"
+    if any(marker in text for marker in ("这类任务", "此类任务", "这种任务")):
+        return "task_type"
+    if any(marker in text for marker in ("这个 Agent", "当前 Agent", "该 Agent")) or "this agent" in lowered:
+        return "agent"
+    return "global"
+
+
+def _command_before_explanation(text: str, lowered: str) -> bool:
+    command_marker = any(marker in text for marker in ("先给命令", "命令放前面", "先输出命令"))
+    explanation_marker = any(marker in text for marker in ("再解释", "然后解释", "后解释"))
+    english = "command first" in lowered or "commands first" in lowered
+    return (command_marker and explanation_marker) or english
+
+
+def _prefers_chinese(text: str, lowered: str) -> bool:
+    return any(marker in text for marker in ("用中文回答", "中文回复", "默认中文")) or "answer in chinese" in lowered
+
+
+def _prefers_concise(text: str, lowered: str) -> bool:
+    return any(
+        marker in text
+        for marker in (
+            "回答简洁",
+            "尽量简洁",
+            "只给关键",
+            "简洁列出",
+            "简洁回答",
+            "不要写长篇",
+            "不要长篇",
+        )
+    ) or "be concise" in lowered
+
+
+def _requires_risk_confirmation(text: str, lowered: str) -> bool:
+    risky = any(
+        marker in text
+        for marker in (
+            "删除",
+            "覆盖",
+            "高风险",
+            "导出密钥",
+            "rm",
+            "systemctl disable",
+            "重启服务",
+        )
+    )
+    confirmation = any(
+        marker in text
+        for marker in (
+            "先确认",
+            "询问我",
+            "征得同意",
+            "必须确认",
+            "等待确认",
+            "说明风险",
+        )
+    )
+    english = "confirm before" in lowered and any(marker in lowered for marker in ("delete", "overwrite", "destructive"))
+    return (risky and confirmation) or english
+
+
+def _dedupe_observations(observations: List[PreferenceObservation]) -> List[PreferenceObservation]:
+    seen = set()
+    result = []
+    for observation in observations:
+        key = (observation.topic, observation.value, observation.scope, observation.polarity)
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(observation)
+    return result

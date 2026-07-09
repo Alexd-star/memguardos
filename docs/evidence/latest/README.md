@@ -1,6 +1,6 @@
 # openKylin 证据采集包
 
-采集时间：20260607_123336
+采集时间：20260607_123336；10k 性能文件已替换为优化后口径，旧并发 P95 超 500 ms 的证据已归档到 `docs/evidence/historical/performance_before_optimized_20260607/`，正式验收以本目录当前 `eval_result_openkylin_10k.json`、`eval_report_openkylin_10k.md` 和 `eval_10k.txt` 为准。
 
 ## 文件说明
 

@@ -1,23 +1,34 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
+import platform
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
 from memguard.config import list_namespaces
+from memguard.desktop.peony_scan import scan_peony_file
+from memguard.desktop.scan_manifest import apply_scan_manifest, create_scan_manifest, forget_imported_memories
 from memguard.ingestion.tool_result import ToolResult
+from memguard.integrations.replay import load_event_file, load_event_jsonl
 from memguard.llm.adapter import LLMAdapterError, generate_answer
 from memguard.llm.prompt import render_generation_prompt
 from memguard.os_guard.auditd_events import parse_auditd_events
 from memguard.os_guard.auditd import audit_rules_file, auditctl_rules, ausearch_command
 from memguard.os_guard.doctor import doctor_report
 from memguard.os_guard.cgroup import cgroup_status
+from memguard.os_guard.openkylin_native import openkylin_native_status
+from memguard.os_guard.privileged_actions import ALLOWED_ACTIONS, run_privileged_action
+from memguard.os_guard.service_control import service_resource_status
 from memguard.retrieval.kylin_sdk import kylin_sdk_status
 from memguard.service import MemGuardService
 
 
-_SERVICE_FREE_COMMANDS = {"doctor", "status", "namespaces", "sdk-status", "auditd-rules"}
+_SERVICE_FREE_COMMANDS = {"doctor", "status", "namespaces", "sdk-status", "auditd-rules", "openkylin-status", "native-action"}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -79,6 +90,16 @@ def build_parser() -> argparse.ArgumentParser:
     memory_policy.add_argument("--eviction-limit", type=int, default=10)
     temporal = sub.add_parser("temporal-status", help="Show temporal validity windows for active and superseded memories")
     temporal.add_argument("--limit", type=int, default=20)
+
+    governance = sub.add_parser("governance", help="List and review quarantined memory sources")
+    governance_sub = governance.add_subparsers(dest="governance_command", required=True)
+    governance_list = governance_sub.add_parser("list", help="List quarantined memories")
+    governance_list.add_argument("--limit", type=int, default=100)
+    governance_review = governance_sub.add_parser("review", help="Approve or reject one quarantined memory")
+    governance_review.add_argument("memory_id")
+    governance_review.add_argument("decision", choices=["approve", "reject"])
+    governance_review.add_argument("--reviewer", required=True)
+    governance_review.add_argument("--reason", required=True)
 
     versions = sub.add_parser("versions", help="List all versions of a memory")
     versions.add_argument("memory_id")
@@ -154,11 +175,41 @@ def build_parser() -> argparse.ArgumentParser:
     diagnostics.add_argument("--probe-sdk", action="store_true", help="Run a real Kylin embedding SDK probe in the diagnostics report")
     diagnostics.add_argument("--probe-timeout", type=float, default=90.0, help="Timeout in seconds for the optional SDK probe")
     diagnostics.add_argument("--audit-limit", type=int, default=20, help="Number of recent audit events to include")
+    evidence = sub.add_parser("collect-openkylin-evidence", help="Export an openKylin acceptance evidence package with manifest and SHA256 checksums")
+    evidence.add_argument("--output-dir", default="", help="Evidence output directory. Defaults to ~/MemGuardOS-openKylin-evidence")
+    evidence.add_argument("--probe-sdk", action="store_true", help="Include a real Kylin SDK inference probe")
+    evidence.add_argument("--probe-timeout", type=float, default=90.0, help="Timeout in seconds for the optional SDK probe")
+    evidence.add_argument("--include-readiness", action="store_true", help="Run scripts/check_competition_ready.py when available")
+    evidence.add_argument("--include-pytest", action="store_true", help="Run local pytest when a source checkout with tests is available")
+    evidence.add_argument("--timeout", type=float, default=300.0, help="Timeout in seconds for optional readiness/pytest commands")
 
     web = sub.add_parser("web", help="Run a localhost Web dashboard for local operation and inspection")
     web.add_argument("--host", default="127.0.0.1")
     web.add_argument("--port", type=int, default=8765)
     web.add_argument("--auth-token-file", default="", help="Optional bearer token file for dashboard API calls")
+
+    desktop = sub.add_parser("desktop", help="Desktop integration operations for UKUI/Peony")
+    desktop_sub = desktop.add_subparsers(dest="desktop_command", required=True)
+    scan_file = desktop_sub.add_parser("scan-file", help="Preview or ingest one Peony-selected file")
+    scan_file.add_argument("--file", required=True, help="Path selected from Peony")
+    scan_file.add_argument("--ingest", action="store_true", help="Record OS event and import safe text files")
+    scan_file.add_argument("--notify", action="store_true", help="Send a desktop notification when notify-send is available")
+    scan_file.add_argument("--max-bytes", type=int, default=1024 * 1024, help="Maximum text file size for direct import")
+    scan_files = desktop_sub.add_parser("scan-files", help="Create a read-only preview manifest for Peony-selected files")
+    scan_files.add_argument("--file", action="append", required=True, help="Selected file path; repeat for multiple files")
+    scan_files.add_argument("--max-files", type=int, default=100)
+    scan_files.add_argument("--max-file-bytes", type=int, default=1024 * 1024)
+    scan_files.add_argument("--max-total-bytes", type=int, default=10 * 1024 * 1024)
+    scan_files.add_argument("--ttl", type=int, default=300, help="Manifest lifetime in seconds")
+    apply_scan = desktop_sub.add_parser("apply-scan", help="Import explicitly selected safe files from a preview manifest")
+    apply_scan.add_argument("--manifest", required=True, help="Manifest path returned by scan-files")
+    apply_scan.add_argument("--select", action="append", required=True, help="Confirmed safe file path; repeat for multiple files")
+    apply_scan.add_argument("--notify", action="store_true", help="Send one batch completion notification")
+    forget_import = desktop_sub.add_parser("forget-import", help="Forget memories created by one Peony import result")
+    forget_import.add_argument("--memory-id", action="append", required=True, help="Imported memory id to forget; repeat for multiple files")
+    forget_import.add_argument("--reason", default="撤销 Peony 文件导入", help="Audit reason stored with the forgetting tombstone")
+    forget_import.add_argument("--compact", action="store_true", help="Compact segment storage after forgetting")
+    forget_import.add_argument("--notify", action="store_true", help="Send one desktop notification")
 
     patterns = sub.add_parser("patterns", help="List or add custom sensitive patterns")
     pattern_sub = patterns.add_subparsers(dest="pattern_command", required=True)
@@ -181,11 +232,50 @@ def build_parser() -> argparse.ArgumentParser:
     sdk_status = sub.add_parser("sdk-status", help="Detect openKylin Kylin AI embedding/vector SDK capabilities")
     sdk_status.add_argument("--probe-embedding", action="store_true", help="Run one real embedding call; may be slow if the model service is not ready")
     sdk_status.add_argument("--probe-timeout", type=float, default=45.0, help="Timeout in seconds for the protected embedding probe subprocess")
+    openkylin_status = sub.add_parser("openkylin-status", help="Show openKylin-native desktop, SDK, service and security status")
+    openkylin_status.add_argument("--fast", action="store_true", help="Use lightweight checks suitable for desktop UI startup; this is also the default unless --probe-sdk is set")
+    openkylin_status.add_argument("--probe-sdk", action="store_true", help="Run one protected Kylin embedding probe")
+    openkylin_status.add_argument("--probe-timeout", type=float, default=45.0)
+    native_action = sub.add_parser("native-action", help="Run a fixed openKylin system action through Polkit")
+    native_action.add_argument("action", choices=sorted(ALLOWED_ACTIONS))
+    native_action.add_argument("--timeout", type=float, default=180.0)
 
     auditd = sub.add_parser("auditd-rules", help="Print auditd rules for sensitive path monitoring")
     auditd.add_argument("--format", choices=["auditctl", "rules-file", "ausearch"], default="auditctl")
     auditd.add_argument("--key", default="memguard_sensitive")
     auditd.add_argument("--existing-only", action="store_true", help="Only emit rules for paths that exist on this host")
+
+    agent = sub.add_parser("agent", help="Ingest, replay, inspect, and build context for external Agent interactions")
+    agent_sub = agent.add_subparsers(dest="agent_command", required=True)
+    agent_ingest = agent_sub.add_parser("ingest-event", help="Ingest one normalized Agent event JSON file")
+    agent_ingest.add_argument("--file", required=True)
+    agent_session = agent_sub.add_parser("ingest-session", help="Ingest one Agent event JSONL session")
+    agent_session.add_argument("--file", required=True)
+    agent_replay = agent_sub.add_parser("replay", help="Replay one Agent event JSONL session idempotently")
+    agent_replay.add_argument("--file", required=True)
+    agent_context = agent_sub.add_parser("context", help="Build stage-specific memory context for an Agent")
+    agent_context.add_argument("--task", required=True)
+    agent_context.add_argument("--stage", required=True, choices=["planning", "tool_selection", "response_generation"])
+    agent_context.add_argument("--agent-name", required=True)
+    agent_context.add_argument("--session-id", required=True)
+    agent_context.add_argument("--project-root", default="")
+    agent_context.add_argument("--task-type", default="")
+    agent_context.add_argument("--limit", type=int, default=8)
+    agent_context.add_argument("--max-chars", type=int, default=4000)
+    agent_context.add_argument("--token-budget", type=int, default=800)
+    agent_sub.add_parser("status", help="Show Agent event and preference aggregation status")
+    agent_evidence = agent_sub.add_parser("evidence", help="Show interaction evidence for one memory")
+    agent_evidence.add_argument("memory_id")
+    agent_forget = agent_sub.add_parser("forget", help="Preview or execute scoped Agent interaction forgetting")
+    agent_forget.add_argument("--agent-name", default="")
+    agent_forget.add_argument("--session-id", default="")
+    agent_forget.add_argument("--turn-id", default="")
+    agent_forget.add_argument("--preference-topic", default="")
+    agent_forget.add_argument("--start-time", default="")
+    agent_forget.add_argument("--end-time", default="")
+    agent_forget.add_argument("--confirm", action="store_true")
+    agent_forget.add_argument("--no-compact", action="store_true")
+    agent_forget.add_argument("--no-external-persistence", action="store_true")
 
     return parser
 
@@ -197,6 +287,105 @@ def main(argv: list[str] | None = None) -> int:
 
     service = MemGuardService(namespace=args.namespace)
     try:
+        if args.command == "desktop":
+            if args.desktop_command == "scan-file":
+                print(
+                    json.dumps(
+                        scan_peony_file(
+                            args.file,
+                            service,
+                            ingest=args.ingest,
+                            notify=args.notify,
+                            max_bytes=args.max_bytes,
+                        ),
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                )
+                return 0
+            if args.desktop_command == "scan-files":
+                print(
+                    json.dumps(
+                        create_scan_manifest(
+                            args.file,
+                            service,
+                            ttl_seconds=args.ttl,
+                            max_files=args.max_files,
+                            max_file_bytes=args.max_file_bytes,
+                            max_total_bytes=args.max_total_bytes,
+                        ),
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                )
+                return 0
+            if args.desktop_command == "apply-scan":
+                result = apply_scan_manifest(
+                    args.manifest,
+                    args.select,
+                    service,
+                    notify=args.notify,
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0 if result.get("ok") else 2
+            if args.desktop_command == "forget-import":
+                result = forget_imported_memories(
+                    args.memory_id,
+                    service,
+                    reason=args.reason,
+                    compact=args.compact,
+                    notify=args.notify,
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0 if result.get("ok") else 2
+
+        if args.command == "agent":
+            if args.agent_command == "ingest-event":
+                print(json.dumps(service.ingest_interaction(load_event_file(Path(args.file))), ensure_ascii=False, indent=2))
+                return 0
+            if args.agent_command in {"ingest-session", "replay"}:
+                result = service.ingest_interactions(load_event_jsonl(Path(args.file)))
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0
+            if args.agent_command == "context":
+                result = service.build_agent_context(
+                    args.task,
+                    stage=args.stage,
+                    agent_name=args.agent_name,
+                    session_id=args.session_id,
+                    project_root=args.project_root,
+                    task_type=args.task_type,
+                    limit=args.limit,
+                    max_chars=args.max_chars,
+                    token_budget=args.token_budget,
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0
+            if args.agent_command == "status":
+                print(json.dumps(service.interaction_status(), ensure_ascii=False, indent=2))
+                return 0
+            if args.agent_command == "evidence":
+                result = service.preference_evidence(args.memory_id)
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0 if result.get("found") else 2
+            if args.agent_command == "forget":
+                filters = {
+                    "agent_name": args.agent_name,
+                    "session_id": args.session_id,
+                    "turn_id": args.turn_id,
+                    "preference_topic": args.preference_topic,
+                    "start_time": args.start_time,
+                    "end_time": args.end_time,
+                }
+                result = service.forget_agent_interactions(
+                    filters,
+                    confirm=args.confirm,
+                    compact=not args.no_compact,
+                    external_persistence=not args.no_external_persistence,
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0
+
         if args.command == "ingest":
             text, source_uri = _read_ingest(args)
             result = service.ingest_text(text, source_kind=args.source_kind, source_uri=source_uri, tier=args.tier)
@@ -324,6 +513,27 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "temporal-status":
             print(json.dumps(service.temporal_status(limit=args.limit), ensure_ascii=False, indent=2))
             return 0
+
+        if args.command == "governance":
+            if args.governance_command == "list":
+                print(json.dumps(service.list_quarantined_memories(limit=args.limit), ensure_ascii=False, indent=2))
+                return 0
+            result = service.review_quarantined_memory(
+                args.memory_id,
+                decision=args.decision,
+                reviewer=args.reviewer,
+                reason=args.reason,
+            )
+            printable = dict(result)
+            if printable.get("record"):
+                record = printable["record"]
+                printable["record"] = {
+                    "memory_id": record.memory_id,
+                    "version_id": record.version.version_id,
+                    "governance_state": record.governance_state,
+                }
+            print(json.dumps(printable, ensure_ascii=False, indent=2))
+            return 0 if result.get("reviewed") else 2
 
         if args.command == "update":
             result = service.update_memory(args.memory_id, args.text, reason=args.reason)
@@ -459,6 +669,11 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
             return 0 if payload["ok"] else 2
 
+        if args.command == "collect-openkylin-evidence":
+            result = _collect_openkylin_evidence(args, service)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result.get("ok") else 2
+
         if args.command == "web":
             token = Path(args.auth_token_file).read_text(encoding="utf-8").strip() if args.auth_token_file else ""
             from memguard.web.dashboard import run_dashboard
@@ -519,6 +734,27 @@ def _run_service_free_command(args: argparse.Namespace) -> int:
         )
         return 0
 
+    if args.command == "openkylin-status":
+        lightweight_status = args.fast or not args.probe_sdk
+        print(
+            json.dumps(
+                openkylin_native_status(
+                    namespace=args.namespace,
+                    probe_sdk=args.probe_sdk,
+                    probe_timeout=args.probe_timeout,
+                    fast=lightweight_status,
+                ),
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "native-action":
+        result = run_privileged_action(args.action, timeout=args.timeout)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if result.get("ok") else 2
+
     if args.command == "auditd-rules":
         if args.format == "auditctl":
             print("\n".join(auditctl_rules(key=args.key, existing_only=args.existing_only)))
@@ -567,6 +803,200 @@ def _read_auditd_lines(path: str, limit: int) -> list[str]:
         return sys.stdin.read().splitlines()
     lines = Path(path).read_text(encoding="utf-8", errors="replace").splitlines()
     return lines[-max(1, limit) :]
+
+
+def _collect_openkylin_evidence(args: argparse.Namespace, service: MemGuardService) -> dict[str, object]:
+    output_dir = Path(args.output_dir or (Path.home() / "MemGuardOS-openKylin-evidence")).expanduser().resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    source_revision = _source_revision_payload()
+    _write_json(output_dir / "source_revision.json", source_revision)
+    _write_json(
+        output_dir / "environment.json",
+        {
+            "schema": "memguardos-openkylin-evidence-environment-v1",
+            "platform": platform.platform(),
+            "python": sys.version.split()[0],
+            "executable": sys.executable,
+            "cwd": str(Path.cwd()),
+            "distribution": _os_release_fields(),
+            "desktop": {
+                "XDG_CURRENT_DESKTOP": os.environ.get("XDG_CURRENT_DESKTOP", ""),
+                "DESKTOP_SESSION": os.environ.get("DESKTOP_SESSION", ""),
+                "XDG_SESSION_TYPE": os.environ.get("XDG_SESSION_TYPE", ""),
+            },
+        },
+    )
+    _write_json(
+        output_dir / "openkylin_status.json",
+        openkylin_native_status(
+            namespace=service.namespace,
+            probe_sdk=args.probe_sdk,
+            probe_timeout=args.probe_timeout,
+            fast=not args.probe_sdk,
+        ),
+    )
+    _write_json(output_dir / "audit_chain.json", service.verify_audit())
+    _write_json(output_dir / "systemd_cgroup.json", service_resource_status())
+    _write_json(output_dir / "desktop_assets.json", _desktop_asset_payload())
+    _write_json(
+        output_dir / "diagnostics.json",
+        {
+            "schema": "memguardos-openkylin-evidence-diagnostics-v1",
+            "namespace": service.namespace,
+            "doctor": doctor_report(namespace=service.namespace),
+            "runtime_status": cgroup_status(),
+            "namespace_status": service.namespace_status(),
+            "retrieval_status": service.retrieval_status(),
+            "memory_policy": service.memory_policy_status(),
+            "kylin_sdk": kylin_sdk_status(probe_embedding=args.probe_sdk, probe_timeout=args.probe_timeout),
+            "recent_audit": service.audit(limit=20),
+        },
+    )
+
+    if args.include_readiness:
+        _write_command_capture(
+            output_dir / "readiness.txt",
+            [sys.executable, "scripts/check_competition_ready.py"],
+            timeout=args.timeout,
+            cwd=Path.cwd(),
+            require_path=Path("scripts/check_competition_ready.py"),
+        )
+    if args.include_pytest:
+        _write_command_capture(
+            output_dir / "pytest.txt",
+            [sys.executable, "-m", "pytest", "-q"],
+            timeout=args.timeout,
+            cwd=Path.cwd(),
+            require_path=Path("tests"),
+        )
+
+    manifest = _write_evidence_manifest(output_dir)
+    return {
+        "ok": True,
+        "schema": "memguardos-openkylin-evidence-package-v1",
+        "output_dir": str(output_dir),
+        "file_count": manifest["file_count"],
+        "source_revision_status": source_revision["status"],
+        "include_readiness": bool(args.include_readiness),
+        "include_pytest": bool(args.include_pytest),
+    }
+
+
+def _write_json(path: Path, payload: dict[str, object]) -> None:
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _source_revision_payload() -> dict[str, object]:
+    env_revision = os.environ.get("MEMGUARD_SOURCE_REVISION", "").strip()
+    if env_revision:
+        return {
+            "schema": "memguardos-source-revision-v1",
+            "source_revision": env_revision,
+            "source_mode": os.environ.get("MEMGUARD_SOURCE_MODE", "environment"),
+            "dirty": os.environ.get("MEMGUARD_SOURCE_DIRTY", "false").lower() == "true",
+            "status": "provided",
+        }
+    result = subprocess.run(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, check=False)
+    revision = result.stdout.strip()
+    if result.returncode == 0 and revision:
+        dirty = subprocess.run(["git", "status", "--porcelain"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, check=False)
+        return {
+            "schema": "memguardos-source-revision-v1",
+            "source_revision": revision,
+            "source_mode": "git_worktree",
+            "dirty": bool(dirty.stdout.strip()),
+            "status": "git",
+        }
+    return {
+        "schema": "memguardos-source-revision-v1",
+        "source_revision": "",
+        "source_mode": "installed_package_or_unknown",
+        "dirty": None,
+        "status": "not_available",
+        "note": "Git metadata was not available in this runtime. Run from the source checkout or set MEMGUARD_SOURCE_REVISION for final contest evidence.",
+    }
+
+
+def _os_release_fields() -> dict[str, str]:
+    path = Path("/etc/os-release")
+    if not path.exists():
+        return {}
+    fields: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        fields[key] = value.strip().strip('"')
+    return fields
+
+
+def _desktop_asset_payload() -> dict[str, object]:
+    peony_plugins = sorted(str(path) for path in Path("/usr/lib").glob("*/peony-extensions/libpeony-menu-plugin-memguardos.so"))
+    ukcc_plugins = sorted(str(path) for path in Path("/usr/lib").glob("*/ukui-control-center/libmemguardos-ukcc-plugin.so"))
+    return {
+        "schema": "memguardos-desktop-assets-v1",
+        "peony_plugins": peony_plugins,
+        "ukui_control_center_plugins": ukcc_plugins,
+        "tray": {
+            "binary": "/usr/bin/memguardos-tray",
+            "binary_exists": Path("/usr/bin/memguardos-tray").exists(),
+            "autostart": "/etc/xdg/autostart/memguardos-tray.desktop",
+            "autostart_exists": Path("/etc/xdg/autostart/memguardos-tray.desktop").exists(),
+        },
+        "menu_entry": {
+            "desktop_file": "/usr/share/applications/memguardos-center.desktop",
+            "exists": Path("/usr/share/applications/memguardos-center.desktop").exists(),
+        },
+        "notify_send": bool(shutil.which("notify-send")),
+    }
+
+
+def _write_command_capture(path: Path, command: list[str], *, timeout: float, cwd: Path, require_path: Path) -> None:
+    if not require_path.exists():
+        path.write_text(
+            "$ %s\nskipped=missing_%s\n" % (" ".join(command), require_path.as_posix()),
+            encoding="utf-8",
+        )
+        return
+    completed = subprocess.run(
+        command,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=timeout,
+        check=False,
+    )
+    path.write_text("$ %s\n%s" % (" ".join(command), completed.stdout), encoding="utf-8")
+
+
+def _write_evidence_manifest(root: Path) -> dict[str, object]:
+    checksum_path = root / "SHA256SUMS.txt"
+    manifest_path = root / "manifest.json"
+    files = [
+        path
+        for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix())
+        if path.is_file() and path not in {checksum_path, manifest_path}
+    ]
+    checksum_path.write_text(
+        "\n".join("%s  %s" % (hashlib.sha256(path.read_bytes()).hexdigest(), path.relative_to(root).as_posix()) for path in files) + "\n",
+        encoding="utf-8",
+    )
+    manifest = {
+        "schema": "memguardos-openkylin-evidence-manifest-v1",
+        "file_count": len(files),
+        "files": [
+            {
+                "path": path.relative_to(root).as_posix(),
+                "bytes": path.stat().st_size,
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+            for path in files
+        ],
+    }
+    _write_json(manifest_path, manifest)
+    return manifest
 
 
 if __name__ == "__main__":

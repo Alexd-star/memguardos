@@ -476,6 +476,49 @@ def test_conflict_resolution_topic_rules_cover_tool_and_risk_preferences(tmp_pat
     assert preference_topic({"summary": "以后 Linux 命令回答要简洁，只给命令和风险。"}) == "linux_command_response"
 
 
+def test_high_risk_confirmation_policy_is_not_quarantined_by_cover_verb(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        result = service.ingest_text("以后执行删除、覆盖、密钥导出等高风险操作前必须先让我确认。", source_kind="manual")
+        assert result["stored"] is True
+        assert result["record"].governance_state == "active"
+        assert result["record"].type == "sensitive_policy"
+        assert preference_topic(result["record"].to_dict()) == "high_risk_confirmation"
+    finally:
+        service.close()
+
+
+def test_conflict_resolution_benchmark_cases_all_pass(tmp_path):
+    rows = [
+        json.loads(line)
+        for line in Path("data/benchmarks/conflict_resolution.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    correct = []
+    for row in rows:
+        service = MemGuardService(
+            store_path=tmp_path / ("%s.segment" % row["case"]),
+            db_path=tmp_path / ("%s.sqlite3" % row["case"]),
+        )
+        try:
+            for item in row["records"]:
+                result = service.ingest_text(
+                    item["text"],
+                    source_kind=item["source_kind"],
+                    source_uri=row["case"],
+                )
+                assert result["stored"] is True
+            resolved = service.resolve_conflicts()
+            assert resolved["resolutions"], row["case"]
+            chosen_id = resolved["resolutions"][0]["chosen_memory_id"]
+            chosen = service.meta.get_memory(chosen_id)
+            chosen_text = chosen.get("content", "") if chosen else ""
+            correct.append(row["expected_contains"] in chosen_text)
+        finally:
+            service.close()
+    assert all(correct)
+
+
 def test_conflict_resolution_update_beats_old_manual(tmp_path):
     service = make_service(tmp_path)
     try:
@@ -507,20 +550,36 @@ def test_kylin_sdk_status_is_safe_on_current_platform():
     assert status["embedding"]["ready_for_default_retrieval"] is None
 
 
-def test_default_retrieval_backend_is_hash(tmp_path):
+def test_default_retrieval_backend_matches_platform_and_explicit_hash(tmp_path, monkeypatch):
     service = make_service(tmp_path)
     try:
         record = service.ingest_text("systemd MemoryMax 可以限制 Linux 服务内存。")["record"]
         hits = service.search("Linux 服务内存限制", limit=3)
         assert hits
         assert hits[0]["memory_id"] == record.memory_id
-        assert hits[0]["vector_backend"] == "hash"
+        assert hits[0]["vector_backend"] in {"hash", "kylin_sdk"}
         status = service.retrieval_status()
-        assert status["requested_backend"] == "hash"
+        assert status["requested_backend"] in {"hash", "auto"}
         assert status["hash"]["available"] is True
-        assert status["policy"]["default_backend"] == "hash"
+        assert status["policy"]["default_backend"] in {"hash", "auto"}
     finally:
         service.close()
+
+    monkeypatch.setenv("MEMGUARD_EMBEDDING_BACKEND", "hash")
+    forced_root = tmp_path / "forced"
+    forced_root.mkdir()
+    forced = make_service(forced_root)
+    try:
+        record = forced.ingest_text("systemd MemoryMax 可以限制 Linux 服务内存。")["record"]
+        hits = forced.search("Linux 服务内存限制", limit=3)
+        assert hits
+        assert hits[0]["memory_id"] == record.memory_id
+        assert hits[0]["vector_backend"] == "hash"
+        status = forced.retrieval_status()
+        assert status["requested_backend"] == "hash"
+        assert status["policy"]["default_backend"] == "hash"
+    finally:
+        forced.close()
 
 
 def test_search_cache_uses_store_revision_and_invalidates_after_write(tmp_path, monkeypatch):
@@ -544,6 +603,113 @@ def test_search_cache_uses_store_revision_and_invalidates_after_write(tmp_path, 
         third = service.search("systemd MemoryMax", limit=3, audit=False)
         assert calls["count"] == 2
         assert any("缓存失效验证" in str(item.get("content", "")) for item in third)
+    finally:
+        service.close()
+
+
+def test_search_candidates_skip_fallback_when_fts_fills_budget(tmp_path, monkeypatch):
+    service = make_service(tmp_path)
+    try:
+        fts_rows = [
+            {
+                "memory_id": "fts-%03d" % index,
+                "type": "knowledge",
+                "summary": "systemd MemoryMax",
+                "content": "openKylin service memory limit",
+                "sensitivity_level": "none",
+            }
+            for index in range(8)
+        ]
+        calls = {"graph": 0, "recent": 0}
+        monkeypatch.setattr(service.meta, "search_text", lambda query, limit: fts_rows[:limit])
+
+        def graph_search(query, limit):
+            calls["graph"] += 1
+            return []
+
+        def list_recent_memories(limit, exclude_ids=None):
+            calls["recent"] += 1
+            return []
+
+        monkeypatch.setattr(service.meta, "graph_search", graph_search)
+        monkeypatch.setattr(service.meta, "list_recent_memories", list_recent_memories, raising=False)
+
+        candidates = service._search_candidates("systemd MemoryMax", limit=5)
+
+        assert [item["memory_id"] for item in candidates] == [
+            "fts-000",
+            "fts-001",
+            "fts-002",
+            "fts-003",
+            "fts-004",
+        ]
+        assert calls == {"graph": 0, "recent": 0}
+    finally:
+        service.close()
+
+
+def test_search_candidates_fill_remaining_budget_without_duplicates(tmp_path, monkeypatch):
+    service = make_service(tmp_path)
+    try:
+        monkeypatch.setattr(
+            service.meta,
+            "search_text",
+            lambda query, limit: [
+                {"memory_id": "fts-1"},
+                {"memory_id": "shared"},
+            ],
+        )
+        monkeypatch.setattr(
+            service.meta,
+            "graph_search",
+            lambda query, limit: [
+                {"memory_id": "shared"},
+                {"memory_id": "graph-1"},
+            ],
+        )
+        observed = {}
+
+        def list_recent_memories(limit, exclude_ids=None):
+            observed["limit"] = limit
+            observed["exclude_ids"] = set(exclude_ids or [])
+            return [
+                {"memory_id": "recent-1"},
+                {"memory_id": "recent-2"},
+            ][:limit]
+
+        monkeypatch.setattr(service.meta, "list_recent_memories", list_recent_memories, raising=False)
+
+        candidates = service._search_candidates("systemd", limit=5)
+
+        assert [item["memory_id"] for item in candidates] == [
+            "fts-1",
+            "shared",
+            "graph-1",
+            "recent-1",
+            "recent-2",
+        ]
+        assert observed["limit"] == 2
+        assert observed["exclude_ids"] == {"fts-1", "shared", "graph-1"}
+    finally:
+        service.close()
+
+
+def test_search_uses_bounded_candidate_pool_for_top_five(tmp_path, monkeypatch):
+    service = make_service(tmp_path)
+    try:
+        observed = {}
+
+        def search_candidates(query, limit):
+            observed["query"] = query
+            observed["limit"] = limit
+            return []
+
+        monkeypatch.setattr(service, "_search_candidates", search_candidates)
+        monkeypatch.setattr(service.meta, "graph_search", lambda query, limit: [])
+        monkeypatch.setattr(service.meta, "search_text", lambda query, limit: [])
+
+        assert service.search("systemd MemoryMax", limit=5, audit=False) == []
+        assert observed == {"query": "systemd MemoryMax", "limit": 64}
     finally:
         service.close()
 
@@ -609,6 +775,53 @@ def test_auto_retrieval_can_use_successful_kylin_embedding_probe(monkeypatch):
     assert ranked[0][1]["memory_id"] == "m1"
     assert all(record["_vector_backend"] == "kylin_sdk" for _, record in ranked)
     assert retriever.status()["last_backend_used"] == "kylin_sdk"
+
+
+def test_platform_default_backend_prefers_auto_only_on_openkylin(monkeypatch):
+    monkeypatch.delenv("MEMGUARD_EMBEDDING_BACKEND", raising=False)
+    monkeypatch.setattr("memguard.retrieval.hybrid._is_openkylin", lambda: True)
+    assert HybridRetriever().requested_backend == "auto"
+
+    monkeypatch.setattr("memguard.retrieval.hybrid._is_openkylin", lambda: False)
+    assert HybridRetriever().requested_backend == "hash"
+
+    monkeypatch.setenv("MEMGUARD_EMBEDDING_BACKEND", "kylin")
+    assert HybridRetriever().requested_backend == "kylin"
+
+
+def test_kylin_provider_recovers_after_cooldown_and_bounds_cache(monkeypatch):
+    from memguard.retrieval.hybrid import KylinEmbeddingProvider
+
+    now = {"value": 100.0}
+    calls = {"count": 0}
+
+    def fake_embed(text, _timeout_seconds, include_vector=True):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            return {"ok": False, "error": "temporary runtime failure"}
+        return {"ok": True, "dim": 2, "vector": [1.0, float(len(text))]}
+
+    monkeypatch.setattr(KylinEmbeddingBackend, "embed_in_subprocess", staticmethod(fake_embed))
+    provider = KylinEmbeddingProvider(
+        cooldown_seconds=10,
+        max_cache_entries=2,
+        clock=lambda: now["value"],
+    )
+
+    assert provider.vector("first") is None
+    assert provider.vector("first") is None
+    assert calls["count"] == 1
+    assert provider.status()["degraded"] is True
+
+    now["value"] = 111.0
+    assert provider.vector("first") is not None
+    assert provider.vector("second") is not None
+    assert provider.vector("third") is not None
+    status = provider.status()
+    assert status["degraded"] is False
+    assert status["cache_entries"] == 2
+    assert status["cache_capacity"] == 2
+    assert status["last_success_at"] == 111.0
 
 
 def test_custom_sensitive_pattern(tmp_path, monkeypatch):
@@ -832,6 +1045,29 @@ def test_manual_config_ingestion_reports_quality_skips(tmp_path):
         assert result["skipped"][0]["reason"] == "empty_value"
     finally:
         service.close()
+
+
+def test_memory_seed_extraction_types_and_subtypes_are_all_correct():
+    extractor = HybridMemoryExtractor()
+    seed_path = Path("data/benchmarks/memory_seed.jsonl")
+    misses = []
+    for line_number, line in enumerate(seed_path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        decision = extractor.extract(row["text"], row.get("source_kind", "manual"))
+        if decision.memory_type != row["expected_type"] or decision.subtype != row["expected_subtype"]:
+            misses.append(
+                {
+                    "line": line_number,
+                    "label": row.get("label"),
+                    "expected": [row["expected_type"], row["expected_subtype"]],
+                    "actual": [decision.memory_type, decision.subtype],
+                    "signals": decision.signals,
+                }
+            )
+
+    assert misses == []
 
 
 def test_shell_history_ingestion_as_user_behavior(tmp_path):
@@ -1058,6 +1294,42 @@ def test_batch_search_reports_ordered_agent_queries_and_audit(tmp_path):
         service.close()
 
 
+def test_batch_search_reuses_one_service_per_worker(tmp_path, monkeypatch):
+    service = make_service(tmp_path)
+    try:
+        for index in range(8):
+            service.ingest_text(
+                "批量检索连接复用样例 %s：openKylin systemd audit mmap。" % index,
+                source_kind="batch_pool_test",
+                source_uri="batch_pool_%s" % index,
+            )
+        original_service = MemGuardService
+        created = {"count": 0}
+
+        def counting_service(*args, **kwargs):
+            created["count"] += 1
+            return original_service(*args, **kwargs)
+
+        monkeypatch.setattr("memguard.service.MemGuardService", counting_service)
+        queries = [
+            "openKylin systemd",
+            "audit mmap",
+            "systemd audit",
+            "mmap openKylin",
+            "服务内存",
+            "精准遗忘",
+        ]
+
+        result = service.batch_search(queries, limit=3, workers=2)
+
+        assert result["ok"] is True
+        assert [item["query"] for item in result["results"]] == queries
+        assert created["count"] == 2
+        assert result["worker_service_count"] == 2
+    finally:
+        service.close()
+
+
 def test_eval_latency_load_smoke():
     result = run_eval(latency_size=20)
     assert result["latency_load"]["memory_count"] == 20
@@ -1113,7 +1385,9 @@ def test_bpf_lsm_policy_header_is_static_and_reviewable():
     assert "Generated by scripts/generate_bpf_lsm_policy.py" in header
 
 
-def test_daemon_health_and_once_mode():
+def test_daemon_health_and_once_mode(tmp_path, monkeypatch):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+
     snapshot = daemon_health_snapshot()
     assert snapshot["status"] == "ready"
     assert snapshot["namespace"] == "default"
@@ -1201,18 +1475,11 @@ def test_local_api_handler_and_unix_socket(tmp_path):
         socket_path = tmp_path / "memguard.sock"
         thread = threading.Thread(target=serve_unix_socket, args=(socket_path, service, lambda: stop["value"]), daemon=True)
         thread.start()
-        for _ in range(50):
-            if socket_path.exists():
-                break
-            time.sleep(0.02)
-        assert socket_path.exists()
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
-            client.connect(str(socket_path))
+        with _connect_unix_socket(socket_path) as client:
             client.sendall(json.dumps({"command": "health"}).encode("utf-8") + b"\n")
             response = client.recv(4096).decode("utf-8")
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+        with _connect_unix_socket(socket_path) as client:
             client.settimeout(3)
-            client.connect(str(socket_path))
             client.sendall(b'{"command":"health","padding":"' + (b"x" * (1024 * 1024 + 1)) + b'"}\n')
             oversized_response = client.recv(4096).decode("utf-8")
         stop["value"] = True
@@ -1223,6 +1490,21 @@ def test_local_api_handler_and_unix_socket(tmp_path):
         assert oversized["error"] == "payload_too_large"
     finally:
         service.close()
+
+
+def _connect_unix_socket(socket_path: Path, timeout_s: float = 2.0) -> socket.socket:
+    deadline = time.time() + timeout_s
+    last_error = None
+    while time.time() < deadline:
+        client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            client.connect(str(socket_path))
+            return client
+        except OSError as exc:
+            last_error = exc
+            client.close()
+            time.sleep(0.02)
+    raise AssertionError("unix socket did not accept connections: %s" % last_error)
 
 
 def test_local_api_internal_errors_are_auditable_without_leaking_details(tmp_path):
@@ -1251,3 +1533,4 @@ def test_local_api_internal_errors_are_auditable_without_leaking_details(tmp_pat
         assert "secret" not in json.dumps(detail, ensure_ascii=False)
     finally:
         service.close()
+

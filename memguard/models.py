@@ -75,6 +75,18 @@ class MemoryRecord:
     version: VersionInfo = field(default_factory=VersionInfo)
     audit: AuditInfo = field(default_factory=AuditInfo)
     temporal: TemporalInfo = field(default_factory=TemporalInfo)
+    preference_topic: str = ""
+    preference_value: str = ""
+    preference_scope: str = "global"
+    preference_explicit: bool = True
+    agent_name: str = ""
+    preference_session_id: str = ""
+    project_root: str = ""
+    task_type: str = ""
+    trust_level: str = "trusted"
+    trust_score: float = 1.0
+    governance_state: str = "active"
+    governance_reason: str = ""
     deleted: bool = False
 
     def finalize_hash(self) -> "MemoryRecord":
@@ -119,6 +131,18 @@ class MemoryRecord:
             version=version,
             audit=audit,
             temporal=temporal,
+            preference_topic=data.get("preference_topic", ""),
+            preference_value=data.get("preference_value", ""),
+            preference_scope=data.get("preference_scope", "global"),
+            preference_explicit=bool(data.get("preference_explicit", True)),
+            agent_name=data.get("agent_name", ""),
+            preference_session_id=data.get("preference_session_id", ""),
+            project_root=data.get("project_root", ""),
+            task_type=data.get("task_type", ""),
+            trust_level=data.get("trust_level", "trusted"),
+            trust_score=float(data.get("trust_score", 1.0)),
+            governance_state=data.get("governance_state", "active"),
+            governance_reason=data.get("governance_reason", ""),
             deleted=bool(data.get("deleted", False)),
         )
 
@@ -136,6 +160,18 @@ def make_memory(
     scope: str = "user",
     tier: str = "long_term",
     sensitivity: Optional[Sensitivity] = None,
+    preference_topic: str = "",
+    preference_value: str = "",
+    preference_scope: str = "global",
+    preference_explicit: bool = True,
+    agent_name: str = "",
+    preference_session_id: str = "",
+    project_root: str = "",
+    task_type: str = "",
+    trust_level: str = "trusted",
+    trust_score: float = 1.0,
+    governance_state: str = "active",
+    governance_reason: str = "",
 ) -> MemoryRecord:
     clean_summary = summary or content[:160]
     record = MemoryRecord(
@@ -149,5 +185,17 @@ def make_memory(
         source=source,
         evidence=[content[:240]],
         sensitivity=sensitivity or Sensitivity(),
+        preference_topic=preference_topic,
+        preference_value=preference_value,
+        preference_scope=preference_scope,
+        preference_explicit=preference_explicit,
+        agent_name=agent_name,
+        preference_session_id=preference_session_id,
+        project_root=project_root,
+        task_type=task_type,
+        trust_level=trust_level,
+        trust_score=trust_score,
+        governance_state=governance_state,
+        governance_reason=governance_reason,
     )
     return record.finalize_hash()

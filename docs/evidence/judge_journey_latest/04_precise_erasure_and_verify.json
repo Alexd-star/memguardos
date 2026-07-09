@@ -1,0 +1,55 @@
+{
+  "schema": "memguardos-judge-journey-result-v1",
+  "step": {
+    "id": "04_precise_erasure_and_verify",
+    "file": "demo\\judge_journey\\04_precise_erasure_and_verify.yml",
+    "title": "自然语言精准遗忘与验证",
+    "goal": "展示 Erasure Intent Compiler 如何把中文遗忘请求编译为结构化过滤器，并通过 dry-run、确认、compact 和 verify 完成闭环。",
+    "evidence_files": [
+      "docs/eval_v2_result.json",
+      "docs/eval_v2_report.md"
+    ],
+    "fallback_if_environment_missing": [
+      "该步骤完全离线可运行，不依赖云端模型或 GPU。"
+    ]
+  },
+  "ok": true,
+  "host": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "system": "Windows",
+    "is_openkylin_hint": false
+  },
+  "commands": [
+    {
+      "argv": [
+        "C:\\Program Files\\Python39\\python.exe",
+        "-m",
+        "pytest",
+        "tests/test_erasure_intent_compiler.py",
+        "-q"
+      ],
+      "ok": true,
+      "status": "passed",
+      "returncode": 0,
+      "duration_ms": 606.434,
+      "stdout": "......                                                                   [100%]\n6 passed in 0.18s\n",
+      "stderr": "Error in atexit._run_exitfuncs:\nTraceback (most recent call last):\n  File \"C:\\Program Files\\Python39\\lib\\pathlib.py\", line 206, in resolve\n    s = self._ext_to_normal(_getfinalpathname(s))\nPermissionError: [WinError 5] 拒绝访问。: 'C:\\\\Users\\\\26312\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-26312\\\\pytest-267'\n"
+    },
+    {
+      "argv": [
+        "C:\\Program Files\\Python39\\python.exe",
+        "scripts/run_evidencebench_v2.py",
+        "--output",
+        "docs/eval_v2_result.json",
+        "--markdown",
+        "docs/eval_v2_report.md"
+      ],
+      "ok": true,
+      "status": "passed",
+      "returncode": 0,
+      "duration_ms": 8613.747,
+      "stdout": "    \"expected\": [\n        \"seed_retrieval_temporal_retrieval_07\"\n      ],\n      \"metric\": \"retrieval\",\n      \"query\": \"回答时先给结论\",\n      \"reason\": \"召回不足或 hard negative 进入结果。\"\n    },\n    {\n      \"actual\": [\n        \"seed_holdout_holdout_retrieval_08\",\n        \"seed_holdout_holdout_retrieval_18\",\n        \"seed_retrieval_cross_language_retrieval_08\",\n        \"seed_retrieval_graph_association_retrieval_08\",\n        \"seed_retrieval_hard_negative_retrieval_08\"\n      ],\n      \"case_id\": \"retrieval_temporal_retrieval_08\",\n      \"expected\": [\n        \"seed_retrieval_temporal_retrieval_08\"\n      ],\n      \"metric\": \"retrieval\",\n      \"query\": \"代码搜索优先使用 rg\",\n      \"reason\": \"召回不足或 hard negative 进入结果。\"\n    },\n    {\n      \"actual\": [\n        \"seed_retrieval_temporal_retrieval_02\",\n        \"seed_retrieval_hard_negative_retrieval_02\",\n        \"seed_retrieval_graph_association_retrieval_02\",\n        \"neg_retrieval_temporal_retrieval_06\",\n        \"neg_retrieval_hard_negative_retrieval_06\"\n      ],\n      \"case_id\": \"retrieval_temporal_retrieval_09\",\n      \"expected\": [\n        \"seed_retrieval_temporal_retrieval_09\"\n      ],\n      \"metric\": \"retrieval\",\n      \"query\": \"高风险命令需要二次确认\",\n      \"reason\": \"召回不足或 hard negative 进入结果。\"\n    },\n    {\n      \"actual\": [\n        \"seed_holdout_holdout_retrieval_10\",\n        \"seed_holdout_holdout_retrieval_20\",\n        \"seed_retrieval_cross_language_retrieval_10\",\n        \"seed_retrieval_graph_association_retrieval_10\",\n        \"seed_retrieval_hard_negative_retrieval_10\"\n      ],\n      \"case_id\": \"retrieval_temporal_retrieval_10\",\n      \"expected\": [\n        \"seed_retrieval_temporal_retrieval_10\"\n      ],\n      \"metric\": \"retrieval\",\n      \"query\": \"pytest 失败后先定位最小失败用例\",\n      \"reason\": \"召回不足或 hard negative 进入结果。\"\n    },\n    {\n      \"actual\": [],\n      \"case_id\": \"forgetting_forget_keep_hard_negatives_09\",\n      \"metric\": \"forgetting\",\n      \"reason\": \"遗忘候选未完全命中目标或误伤应保留样例。\",\n      \"request\": \"忘记高风险命令需要二次确认，但保留不相关记忆\"\n    },\n    {\n      \"actual\": [],\n      \"case_id\": \"forgetting_natural_language_erasure_09\",\n      \"metric\": \"forgetting\",\n      \"reason\": \"遗忘候选未完全命中目标或误伤应保留样例。\",\n      \"request\": \"忘记高风险命令需要二次确认，但保留不相关记忆\"\n    },\n    {\n      \"actual\": [],\n      \"case_id\": \"forgetting_scoped_agent_forgetting_09\",\n      \"metric\": \"forgetting\",\n      \"reason\": \"遗忘候选未完全命中目标或误伤应保留样例。\",\n      \"request\": \"忘记高风险命令需要二次确认，但保留不相关记忆\"\n    },\n    {\n      \"actual\": [],\n      \"case_id\": \"forgetting_time_range_forgetting_09\",\n      \"metric\": \"forgetting\",\n      \"reason\": \"遗忘候选未完全命中目标或误伤应保留样例。\",\n      \"request\": \"忘记高风险命令需要二次确认，但保留不相关记忆\"\n    },\n    {\n      \"actual\": [],\n      \"case_id\": \"holdout_holdout_forgetting_09\",\n      \"metric\": \"forgetting\",\n      \"reason\": \"遗忘候选未完全命中目标或误伤应保留样例。\",\n      \"request\": \"忘记高风险命令需要二次确认，但保留不相关记忆\"\n    }\n  ],\n  \"metadata\": {\n    \"benchmark_name\": \"MemGuardOS EvidenceBench\",\n    \"generated_by\": \"scripts/run_evidencebench_v2.py\",\n    \"note\": \"原 benchmark 偏功能正确性；EvidenceBench v2 偏 hard negative、holdout 和边界解释。\",\n    \"schema\": \"memguardos-evidencebench-v2-result\",\n    \"version\": \"v2\"\n  },\n  \"metrics\": {\n    \"agent_context_adherence_rate\": 1.0,\n    \"audit_chain_ok\": true,\n    \"conflict_resolution_accuracy\": 1.0,\n    \"cpu_time_ms\": 6468.75,\n    \"cross_language_recall_at_1\": 0.0,\n    \"cross_language_recall_at_5\": 0.9,\n    \"forget_keep_success\": 1.0,\n    \"forget_precision\": 0.9,\n    \"forget_recall\": 0.9,\n    \"forget_residual_leak_rate\": 0.0,\n    \"hard_negative_false_positive_rate\": 0.0,\n    \"mrr\": 0.3425,\n    \"ndcg_at_5\": 0.4423,\n    \"p50_latency_ms\": 0.075,\n    \"p95_latency_ms\": 2.994,\n    \"p99_latency_ms\": 4.128,\n    \"recall_at_1\": 0.15,\n    \"recall_at_3\": 0.45,\n    \"recall_at_5\": 0.75,\n    \"rss_delta_kb\": null,\n    \"rss_kb\": null,\n    \"sensitive_block_f1\": 0.8421,\n    \"sensitive_false_positive_rate\": 0.0,\n    \"sensitive_redaction_f1\": 0.8571,\n    \"storage_footprint_kb\": 4985.17,\n    \"tool_result_to_preference_extraction_accuracy\": 1.0\n  },\n  \"runtime\": {\n    \"latency_queries\": 30,\n    \"wall_time_ms\": 8324.498\n  }\n}\n",
+      "stderr": ""
+    }
+  ]
+}

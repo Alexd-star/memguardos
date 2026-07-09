@@ -49,7 +49,7 @@ python -m memguard.cli.memctl doctor
 
 ## 9. openKylin `.deb` 安装被拦截怎么办？
 
-openKylin 普通模式可能有系统保护策略。正式安装复验证据建议在维护模式执行 `sudo apt install ./dist/memguardos_0.1.0_amd64.deb`，安装后再采集 `dpkg`、systemd、SDK 和审计证据。
+openKylin 普通模式可能有系统保护策略。当前版本默认生成五个包：`memguardos-core`、`memguardos-ukui`、`memguardos-agent-bridge`、`memguardos-doc` 和 `memguardos` 元包。正式安装复验证据建议在维护模式执行五包 `sudo apt install ./dist/*.deb`，安装后再采集 `dpkg`、systemd、Peony/UKUI/托盘、Polkit、SDK 和审计证据。若暂时无法进入维护模式，可先执行 `bash scripts/verify_deb_lifecycle.sh`，验证离线安装、包边界和用户数据保护。
 
 ## 10. 哪些文件可以清理？
 

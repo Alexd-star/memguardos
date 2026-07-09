@@ -2,6 +2,30 @@
 
 本文记录 MemGuardOS 的主要版本和能力变化。
 
+## v0.1.0-agent-adherence - 2026-06-20
+
+- OpenHands PreToolUse Hook 增加工具偏好执行策略，能够在用户已选择 `rg` 时拒绝明显改用 `grep` 的代码搜索命令，并把偏好拒绝与高风险拒绝分开审计。
+- Runner 增加一次有界合规修复，检查工具偏好和回答顺序是否真正转化为成功行为；内部修复消息记录为 `system_message`，不会污染用户偏好。
+- 新增严格只读结构化工具意图恢复：只允许当前偏好明确选择的 `rg/grep`、固定工作区、单个查询模式、有限参数、`shell=False` 执行，拒绝管道、重定向、绝对路径和父目录跳转。
+- 新增失败搜索命令规范化恢复。对退出码 2 的已选只读工具调用，只提取查询词并重建为安全的当前目录命令，原始失败仍保留。
+- 新增程序性记忆结果兜底。当已选择历史成功轨迹、没有新的成功工具结果且模型遗漏完整证据时，补充已验证的 `stdout_summary`，并标记 `execution_origin=procedural_memory_fallback`。
+- 行为评测新增尝试调用、策略拒绝、实际执行、恢复错误、结构化恢复和程序性兜底等分项指标；Runner 合规状态未收敛时不能仅凭猜中输出判为通过。
+- 偏好版本选择在 `updated_at` 平局时改用 Agent 事件时间与 SQLite 插入序号判定新旧，D05 冲突案例连续复跑 10 次均通过。
+- 证据采集支持无 Git 元数据的 openKylin 同步树；新增 `refresh_evidence_manifest.py`，跨平台原子重建 SHA256 清单和 manifest。
+- 最新本地测试为 `244 passed, 1 skipped`；最新同 HEAD openKylin 为 `245 passed`。
+- 16 组确定性配对实验全部通过；原 12 组真实 OpenHands 会话与新增 R13-R20 扩展会话合计 28 组均已归档（含 8 组 holdout 留出盲测），记忆系统层与 Agent 行为层均为 `28/28`，未归因失败为 `0`。
+
+## v0.1.0-performance - 2026-06-19
+
+- 检索候选生成改为按 64 条预算依次使用 FTS、图谱和最新记忆补足，避免 FTS 已充足时重复读取兜底候选。
+- Agent 批量检索改为每个工作线程复用一个服务和 SQLite 连接，不再为每条查询重复初始化。
+- 新增 `memguard.eval.ablation`，统一比较纯文本、混合无图谱、完整无缓存、完整热缓存和 Kylin SDK 可选增强。
+- 新增 `memguard.eval.performance_suite`，默认执行三轮并发试验，同时报告中位数和最差 P95/P99。
+- openKylin 三轮 1k/120 查询/6 worker 并发最差 P95 为 `54.381 ms`；完整 10k 评测内并发 P95 为 `139.264 ms`。
+- openKylin 10k 主负载 P95 为 `10.105 ms`、P99 为 `75.255 ms`、RSS 为 `130444 KB`。
+- 统一消融中纯文本 Recall@5 为 `0.8426`，混合与完整系统为 `1.0000`。
+- 本地测试 `141 passed, 1 skipped`，openKylin 测试 `142 passed`。
+
 ## v0.1-stable - 2026-05-22
 
 首个稳定快照，已推送到私有 GitHub 仓库并打标签。

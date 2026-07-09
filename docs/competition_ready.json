@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 136,
-    "passed": 136,
+    "total": 237,
+    "passed": 237,
     "failed": 0,
     "warnings": 0
   },
@@ -11,14 +11,14 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 3080",
+      "detail": "中文字符数 4329",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "PROJECT_INDEX.md",
       "ok": true,
-      "detail": "中文字符数 2392",
+      "detail": "中文字符数 2820",
       "severity": "P0"
     },
     {
@@ -39,7 +39,7 @@
       "category": "中文文档",
       "name": "docs/03_操作手册.md",
       "ok": true,
-      "detail": "中文字符数 585",
+      "detail": "中文字符数 662",
       "severity": "P0"
     },
     {
@@ -102,28 +102,28 @@
       "category": "中文文档",
       "name": "docs/12_环境依赖与部署.md",
       "ok": true,
-      "detail": "中文字符数 395",
+      "detail": "中文字符数 438",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/13_测试说明.md",
       "ok": true,
-      "detail": "中文字符数 418",
+      "detail": "中文字符数 479",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/14_常见问题FAQ.md",
       "ok": true,
-      "detail": "中文字符数 698",
+      "detail": "中文字符数 747",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/15_更新日志.md",
       "ok": true,
-      "detail": "中文字符数 403",
+      "detail": "中文字符数 772",
       "severity": "P0"
     },
     {
@@ -137,7 +137,7 @@
       "category": "中文文档",
       "name": "docs/17_项目交付说明.md",
       "ok": true,
-      "detail": "中文字符数 603",
+      "detail": "中文字符数 640",
       "severity": "P0"
     },
     {
@@ -151,35 +151,35 @@
       "category": "中文文档",
       "name": "docs/最终提交说明.md",
       "ok": true,
-      "detail": "中文字符数 2823",
+      "detail": "中文字符数 3655",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/平台摘要.md",
       "ok": true,
-      "detail": "中文字符数 2711",
+      "detail": "中文字符数 2666",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/项目介绍总览.md",
       "ok": true,
-      "detail": "中文字符数 5928",
+      "detail": "中文字符数 6049",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/概要设计说明书.md",
       "ok": true,
-      "detail": "中文字符数 1035",
+      "detail": "中文字符数 1349",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/详细设计说明书.md",
       "ok": true,
-      "detail": "中文字符数 2799",
+      "detail": "中文字符数 3220",
       "severity": "P0"
     },
     {
@@ -193,14 +193,14 @@
       "category": "中文文档",
       "name": "docs/操作系统机制说明.md",
       "ok": true,
-      "detail": "中文字符数 1619",
+      "detail": "中文字符数 1651",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/Peony与UKUI桌面集成实现说明.md",
       "ok": true,
-      "detail": "中文字符数 2600",
+      "detail": "中文字符数 2863",
       "severity": "P0"
     },
     {
@@ -214,14 +214,14 @@
       "category": "中文文档",
       "name": "docs/openKylin验证记录.md",
       "ok": true,
-      "detail": "中文字符数 1565",
+      "detail": "中文字符数 1669",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/部署手册.md",
       "ok": true,
-      "detail": "中文字符数 1387",
+      "detail": "中文字符数 2085",
       "severity": "P0"
     },
     {
@@ -235,14 +235,35 @@
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 2489",
+      "detail": "中文字符数 4114",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/真实Agent接入使用说明.md",
+      "ok": true,
+      "detail": "中文字符数 2072",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/真实Agent闭环测试报告.md",
+      "ok": true,
+      "detail": "中文字符数 1579",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/真实Agent记忆价值评测报告.md",
+      "ok": true,
+      "detail": "中文字符数 3289",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/赛题符合性说明.md",
       "ok": true,
-      "detail": "中文字符数 1082",
+      "detail": "中文字符数 1138",
       "severity": "P0"
     },
     {
@@ -256,28 +277,63 @@
       "category": "中文文档",
       "name": "docs/评委证据包索引.md",
       "ok": true,
-      "detail": "中文字符数 1828",
+      "detail": "中文字符数 2140",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/答辩提纲.md",
       "ok": true,
-      "detail": "中文字符数 1261",
+      "detail": "中文字符数 1296",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/答辩稿.md",
       "ok": true,
-      "detail": "中文字符数 5960",
+      "detail": "中文字符数 6259",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/演示视频脚本.md",
       "ok": true,
-      "detail": "中文字符数 615",
+      "detail": "中文字符数 593",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/超标准交付评分矩阵.md",
+      "ok": true,
+      "detail": "中文字符数 1268",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/供应链与SBOM说明.md",
+      "ok": true,
+      "detail": "中文字符数 363",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/安全扫描报告.md",
+      "ok": true,
+      "detail": "中文字符数 304",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/外部标准基准说明.md",
+      "ok": true,
+      "detail": "中文字符数 352",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "docs/安全与遗忘保证边界.md",
+      "ok": true,
+      "detail": "中文字符数 1451",
       "severity": "P0"
     },
     {
@@ -313,6 +369,27 @@
       "name": "Web 控制台安全响应头",
       "ok": true,
       "detail": "包含 CSP、frame、opener 和权限策略响应头",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "正式文档测试数字口径",
+      "ok": true,
+      "detail": "正式材料使用当前 312/313 测试口径",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "openKylin 桌面产品话术",
+      "ok": true,
+      "detail": "桌面文档使用本机智能检索、操作进度等成熟产品表达",
+      "severity": "P0"
+    },
+    {
+      "category": "中文文档",
+      "name": "超标准交付评分矩阵",
+      "ok": true,
+      "detail": "评分矩阵覆盖指标余量、外部最佳实践和边界声明",
       "severity": "P0"
     },
     {
@@ -394,6 +471,104 @@
     },
     {
       "category": "源码与脚本",
+      "name": "scripts/collect_agent_evidence.sh",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/collect_memory_value_evidence.sh",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/run_openhands_memguard_demo.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/run_openhands_behavior_suite.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/evaluate_memory_value.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/memguard_agent_bridge.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/memguard-agent@.service",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/integrations/openhands_adapter.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/integrations/openhands_runner.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/integrations/context_injector.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/eval/ablation.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/eval/performance_suite.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/eval/memory_value.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/eval/real_agent_behavior.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
       "name": "scripts/build_deb.sh",
       "ok": true,
       "detail": "存在",
@@ -422,7 +597,98 @@
     },
     {
       "category": "源码与脚本",
+      "name": "scripts/generate_sbom.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/run_security_scan.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/run_resource_control.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/fetch_longmemeval_v2.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/run_longmemeval_v2.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/backup_memguard.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/restore_memguard.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/check_slo.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/sign_release.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
       "name": "scripts/verify_ukui_plugins.sh",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/eval/resource_control.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/integrations/longmemeval_v2.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "memguard/governance/trust.py",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "config/nginx/memguardos.conf",
       "ok": true,
       "detail": "存在",
       "severity": "P0"
@@ -809,21 +1075,21 @@
       "category": "openKylin指标",
       "name": "10k 负载 P95 < 500ms",
       "ok": true,
-      "detail": "当前 10.8440，要求 <= 500.0000",
+      "detail": "当前 10.1050，要求 <= 500.0000",
       "severity": "P0"
     },
     {
       "category": "openKylin指标",
       "name": "10k 负载 P99 < 500ms",
       "ok": true,
-      "detail": "当前 106.0950，要求 <= 500.0000",
+      "detail": "当前 75.2550，要求 <= 500.0000",
       "severity": "P0"
     },
     {
       "category": "openKylin指标",
       "name": "10k 进程 RSS < 256MB",
       "ok": true,
-      "detail": "当前 149284.0000，要求 <= 262144.0000",
+      "detail": "当前 130444.0000，要求 <= 262144.0000",
       "severity": "P0"
     },
     {
@@ -851,7 +1117,7 @@
       "category": "openKylin指标",
       "name": "10k Agent 批量检索 P95 < 100ms",
       "ok": true,
-      "detail": "当前 15.4270，要求 <= 100.0000",
+      "detail": "当前 11.6990，要求 <= 100.0000",
       "severity": "P0"
     },
     {
@@ -936,6 +1202,447 @@
       "name": "SHA256SUMS 覆盖全部证据文件",
       "ok": true,
       "detail": "覆盖 71 个证据文件",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "证据目录",
+      "ok": true,
+      "detail": "docs/evidence/openkylin_native_latest",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "source_revision.json",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "environment.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "openkylin_status.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "openkylin_status_probe_sdk.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "peony_batch_preview.json",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "peony_batch_apply.json",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "peony_sensitive_preview.json",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "systemd_cgroup.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "polkit_assets.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "tray_assets.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "desktop_build.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "debian_packages.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "deb_lifecycle.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "pytest_openkylin.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "manifest.json",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "SHA256SUMS.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "证据对应当前 Git HEAD",
+      "ok": true,
+      "detail": "source=f14d614835c4068f4add682237b5b29cf3f44d01；当前 HEAD 仅追加/更新原生证据文件 18 个",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "Polkit policy 交付状态",
+      "ok": true,
+      "detail": "system installed",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "Polkit helper 交付状态",
+      "ok": true,
+      "detail": "system installed",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "Polkit helper 拒绝未知动作",
+      "ok": true,
+      "detail": "unknown_action_rejected=true",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "Debian 五包生命周期",
+      "ok": true,
+      "detail": "package_count=5 offline_install=ok",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "Debian 桌面包卸载重装",
+      "ok": true,
+      "detail": "桌面包卸载/重装通过",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "Debian 用户数据保护",
+      "ok": true,
+      "detail": "user_data_delete_guard=ok",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "Peony 批量预览确认契约",
+      "ok": true,
+      "detail": "批量预览可选择安全项",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "Peony 确认导入与审计链",
+      "ok": true,
+      "detail": "stored>=2 audit_chain=true",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "Peony 敏感文件阻断",
+      "ok": true,
+      "detail": "block_sensitive selectable=false",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "UKUI 托盘安装资产",
+      "ok": true,
+      "detail": "托盘程序与 UKUI autostart 存在",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "manifest 覆盖全部证据文件",
+      "ok": true,
+      "detail": "覆盖 19 个证据文件",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin证据",
+      "name": "SHA256SUMS 覆盖全部证据文件",
+      "ok": true,
+      "detail": "覆盖 19 个证据文件",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "证据目录",
+      "ok": true,
+      "detail": "docs/evidence/performance_latest",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "优化后 10k 负载 P95 < 500ms",
+      "ok": true,
+      "detail": "当前 10.1050，要求 <= 500.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "优化后 10k 负载 P99 < 500ms",
+      "ok": true,
+      "detail": "当前 75.2550，要求 <= 500.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "优化后 10k RSS < 256MB",
+      "ok": true,
+      "detail": "当前 130444.0000，要求 <= 262144.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "优化后 Agent 批量检索 P95 < 100ms",
+      "ok": true,
+      "detail": "当前 11.6990，要求 <= 100.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "多轮并发全部通过",
+      "ok": true,
+      "detail": "all_ok=True",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "多轮并发最差 P95 < 500ms",
+      "ok": true,
+      "detail": "当前 54.3810，要求 <= 500.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "多轮并发最差 P99 < 500ms",
+      "ok": true,
+      "detail": "当前 69.7830，要求 <= 500.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "消融实验证明混合检索提升召回",
+      "ok": true,
+      "detail": "text_only=0.8426 full_no_cache=1.0",
+      "severity": "P0"
+    },
+    {
+      "category": "性能与消融证据",
+      "name": "Kylin SDK 消融边界已记录",
+      "ok": true,
+      "detail": "status=completed P95=279.641 P99=1492.348",
+      "severity": "P0"
+    },
+    {
+      "category": "Agent记忆价值证据",
+      "name": "证据目录",
+      "ok": true,
+      "detail": "docs/evidence/memory_value_latest",
+      "severity": "P0"
+    },
+    {
+      "category": "Agent记忆价值证据",
+      "name": "16 组确定性配对实验",
+      "ok": true,
+      "detail": "case_count=16 passed=16 failed=0",
+      "severity": "P0"
+    },
+    {
+      "category": "Agent记忆价值证据",
+      "name": "至少 12 组真实 OpenHands 案例",
+      "ok": true,
+      "detail": "case_count=12 completed=12",
+      "severity": "P0"
+    },
+    {
+      "category": "Agent记忆价值证据",
+      "name": "真实案例失败均已归因",
+      "ok": true,
+      "detail": "unclassified_failure_count=0",
+      "severity": "P0"
+    },
+    {
+      "category": "Agent记忆价值证据",
+      "name": "真实记忆系统层通过率",
+      "ok": true,
+      "detail": "当前 1.0000，要求 >= 0.7500",
+      "severity": "P0"
+    },
+    {
+      "category": "Agent记忆价值证据",
+      "name": "真实 Agent 行为层结果已记录",
+      "ok": true,
+      "detail": "agent_behavior_pass_rate=1.0000",
+      "severity": "P0"
+    },
+    {
+      "category": "Agent记忆价值证据",
+      "name": "manifest.json",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "Agent记忆价值证据",
+      "name": "SHA256SUMS.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "真实Agent扩展证据",
+      "name": "R13-R20 证据目录",
+      "ok": true,
+      "detail": "docs/evidence/real_agent_extension_r13_r20_latest",
+      "severity": "P0"
+    },
+    {
+      "category": "真实Agent扩展证据",
+      "name": "R13-R20 新增 8 组真实 OpenHands 案例",
+      "ok": true,
+      "detail": "case_count=8 completed=8 memory=1.0000 behavior=1.0000 unclassified=0",
+      "severity": "P0"
+    },
+    {
+      "category": "真实Agent扩展证据",
+      "name": "manifest.json",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "真实Agent扩展证据",
+      "name": "SHA256SUMS.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "真实Agent留出证据",
+      "name": "留出集证据目录",
+      "ok": true,
+      "detail": "docs/evidence/real_agent_holdout_latest",
+      "severity": "P0"
+    },
+    {
+      "category": "真实Agent留出证据",
+      "name": "8 组留出真实 OpenHands 案例",
+      "ok": true,
+      "detail": "case_count=8 completed=8 memory=1.0000 behavior=1.0000 unclassified=0 failed=[]",
+      "severity": "P0"
+    },
+    {
+      "category": "真实Agent留出证据",
+      "name": "manifest.json",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "真实Agent留出证据",
+      "name": "SHA256SUMS.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "供应链与SBOM",
+      "name": "SBOM JSON",
+      "ok": true,
+      "detail": "docs/sbom.json",
+      "severity": "P0"
+    },
+    {
+      "category": "供应链与SBOM",
+      "name": "SBOM 中文说明",
+      "ok": true,
+      "detail": "docs/供应链与SBOM说明.md",
+      "severity": "P0"
+    },
+    {
+      "category": "供应链与SBOM",
+      "name": "SBOM 关键源码覆盖",
+      "ok": true,
+      "detail": "覆盖核心服务、真实 Agent runner 和 BPF LSM",
+      "severity": "P0"
+    },
+    {
+      "category": "供应链与SBOM",
+      "name": "SBOM 依赖分组",
+      "ok": true,
+      "detail": "包含 runtime/dev/agent-openhands 分组",
+      "severity": "P0"
+    },
+    {
+      "category": "安全扫描",
+      "name": "安全扫描 JSON",
+      "ok": true,
+      "detail": "docs/security_scan.json",
+      "severity": "P0"
+    },
+    {
+      "category": "安全扫描",
+      "name": "安全扫描中文报告",
+      "ok": true,
+      "detail": "docs/安全扫描报告.md",
+      "severity": "P0"
+    },
+    {
+      "category": "安全扫描",
+      "name": "安全扫描门禁通过",
+      "ok": true,
+      "detail": "bandit_high=0 pip_audit_vulnerabilities=0 missing_tools=[] bandit=warnings pip_audit=clean",
       "severity": "P0"
     },
     {

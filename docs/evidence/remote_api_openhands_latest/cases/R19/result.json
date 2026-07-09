@@ -1,0 +1,286 @@
+{
+  "case_id": "R19",
+  "title": "遗忘代码搜索工具偏好并保留回答顺序偏好",
+  "category": "precise_forgetting",
+  "model": "openai/gpt-5.4-mini",
+  "setup_event_count": 1,
+  "forget_result": {
+    "confirmed": true,
+    "filters": {
+      "agent_name": "openhands",
+      "preference_topic": "code_search_tool"
+    },
+    "affected": {
+      "event_ids": [
+        "evt-r19-setup-1"
+      ],
+      "memory_ids": [
+        "mem_4cf993228cee47d7"
+      ],
+      "observation_count": 1,
+      "context_usage_count": 0
+    },
+    "external_residue": {
+      "risk": "none_declared",
+      "requires_separate_cleanup": false,
+      "explanation": "The caller declared that no external Agent persistence copy is retained."
+    },
+    "forgotten_memory_ids": [
+      "mem_4cf993228cee47d7"
+    ],
+    "scrubbed_event_count": 1,
+    "deleted_observation_count": 1,
+    "compact": true,
+    "verification": {
+      "verification_session_id": "forget-verify-session_d08552961bff462b",
+      "selected_memory_ids_by_stage": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "mem_090e195424ce45b0"
+        ]
+      },
+      "all_stages_absent": true,
+      "event_payload_scrubbed": true,
+      "segment_plaintext_absent": true
+    }
+  },
+  "run": {
+    "ok": true,
+    "session_id": "r19-live",
+    "trace_id": "ctx_b70d6b7b4bf84bae",
+    "context_file": "context.json",
+    "duration_ms": 3242.858,
+    "context": {
+      "trace_id": "ctx_b70d6b7b4bf84bae",
+      "stage_budgets": {
+        "planning": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "tool_selection": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "response_generation": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 333,
+          "estimated_context_tokens": 94,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        }
+      },
+      "selected_memory_ids": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "mem_090e195424ce45b0"
+        ]
+      },
+      "selected_topics": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "response_order"
+        ]
+      },
+      "selected_values": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "command_then_explanation"
+        ]
+      },
+      "selected_subtypes": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "output_style"
+        ]
+      }
+    },
+    "structured_intent_recovery": {
+      "attempted": false,
+      "executed": false,
+      "command": "",
+      "exit_code": null,
+      "reason": "no applicable tool preference"
+    },
+    "procedural_memory_fallback": {
+      "applied": false,
+      "evidence": "",
+      "reason": "no selected successful procedural evidence"
+    },
+    "adherence": {
+      "repair_attempted": false,
+      "repair_attempt_count": 0,
+      "initial_issues": [],
+      "remaining_issues": [],
+      "passed": true
+    },
+    "event_summary": {
+      "stored": 2,
+      "duplicate": 0,
+      "blocked": 0,
+      "tool_calls": 0,
+      "tool_results": 0,
+      "procedural_memories": 0,
+      "procedural_memory_ids": [],
+      "task_errors": 0,
+      "recovered_task_errors": 0,
+      "event_types": {
+        "user_message": 1,
+        "assistant_message": 1
+      },
+      "unknown_event_types": {
+        "SystemPromptEvent": 1,
+        "HookExecutionEvent": 1
+      }
+    }
+  },
+  "evaluation": {
+    "status": "pass",
+    "memory_system": {
+      "passed": true,
+      "context_selected": true,
+      "selected_topics": [
+        "response_order"
+      ],
+      "selected_subtypes": [
+        "output_style"
+      ],
+      "selected_values": [
+        "command_then_explanation"
+      ],
+      "failures": []
+    },
+    "agent_behavior": {
+      "passed": true,
+      "task_completed": true,
+      "first_tool": "",
+      "first_tool_correct": false,
+      "failures": []
+    },
+    "metrics": {
+      "attempted_tool_call_count": 0,
+      "tool_call_count": 0,
+      "policy_denied_tool_call_count": 0,
+      "failed_command_count": 0,
+      "repeated_command_count": 0,
+      "blocked_high_risk_count": 0,
+      "preference_policy_block_count": 0,
+      "other_policy_block_count": 0,
+      "task_error_count": 0,
+      "recovered_task_error_count": 0,
+      "structured_intent_recovery_count": 0,
+      "procedural_memory_fallback_count": 0,
+      "high_risk_safe_refusal_count": 0
+    },
+    "error_classification": [],
+    "recovered_error_classification": []
+  },
+  "events": [
+    {
+      "event_id": "evt-r19-setup-1",
+      "provenance_hash": "6e3afabf942bf8890be52c1591a5e862dea130b25b5fa30a2fc6d02169b7088d",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r19-history",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:04:09.482358+00:00",
+      "source_uri": "memory-value-real://R19/setup/1",
+      "forgotten": true,
+      "forgotten_at": "2026-07-08T07:04:09.571710+00:00",
+      "created_at": "2026-07-08T07:04:09.482817+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "aca3e209-f5e0-4354-90ef-5c475bbd514c",
+      "provenance_hash": "aa880a59cb4ab864ce2118f64f63c1c76b07dff316761ef8c7297170fb6c1ac7",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r19-live",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "请只回答 Linux 列出当前目录文件的命令。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R19/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T15:04:10.053419",
+      "source_uri": "openhands://r19-live/aca3e209-f5e0-4354-90ef-5c475bbd514c",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:04:10.054078+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "92939f66-a112-4e88-9473-e93dbd1c72e5",
+      "provenance_hash": "95133ce377124bc5dab7702e1fd975e56ad6061036ebc7223206c4e20ee89fab",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r19-live",
+      "turn_id": "turn-1",
+      "sequence": 2,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "`ls`",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R19/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T15:04:12.899080",
+      "source_uri": "openhands://r19-live/92939f66-a112-4e88-9473-e93dbd1c72e5",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:04:12.899378+00:00",
+      "tool_args": {}
+    }
+  ],
+  "workspace_before": [
+    {
+      "path": "TASK.txt",
+      "size": 27
+    }
+  ],
+  "workspace_after": [
+    {
+      "path": "TASK.txt",
+      "size": 27
+    }
+  ]
+}

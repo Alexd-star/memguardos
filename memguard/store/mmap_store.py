@@ -87,6 +87,18 @@ class AppendOnlyMemoryStore:
                 created_at=utc_now(),
                 hash=stable_hash(record.memory_id + reason + utc_now()),
             ),
+            preference_topic=record.preference_topic,
+            preference_value=record.preference_value,
+            preference_scope=record.preference_scope,
+            preference_explicit=record.preference_explicit,
+            agent_name=record.agent_name,
+            preference_session_id=record.preference_session_id,
+            project_root=record.project_root,
+            task_type=record.task_type,
+            trust_level=record.trust_level,
+            trust_score=record.trust_score,
+            governance_state=record.governance_state,
+            governance_reason=record.governance_reason,
             deleted=True,
         )
         record.invalidate(valid_to=tomb.temporal.valid_from, superseded_by=tombstone_version_id)

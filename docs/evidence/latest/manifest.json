@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-06-07T09:45:51.141748+00:00",
+  "generated_at": "2026-07-09T10:20:41.054198+00:00",
   "root": "docs/evidence/latest",
   "file_count": 71,
-  "total_bytes": 434085,
+  "total_bytes": 434126,
   "files": [
     {
       "path": "agent_batch_search.txt",
@@ -101,8 +101,8 @@
     },
     {
       "path": "eval_10k.txt",
-      "bytes": 3855,
-      "sha256": "f64718d2efbd775fe9de1d93375e2a5ad54b1c7f05ab5f81b7a56b79be81173f"
+      "bytes": 3606,
+      "sha256": "df3c88cfdb5654ae177892072fdde8a88d487bb0b45689f5e65616d0edcbd87f"
     },
     {
       "path": "eval_1k.txt",
@@ -116,8 +116,8 @@
     },
     {
       "path": "eval_report_openkylin_10k.md",
-      "bytes": 2854,
-      "sha256": "f90b0a68c233e3b338d5d41aea7e867ef5be1f3c0aa1a74b15adc47fb5e4f956"
+      "bytes": 2855,
+      "sha256": "cb742841948a6fe678391b379f5d0e055e6d9c5bf872ec7fee9d4928fd496f65"
     },
     {
       "path": "eval_result_openkylin.json",
@@ -127,7 +127,7 @@
     {
       "path": "eval_result_openkylin_10k.json",
       "bytes": 3606,
-      "sha256": "1932f1631e6c1c4db06378e72b80684ba97d496adf964abbc5b032e4eb004e2e"
+      "sha256": "df3c88cfdb5654ae177892072fdde8a88d487bb0b45689f5e65616d0edcbd87f"
     },
     {
       "path": "generate_answer.txt",
@@ -261,8 +261,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 4415,
-      "sha256": "720f022a7ca4d535147e817004a144bdc2f1f9a65c1a48d9cd113c47cbff98de"
+      "bytes": 4704,
+      "sha256": "afe093798c577a8d9e640af3637bca6a23ca113c0ed12cf84708f07d121a2997"
     },
     {
       "path": "sdk_embedding_probe.txt",

@@ -1,10 +1,10 @@
 # openKylin 验证记录
 
-本文记录在 openKylin 上验证 MemGuardOS 的命令和结果。录制最终视频前需要在最终环境中复跑。
+本文记录在 openKylin 上验证 MemGuardOS 的命令和结果。通用功能与真实 Agent 专项已经完成最终环境复跑。
 
 ## 0. 已验证 VM 快照
 
-日期：2026-05-18 至 2026-06-07
+日期：2026-05-18 至 2026-06-19
 
 说明：本页记录已经完成的 openKylin 证据。最新证据包采集时间为 `20260607_123336`，已包含用户行为接入、Unix socket token 鉴权、namespace 多会话隔离、systemd 模板 cgroup、并发审计、自然语言敏感规则、可解释语义抽取、时间有效性窗口、本地 Web 控制台、Kylin embedding 实际检索重排、Kylin 向量数据库探针、BPF JSON 策略生成、BPF LSM 安全测试文件强制拒绝、Peony/UKUI 原生插件构建、UKUI 插件可见性核查和 10k 规模评测。当前已补充 Peony 右键菜单、UKUI 控制中心桌面可见验证证据、Debian 安装包构建、openKylin 维护模式完整 apt 安装复验证据、企业化控制中心面板、默认演示库审计链重建验证和诊断报告证据。
 
@@ -26,6 +26,8 @@
 - Kylin vector SDK：`libkysdk-vector-engine-client.so.1` 可加载，C++ 探针完成连接、建表、插入、搜索和清理
 - Debian 安装包：维护模式完整 `apt install` 通过；安装后 `memguardd.service` active、cgroup 限制生效、Peony/UKUI 插件依赖完整、审计链验证通过；安装后 Kylin embedding Python/C++ 探针返回 768 维向量
 - Kylin vector engine 用户服务：active，socket 可用
+- OpenHands SDK：1.28.1，真实终端调用、事件回收与跨会话上下文已验证
+- Agent bridge：`memguard-agent@luo.service` active，普通用户运行，`NoNewPrivileges=yes`、`ProtectSystem=strict`、`MemoryMax=2G`
 
 已验证命令：
 
@@ -39,24 +41,29 @@ python -m memguard.eval.run_eval --latency-size 1000 --latency-queries 120 \
 bash scripts/openkylin_verify.sh
 python -m memguard.cli.memctl sdk-status
 bash scripts/collect_openkylin_evidence.sh --with-10k
+bash scripts/collect_agent_evidence.sh
 ```
 
 最新结果：
 
-- 单元测试：`68 passed`
+- 最新同 HEAD 单元测试：`313 passed`
+- 真实 Agent：OpenHands 实际执行 `rg -n build_agent_context memguard` 并返回真实文件与行号
+- Agent 专项 benchmark：200 条，提取/遗忘/跨会话指标 1.0000，污染率/泄漏率 0，P95 113.97 ms
 - 负载评测：1000 条记忆，120 次检索请求
 - 最新 1k 负载 P95：8.904 ms
 - 最新证据包未单独采集 5k 负载；10k 规模评测覆盖更大数据量
-- 10k 负载 P95：10.844 ms
-- 10k 负载 P99：106.095 ms
-- 普通并发压力项：1k P95 为 666.905 ms，10k P95 为 654.302 ms；该项用于观察多 worker 压力下的尾延迟，不作为赛题“检索响应延迟 <= 500ms”的主指标
-- OS Agent 批量检索 P95：15.427 ms
+- 优化后 10k 负载 P95：10.105 ms
+- 优化后 10k 负载 P99：75.255 ms
+- 独立三轮普通并发压力项：6 worker、每轮 120 查询，P95 中位数 31.605 ms、最差 P95 54.381 ms、最差 P99 69.783 ms
+- 完整 10k 评测进程内普通并发 P95：139.264 ms，P99：206.772 ms
+- OS Agent 批量检索 P95：11.699 ms
 - 最新 openKylin 1k RSS：122112.0 KB
-- 10k 评测 RSS：149284.0 KB
-- 纯文本基线 Recall@5：0.8229
+- 10k 评测 RSS：130444.0 KB
+- 统一消融纯文本基线 Recall@5：0.8426
 - 完整 MemGuardOS Recall@5：1.0000
+- Kylin SDK 消融：Recall@5 1.0000，P95 279.641 ms，P99 1492.348 ms；首次端侧推理尾延迟明显，继续作为可选增强而非默认唯一路径
 - 该证据包采集时的 benchmark：53 条种子记忆、48 条检索用例、31 条敏感检测用例、25 条精准遗忘用例、10 条冲突解决用例、17 条图谱检索用例、6 条数据质量用例、7 条程序性记忆用例。
-- 类型准确率、Recall@5、敏感阻断 F1、脱敏 F1、敏感标签 F1、遗忘精确率/召回率、冲突正确率、图谱 Recall@5 均为 1.0000；子类型准确率为 0.9811
+- 最新复评中，类型准确率、子类型准确率、Recall@5、敏感阻断 F1、脱敏 F1、敏感标签 F1、遗忘精确率/召回率、冲突正确率、图谱 Recall@5 均为 1.0000；历史证据包中保留早期子类型准确率 0.9811 的原始记录，用于追溯修复前状态
 - 审计哈希链验证通过
 - 并发审计验证通过：6 线程共 72 条事件，`verify.ok=true`
 - OS 敏感路径 smoke test 被正确阻断
@@ -226,8 +233,8 @@ bash scripts/install_ukui_plugins.sh --no-build
 
 - Peony 右键菜单插件构建产物：`native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so`。
 - UKUI 控制中心插件构建产物：`native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so`。
-- openKylin ostree/overlay 只读 `/usr` 场景已通过 bind mount 演示安装处理；Peony 右键菜单项“用 MemGuardOS 扫描并导入记忆”已在桌面右键菜单中可见验证，UKUI 控制中心入口“MemGuardOS 记忆安全”已在设置界面中可见验证。当前源码已将控制中心升级为本机运维面板，提供运行环境检查、审计链校验、端侧向量能力检查、诊断报告和本地控制台入口；`peony_file_scan_smoke.sh` 会自动复验右键动作对应的文本文件导入、检索和审计链。
-- `ukui_enterprise_panel.txt` 记录新控制中心插件 `.so` 已重新构建并安装到系统插件目录，字符串核查包含【运行环境检查】、【校验审计链】、【检查端侧向量能力】、【导出诊断报告】和【打开本地控制台】。
+- openKylin ostree/overlay 只读 `/usr` 场景支持 bind mount 演示安装处理；Peony 右键入口已升级为多文件预览、确认导入和敏感阻断闭环，UKUI 控制中心入口“MemGuardOS 记忆安全”提供本机运维面板，UKUI 托盘提供状态提醒和快捷入口。当前原生化证据脚本会自动复验 Peony 预览/确认/阻断、桌面构建、Polkit、托盘、服务级 cgroup、五包构建和离线生命周期。
+- `ukui_enterprise_panel.txt` 记录新控制中心插件 `.so` 已重新构建并安装到系统插件目录，字符串核查包含【运行环境检查】、【校验审计链】、【检查本机智能检索】、【导出诊断报告】和【打开本地控制台】。
 - `diagnostics_probe_after_reset.txt` 记录默认用户库重建后的诊断报告：`audit_chain.ok=true`，Kylin embedding 实际探针 `ok=true`、维度为 `768`。
 
 ## 10. 一键验证
@@ -237,3 +244,8 @@ bash scripts/openkylin_verify.sh
 ```
 
 该脚本会运行 doctor、Kylin AI SDK 状态、向量数据库探针、单元测试、评测、auditd 规则预览、OS 事件 smoke test、真实 auditd 日志接入和审计链验证。
+
+
+
+
+

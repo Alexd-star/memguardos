@@ -1,0 +1,424 @@
+{
+  "case_id": "R13",
+  "title": "项目级简洁回答覆盖全局详细回答",
+  "category": "conflict_override",
+  "model": "ollama/qwen3:1.7b",
+  "setup_event_count": 2,
+  "forget_result": null,
+  "run": {
+    "ok": true,
+    "session_id": "r13-live",
+    "trace_id": "ctx_1d459dea179e4106",
+    "context_file": "context.json",
+    "duration_ms": 84394.642,
+    "context": {
+      "trace_id": "ctx_1d459dea179e4106",
+      "stage_budgets": {
+        "planning": {
+          "max_chars": 4000,
+          "token_budget": 256,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "tool_selection": {
+          "max_chars": 4000,
+          "token_budget": 256,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "response_generation": {
+          "max_chars": 4000,
+          "token_budget": 256,
+          "context_chars": 309,
+          "estimated_context_tokens": 88,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        }
+      },
+      "selected_memory_ids": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "mem_49a05359b1724262"
+        ]
+      },
+      "selected_topics": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "response_verbosity"
+        ]
+      },
+      "selected_values": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "concise"
+        ]
+      },
+      "selected_subtypes": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "output_style"
+        ]
+      }
+    },
+    "structured_intent_recovery": {
+      "attempted": false,
+      "executed": false,
+      "command": "",
+      "exit_code": null,
+      "reason": "no applicable tool preference"
+    },
+    "procedural_memory_fallback": {
+      "applied": false,
+      "evidence": "",
+      "reason": "no selected successful procedural evidence"
+    },
+    "adherence": {
+      "repair_attempted": false,
+      "repair_attempt_count": 0,
+      "initial_issues": [],
+      "remaining_issues": [],
+      "passed": true
+    },
+    "event_summary": {
+      "stored": 7,
+      "duplicate": 0,
+      "blocked": 0,
+      "tool_calls": 2,
+      "tool_results": 2,
+      "procedural_memories": 2,
+      "procedural_memory_ids": [
+        "mem_7b495db926e44c53",
+        "mem_80c1b0bb74dd4811"
+      ],
+      "task_errors": 0,
+      "recovered_task_errors": 0,
+      "event_types": {
+        "user_message": 1,
+        "policy_decision": 2,
+        "tool_call": 2,
+        "tool_result": 2
+      },
+      "unknown_event_types": {
+        "SystemPromptEvent": 1,
+        "HookExecutionEvent": 1
+      }
+    }
+  },
+  "evaluation": {
+    "status": "pass",
+    "memory_system": {
+      "passed": true,
+      "context_selected": true,
+      "selected_topics": [
+        "response_verbosity"
+      ],
+      "selected_subtypes": [
+        "output_style"
+      ],
+      "selected_values": [
+        "concise"
+      ],
+      "failures": []
+    },
+    "agent_behavior": {
+      "passed": true,
+      "task_completed": true,
+      "first_tool": "pwd",
+      "first_tool_correct": false,
+      "failures": []
+    },
+    "metrics": {
+      "attempted_tool_call_count": 1,
+      "tool_call_count": 1,
+      "policy_denied_tool_call_count": 0,
+      "failed_command_count": 0,
+      "repeated_command_count": 0,
+      "blocked_high_risk_count": 0,
+      "preference_policy_block_count": 0,
+      "other_policy_block_count": 0,
+      "task_error_count": 0,
+      "recovered_task_error_count": 0,
+      "structured_intent_recovery_count": 0,
+      "procedural_memory_fallback_count": 0,
+      "high_risk_safe_refusal_count": 0
+    },
+    "error_classification": [],
+    "recovered_error_classification": []
+  },
+  "events": [
+    {
+      "event_id": "evt-r13-setup-1",
+      "provenance_hash": "538a87a5344f4f2aa09ae9f3163e38679c4a4ac92195d44cc7faa30800361014",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r13-global",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "全局回答可以详细解释。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T14:25:41.861519+00:00",
+      "source_uri": "memory-value-real://R13/setup/1",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:25:41.861705+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "67c7ac6d-fd37-4d2a-85dd-4962ff453644",
+      "provenance_hash": "24149d87dab5a858dd966fa86ff2de8493fb4077928566997deeecaae82d7325",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r13-live",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "请只回答 Linux 查看当前所在目录路径的命令。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/outputs/openhands_behavior_r13_r20_final_20260627_222527/cases/R13/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T22:25:43.028181",
+      "source_uri": "openhands://r13-live/67c7ac6d-fd37-4d2a-85dd-4962ff453644",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:25:43.028681+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "fc528b26-a295-415a-a9a4-b0ae4192896c",
+      "provenance_hash": "0644c41cfb69b0e2072599b1de089e847000df027bcb36d5e644838f84d4f11a",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r13-live",
+      "turn_id": "turn-1",
+      "sequence": 2,
+      "event_type": "policy_decision",
+      "role": "system",
+      "content": "{\"decision\": \"allow\", \"continue\": true}",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": 0,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/outputs/openhands_behavior_r13_r20_final_20260627_222527/cases/R13/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T22:26:22.048752",
+      "source_uri": "openhands://r13-live/fc528b26-a295-415a-a9a4-b0ae4192896c",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:26:22.049392+00:00",
+      "tool_args": {
+        "continue": true,
+        "decision": "allow"
+      }
+    },
+    {
+      "event_id": "6479d577-67ac-4c9a-8da0-bd0c93d07dd9",
+      "provenance_hash": "33c9957b0a44dae24ad4acfa6a4ca8250b0b37fb851f842ad7415d89a9fc4c55",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r13-live",
+      "turn_id": "turn-1",
+      "sequence": 3,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/outputs/openhands_behavior_r13_r20_final_20260627_222527/cases/R13/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T22:26:22.003690",
+      "source_uri": "openhands://r13-live/6479d577-67ac-4c9a-8da0-bd0c93d07dd9",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:26:22.058277+00:00",
+      "tool_args": {
+        "command": "pwd"
+      }
+    },
+    {
+      "event_id": "769ce519-2673-4d3f-8109-04ad92686274",
+      "provenance_hash": "ae7d0d39d26eb89fbca8cfd50a5d26292ad34fee3ef7e9617d80dbf6cf8f8cca",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r13-live",
+      "turn_id": "turn-1",
+      "sequence": 4,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "\u001b[?2004l/home/luo/memguardos/outputs/openhands_behavior_r13_r20_final_20260627_222527/cases/R13/workspace \u001b[?2004h",
+      "exit_code": 0,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/outputs/openhands_behavior_r13_r20_final_20260627_222527/cases/R13/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T22:26:22.130696",
+      "source_uri": "openhands://r13-live/769ce519-2673-4d3f-8109-04ad92686274",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:26:22.130975+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "d05aea60-e9ae-45b6-bcd8-a65d64cce63c",
+      "provenance_hash": "a665a632d88fc3df9cf7cc9087526ea7c529ce507f404280534209fe1367028d",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r13-live",
+      "turn_id": "turn-1",
+      "sequence": 5,
+      "event_type": "policy_decision",
+      "role": "system",
+      "content": "{\"decision\": \"allow\", \"continue\": true}",
+      "tool_name": "finish",
+      "tool_result": "",
+      "exit_code": 0,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/outputs/openhands_behavior_r13_r20_final_20260627_222527/cases/R13/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T22:27:06.245151",
+      "source_uri": "openhands://r13-live/d05aea60-e9ae-45b6-bcd8-a65d64cce63c",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:27:06.245419+00:00",
+      "tool_args": {
+        "continue": true,
+        "decision": "allow"
+      }
+    },
+    {
+      "event_id": "1cfcecb8-296a-426e-aaf4-9c244a19cb92",
+      "provenance_hash": "36f14ffaffb46f3f0790070ec7c63c6da4600c4c4c6201acbbc6d17b70ea37a4",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r13-live",
+      "turn_id": "turn-1",
+      "sequence": 6,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "",
+      "tool_name": "finish",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/outputs/openhands_behavior_r13_r20_final_20260627_222527/cases/R13/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T22:27:06.206597",
+      "source_uri": "openhands://r13-live/1cfcecb8-296a-426e-aaf4-9c244a19cb92",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:27:06.254792+00:00",
+      "tool_args": {
+        "message": "/home/luo/memguardos/outputs/openhands_behavior_r13_r20_final_20260627_222527/cases/R13/workspace",
+        "summary": "显示当前目录路径"
+      }
+    },
+    {
+      "event_id": "4e028fe4-9bd1-4439-b34f-ccd2ee5f9ef0",
+      "provenance_hash": "768e56fda4d29e3f8ec5202ca87ee5e14300e81bab93f930589b7db6b9dd3e76",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r13-live",
+      "turn_id": "turn-1",
+      "sequence": 7,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "finish",
+      "tool_result": "/home/luo/memguardos/outputs/openhands_behavior_r13_r20_final_20260627_222527/cases/R13/workspace",
+      "exit_code": 0,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/outputs/openhands_behavior_r13_r20_final_20260627_222527/cases/R13/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T22:27:06.264880",
+      "source_uri": "openhands://r13-live/4e028fe4-9bd1-4439-b34f-ccd2ee5f9ef0",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:27:06.265103+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "evt-r13-setup-2",
+      "provenance_hash": "519eaa9a5a72c31e028603491c47667c6989bf4efb59ec457f51201cd4dcb92b",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r13-project",
+      "turn_id": "turn-2",
+      "sequence": 2,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "在这个项目中回答尽量简洁，只给关键步骤。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos/outputs/openhands_behavior_r13_r20_final_20260627_222527/cases/R13/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-06-27T14:25:41.870928+00:00",
+      "source_uri": "memory-value-real://R13/setup/2",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-06-27T14:25:41.871106+00:00",
+      "tool_args": {}
+    }
+  ],
+  "workspace_before": [
+    {
+      "path": "TASK.txt",
+      "size": 16
+    }
+  ],
+  "workspace_after": [
+    {
+      "path": "TASK.txt",
+      "size": 16
+    }
+  ]
+}

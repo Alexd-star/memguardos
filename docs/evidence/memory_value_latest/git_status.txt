@@ -1,0 +1,1 @@
+Git metadata is intentionally absent from the synchronized openKylin test tree.

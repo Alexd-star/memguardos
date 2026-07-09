@@ -1,0 +1,13 @@
+[Unit]
+Description=MemGuardOS Kylin embedding SDK warmup
+Documentation=file:/opt/memguardos/docs/麒麟SDK集成证据.md
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+Environment=PYTHONPATH=/opt/memguardos
+ExecStart=/opt/memguardos/scripts/warmup_kylin_sdk.sh
+TimeoutStartSec=150
+
+[Install]
+WantedBy=default.target

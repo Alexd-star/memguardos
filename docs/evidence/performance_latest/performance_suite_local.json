@@ -1,0 +1,161 @@
+{
+  "concurrent_protocol": {
+    "memory_count": 1000,
+    "query_count_per_trial": 120,
+    "workers": 6,
+    "trial_count": 3,
+    "reporting_policy": "median_and_worst_tail_latency"
+  },
+  "concurrent_trials": [
+    {
+      "memory_count": 1000,
+      "query_count": 120,
+      "workers": 6,
+      "read_path_audit": "disabled_for_latency_measurement",
+      "errors": [],
+      "ok": true,
+      "p50_latency_ms": 0.171,
+      "p95_latency_ms": 16.204,
+      "p99_latency_ms": 18.006,
+      "audit_chain_ok": true,
+      "audit_events_checked": 1000,
+      "policy_eviction_candidates": 5
+    },
+    {
+      "memory_count": 1000,
+      "query_count": 120,
+      "workers": 6,
+      "read_path_audit": "disabled_for_latency_measurement",
+      "errors": [],
+      "ok": true,
+      "p50_latency_ms": 0.23,
+      "p95_latency_ms": 13.994,
+      "p99_latency_ms": 16.0,
+      "audit_chain_ok": true,
+      "audit_events_checked": 1000,
+      "policy_eviction_candidates": 5
+    },
+    {
+      "memory_count": 1000,
+      "query_count": 120,
+      "workers": 6,
+      "read_path_audit": "disabled_for_latency_measurement",
+      "errors": [],
+      "ok": true,
+      "p50_latency_ms": 0.156,
+      "p95_latency_ms": 10.464,
+      "p99_latency_ms": 12.437,
+      "audit_chain_ok": true,
+      "audit_events_checked": 1000,
+      "policy_eviction_candidates": 5
+    }
+  ],
+  "concurrent_summary": {
+    "trial_count": 3,
+    "all_ok": true,
+    "median_p50_latency_ms": 0.171,
+    "median_p95_latency_ms": 13.994,
+    "worst_p95_latency_ms": 16.204,
+    "worst_p99_latency_ms": 18.006
+  },
+  "ablation": {
+    "protocol": {
+      "same_dataset_for_all_variants": true,
+      "same_query_order_for_all_variants": true,
+      "top_k": 5,
+      "repetitions": 3,
+      "latency_clock": "time.perf_counter",
+      "cache_policy": {
+        "text_only": "no_application_result_cache",
+        "hybrid_no_graph": "no_application_result_cache",
+        "full_no_cache": "clear_before_each_query",
+        "full_warm_cache": "one_prime_then_timed_hit",
+        "full_kylin_sdk": "clear_before_each_query"
+      }
+    },
+    "environment": {
+      "python": "3.9.6",
+      "platform": "Windows-10-10.0.26200-SP0",
+      "machine": "AMD64"
+    },
+    "dataset": {
+      "seed_count": 59,
+      "stored_seed_count": 59,
+      "query_count": 54,
+      "seed_sha256": "f2b9297977587da8bba1081d5f5b5cae67459d7b95af7e521352c5450bc82b11",
+      "query_sha256": "ffb171affbde784c58e925a752892df91d06dc0156adfe0dfab11d2d3989ca2d"
+    },
+    "variants": {
+      "text_only": {
+        "name": "text_only",
+        "status": "completed",
+        "query_count": 162,
+        "recall_at_5": 0.8426,
+        "p50_latency_ms": 0.191,
+        "p95_latency_ms": 0.465,
+        "p99_latency_ms": 0.662,
+        "qps": 4482.99,
+        "candidate_count": {
+          "mean": 3.907,
+          "max": 5
+        }
+      },
+      "hybrid_no_graph": {
+        "name": "hybrid_no_graph",
+        "status": "completed",
+        "query_count": 162,
+        "recall_at_5": 1.0,
+        "p50_latency_ms": 1.452,
+        "p95_latency_ms": 2.516,
+        "p99_latency_ms": 4.317,
+        "qps": 610.783,
+        "candidate_count": {
+          "mean": 59.0,
+          "max": 59
+        }
+      },
+      "full_no_cache": {
+        "name": "full_no_cache",
+        "status": "completed",
+        "query_count": 162,
+        "recall_at_5": 1.0,
+        "p50_latency_ms": 2.197,
+        "p95_latency_ms": 4.166,
+        "p99_latency_ms": 5.042,
+        "qps": 400.316,
+        "candidate_count": {
+          "mean": 59.0,
+          "max": 59
+        }
+      },
+      "full_warm_cache": {
+        "name": "full_warm_cache",
+        "status": "completed",
+        "query_count": 162,
+        "recall_at_5": 1.0,
+        "p50_latency_ms": 0.026,
+        "p95_latency_ms": 0.056,
+        "p99_latency_ms": 0.076,
+        "qps": 1165.864,
+        "candidate_count": {
+          "mean": 59.0,
+          "max": 59
+        }
+      },
+      "full_kylin_sdk": {
+        "name": "full_kylin_sdk",
+        "status": "skipped",
+        "reason": "disabled_by_caller"
+      }
+    },
+    "startup_and_cache": {
+      "measurement_scope": "process_cold_vs_process_warm",
+      "service_startup_ms": 74.566,
+      "first_query_ms": 2.397,
+      "warm_query_ms": 0.027,
+      "warm_speedup": 90.438,
+      "os_page_cache_claimed": false,
+      "note": "该测量比较新服务实例首次查询与同进程重复查询，不等同于清空 Linux 内核页缓存。"
+    }
+  }
+}

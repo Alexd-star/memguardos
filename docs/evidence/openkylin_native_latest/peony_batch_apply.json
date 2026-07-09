@@ -1,0 +1,85 @@
+{
+  "schema": "memguardos-desktop-scan-apply-v1",
+  "ok": true,
+  "manifest_id": "3868cccf-5602-4db1-85b2-443c7b7fc602",
+  "summary": {
+    "selected": 2,
+    "stored": 2,
+    "blocked": 0,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "schema": "memguardos-peony-scan-report-v1",
+      "path": "/var/tmp/tmp.nfiPbuCsHL/peony_preference.md",
+      "exists": true,
+      "file_kind": "file",
+      "size_bytes": 57,
+      "eligible_for_text_import": true,
+      "recommended_action": "import_text",
+      "sensitivity": {
+        "level": "none",
+        "labels": [],
+        "redacted": false
+      },
+      "preview": "以后回答 openKylin 问题时先给可复制命令。",
+      "warnings": [],
+      "audit_event": {
+        "attempted": true,
+        "stored": true,
+        "reason": ""
+      },
+      "ingest": {
+        "attempted": true,
+        "stored": true,
+        "reason": "",
+        "memory_id": "mem_490a45b25381429b",
+        "type": "preference",
+        "subtype": "tool_preference",
+        "tier": "long_term"
+      },
+      "verification": {
+        "audit_chain_ok": true
+      }
+    },
+    {
+      "schema": "memguardos-peony-scan-report-v1",
+      "path": "/var/tmp/tmp.nfiPbuCsHL/peony_knowledge.txt",
+      "exists": true,
+      "file_kind": "file",
+      "size_bytes": 61,
+      "eligible_for_text_import": true,
+      "recommended_action": "import_text",
+      "sensitivity": {
+        "level": "none",
+        "labels": [],
+        "redacted": false
+      },
+      "preview": "systemd MemoryMax 可以限制后台记忆服务的内存。",
+      "warnings": [],
+      "audit_event": {
+        "attempted": true,
+        "stored": true,
+        "reason": ""
+      },
+      "ingest": {
+        "attempted": true,
+        "stored": true,
+        "reason": "",
+        "memory_id": "mem_0720cc1e05b147f3",
+        "type": "knowledge",
+        "subtype": "fact",
+        "tier": "long_term"
+      },
+      "verification": {
+        "audit_chain_ok": true
+      }
+    }
+  ],
+  "audit_chain": {
+    "ok": true,
+    "checked": 1445,
+    "head_hash": "8d85e38508fe0ade7e9be6d970bb1b3c61a605e4a17dd25c165f3ae282c64a5c"
+  }
+}

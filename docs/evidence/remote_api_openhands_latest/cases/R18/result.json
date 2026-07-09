@@ -1,0 +1,246 @@
+{
+  "case_id": "R18",
+  "title": "新会话复用简洁回答偏好",
+  "category": "cross_session",
+  "model": "openai/gpt-5.4-mini",
+  "setup_event_count": 1,
+  "forget_result": null,
+  "run": {
+    "ok": true,
+    "session_id": "r18-live",
+    "trace_id": "ctx_77b37ce5d16b43c9",
+    "context_file": "context.json",
+    "duration_ms": 2751.888,
+    "context": {
+      "trace_id": "ctx_77b37ce5d16b43c9",
+      "stage_budgets": {
+        "planning": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "tool_selection": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "response_generation": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 303,
+          "estimated_context_tokens": 86,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        }
+      },
+      "selected_memory_ids": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "mem_ee3fe99378114335"
+        ]
+      },
+      "selected_topics": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "response_verbosity"
+        ]
+      },
+      "selected_values": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "concise"
+        ]
+      },
+      "selected_subtypes": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "output_style"
+        ]
+      }
+    },
+    "structured_intent_recovery": {
+      "attempted": false,
+      "executed": false,
+      "command": "",
+      "exit_code": null,
+      "reason": "no applicable tool preference"
+    },
+    "procedural_memory_fallback": {
+      "applied": false,
+      "evidence": "",
+      "reason": "no selected successful procedural evidence"
+    },
+    "adherence": {
+      "repair_attempted": false,
+      "repair_attempt_count": 0,
+      "initial_issues": [],
+      "remaining_issues": [],
+      "passed": true
+    },
+    "event_summary": {
+      "stored": 2,
+      "duplicate": 0,
+      "blocked": 0,
+      "tool_calls": 0,
+      "tool_results": 0,
+      "procedural_memories": 0,
+      "procedural_memory_ids": [],
+      "task_errors": 0,
+      "recovered_task_errors": 0,
+      "event_types": {
+        "user_message": 1,
+        "assistant_message": 1
+      },
+      "unknown_event_types": {
+        "SystemPromptEvent": 1,
+        "HookExecutionEvent": 1
+      }
+    }
+  },
+  "evaluation": {
+    "status": "pass",
+    "memory_system": {
+      "passed": true,
+      "context_selected": true,
+      "selected_topics": [
+        "response_verbosity"
+      ],
+      "selected_subtypes": [
+        "output_style"
+      ],
+      "selected_values": [
+        "concise"
+      ],
+      "failures": []
+    },
+    "agent_behavior": {
+      "passed": true,
+      "task_completed": true,
+      "first_tool": "",
+      "first_tool_correct": false,
+      "failures": []
+    },
+    "metrics": {
+      "attempted_tool_call_count": 0,
+      "tool_call_count": 0,
+      "policy_denied_tool_call_count": 0,
+      "failed_command_count": 0,
+      "repeated_command_count": 0,
+      "blocked_high_risk_count": 0,
+      "preference_policy_block_count": 0,
+      "other_policy_block_count": 0,
+      "task_error_count": 0,
+      "recovered_task_error_count": 0,
+      "structured_intent_recovery_count": 0,
+      "procedural_memory_fallback_count": 0,
+      "high_risk_safe_refusal_count": 0
+    },
+    "error_classification": [],
+    "recovered_error_classification": []
+  },
+  "events": [
+    {
+      "event_id": "2f3d0f71-fca6-4533-b21a-bb8e0ba4f984",
+      "provenance_hash": "c08942d2b904fbdd18e1c9e1c42549238155731c35d4ce9f10052090c345d589",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r18-live",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "请只回答 Linux 列出当前目录文件的命令。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R18/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T15:04:07.105070",
+      "source_uri": "openhands://r18-live/2f3d0f71-fca6-4533-b21a-bb8e0ba4f984",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:04:07.105461+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "b8262797-e297-4371-8ddf-203d7ecd8d4d",
+      "provenance_hash": "a63c3587248ec4175df84b9c866fd8fef9f68fb89d18665431ea5f5bdb89731c",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r18-live",
+      "turn_id": "turn-1",
+      "sequence": 2,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "`ls`",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R18/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T15:04:09.425976",
+      "source_uri": "openhands://r18-live/b8262797-e297-4371-8ddf-203d7ecd8d4d",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:04:09.426313+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "evt-r18-setup-1",
+      "provenance_hash": "db62ceb05bfcaa00574679d0a45a3ab473a1e8a7e8e8be5c6339af1af295e2c5",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r18-old",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "以后回答尽量简洁，只给关键步骤。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:04:06.672945+00:00",
+      "source_uri": "memory-value-real://R18/setup/1",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:04:06.673180+00:00",
+      "tool_args": {}
+    }
+  ],
+  "workspace_before": [
+    {
+      "path": "TASK.txt",
+      "size": 24
+    }
+  ],
+  "workspace_after": [
+    {
+      "path": "TASK.txt",
+      "size": 24
+    }
+  ]
+}

@@ -70,6 +70,16 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
     if command == "memory_policy":
         eviction_limit = _int_param(request, "eviction_limit", 10, minimum=1, maximum=100)
         return {"ok": True, "result": service.memory_policy_status(eviction_limit=eviction_limit)}
+    if command == "governance_list":
+        limit = _int_param(request, "limit", 100, minimum=1, maximum=1000)
+        return {"ok": True, "result": _jsonable(service.list_quarantined_memories(limit=limit))}
+    if command == "governance_review":
+        memory_id = _string_param(request, "memory_id", "", max_chars=128)
+        decision = _string_param(request, "decision", "", max_chars=16)
+        reviewer = _string_param(request, "reviewer", "", max_chars=256)
+        reason = _string_param(request, "reason", "", max_chars=2048)
+        result = service.review_quarantined_memory(memory_id, decision, reviewer, reason)
+        return {"ok": bool(result.get("reviewed")), "result": _jsonable(result)}
     if command == "temporal_status":
         limit = _int_param(request, "limit", 20, minimum=1, maximum=100)
         return {"ok": True, "result": service.temporal_status(limit=limit)}
@@ -118,6 +128,81 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         return {"ok": bool(result.get("ok")) if isinstance(result, dict) else False, "result": result}
     if command == "retrieval_status":
         return {"ok": True, "result": _jsonable(service.retrieval_status())}
+    if command == "ingest_interaction":
+        event = request.get("event")
+        if not isinstance(event, dict):
+            raise ValueError("event must be an object")
+        return {"ok": True, "result": _jsonable(service.ingest_interaction(event))}
+    if command == "ingest_interactions":
+        events = request.get("events")
+        if not isinstance(events, list):
+            raise ValueError("events must be an array")
+        if len(events) > 500:
+            raise ValueError("events must contain at most 500 items")
+        if any(not isinstance(event, dict) for event in events):
+            raise ValueError("every event must be an object")
+        return {"ok": True, "result": _jsonable(service.ingest_interactions(events))}
+    if command == "interaction_status":
+        return {"ok": True, "result": _jsonable(service.interaction_status())}
+    if command == "forget_agent_interactions":
+        raw_filters = request.get("filters")
+        if not isinstance(raw_filters, dict):
+            raise ValueError("filters must be an object")
+        filters = {}
+        for key, max_chars in {
+            "agent_name": 128,
+            "session_id": 256,
+            "turn_id": 256,
+            "preference_topic": 128,
+            "start_time": 64,
+            "end_time": 64,
+        }.items():
+            if raw_filters.get(key):
+                value = str(raw_filters[key]).strip()
+                if len(value) > max_chars:
+                    raise ValueError("%s exceeds maximum length" % key)
+                filters[key] = value
+        return {
+            "ok": True,
+            "result": _jsonable(
+                service.forget_agent_interactions(
+                    filters,
+                    confirm=bool(request.get("confirm", False)),
+                    compact=bool(request.get("compact", True)),
+                    external_persistence=bool(request.get("external_persistence", True)),
+                )
+            ),
+        }
+    if command == "build_agent_context":
+        task = _string_param(request, "task", "", max_chars=4096)
+        stage = _string_param(request, "stage", "", max_chars=64)
+        agent_name = _string_param(request, "agent_name", "", max_chars=128)
+        session_id = _string_param(request, "session_id", "", max_chars=256)
+        project_root = _string_param(request, "project_root", "", max_chars=2048)
+        task_type = _string_param(request, "task_type", "", max_chars=128)
+        limit = _int_param(request, "limit", 8, minimum=1, maximum=50)
+        max_chars = _int_param(request, "max_chars", 4000, minimum=128, maximum=20000)
+        token_budget = _int_param(request, "token_budget", 800, minimum=64, maximum=32000)
+        return {
+            "ok": True,
+            "result": _jsonable(
+                service.build_agent_context(
+                    task,
+                    stage=stage,
+                    agent_name=agent_name,
+                    session_id=session_id,
+                    project_root=project_root,
+                    task_type=task_type,
+                    limit=limit,
+                    max_chars=max_chars,
+                    token_budget=token_budget,
+                )
+            ),
+        }
+    if command == "preference_evidence":
+        memory_id = _string_param(request, "memory_id", "", max_chars=128)
+        result = _jsonable(service.preference_evidence(memory_id))
+        return {"ok": bool(result.get("found")) if isinstance(result, dict) else False, "result": result}
     if command == "ingest":
         text = _string_param(request, "text", "", max_chars=200000)
         source_kind = _string_param(request, "source_kind", "api", max_chars=64)
@@ -232,27 +317,35 @@ def serve_unix_socket(
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         path.unlink()
-    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as server:
-        server.bind(str(path))
-        os.chmod(path, mode)
-        server.listen(8)
-        server.settimeout(1.0)
-        if on_ready:
-            on_ready(str(path))
-        while not should_stop():
-            try:
-                conn, _addr = server.accept()
-            except socket.timeout:
-                continue
-            with conn:
+    socket_service = MemGuardService(
+        store_path=service.store.path,
+        db_path=service.meta.path,
+        namespace=service.namespace,
+    )
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as server:
+            server.bind(str(path))
+            os.chmod(path, mode)
+            server.listen(8)
+            server.settimeout(1.0)
+            if on_ready:
+                on_ready(str(path))
+            while not should_stop():
                 try:
-                    payload = _read_request(conn)
-                    response = _dispatch_payload(service, payload, auth_token=auth_token)
-                except RequestTooLarge:
-                    response = {"ok": False, "error": "payload_too_large", "detail": "request body exceeds 1 MiB"}
-                conn.sendall((json.dumps(response, ensure_ascii=False) + "\n").encode("utf-8"))
-    if path.exists():
-        path.unlink()
+                    conn, _addr = server.accept()
+                except socket.timeout:
+                    continue
+                with conn:
+                    try:
+                        payload = _read_request(conn)
+                        response = _dispatch_payload(socket_service, payload, auth_token=auth_token)
+                    except RequestTooLarge:
+                        response = {"ok": False, "error": "payload_too_large", "detail": "request body exceeds 1 MiB"}
+                    conn.sendall((json.dumps(response, ensure_ascii=False) + "\n").encode("utf-8"))
+    finally:
+        socket_service.close()
+        if path.exists():
+            path.unlink()
 
 
 def _read_request(conn: socket.socket) -> bytes:

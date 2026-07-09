@@ -1,0 +1,6 @@
+$ bash -lc dpkg-query -W -f="\${Package} \${Version} \${Status}\n" "memguardos*" 2>/dev/null || true
+memguardos 0.1.0-2 install ok installed
+memguardos-agent-bridge 0.1.0-2 install ok installed
+memguardos-core 0.1.0-2 install ok installed
+memguardos-doc 0.1.0-2 install ok installed
+memguardos-ukui 0.1.0-2 install ok installed

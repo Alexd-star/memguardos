@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=MemGuardOS 记忆安全
+Comment=打开本机 Agent 记忆安全中心
+Exec=ukui-control-center
+Icon=security-high
+Terminal=false
+Categories=Settings;Security;
+StartupNotify=true

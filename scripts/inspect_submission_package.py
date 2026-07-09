@@ -21,18 +21,51 @@ REQUIRED_PATHS = {
     "memguard/service.py",
     "memguard/api/server.py",
     "memguard/web/dashboard.py",
+    "memguard/integrations/openhands_adapter.py",
+    "memguard/integrations/openhands_runner.py",
+    "memguard/integrations/bridge.py",
+    "memguard/eval/memory_value.py",
+    "memguard/eval/real_agent_behavior.py",
     "memguard/store/mmap_store.py",
     "memguard/store/sqlite_meta.py",
     "memguard/retrieval/hybrid.py",
     "memguard/retrieval/kylin_sdk.py",
+    "memguard/os_guard/openkylin_native.py",
+    "memguard/os_guard/service_control.py",
+    "memguard/os_guard/privileged_actions.py",
+    "memguard/desktop/peony_scan.py",
+    "memguard/desktop/scan_manifest.py",
     "scripts/install_openkylin.sh",
     "scripts/build_deb.sh",
+    "scripts/build_deb_packages.py",
+    "scripts/verify_deb_lifecycle.sh",
     "scripts/collect_openkylin_evidence.sh",
+    "scripts/collect_openkylin_native_evidence.sh",
+    "scripts/collect_agent_evidence.sh",
     "scripts/web_dashboard_smoke.py",
+    "scripts/memguard-agent@.service",
+    "scripts/memguard-kylin-warmup.service",
+    "scripts/memguard_agent_bridge.py",
+    "scripts/memguardos-native-helper.sh",
+    "scripts/warmup_kylin_sdk.sh",
+    "scripts/run_openhands_memguard_demo.py",
+    "scripts/evaluate_agent_interactions.py",
+    "scripts/evaluate_memory_value.py",
+    "scripts/run_openhands_behavior_suite.py",
+    "scripts/collect_memory_value_evidence.sh",
+    "scripts/generate_sbom.py",
+    "data/benchmarks/agent_interactions.jsonl",
+    "data/benchmarks/agent_memory_value.jsonl",
+    "data/benchmarks/real_agent_behavior.jsonl",
+    "data/benchmarks/real_agent_behavior_holdout.jsonl",
     "scripts/peony_file_scan_smoke.sh",
     "native/bpf_lsm/memguard_lsm.bpf.c",
     "native/ukui/peony-memguard/memguard_peony_plugin.cpp",
     "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp",
+    "native/ukui/tray/memguard_tray.cpp",
+    "packaging/debian/packages.json",
+    "packaging/desktop/memguardos-tray.desktop",
+    "packaging/polkit/org.memguardos.policy",
     "docs/evidence/latest/pytest.txt",
     "docs/evidence/latest/web_dashboard.txt",
     "docs/evidence/latest/peony_file_scan_smoke.txt",
@@ -47,6 +80,43 @@ REQUIRED_PATHS = {
     "docs/evidence/latest/verify_audit.txt",
     "docs/evidence/latest/manifest.json",
     "docs/evidence/latest/SHA256SUMS.txt",
+    "docs/evidence/openkylin_native_latest/openkylin_status.txt",
+    "docs/evidence/openkylin_native_latest/source_revision.json",
+    "docs/evidence/openkylin_native_latest/openkylin_status_probe_sdk.txt",
+    "docs/evidence/openkylin_native_latest/kylin_warmup.txt",
+    "docs/evidence/openkylin_native_latest/peony_batch_preview.json",
+    "docs/evidence/openkylin_native_latest/peony_batch_apply.json",
+    "docs/evidence/openkylin_native_latest/peony_sensitive_preview.json",
+    "docs/evidence/openkylin_native_latest/tray_assets.txt",
+    "docs/evidence/openkylin_native_latest/debian_packages.txt",
+    "docs/evidence/openkylin_native_latest/deb_lifecycle.txt",
+    "docs/evidence/openkylin_native_latest/pytest_openkylin.txt",
+    "docs/evidence/openkylin_native_latest/manifest.json",
+    "docs/evidence/openkylin_native_latest/SHA256SUMS.txt",
+    "docs/evidence/agent_latest/pytest_openkylin.txt",
+    "docs/evidence/agent_latest/benchmark/metrics.json",
+    "docs/evidence/agent_latest/session_a_events.json",
+    "docs/evidence/agent_latest/real-agent-session-b5_context.json",
+    "docs/evidence/agent_latest/interaction_status.json",
+    "docs/evidence/agent_latest/agent_bridge_security.txt",
+    "docs/evidence/agent_latest/audit_verify.json",
+    "docs/evidence/agent_latest/manifest.json",
+    "docs/evidence/agent_latest/SHA256SUMS.txt",
+    "docs/evidence/memory_value_latest/deterministic/metrics.json",
+    "docs/evidence/memory_value_latest/real_agent/metrics.json",
+    "docs/evidence/memory_value_latest/manifest.json",
+    "docs/evidence/memory_value_latest/SHA256SUMS.txt",
+    "docs/evidence/real_agent_extension_r13_r20_latest/metrics.json",
+    "docs/evidence/real_agent_extension_r13_r20_latest/manifest.json",
+    "docs/evidence/real_agent_extension_r13_r20_latest/SHA256SUMS.txt",
+    "docs/evidence/real_agent_holdout_latest/metrics.json",
+    "docs/evidence/real_agent_holdout_latest/manifest.json",
+    "docs/evidence/real_agent_holdout_latest/SHA256SUMS.txt",
+    "docs/真实Agent记忆价值评测报告.md",
+    "docs/sbom.json",
+    "docs/供应链与SBOM说明.md",
+    "docs/security_scan.json",
+    "docs/安全扫描报告.md",
 } | FORMAL_DOCS
 
 FORBIDDEN_EXACT = {
@@ -177,6 +247,229 @@ def check_evidence_content(package: Path, name_set: set[str]) -> list[dict[str, 
         pytest_text = text("docs/evidence/latest/pytest.txt")
         if not re.search(r"\b\d+\s+passed\b", pytest_text) or " failed" in pytest_text:
             failures.append({"path": "docs/evidence/latest/pytest.txt", "reason": "missing clean pytest passed summary"})
+
+        agent_pytest_text = text("docs/evidence/agent_latest/pytest_openkylin.txt")
+        if not re.search(r"\b\d+\s+passed\b", agent_pytest_text) or " failed" in agent_pytest_text:
+            failures.append({"path": "docs/evidence/agent_latest/pytest_openkylin.txt", "reason": "missing clean openKylin pytest passed summary"})
+
+        agent_metrics = _json_from_text(text("docs/evidence/agent_latest/benchmark/metrics.json"))
+        if not agent_metrics:
+            failures.append({"path": "docs/evidence/agent_latest/benchmark/metrics.json", "reason": "cannot parse Agent benchmark JSON"})
+        else:
+            agent_rules = [
+                ("case_count", ["case_count"], 200.0, "lower"),
+                ("extraction.precision", ["metrics", "extraction", "precision"], 0.95, "lower"),
+                ("extraction.recall", ["metrics", "extraction", "recall"], 0.95, "lower"),
+                ("extraction.f1", ["metrics", "extraction", "f1"], 0.95, "lower"),
+                ("role_pollution_rate", ["metrics", "role_pollution_rate"], 0.0, "upper"),
+                ("sensitive_leak_rate", ["metrics", "sensitive_leak_rate"], 0.0, "upper"),
+                ("forget_success_rate", ["metrics", "forget_success_rate"], 0.95, "lower"),
+                ("cross_session_adherence", ["metrics", "cross_session_adherence"], 0.95, "lower"),
+                ("latency_ms.p95", ["latency_ms", "p95"], 500.0, "upper"),
+            ]
+            for label, keys, threshold, mode in agent_rules:
+                value = _nested_get(agent_metrics, keys)
+                ok = isinstance(value, (int, float)) and (value <= threshold if mode == "upper" else value >= threshold)
+                if not ok:
+                    failures.append(
+                        {
+                            "path": "docs/evidence/agent_latest/benchmark/metrics.json",
+                            "reason": "%s violates threshold" % label,
+                            "actual": value,
+                        }
+                    )
+            if agent_metrics.get("failures"):
+                failures.append(
+                    {
+                        "path": "docs/evidence/agent_latest/benchmark/metrics.json",
+                        "reason": "Agent benchmark contains failures",
+                        "actual": agent_metrics.get("failures"),
+                    }
+                )
+
+        memory_value_deterministic = _json_from_text(
+            text(
+                "docs/evidence/memory_value_latest/deterministic/metrics.json"
+            )
+        )
+        if not memory_value_deterministic:
+            failures.append(
+                {
+                    "path": "docs/evidence/memory_value_latest/deterministic/metrics.json",
+                    "reason": "cannot parse deterministic memory-value metrics",
+                }
+            )
+        else:
+            deterministic_ok = (
+                memory_value_deterministic.get("case_count") == 16
+                and _nested_get(
+                    memory_value_deterministic,
+                    ["system_validation", "passed"],
+                )
+                == 16
+                and _nested_get(
+                    memory_value_deterministic,
+                    ["system_validation", "failed"],
+                )
+                == 0
+                and not memory_value_deterministic.get("failures")
+            )
+            if not deterministic_ok:
+                failures.append(
+                    {
+                        "path": "docs/evidence/memory_value_latest/deterministic/metrics.json",
+                        "reason": "16-case deterministic memory-value gate did not pass",
+                    }
+                )
+
+        memory_value_real = _json_from_text(
+            text("docs/evidence/memory_value_latest/real_agent/metrics.json")
+        )
+        if not memory_value_real:
+            failures.append(
+                {
+                    "path": "docs/evidence/memory_value_latest/real_agent/metrics.json",
+                    "reason": "cannot parse real Agent memory-value metrics",
+                }
+            )
+        else:
+            case_count = memory_value_real.get("case_count")
+            completed_count = memory_value_real.get("completed_case_count")
+            if not isinstance(case_count, int) or case_count < 12:
+                failures.append(
+                    {
+                        "path": "docs/evidence/memory_value_latest/real_agent/metrics.json",
+                        "reason": "case_count must be at least 12",
+                        "actual": case_count,
+                    }
+                )
+            if completed_count != case_count:
+                failures.append(
+                    {
+                        "path": "docs/evidence/memory_value_latest/real_agent/metrics.json",
+                        "reason": "completed_case_count must equal case_count",
+                        "actual": completed_count,
+                    }
+                )
+            if memory_value_real.get("unclassified_failure_count") != 0:
+                failures.append(
+                    {
+                        "path": "docs/evidence/memory_value_latest/real_agent/metrics.json",
+                        "reason": "unclassified_failure_count must equal 0",
+                        "actual": memory_value_real.get("unclassified_failure_count"),
+                    }
+                )
+            memory_rate = memory_value_real.get("memory_system_pass_rate")
+            if not isinstance(memory_rate, (int, float)) or memory_rate < 0.75:
+                failures.append(
+                    {
+                        "path": "docs/evidence/memory_value_latest/real_agent/metrics.json",
+                        "reason": "memory_system_pass_rate must be at least 0.75",
+                        "actual": memory_rate,
+                    }
+                )
+
+        real_extension = _json_from_text(
+            text("docs/evidence/real_agent_extension_r13_r20_latest/metrics.json")
+        )
+        if not real_extension:
+            failures.append(
+                {
+                    "path": "docs/evidence/real_agent_extension_r13_r20_latest/metrics.json",
+                    "reason": "cannot parse R13-R20 real Agent extension metrics",
+                }
+            )
+        else:
+            extension_rules = {
+                "case_count": 8,
+                "completed_case_count": 8,
+                "memory_system_pass_rate": 1.0,
+                "agent_behavior_pass_rate": 1.0,
+                "unclassified_failure_count": 0,
+            }
+            for key, expected in extension_rules.items():
+                if real_extension.get(key) != expected:
+                    failures.append(
+                        {
+                            "path": "docs/evidence/real_agent_extension_r13_r20_latest/metrics.json",
+                            "reason": "%s must equal %s" % (key, expected),
+                            "actual": real_extension.get(key),
+                        }
+                    )
+
+        real_holdout = _json_from_text(
+            text("docs/evidence/real_agent_holdout_latest/metrics.json")
+        )
+        if not real_holdout:
+            failures.append(
+                {
+                    "path": "docs/evidence/real_agent_holdout_latest/metrics.json",
+                    "reason": "cannot parse held-out real Agent metrics",
+                }
+            )
+        else:
+            holdout_rules = {
+                "case_count": 8,
+                "completed_case_count": 8,
+                "memory_system_pass_rate": 1.0,
+                "agent_behavior_pass_rate": 1.0,
+                "unclassified_failure_count": 0,
+            }
+            for key, expected in holdout_rules.items():
+                if real_holdout.get(key) != expected:
+                    failures.append(
+                        {
+                            "path": "docs/evidence/real_agent_holdout_latest/metrics.json",
+                            "reason": "%s must equal %s" % (key, expected),
+                            "actual": real_holdout.get(key),
+                        }
+                    )
+            if real_holdout.get("failed_case_ids") != []:
+                failures.append(
+                    {
+                        "path": "docs/evidence/real_agent_holdout_latest/metrics.json",
+                        "reason": "failed_case_ids must be empty",
+                        "actual": real_holdout.get("failed_case_ids"),
+                    }
+                )
+
+        security_scan = _json_from_text(text("docs/security_scan.json"))
+        if not security_scan:
+            failures.append(
+                {
+                    "path": "docs/security_scan.json",
+                    "reason": "cannot parse security scan JSON",
+                }
+            )
+        else:
+            security_summary = security_scan.get("summary", {})
+            security_tools = security_scan.get("tools", {})
+            rules = [
+                ("schema", security_scan.get("schema"), "memguardos-security-scan-v1"),
+                ("ok", security_scan.get("ok"), True),
+                ("bandit_high_count", _nested_get(security_summary, ["bandit_high_count"]), 0),
+                ("pip_audit_vulnerability_count", _nested_get(security_summary, ["pip_audit_vulnerability_count"]), 0),
+                ("missing_tools", _nested_get(security_summary, ["missing_tools"]), []),
+                ("pip_audit.status", _nested_get(security_tools, ["pip_audit", "status"]), "clean"),
+            ]
+            for label, actual, expected in rules:
+                if actual != expected:
+                    failures.append(
+                        {
+                            "path": "docs/security_scan.json",
+                            "reason": "%s must equal %s" % (label, expected),
+                            "actual": actual,
+                        }
+                    )
+            bandit_status = _nested_get(security_tools, ["bandit", "status"])
+            if bandit_status not in {"clean", "warnings"}:
+                failures.append(
+                    {
+                        "path": "docs/security_scan.json",
+                        "reason": "bandit.status must equal clean or warnings",
+                        "actual": bandit_status,
+                    }
+                )
 
         sdk_probe = _json_from_capture(text("docs/evidence/latest/sdk_embedding_probe.txt"))
         if not sdk_probe:

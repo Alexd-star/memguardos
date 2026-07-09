@@ -254,7 +254,11 @@ MemGuardOS 提供 `.deb` 打包脚本，用于在 openKylin/Debian 系系统中�
 ```bash
 cd ~/memguardos
 bash scripts/build_deb.sh
-sudo apt install ./dist/memguardos_0.1.0_amd64.deb
+sudo apt install ./dist/memguardos-core_0.1.0-2_amd64.deb \
+  ./dist/memguardos-ukui_0.1.0-2_amd64.deb \
+  ./dist/memguardos-agent-bridge_0.1.0-2_amd64.deb \
+  ./dist/memguardos-doc_0.1.0-2_all.deb \
+  ./dist/memguardos_0.1.0-2_all.deb
 memctl doctor
 sudo systemctl start memguardd
 systemctl status memguardd --no-pager
@@ -310,7 +314,7 @@ python -m memguard.cli.memctl retrieval-status
 python -m memguard.cli.memctl verify-audit
 ```
 
-如果是空库环境，`verify-audit` 可能只检查到较少事件，这是正常现象。若 `doctor` 提示 Kylin SDK 不可用，不代表核心系统不可用；只有在准备展示 openKylin 端侧向量能力时，才需要进一步运行 `sdk-status --probe-embedding` 和相关修复脚本。初始化检查完成后，建议写入一条无敏感内容的测试记忆并立即检索，以确认写入、索引和审计链都能正常工作。
+如果是空库环境，`verify-audit` 可能只检查到较少事件，这是正常现象。若 `doctor` 提示 Kylin SDK 不可用，不代表核心系统不可用；只有在准备展示 openKylin 本机智能检索时，才需要进一步运行 `sdk-status --probe-embedding` 和相关修复脚本。初始化检查完成后，建议写入一条无敏感内容的测试记忆并立即检索，以确认写入、索引和审计链都能正常工作。
 
 ## 第5章 功能操作说明
 
@@ -605,7 +609,7 @@ Web 控制台是本地可视化入口，适合展示系统能力和降低操作�
 
 ### 6.3 openKylin 桌面入口
 
-在 openKylin 桌面环境中，MemGuardOS 提供 Peony 文件右键菜单和 UKUI 控制中心入口。Peony 入口适合从文件管理器中触发“用 MemGuardOS 扫描并导入记忆”；该入口会把选中文件路径写成 OS event，并对小于 1 MB 的文本类文件执行内容导入。UKUI 控制中心入口适合集中查看运行环境检查、审计链校验、端侧向量能力检查、诊断报告导出和本地控制台打开操作。
+在 openKylin 桌面环境中，MemGuardOS 提供 Peony 文件右键菜单、UKUI 控制中心入口和 UKUI 托盘。Peony 入口适合从文件管理器中触发文件扫描；系统会先展示多文件预览、敏感风险和建议动作，用户确认后才导入安全文本。UKUI 控制中心入口适合集中查看服务状态、服务级 cgroup、审计链、本机智能检索、Polkit 高权限动作、诊断报告导出和本地控制台打开操作。托盘用于低干扰状态提醒和快捷入口，退出托盘不会停止核心服务。
 
 这两个入口用于展示 MemGuardOS 与 openKylin 桌面环境的集成方向。它们不是独立账号系统，也不是完整企业控制台。若插件在当前桌面会话中不可见，应先确认插件版本、安装路径、只读 `/usr` 状态和桌面缓存，再重启 Peony 或注销重进桌面会话。
 
@@ -777,9 +781,9 @@ nohup peony "$(xdg-user-dir DESKTOP)" >/tmp/peony_window_memguardos.log 2>&1 &
 
 预期结果：
 
-1. Peony 文件右键菜单中出现【用 MemGuardOS 扫描并导入记忆】。
+1. Peony 文件右键菜单中出现 MemGuardOS 扫描入口，并能打开预览确认对话框。
 2. UKUI 设置/控制中心左侧安全分类下出现【MemGuardOS 记忆安全】。
-3. 控制中心页面可见【运行环境检查】、【校验审计链】、【检查端侧向量能力】、【导出诊断报告】和【打开本地控制台】。
+3. 控制中心页面可见【运行环境检查】、【校验审计链】、【检查本机智能检索】、【导出诊断报告】和【打开本地控制台】。
 
 如需自动复验 Peony 右键动作对应的导入链路，可运行：
 
@@ -810,7 +814,7 @@ python scripts/web_dashboard_smoke.py
 python -m memguard.eval.run_eval --latency-size 10000 --latency-queries 150 --output docs/eval_result_openkylin_10k.json --markdown docs/eval_report_openkylin_10k.md
 ```
 
-当前正式证据中，openKylin 10k 负载 P95 为 10.844 ms，P99 为 106.095 ms，RSS 为 149284 KB；openKylin 单元测试证据为 68 passed；本地单元测试为 70 passed。提交前如果重新运行评测并得到新结果，应同步更新 README、测试报告、平台摘要和答辩材料中的指标。
+当前正式证据中，优化后的 openKylin 10k 负载 P95 为 10.105 ms，P99 为 75.255 ms，RSS 为 130444 KB；最新同 HEAD openKylin 单元测试为 313 passed；本地单元测试为 312 passed、1 skipped。独立三轮 6 worker 并发试验最差 P95 为 54.381 ms，完整 10k 评测内并发 P95 为 139.264 ms。真实 Agent 专项包含 200 条交互样例，提取、遗忘和跨会话指标均为 1.0000，角色污染率和敏感泄漏率为 0，P95 为 113.97 ms。通用评测、检索消融与 Agent 专项应分开报告，避免混淆任务口径。
 
 ### 10.3 竞赛就绪自检
 
@@ -1218,7 +1222,7 @@ RAG 上下文是敏感信息最容易外传的环节。写入系统内部的记�
 
 文档材料应以正式中文文档为主。研究笔记可以保留在仓库的研究目录中，但不应作为评委第一阅读入口。评委最需要的是项目介绍、部署手册、用户手册、测试报告、赛题符合性说明、证据包索引、答辩稿和操作手册。材料太多且重复，会让评委难以抓住重点；材料少但有清晰证据，反而更容易建立信任。
 
-提交前应检查所有指标口径是否一致。比如本地测试已复跑为 70 passed、openKylin 证据为 68 passed，就不要继续引用旧的 60 passed。不同环境的测试数量如果确实不同是可以解释的，但如果文档互相矛盾，会让评委怀疑证据是否过期。每次重新采集证据后，都应同步更新 README、平台摘要、测试报告和答辩稿中的关键数字。
+提交前应检查所有指标口径是否一致。当前本地测试为 312 passed、1 skipped，最新同 HEAD openKylin 为 313 passed；差异来自 Linux 专属测试在目标系统实际执行。不同环境的测试数量如果确实不同是可以解释的，但文档之间不能引用过期数字。每次重新采集证据后，都应同步更新 README、平台摘要、测试报告、答辩稿和操作手册中的关键数字。
 
 ## 第19章 长期维护与二次开发说明
 
@@ -1352,7 +1356,7 @@ MemGuardOS 当前代码按功能分目录组织，核心服务、存储、检索
 
 证据文件不需要每个都很长。某些证据只要证明状态即可，例如 systemd active、cgroup 参数、SDK 推理维度、UKUI 可见性确认。某些证据则需要更完整，例如评测 JSON、审计链验证、提交包审计。用户应根据证据用途决定保留内容。过短会缺乏说服力，过长会增加阅读负担。正式提交时，最好通过证据索引告诉评委每个文件证明什么。
 
-证据还需要与文档同步。比如文档写 openKylin 10k P95 为 10.844 ms，就应能在对应 JSON 或报告中找到这个值。如果文档和证据不一致，评委可能认为数据过期或不可信。每次重新采集证据后，都应更新指标口径，并运行全文搜索检查旧数字残留。这个步骤虽然细碎，但对正式交付很关键。
+证据还需要与文档同步。比如文档写 openKylin 10k P95 为 10.105 ms，就应能在 `docs/evidence/performance_latest/` 的对应 JSON 或报告中找到这个值。如果文档和证据不一致，评委可能认为数据过期或不可信。每次重新采集证据后，都应更新指标口径，并运行全文搜索检查旧数字残留。这个步骤虽然细碎，但对正式交付很关键。
 
 ## 第22章 教学、课程设计与项目展示说明
 
@@ -1486,3 +1490,8 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 - 未编造账号、密码、公网地址、外部 API 购买要求或未确认企业能力。
 - 对 BPF LSM、Kylin SDK、Peony/UKUI、Web 控制台等能力均保持准确边界。
 - Markdown 源文档可转换为 Word、PDF 或在线帮助中心。
+
+
+
+
+

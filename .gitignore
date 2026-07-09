@@ -10,6 +10,7 @@ dist/
 *.sqlite3
 *.segment
 .tmp_cli_home/
+.tmp/
 local_notes/
 docs/evidence/openkylin_*/
 docs/evidence/kylin_embedding_diag_*/

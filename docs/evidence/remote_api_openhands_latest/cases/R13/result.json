@@ -1,0 +1,273 @@
+{
+  "case_id": "R13",
+  "title": "项目级简洁回答覆盖全局详细回答",
+  "category": "conflict_override",
+  "model": "openai/gpt-5.4-mini",
+  "setup_event_count": 2,
+  "forget_result": null,
+  "run": {
+    "ok": true,
+    "session_id": "r13-live",
+    "trace_id": "ctx_7903cefe7294477e",
+    "context_file": "context.json",
+    "duration_ms": 2667.836,
+    "context": {
+      "trace_id": "ctx_7903cefe7294477e",
+      "stage_budgets": {
+        "planning": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "tool_selection": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "response_generation": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 309,
+          "estimated_context_tokens": 88,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        }
+      },
+      "selected_memory_ids": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "mem_28b078e8be2f4973"
+        ]
+      },
+      "selected_topics": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "response_verbosity"
+        ]
+      },
+      "selected_values": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "concise"
+        ]
+      },
+      "selected_subtypes": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": [
+          "output_style"
+        ]
+      }
+    },
+    "structured_intent_recovery": {
+      "attempted": false,
+      "executed": false,
+      "command": "",
+      "exit_code": null,
+      "reason": "no applicable tool preference"
+    },
+    "procedural_memory_fallback": {
+      "applied": false,
+      "evidence": "",
+      "reason": "no selected successful procedural evidence"
+    },
+    "adherence": {
+      "repair_attempted": false,
+      "repair_attempt_count": 0,
+      "initial_issues": [],
+      "remaining_issues": [],
+      "passed": true
+    },
+    "event_summary": {
+      "stored": 2,
+      "duplicate": 0,
+      "blocked": 0,
+      "tool_calls": 0,
+      "tool_results": 0,
+      "procedural_memories": 0,
+      "procedural_memory_ids": [],
+      "task_errors": 0,
+      "recovered_task_errors": 0,
+      "event_types": {
+        "user_message": 1,
+        "assistant_message": 1
+      },
+      "unknown_event_types": {
+        "SystemPromptEvent": 1,
+        "HookExecutionEvent": 1
+      }
+    }
+  },
+  "evaluation": {
+    "status": "pass",
+    "memory_system": {
+      "passed": true,
+      "context_selected": true,
+      "selected_topics": [
+        "response_verbosity"
+      ],
+      "selected_subtypes": [
+        "output_style"
+      ],
+      "selected_values": [
+        "concise"
+      ],
+      "failures": []
+    },
+    "agent_behavior": {
+      "passed": true,
+      "task_completed": true,
+      "first_tool": "",
+      "first_tool_correct": false,
+      "failures": []
+    },
+    "metrics": {
+      "attempted_tool_call_count": 0,
+      "tool_call_count": 0,
+      "policy_denied_tool_call_count": 0,
+      "failed_command_count": 0,
+      "repeated_command_count": 0,
+      "blocked_high_risk_count": 0,
+      "preference_policy_block_count": 0,
+      "other_policy_block_count": 0,
+      "task_error_count": 0,
+      "recovered_task_error_count": 0,
+      "structured_intent_recovery_count": 0,
+      "procedural_memory_fallback_count": 0,
+      "high_risk_safe_refusal_count": 0
+    },
+    "error_classification": [],
+    "recovered_error_classification": []
+  },
+  "events": [
+    {
+      "event_id": "evt-r13-setup-1",
+      "provenance_hash": "538a87a5344f4f2aa09ae9f3163e38679c4a4ac92195d44cc7faa30800361014",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r13-global",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "全局回答可以详细解释。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:03:34.531850+00:00",
+      "source_uri": "memory-value-real://R13/setup/1",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:03:34.532075+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "c0b06bab-4194-40d7-80f2-f6bfc75942dd",
+      "provenance_hash": "3794118a400883daafe85a224aa3299a10ff63d405502207c66fec8881c87a3e",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r13-live",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "请只回答 Linux 查看当前所在目录路径的命令。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R13/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T15:03:34.927264",
+      "source_uri": "openhands://r13-live/c0b06bab-4194-40d7-80f2-f6bfc75942dd",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:03:34.927510+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "41685896-1826-47f4-a9d7-9b7b66a777fa",
+      "provenance_hash": "42acda905ab7781106bd5049d0fc843240aba038b77d58cfce2aab6c16530333",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r13-live",
+      "turn_id": "turn-1",
+      "sequence": 2,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "`pwd`",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R13/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T15:03:37.225817",
+      "source_uri": "openhands://r13-live/41685896-1826-47f4-a9d7-9b7b66a777fa",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:03:37.226045+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "evt-r13-setup-2",
+      "provenance_hash": "782d535a492bacd9dc1650911bb5e73f179fb4b5dfb3c7bdf8f94532aa14c83a",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r13-project",
+      "turn_id": "turn-2",
+      "sequence": 2,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "在这个项目中回答尽量简洁，只给关键步骤。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R13/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:03:34.540838+00:00",
+      "source_uri": "memory-value-real://R13/setup/2",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:03:34.541403+00:00",
+      "tool_args": {}
+    }
+  ],
+  "workspace_before": [
+    {
+      "path": "TASK.txt",
+      "size": 16
+    }
+  ],
+  "workspace_after": [
+    {
+      "path": "TASK.txt",
+      "size": 16
+    }
+  ]
+}

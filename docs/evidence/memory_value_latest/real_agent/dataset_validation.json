@@ -1,0 +1,29 @@
+{
+  "valid": true,
+  "case_count": 12,
+  "case_ids": [
+    "R01",
+    "R02",
+    "R03",
+    "R04",
+    "R05",
+    "R06",
+    "R07",
+    "R08",
+    "R09",
+    "R10",
+    "R11",
+    "R12"
+  ],
+  "category_distribution": {
+    "conflict_override": 1,
+    "cross_session": 1,
+    "implicit_habit": 1,
+    "precise_forgetting": 1,
+    "repair_experience": 2,
+    "risk_confirmation": 2,
+    "role_pollution": 2,
+    "user_correction": 2
+  },
+  "errors": []
+}

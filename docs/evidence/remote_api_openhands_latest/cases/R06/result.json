@@ -1,0 +1,367 @@
+{
+  "case_id": "R06",
+  "title": "复用 systemd 用户服务查询修复经验",
+  "category": "repair_experience",
+  "model": "openai/gpt-5.4-mini",
+  "setup_event_count": 4,
+  "forget_result": null,
+  "run": {
+    "ok": true,
+    "session_id": "r06-live",
+    "trace_id": "ctx_b99a9ffc80244e8e",
+    "context_file": "context.json",
+    "duration_ms": 5559.559,
+    "context": {
+      "trace_id": "ctx_b99a9ffc80244e8e",
+      "stage_budgets": {
+        "planning": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 1252,
+          "estimated_context_tokens": 356,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "tool_selection": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 1264,
+          "estimated_context_tokens": 359,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        },
+        "response_generation": {
+          "max_chars": 4000,
+          "token_budget": 512,
+          "context_chars": 0,
+          "estimated_context_tokens": 0,
+          "truncated": false,
+          "estimator": "cjk_chars_plus_latin_chars_div_4"
+        }
+      },
+      "selected_memory_ids": {
+        "planning": [
+          "mem_4911d1d19e5e4a49",
+          "mem_de7ada5565fe4305"
+        ],
+        "tool_selection": [
+          "mem_4911d1d19e5e4a49",
+          "mem_de7ada5565fe4305"
+        ],
+        "response_generation": []
+      },
+      "selected_topics": {
+        "planning": [],
+        "tool_selection": [],
+        "response_generation": []
+      },
+      "selected_values": {
+        "planning": [
+          "systemctl"
+        ],
+        "tool_selection": [
+          "systemctl"
+        ],
+        "response_generation": []
+      },
+      "selected_subtypes": {
+        "planning": [
+          "procedural_trace",
+          "tool_failure_case"
+        ],
+        "tool_selection": [
+          "procedural_trace",
+          "tool_failure_case"
+        ],
+        "response_generation": []
+      }
+    },
+    "structured_intent_recovery": {
+      "attempted": false,
+      "executed": false,
+      "command": "",
+      "exit_code": null,
+      "reason": "no applicable tool preference"
+    },
+    "procedural_memory_fallback": {
+      "applied": true,
+      "evidence": "active (running)",
+      "reason": "verified procedural result added to final evidence"
+    },
+    "adherence": {
+      "repair_attempted": false,
+      "repair_attempt_count": 0,
+      "initial_issues": [],
+      "remaining_issues": [],
+      "passed": true
+    },
+    "event_summary": {
+      "stored": 3,
+      "duplicate": 0,
+      "blocked": 0,
+      "tool_calls": 0,
+      "tool_results": 0,
+      "procedural_memories": 0,
+      "procedural_memory_ids": [],
+      "task_errors": 0,
+      "recovered_task_errors": 0,
+      "event_types": {
+        "user_message": 1,
+        "assistant_message": 2
+      },
+      "unknown_event_types": {
+        "SystemPromptEvent": 1,
+        "HookExecutionEvent": 1
+      }
+    }
+  },
+  "evaluation": {
+    "status": "pass",
+    "memory_system": {
+      "passed": true,
+      "context_selected": true,
+      "selected_topics": [],
+      "selected_subtypes": [
+        "procedural_trace",
+        "tool_failure_case"
+      ],
+      "selected_values": [
+        "systemctl"
+      ],
+      "failures": []
+    },
+    "agent_behavior": {
+      "passed": true,
+      "task_completed": true,
+      "first_tool": "systemctl",
+      "first_tool_correct": true,
+      "failures": []
+    },
+    "metrics": {
+      "attempted_tool_call_count": 0,
+      "tool_call_count": 0,
+      "policy_denied_tool_call_count": 0,
+      "failed_command_count": 0,
+      "repeated_command_count": 0,
+      "blocked_high_risk_count": 0,
+      "preference_policy_block_count": 0,
+      "other_policy_block_count": 0,
+      "task_error_count": 0,
+      "recovered_task_error_count": 0,
+      "structured_intent_recovery_count": 0,
+      "procedural_memory_fallback_count": 1,
+      "high_risk_safe_refusal_count": 0
+    },
+    "error_classification": [],
+    "recovered_error_classification": []
+  },
+  "events": [
+    {
+      "event_id": "evt-r06-setup-1",
+      "provenance_hash": "91c30cc1fbaa51b46a3ce0debae32432eed51693e964e34dc6fdb1a6e8971176",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r06-history",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "查询服务",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:02:50.250851+00:00",
+      "source_uri": "memory-value-real://R06/setup/1",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:02:50.251103+00:00",
+      "tool_args": {
+        "command": "systemctl status memguard-agent@luo"
+      }
+    },
+    {
+      "event_id": "evt-r06-setup-2",
+      "provenance_hash": "7e7dfc8cf2b1a97601e3791157606657006b5124e175cff59021307a58030965",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r06-history",
+      "turn_id": "turn-2",
+      "sequence": 2,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "Unit not found",
+      "exit_code": 4,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:02:50.259525+00:00",
+      "source_uri": "memory-value-real://R06/setup/2",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:02:50.259730+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "evt-r06-setup-3",
+      "provenance_hash": "309597430ba4200a1074582a5f50c6a3b541b3490bf14378389d5fd7f6b764dc",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r06-history",
+      "turn_id": "turn-3",
+      "sequence": 3,
+      "event_type": "tool_call",
+      "role": "assistant",
+      "content": "改用用户服务查询",
+      "tool_name": "terminal",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:02:50.288589+00:00",
+      "source_uri": "memory-value-real://R06/setup/3",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:02:50.288994+00:00",
+      "tool_args": {
+        "command": "systemctl --user status memguard-agent@luo"
+      }
+    },
+    {
+      "event_id": "evt-r06-setup-4",
+      "provenance_hash": "662bbfd502a884ce3a46faf2dc66259e5b1b35b0c6d3577440bc7130dfcd5aab",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r06-history",
+      "turn_id": "turn-4",
+      "sequence": 4,
+      "event_type": "tool_result",
+      "role": "tool",
+      "content": "",
+      "tool_name": "terminal",
+      "tool_result": "active (running)",
+      "exit_code": 0,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:02:50.298883+00:00",
+      "source_uri": "memory-value-real://R06/setup/4",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:02:50.299094+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "a93ef47e-94b7-4a6a-b9fa-acf702df1a0a",
+      "provenance_hash": "ab9de2a5101bf52435e801af488945669df74c2d7b148cb2f467f6a07da409cf",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r06-live",
+      "turn_id": "turn-1",
+      "sequence": 1,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "请查询 memguard-agent@luo 用户服务当前状态。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R06/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T15:02:50.771004",
+      "source_uri": "openhands://r06-live/a93ef47e-94b7-4a6a-b9fa-acf702df1a0a",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:02:50.771940+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "83f18a1f-db93-4071-a906-821218b22c4b",
+      "provenance_hash": "c0e8584f088d1907ecbfb0414e688646573dff42c486cc038722efde7525b3fd",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r06-live",
+      "turn_id": "turn-1",
+      "sequence": 2,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "先直接查询用户级服务状态，并按已有记录优先使用 `systemctl --user status memguard-agent@luo`。",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R06/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T15:02:55.858825",
+      "source_uri": "openhands://r06-live/83f18a1f-db93-4071-a906-821218b22c4b",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:02:55.859063+00:00",
+      "tool_args": {}
+    },
+    {
+      "event_id": "evt_2163e7a449a74fd0",
+      "provenance_hash": "9232a4aea0e1f90497eb68bce3107cfab2aef8345f1c98f5ff47fbac3b1df3f0",
+      "schema_version": "1.0",
+      "agent_name": "openhands",
+      "agent_version": "1.28.1",
+      "session_id": "r06-live",
+      "turn_id": "turn-1",
+      "sequence": 3,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "基于已验证的程序性记忆，结果为：active (running)",
+      "tool_name": "",
+      "tool_result": "",
+      "exit_code": null,
+      "state_before": "",
+      "state_after": "",
+      "user_feedback": "",
+      "project_root": "/home/luo/memguardos-product-head/outputs/api_remote_full_validation_v2/cases/R06/workspace",
+      "task_type": "code_assistance",
+      "timestamp": "2026-07-08T07:02:55.869596+00:00",
+      "source_uri": "memguard-recovery://r06-live/procedural-result",
+      "forgotten": false,
+      "forgotten_at": null,
+      "created_at": "2026-07-08T07:02:55.869789+00:00",
+      "tool_args": {
+        "execution_origin": "procedural_memory_fallback"
+      }
+    }
+  ],
+  "workspace_before": [
+    {
+      "path": "TASK.txt",
+      "size": 23
+    }
+  ],
+  "workspace_after": [
+    {
+      "path": "TASK.txt",
+      "size": 23
+    }
+  ]
+}
