@@ -518,6 +518,12 @@ def _dashboard_html() -> str:
     details summary { cursor:pointer; padding:10px 12px; font-weight:700; color:var(--ink); }
     details[open] summary { border-bottom:1px solid var(--line); }
     .advanced-output { margin:0; border-radius:0 0 8px 8px; min-height:140px; }
+    .operation-status { display:none; margin:12px 24px 0; border:1px solid #bfdbfe; background:#eff6ff; color:#1e3a8a; border-radius:8px; padding:10px 12px; font-size:13px; }
+    .operation-status.ok { border-color:#bbf7d0; background:#f0fdf4; color:#166534; }
+    .operation-status.warn { border-color:#fde68a; background:#fffbeb; color:#92400e; }
+    .operation-status.bad { border-color:#fecaca; background:#fef2f2; color:#991b1b; }
+    .button-label { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+    .mini-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
     #storageRoot { word-break:break-all; overflow-wrap:anywhere; }
     @media (max-width: 900px) {
       main { grid-template-columns: 1fr; }
@@ -554,6 +560,7 @@ def _dashboard_html() -> str:
     </nav>
     <div>
       <div id="errorBox" class="error"></div>
+      <div id="operationStatus" class="operation-status" role="status" aria-live="polite"></div>
       <section id="overview" class="active">
         <h2>个人工作台</h2>
         <p class="lead">这里汇总本机 Agent 记忆服务的健康状态、最近记忆数量、审计完整性和常用操作。普通用户可以完成写入、检索、上下文预览和遗忘预览；管理员可以进入系统维护查看服务、SDK、授权和资源状态。</p>
@@ -600,6 +607,7 @@ def _dashboard_html() -> str:
             </div>
           </div>
         </div>
+        <div id="refreshWarnings" class="panel" style="margin-top:12px; display:none"></div>
         <div class="grid two" style="margin-top:12px">
           <div class="panel">
             <div class="item-title">记忆治理流程</div>
@@ -764,10 +772,10 @@ def _dashboard_html() -> str:
         <p class="lead">管理员视图用于本机运维和问题排查，聚合审计链、检索后端、记忆策略、端侧 SDK、cgroup 和本机检查信息，并支持一键导出。</p>
         <div class="panel">
           <div class="actions">
-            <button class="primary" onclick="verifyAudit(event)">校验审计链</button>
-            <button class="secondary" onclick="retrievalStatus(event)">检索后端</button>
-            <button class="secondary" onclick="memoryPolicy(event)">记忆策略</button>
-            <button class="secondary" onclick="diagnostics(event)">聚合状态</button>
+            <button class="primary" onclick="verifyAudit(event)">校验操作记录</button>
+            <button class="secondary" onclick="retrievalStatus(event)">检查检索方式</button>
+            <button class="secondary" onclick="memoryPolicy(event)">查看记忆策略</button>
+            <button class="secondary" onclick="diagnostics(event)">聚合系统状态</button>
             <button class="secondary" onclick="exportDiagnostics(event)">导出系统报告</button>
           </div>
           <p class="muted">维护输出用于本机管理员定位审计、检索和冷热分层状态。敏感内容会按核心链路的脱敏规则处理。</p>
@@ -851,15 +859,31 @@ def _dashboard_html() -> str:
       box.style.display = message ? 'block' : 'none';
       box.textContent = message || '';
     }
+    function setOperationStatus(message, state) {
+      const box = document.getElementById('operationStatus');
+      if (!box) return;
+      box.style.display = message ? 'block' : 'none';
+      box.className = 'operation-status ' + (state || '');
+      box.textContent = message || '';
+    }
+    function buttonText(button) {
+      return button ? button.textContent.replace(/\\s+/g, ' ').trim() : '操作';
+    }
     async function withBusy(event, work) {
       const button = event && event.currentTarget ? event.currentTarget : null;
       const label = button ? button.textContent : '';
       if (button) {
         button.disabled = true;
-        button.textContent = '处理中...';
+        button.innerHTML = '<span class="button-label">处理中</span>';
       }
       try {
-        return await work();
+        setOperationStatus('正在处理：' + buttonText({textContent: label}) + '。请稍候，页面可继续查看其他信息。', 'warn');
+        const result = await work();
+        setOperationStatus('操作完成。页面内容已更新，请查看对应区域的结果摘要。', 'ok');
+        return result;
+      } catch (err) {
+        setOperationStatus('操作没有完成。请查看下方处理建议，或进入系统维护导出报告。', 'bad');
+        throw err;
       } finally {
         if (button) {
           button.disabled = false;
@@ -867,27 +891,36 @@ def _dashboard_html() -> str:
         }
       }
     }
+    async function fetchWithTimeout(url, options, timeoutMs) {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), timeoutMs || 90000);
+      try {
+        return await fetch(url, Object.assign({}, options || {}, {signal:controller.signal}));
+      } finally {
+        window.clearTimeout(timeout);
+      }
+    }
     async function getJson(url) {
       try {
-        const r = await fetch(url, {headers: authHeaders()});
+        const r = await fetchWithTimeout(url, {headers: authHeaders()}, 90000);
         const data = await r.json();
         if (!r.ok || data.ok === false) showError(data.error ? (data.error + (data.detail ? ': ' + data.detail : '')) : '请求失败');
         else showError('');
         return data;
       } catch (err) {
-        showError('无法连接本地控制台服务：' + err);
+        showError(err && err.name === 'AbortError' ? '操作等待时间过长。请稍后重试，或进入系统维护导出报告。' : '无法连接本地控制台服务：' + err);
         return {ok:false, error:String(err)};
       }
     }
     async function postJson(url, data) {
       try {
-        const r = await fetch(url, {method:'POST', headers:authHeaders({'Content-Type':'application/json'}), body:JSON.stringify(data)});
+        const r = await fetchWithTimeout(url, {method:'POST', headers:authHeaders({'Content-Type':'application/json'}), body:JSON.stringify(data)}, 180000);
         const payload = await r.json();
         if (!r.ok || payload.ok === false) showError(payload.error ? (payload.error + (payload.detail ? ': ' + payload.detail : '')) : '请求失败');
         else showError('');
         return payload;
       } catch (err) {
-        showError('无法连接本地控制台服务：' + err);
+        showError(err && err.name === 'AbortError' ? '操作等待时间过长。请稍后重试，或进入系统维护导出报告。' : '无法连接本地控制台服务：' + err);
         return {ok:false, error:String(err)};
       }
     }
@@ -1150,18 +1183,34 @@ def _dashboard_html() -> str:
       badge('osBadge', runtime.cgroup_v2 ? 'ok' : 'warn', runtime.cgroup_v2 ? 'cgroup v2' : '部分可用');
       dot('osDot', runtime.cgroup_v2 ? 'ok' : 'warn');
       renderDeliveryReadiness(diag, retrieval, runtime, sdkAvailable);
-      document.getElementById('lastUpdated').textContent = '最后刷新：' + new Date().toLocaleTimeString();
+      document.getElementById('lastUpdated').textContent = '状态已刷新';
       renderStatusSummary(status, diag);
+      renderRefreshWarnings(diag, retrieval, runtime, sdkAvailable);
+    }
+    function renderRefreshWarnings(diag, retrieval, runtime, sdkAvailable) {
+      const warnings = [];
+      if (!(diag.audit_chain && diag.audit_chain.ok)) warnings.push('操作记录完整性需要复核。');
+      if (!(retrieval.requested_backend || retrieval.last_backend_used)) warnings.push('检索方式尚未确认。');
+      if (!sdkAvailable) warnings.push('本机智能检索当前使用稳定降级，不影响基础检索。');
+      const box = document.getElementById('refreshWarnings');
+      if (!warnings.length) {
+        box.style.display = 'none';
+        box.innerHTML = '';
+        return;
+      }
+      box.style.display = 'block';
+      box.innerHTML = '<div class="item-title">需要关注</div>'
+        + warnings.map(item => '<div class="item"><div class="muted">' + esc(item) + '</div><div class="mini-actions"><button class="secondary" onclick="openTab(\\'diagnostics\\')">跳转处理</button></div></div>').join('');
     }
     function renderDeliveryReadiness(diag, retrieval, runtime, sdkAvailable) {
       const checks = [
-        {name:'审计链', ok: Boolean(diag.audit_chain && diag.audit_chain.ok), advice:'审计链异常时先运行“校验审计链”，必要时核对命名空间和备份。'},
-        {name:'检索后端', ok: Boolean(retrieval.requested_backend || retrieval.last_backend_used), advice:'检索后端未知时运行“检索后端”，确认 FTS/hash/graph 或 Kylin 后端状态。'},
-        {name:'OS 资源', ok: Boolean(runtime.platform || runtime.cgroup_v2), advice:'OS 资源不可见时检查 systemd/cgroup 运行环境，普通 Windows 本机属于部分可用。'},
-        {name:'系统报告', ok: true, advice:'导出系统报告后可作为管理员排查、变更复核和问题沟通附件。'}
+        {name:'操作记录完整性', ok: Boolean(diag.audit_chain && diag.audit_chain.ok), advice:'先进入系统维护，点击“校验操作记录”；仍异常时导出系统报告交给管理员。', tab:'diagnostics', label:'跳转处理'},
+        {name:'检索方式', ok: Boolean(retrieval.requested_backend || retrieval.last_backend_used), advice:'进入系统维护点击“检查检索方式”，确认当前使用本机检索或自动降级。', tab:'diagnostics', label:'跳转处理'},
+        {name:'OS 资源', ok: Boolean(runtime.platform || runtime.cgroup_v2), advice:'进入系统维护查看聚合系统状态；如果只在普通桌面使用，部分资源信息不可见不影响基础记忆功能。', tab:'diagnostics', label:'跳转处理'},
+        {name:'系统报告', ok: true, advice:'需要交付或排障时进入系统维护导出系统报告。', tab:'diagnostics', label:'跳转处理'}
       ];
       if (!sdkAvailable) {
-        checks.push({name:'端侧 SDK', ok:true, advice:'Kylin SDK 不可用时保持稳定自动降级；openKylin 环境可运行 SDK 状态检查。'});
+        checks.push({name:'本机智能检索', ok:true, advice:'本机智能检索不可用时会稳定使用基础检索；openKylin 上可在系统维护中重新检查。', tab:'diagnostics', label:'跳转处理'});
       }
       const passed = checks.filter(item => item.ok).length;
       const score = Math.round((passed / checks.length) * 100);
@@ -1169,7 +1218,7 @@ def _dashboard_html() -> str:
       document.getElementById('readinessText').textContent = '当前就绪度 ' + score + '% · ' + passed + '/' + checks.length + ' 项满足';
       const advice = checks.filter(item => !item.ok).concat(checks.filter(item => item.ok).slice(0, 1));
       document.getElementById('riskAdvice').innerHTML = advice.map(item =>
-        '<div class="item"><div class="item-title">' + esc(item.name) + '</div><div class="muted">' + esc(item.advice) + '</div></div>'
+        '<div class="item"><div class="item-title">处理建议 · ' + esc(item.name) + '</div><div class="muted">' + esc(item.advice) + '</div><div class="mini-actions"><button class="secondary" onclick="openTab(\\'' + esc(item.tab || 'diagnostics') + '\\')">' + esc(item.label || '跳转处理') + '</button></div></div>'
       ).join('');
     }
     async function ingest(event) {

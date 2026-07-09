@@ -76,6 +76,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | Agent API | 本地 Unix socket JSON API，支持 health、ingest、search、batch_search、build_context、forget、audit 等 | `memguard/api/server.py` |
 | Kylin SDK 适配 | Kylin embedding/vector SDK 探测，embedding 可选重排后端，默认保留稳定 fallback | `memctl sdk-status`、`memguard/retrieval/kylin_sdk.py` |
 | 本地控制台 | localhost Web 控制台，覆盖 Agent 治理总览、交互时间线、偏好证据、三阶段上下文、交互遗忘、审计和系统诊断；支持 viewer/operator/admin 角色 token、health/readiness 和拒绝审计 | `memctl web`、`memguard/web/dashboard.py` |
+| 用户友好入口 | 面向普通用户和评委演示的短命令工作台，提供状态、写入、检索、上下文、遗忘预览、轻量证据和完整闭环 demo | `memguard status`、`memguard demo`、`memguard shell` |
 | 外部基准适配 | LongMemEval-V2 官方 schema 适配，提供 `insert()`/`query()` 兼容后端、上游 revision 记录和检索层/答案层指标隔离 | `memguard/integrations/longmemeval_v2.py`、`scripts/run_longmemeval_v2.py` |
 | 企业交付能力 | 严格记忆开关资源对照、SLO 门禁、可校验备份恢复、release attestation、Nginx HTTPS 反向代理模板和遗忘边界声明 | `scripts/run_resource_control.py`、`scripts/check_slo.py`、`scripts/backup_memguard.py`、`config/nginx/memguardos.conf` |
 
@@ -170,6 +171,19 @@ python -m memguard.cli.memctl hierarchical-graph-search systemd --limit 5
 python -m memguard.cli.memctl explain-extraction --text "真实案例：systemd service failed with exit_code=1，修复后运行 pytest。"
 python -m memguard.cli.memctl web --host 127.0.0.1 --port 8765
 ```
+
+普通用户或评委想快速体验完整闭环时，可以优先使用更短的入口：
+
+```bash
+memguard status
+memguard remember "以后查代码优先使用 rg。"
+memguard search "代码搜索工具"
+memguard context "查找精准遗忘的实现位置"
+memguard forget "忘掉代码搜索工具偏好"
+memguard demo
+```
+
+`memguard forget` 默认只预览影响范围，不会直接删除；确认执行时再追加 `--yes`。`memguard shell` 可以进入交互式记忆工作台，输入 `/help` 可查看可用操作。
 
 ### 5. 接入现有 OpenHands Agent
 

@@ -90,6 +90,12 @@ def main() -> int:
             and acceptance_plan.get("result", {}).get("summary", {}).get("manual", 0) >= 1
             and acceptance_run.get("ok") is True
             and acceptance_run.get("result", {}).get("status") == "passed",
+            "operation_feedback_ok": "operationStatus" in page
+            and "AbortController" in page
+            and "跳转处理" in page
+            and "处理建议" in page
+            and "最后刷新" not in page
+            and "toLocaleTimeString" not in page,
             "traffic_light_status_ok": "红黄绿状态" in page,
             "rag_visual_ok": "候选选择轨迹" in page,
             "forget_candidate_visual_ok": "候选会以卡片形式列出" in page,
@@ -129,6 +135,7 @@ def main() -> int:
             and result["forget_confirmation_copy_ok"]
             and result["competition_copy_absent"]
             and result["acceptance_review_ok"]
+            and result["operation_feedback_ok"]
             and result["traffic_light_status_ok"]
             and result["rag_visual_ok"]
             and result["forget_candidate_visual_ok"]

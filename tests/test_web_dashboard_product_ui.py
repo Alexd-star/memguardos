@@ -49,3 +49,40 @@ def test_dashboard_has_visual_product_affordances_not_only_text_blocks():
     assert "acceptanceManualList" in page
     assert "acceptanceProgress" in page
     assert "任意命令" not in page
+
+
+def test_dashboard_operations_have_user_feedback_without_debug_timestamps():
+    page = _dashboard_html()
+
+    assert "operationStatus" in page
+    assert "setOperationStatus" in page
+    assert "AbortController" in page
+    assert "timeoutMs" in page
+    assert "refreshWarnings" in page
+    assert "处理建议" in page
+    assert "跳转处理" in page
+    assert "最后刷新" not in page
+    assert "toLocaleTimeString" not in page
+    assert "new Date()" not in page
+    assert "正在执行请稍后" not in page
+
+
+def test_dashboard_declares_click_handlers_for_all_inline_buttons():
+    page = _dashboard_html()
+    handlers = set()
+    for marker in ('onclick="', "onclick='"):
+        start = 0
+        while True:
+            index = page.find(marker, start)
+            if index < 0:
+                break
+            value_start = index + len(marker)
+            value_end = page.find(marker[-1], value_start)
+            value = page[value_start:value_end]
+            name = value.split("(", 1)[0].strip()
+            if name:
+                handlers.add(name)
+            start = value_end + 1
+
+    for handler in handlers:
+        assert f"function {handler}" in page or f"async function {handler}" in page

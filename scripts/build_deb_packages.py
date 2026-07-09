@@ -27,6 +27,7 @@ def build_package_plan(version: str, architecture: str, multiarch: str) -> Dict[
             "replaces": moved,
             "description": "MemGuardOS 本地记忆核心服务与系统集成",
             "files": [
+                "/usr/bin/memguard",
                 "/usr/bin/memctl",
                 "/usr/bin/memguardd",
                 "/lib/systemd/system/memguardd.service",
@@ -163,6 +164,7 @@ class DebianPackageBuilder:
         for name in core_scripts:
             self._copy_file(self.root / "scripts" / name, stage / "opt/memguardos/scripts" / name, executable=name.endswith(".sh"))
         self._copy_tree(self.root / "native/bpf_lsm", stage / "opt/memguardos/native/bpf_lsm")
+        self._write_wrapper(stage / "usr/bin/memguard", "memguard.cli.memguard")
         self._write_wrapper(stage / "usr/bin/memctl", "memguard.cli.memctl")
         self._write_wrapper(stage / "usr/bin/memguardd", "memguard.daemon")
         for unit in ("memguardd.service", "memguardd@.service"):
