@@ -8,5 +8,5 @@ $ bash scripts/warmup_kylin_sdk.sh
   "dim": null,
   "fallback": "hash_embedding",
   "recommendation": "SDK 元数据可达但真实推理未就绪，默认继续使用稳定 fallback。",
-  "completed_at": "2026-07-09T12:51:20+08:00"
+  "completed_at": "2026-07-09T12:54:09+08:00"
 }

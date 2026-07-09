@@ -12,12 +12,12 @@ SubState=running
 --- cpu.max ---
 50000 100000
 --- cpu.stat ---
-usage_usec 470044
-user_usec 257436
-system_usec 212607
+usage_usec 486386
+user_usec 270700
+system_usec 215686
 nice_usec 0
 core_sched.force_idle_usec 0
-nr_periods 115
+nr_periods 123
 nr_throttled 3
 throttled_usec 50978
 nr_bursts 0

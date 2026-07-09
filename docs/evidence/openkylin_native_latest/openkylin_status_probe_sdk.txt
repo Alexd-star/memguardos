@@ -332,12 +332,12 @@ Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/cor
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 464369,
-        "user_usec": 251761,
-        "system_usec": 212607,
+        "usage_usec": 486118,
+        "user_usec": 270550,
+        "system_usec": 215567,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 113,
+        "nr_periods": 123,
         "nr_throttled": 3,
         "throttled_usec": 50978,
         "nr_bursts": 0,
@@ -359,11 +359,11 @@ Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/cor
     "store_exists": true,
     "db_exists": true,
     "custom_patterns_exists": false,
-    "store_bytes": 429350,
-    "db_bytes": 1101824,
-    "record_count": 165,
-    "live_record_count": 165,
-    "audit_event_count": 891
+    "store_bytes": 439358,
+    "db_bytes": 1118208,
+    "record_count": 169,
+    "live_record_count": 169,
+    "audit_event_count": 897
   },
   "summary": {
     "overall": "yellow",
