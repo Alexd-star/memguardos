@@ -34,13 +34,13 @@ EvidenceBench v2 是抗质疑评测，用于补充原 benchmark 的功能正确�
 | tool_result_to_preference_extraction_accuracy | 1.0 |
 | conflict_resolution_accuracy | 1.0 |
 | agent_context_adherence_rate | 1.0 |
-| p50_latency_ms | 0.088 |
-| p95_latency_ms | 3.102 |
-| p99_latency_ms | 3.498 |
+| p50_latency_ms | 1.115 |
+| p95_latency_ms | 2.446 |
+| p99_latency_ms | 2.562 |
 | rss_kb | None |
 | rss_delta_kb | None |
-| cpu_time_ms | 4968.75 |
-| storage_footprint_kb | 4957.006 |
+| cpu_time_ms | 4796.875 |
+| storage_footprint_kb | 4948.936 |
 | audit_chain_ok | True |
 
 ## 失败样例与原因

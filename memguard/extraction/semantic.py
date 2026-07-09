@@ -92,7 +92,9 @@ class HybridMemoryExtractor:
         lowered = text.lower()
         signals = self._signals(text, source_kind)
         memory_type = "knowledge"
-        if "source_tool_result" in signals:
+        if "source_tool_result" in signals and "preference_intent" in signals and "tool_preference_intent" in signals:
+            memory_type = "preference"
+        elif "source_tool_result" in signals:
             memory_type = "knowledge"
         elif "security_policy_intent" in signals or "sensitive_secret_term" in signals:
             memory_type = "sensitive_policy"
@@ -100,7 +102,9 @@ class HybridMemoryExtractor:
             memory_type = "preference"
 
         subtype = "fact"
-        if source_kind == "tool_result" or "tool result:" in lowered:
+        if source_kind == "tool_result" and memory_type == "preference" and "tool_preference_intent" in signals:
+            subtype = "tool_preference"
+        elif source_kind == "tool_result" or "tool result:" in lowered:
             if "procedural_memory=state_action_result" in lowered:
                 subtype = "tool_failure_case" if ("status=failure" in lowered or "exit_code=1" in lowered) else "procedural_trace"
             else:

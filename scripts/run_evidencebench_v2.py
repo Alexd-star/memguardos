@@ -289,7 +289,7 @@ def evaluate_extraction(service: MemGuardService, rows_by_file: dict[str, list[d
                 )
                 stored = bool(result.get("stored"))
                 subtype = result.get("record").subtype if stored else ""
-                tool_pref.append(1.0 if stored and subtype == "procedural_trace" else 0.0)
+                tool_pref.append(1.0 if stored and subtype in {"tool_preference", "procedural_trace"} else 0.0)
             if row.get("hard_negative"):
                 conflicts.append(1.0)
     return {

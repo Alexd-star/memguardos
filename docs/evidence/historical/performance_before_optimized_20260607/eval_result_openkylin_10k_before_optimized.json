@@ -1,0 +1,136 @@
+{
+  "dataset": {
+    "seed_memories": 53,
+    "retrieval_cases": 48,
+    "sensitive_cases": 31,
+    "forgetting_cases": 25,
+    "conflict_cases": 10,
+    "graph_cases": 17,
+    "quality_cases": 6,
+    "procedural_cases": 7
+  },
+  "preference_and_knowledge_extraction": {
+    "type_accuracy": 1.0,
+    "subtype_accuracy": 0.9811,
+    "preference_precision": 1.0,
+    "preference_true_positive": 12,
+    "preference_false_positive": 0,
+    "knowledge_precision": 1.0,
+    "knowledge_true_positive": 39,
+    "knowledge_false_positive": 0
+  },
+  "data_quality": {
+    "decision_accuracy": 1.0,
+    "issue_detection_accuracy": 1.0,
+    "warning_detection_accuracy": 1.0
+  },
+  "retrieval": {
+    "mean_recall_at_5": 1.0,
+    "cross_language_recall_at_5": 1.0,
+    "p50_latency_ms": 12.451,
+    "p95_latency_ms": 13.871
+  },
+  "baseline_comparison": {
+    "text_only_recall_at_5": 0.8229,
+    "hybrid_no_graph_recall_at_5": 1.0,
+    "full_memguardos_recall_at_5": 1.0
+  },
+  "sensitive_detection": {
+    "block_f1": 1.0,
+    "redaction_f1": 1.0,
+    "label_f1": 1.0
+  },
+  "forgetting": {
+    "candidate_precision": 1.0,
+    "candidate_recall": 1.0,
+    "keep_success": 1.0
+  },
+  "conflict_resolution": {
+    "correctness": 1.0
+  },
+  "graph_memory": {
+    "entity_recall_at_5": 1.0
+  },
+  "memory_tiers": {
+    "flow_ok": true,
+    "working_session_long_term_supported": true,
+    "policy_report_ok": true,
+    "eviction_candidates_before": 1,
+    "stale_or_deleted_after": 5
+  },
+  "latency_load": {
+    "memory_count": 10000,
+    "query_count": 150,
+    "p50_latency_ms": 9.185,
+    "p95_latency_ms": 10.844,
+    "p99_latency_ms": 106.095,
+    "segment_kb": 29231.307,
+    "sqlite_kb": 51580.0,
+    "total_store_kb": 85317.4
+  },
+  "concurrent_search": {
+    "memory_count": 1000,
+    "query_count": 150,
+    "workers": 6,
+    "read_path_audit": "disabled_for_latency_measurement",
+    "errors": [],
+    "ok": true,
+    "p50_latency_ms": 0.874,
+    "p95_latency_ms": 654.302,
+    "p99_latency_ms": 782.799,
+    "audit_chain_ok": true,
+    "audit_events_checked": 1000,
+    "policy_eviction_candidates": 5
+  },
+  "agent_batch_search": {
+    "ok": true,
+    "query_count": 4,
+    "workers": 4,
+    "hits_per_query": [
+      4,
+      2,
+      2,
+      3
+    ],
+    "total_latency_ms": 77.418,
+    "p95_latency_ms": 15.427,
+    "audit_chain_ok": true,
+    "read_path_audit": "single_batch_audit_event"
+  },
+  "procedural_memory": {
+    "state_action_result_cases": 7,
+    "stored_cases": 7,
+    "recall_at_5": 1.0,
+    "procedural_subtype_hit_rate": 1.0,
+    "hierarchical_graph_layers_ok": true,
+    "context_explainability_ok": true
+  },
+  "rag_context_budget": {
+    "token_budget": 280,
+    "estimated_context_tokens": 174,
+    "estimated_package_tokens": 1136,
+    "context_chars": 442,
+    "truncated": true,
+    "over_token_budget": false,
+    "redaction_enforced": true,
+    "memory_count": 3,
+    "policy": "仅使用已返回且已脱敏的记忆作为 OS Agent 生成上下文；不得输出被精准遗忘或被敏感策略阻断的明文。"
+  },
+  "resource_usage": {
+    "eval_wall_time_ms": 191480.781,
+    "eval_cpu_time_ms": 99358.828,
+    "tracemalloc_current_kb": 14015.885,
+    "tracemalloc_peak_kb": 28141.18,
+    "process_rss_kb": 149284.0,
+    "baseline_rss_kb": 28644.0,
+    "rss_delta_kb": 120640.0,
+    "baseline_method": "current process RSS sampled before MemGuardService initialization"
+  },
+  "storage_footprint": {
+    "main_segment_kb": 147.465,
+    "main_sqlite_kb": 264.0,
+    "total_eval_store_kb": 4580.919,
+    "bytes_per_live_memory": 65150.847
+  },
+  "memory_count": 72
+}

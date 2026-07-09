@@ -155,6 +155,9 @@ class ErasureIntentCompiler:
         agent_name = str(context.get("agent_name") or "")
         session_id = str(context.get("session_id") or "")
         project_root = str(context.get("project_root") or "")
+        explicit_session = re.search(r"(?:会话|session)\s*([A-Za-z0-9_.:-]{2,64})", text, flags=re.IGNORECASE)
+        if explicit_session:
+            return {"level": "session", "session_id": explicit_session.group(1), "agent_name": agent_name}
         if "当前 Agent" in text or "当前Agent" in text or "当前智能体" in text:
             return {"level": "agent", "agent_name": agent_name, "session_id": session_id}
         if "当前会话" in text or "本轮任务" in text:
@@ -216,7 +219,21 @@ class ErasureIntentCompiler:
         end: Optional[datetime] = None
         source = ""
         today = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
-        if "昨天" in text:
+        explicit = re.search(
+            r"(20\d{2}-\d{1,2}-\d{1,2})\s*(?:到|至|-|~)\s*(20\d{2}-\d{1,2}-\d{1,2})",
+            text,
+        )
+        recent_days = re.search(r"(?:最近|近|过去)\s*(\d{1,2})\s*天", text)
+        if explicit:
+            source = "%s 到 %s" % (explicit.group(1), explicit.group(2))
+            start = ErasureIntentCompiler._parse_date(explicit.group(1))
+            end = ErasureIntentCompiler._parse_date(explicit.group(2)) + timedelta(days=1)
+        elif recent_days:
+            days = max(1, min(90, int(recent_days.group(1))))
+            source = "近%s天" % days
+            start = now - timedelta(days=days)
+            end = now
+        elif "昨天" in text:
             source = "昨天"
             start = today - timedelta(days=1)
             end = today
@@ -246,6 +263,11 @@ class ErasureIntentCompiler:
             "end_time": end.isoformat() if end else "",
             "source_text": source,
         }
+
+    @staticmethod
+    def _parse_date(value: str) -> datetime:
+        year, month, day = [int(part) for part in value.split("-")]
+        return datetime(year, month, day, tzinfo=timezone.utc)
 
     @staticmethod
     def _retention_constraints(text: str, topic: str) -> List[Dict[str, Any]]:

@@ -22,6 +22,7 @@ from memguard.governance.trust import assess_memory_source
 from memguard.ingestion.behavior import BehaviorEvent, load_shell_history
 from memguard.ingestion.config import config_entry_to_memory_text, load_config_entries, validate_config_entry
 from memguard.ingestion.quality import assess_text_quality
+from memguard.ingestion.tool_preference import ToolPreferenceMiner
 from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.events import AgentInteractionEvent
 from memguard.integrations.context_injector import (
@@ -59,6 +60,7 @@ class MemGuardService:
         self.conflicts = ConflictResolver()
         self.forget_planner = ForgetPlanner()
         self.erasure_intent_compiler = ErasureIntentCompiler()
+        self.tool_preference_miner = ToolPreferenceMiner()
         self.journald = JournaldLogger()
         self._search_cache: OrderedDict[Tuple[str, int, str], List[Dict[str, object]]] = OrderedDict()
         self._search_cache_limit = 128
@@ -149,6 +151,30 @@ class MemGuardService:
             source_uri=source_uri,
             tier="session" if tool_result.exit_code == 0 else "working",
         )
+
+    def ingest_tool_results(self, tool_results: List[ToolResult], source_uri: str = "tool_results") -> Dict[str, object]:
+        if len(tool_results) > 200:
+            raise ValueError("tool_results must contain at most 200 items")
+        stored_results = [
+            self.ingest_tool_result(tool_result, source_uri="%s#%s" % (source_uri, index + 1))
+            for index, tool_result in enumerate(tool_results)
+        ]
+        preference_results = []
+        for candidate in self.tool_preference_miner.mine(tool_results):
+            preference_results.append(
+                self.ingest_text(
+                    candidate.to_memory_text(),
+                    source_kind="tool_result",
+                    source_uri="%s#tool-preference:%s:%s" % (source_uri, candidate.domain, candidate.preferred_tool),
+                    tier="profile",
+                )
+            )
+        return {
+            "stored_count": sum(1 for item in stored_results if item.get("stored")),
+            "preference_count": sum(1 for item in preference_results if item.get("stored")),
+            "results": stored_results,
+            "preferences": preference_results,
+        }
 
     def ingest_interaction(self, event: Union[AgentInteractionEvent, Dict[str, object]]) -> Dict[str, object]:
         parsed = event if isinstance(event, AgentInteractionEvent) else AgentInteractionEvent.from_dict(event)

@@ -1,0 +1,22 @@
+{
+  "schema": "memguardos-bpf-path-denylist-v1",
+  "boundary": "path_substring_denylist",
+  "claims": [
+    "path_open_guard",
+    "managed_sensitive_path_block"
+  ],
+  "deny_substrings": [
+    "/tmp/memguardos-bpf-deny",
+    "/home/luo/.ssh",
+    "/etc/shadow"
+  ],
+  "non_claims": [
+    "内核态不做任意文件内容级 PII 识别",
+    "不宣称替代用户态敏感检测、审计和遗忘流程",
+    "不宣称对外部 Agent 日志或磁盘快照完成清理"
+  ],
+  "demo": {
+    "generate": "python scripts/generate_bpf_lsm_policy.py --policy native/bpf_lsm/memguard_lsm_policy.example.json --output docs/evidence/latest/memguard_lsm_policy.generated.h",
+    "verify": "确认生成头文件中包含 /tmp/memguardos-bpf-deny 路径片段，并在增强环境中由 BPF LSM 拒绝测试路径访问"
+  }
+}

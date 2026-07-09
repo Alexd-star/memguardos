@@ -71,6 +71,34 @@ def test_compiler_resolves_relative_time_ranges():
     assert recent_three_days["time_range"]["end_time"].startswith("2026-07-09T12:00:00")
 
 
+def test_compiler_handles_broader_field_test_phrases():
+    project = compile_request(
+        "清除近7天 OpenHands 当前项目里关于 rg 工具偏好的记忆",
+        agent_name="OpenHands",
+        session_id="sess-9",
+        project_root="/repo/memguardos",
+    )
+    assert project["agent_name"] == "OpenHands"
+    assert project["scope"] == {"level": "project", "project_root": "/repo/memguardos"}
+    assert project["memory_types"] == ["preference"]
+    assert project["topic"] == "rg"
+    assert project["preference_topic"] == "rg"
+    assert project["time_range"]["source_text"] == "近7天"
+    assert project["time_range"]["start_time"].startswith("2026-07-02T12:00:00")
+
+    explicit_session = compile_request("删除会话 sess-42 中关于 API Key 的所有记忆")
+    assert explicit_session["scope"]["level"] == "session"
+    assert explicit_session["scope"]["session_id"] == "sess-42"
+    assert explicit_session["sensitive_labels"] == ["api_key"]
+
+    explicit_dates = compile_request("遗忘 2026-07-01 到 2026-07-03 关于部署脚本的知识")
+    assert explicit_dates["memory_types"] == ["knowledge"]
+    assert explicit_dates["topic"] == "部署脚本"
+    assert explicit_dates["time_range"]["source_text"] == "2026-07-01 到 2026-07-03"
+    assert explicit_dates["time_range"]["start_time"].startswith("2026-07-01T00:00:00")
+    assert explicit_dates["time_range"]["end_time"].startswith("2026-07-04T00:00:00")
+
+
 def test_compiler_extracts_sensitive_labels_and_scope_context():
     result = compile_request(
         "忘掉当前会话里关于 Token、密码、邮箱和手机号的所有记忆",

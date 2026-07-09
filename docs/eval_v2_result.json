@@ -317,7 +317,7 @@
     "agent_context_adherence_rate": 1.0,
     "audit_chain_ok": true,
     "conflict_resolution_accuracy": 1.0,
-    "cpu_time_ms": 4968.75,
+    "cpu_time_ms": 4796.875,
     "cross_language_recall_at_1": 0.0,
     "cross_language_recall_at_5": 0.9,
     "forget_keep_success": 1.0,
@@ -327,9 +327,9 @@
     "hard_negative_false_positive_rate": 0.0,
     "mrr": 0.3425,
     "ndcg_at_5": 0.4423,
-    "p50_latency_ms": 0.088,
-    "p95_latency_ms": 3.102,
-    "p99_latency_ms": 3.498,
+    "p50_latency_ms": 1.115,
+    "p95_latency_ms": 2.446,
+    "p99_latency_ms": 2.562,
     "recall_at_1": 0.15,
     "recall_at_3": 0.45,
     "recall_at_5": 0.75,
@@ -338,11 +338,11 @@
     "sensitive_block_f1": 0.8421,
     "sensitive_false_positive_rate": 0.0,
     "sensitive_redaction_f1": 0.8571,
-    "storage_footprint_kb": 4957.006,
+    "storage_footprint_kb": 4948.936,
     "tool_result_to_preference_extraction_accuracy": 1.0
   },
   "runtime": {
-    "latency_queries": 30,
-    "wall_time_ms": 6343.363
+    "latency_queries": 20,
+    "wall_time_ms": 6299.91
   }
 }
