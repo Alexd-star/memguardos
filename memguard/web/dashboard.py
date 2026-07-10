@@ -402,6 +402,12 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                 filename="memguardos-diagnostics.json",
             )
             return
+        if parsed.path == "/api/export-evidence":
+            self._send_json_attachment(
+                self._evidence_payload(),
+                filename="memguardos-local-evidence.json",
+            )
+            return
         if parsed.path == "/api/search":
             params = parse_qs(parsed.query)
             query = params.get("q", [""])[0]
@@ -856,6 +862,21 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         finally:
             service.close()
 
+    def _evidence_payload(self) -> dict[str, Any]:
+        diagnostics = self._diagnostics_payload(probe_sdk=False)
+        return {
+            "schema": "memguardos-local-evidence-v1",
+            "ok": bool(diagnostics.get("ok")),
+            "scope": "local_dashboard_export",
+            "privacy": {
+                "contains_memory_plaintext": False,
+                "contains_credentials": False,
+                "purpose": "local acceptance, delivery review and troubleshooting",
+            },
+            "diagnostics": diagnostics,
+            "acceptance_plan": acceptance_plan(),
+        }
+
 
 def _safe_int(value: object, default: int) -> int:
     try:
@@ -1079,25 +1100,23 @@ def _dashboard_html() -> str:
   <main>
     <nav>
       <div class="nav-group">普通用户</div>
-      <button class="active" data-tab="overview">个人工作台</button>
-      <button data-tab="ingest">记忆写入</button>
-      <button data-tab="search">记忆检索</button>
-      <button data-tab="context">上下文预览</button>
+      <button class="active" data-tab="overview">总览</button>
       <button data-tab="agent">Agent 工作台</button>
-      <button data-tab="preferences">偏好设置</button>
-      <button data-tab="memory-detail">记忆详情</button>
-      <button data-tab="forget">遗忘验证</button>
-      <button data-tab="notifications">通知中心</button>
+      <button data-tab="memory">记忆中心</button>
+      <button data-tab="preferences">偏好与策略</button>
+      <button data-tab="sensitive">敏感保护</button>
+      <button data-tab="forget">精准遗忘</button>
       <button data-tab="diagnostics">系统维护</button>
       <div class="nav-group" data-min-role="admin">管理员视图</div>
-      <button data-tab="audit" data-min-role="admin">审计记录</button>
-      <button data-tab="acceptance" data-min-role="admin">复核中心</button>
+      <button data-tab="evidence" data-min-role="admin">审计与证据</button>
+      <button data-tab="acceptance" data-min-role="admin">本机验收</button>
     </nav>
     <div>
       <div id="errorBox" class="error"></div>
       <div id="operationStatus" class="operation-status" role="status" aria-live="polite"></div>
       <section id="overview" class="active">
-        <h2>个人工作台</h2>
+        <h2>总览</h2>
+        <div class="eyebrow">个人工作台</div>
         <p class="lead">这里汇总本机 Agent 记忆服务的健康状态、最近记忆数量、审计完整性和常用操作。普通用户可以完成写入、检索、上下文预览和遗忘预览；管理员可以进入系统维护查看服务、SDK、授权和资源状态。</p>
         <div class="statusline"><span id="healthBadge" class="badge">连接中</span><span id="lastUpdated">等待刷新</span></div>
         <div class="quick-actions" aria-label="常用快捷操作">
@@ -1226,6 +1245,34 @@ def _dashboard_html() -> str:
         </details>
         <details><summary>详细记录：操作回执</summary><pre id="overviewOut" class="advanced-output"></pre></details>
       </section>
+      <section id="memory">
+        <h2>记忆中心</h2>
+        <p class="lead">在一个入口完成记忆写入、检索、上下文预览和详情核验。每项操作仍使用原有受控流程，不会因为页面聚合而绕过敏感检查或权限控制。</p>
+        <div class="grid two">
+          <div class="panel">
+            <div class="health"><div class="item-title">写入记忆</div><span class="badge">受控保存</span></div>
+            <p class="muted">输入用户偏好、知识或操作经验，先查看抽取与敏感判断，再决定是否保存。</p>
+            <button class="primary" data-min-role="operator" onclick="openTab('ingest')">开始写入</button>
+          </div>
+          <div class="panel">
+            <div class="health"><div class="item-title">搜索记忆</div><span class="badge">可解释命中</span></div>
+            <p class="muted">查看为什么命中、来自哪里、是否适合进入 Agent 上下文。</p>
+            <button class="secondary" onclick="openTab('search')">开始搜索</button>
+          </div>
+          <div class="panel">
+            <div class="health"><div class="item-title">生成 Agent 上下文</div><span class="badge">脱敏输出</span></div>
+            <p class="muted">按任务和长度上限构建上下文，并展示过滤原因与候选选择轨迹。</p>
+            <button class="secondary" onclick="openTab('context')">生成上下文</button>
+          </div>
+          <div class="panel">
+            <div class="health"><div class="item-title">查看记忆详情</div><span class="badge">来源可追溯</span></div>
+            <p class="muted">核对摘要、来源、作用域、版本、关联信息和最近生效阶段。</p>
+            <button class="secondary" onclick="openTab('memory-detail')">选择记忆</button>
+          </div>
+        </div>
+        <details><summary>记忆中心使用说明</summary><div class="details-body muted">写入、搜索、上下文和详情仍保留各自的完整操作页，记忆中心只负责把常用流程组织到一个清晰入口。</div></details>
+      </section>
+
       <section id="ingest">
         <h2>写入记忆</h2>
         <div class="panel">
@@ -1325,6 +1372,34 @@ def _dashboard_html() -> str:
         <div id="memoryDetailCards" class="list" style="margin-top:12px"></div>
         <details><summary>详细记录：记忆详情</summary><pre id="memoryDetailOut" class="advanced-output"></pre></details>
       </section>
+      <section id="sensitive">
+        <h2>敏感保护</h2>
+        <p class="lead">敏感内容不会默认进入长期记忆或 Agent 上下文。这里可以查看最近保护结果，并在不保存文本的情况下测试检测策略。</p>
+        <div class="grid two">
+          <div class="panel">
+            <div class="health"><div class="item-title">保护状态</div><span class="badge ok">默认保护</span></div>
+            <div class="list" style="margin-top:12px">
+              <div class="item"><div class="item-title">高风险凭据</div><div class="muted">检测到 API Key、令牌或密码特征时，默认阻止进入长期记忆。</div></div>
+              <div class="item"><div class="item-title">进入 Agent 上下文</div><div class="muted">被阻止的原文不会进入 RAG；脱敏内容只保留受控摘要。</div></div>
+              <div class="item"><div class="item-title">处理记录</div><div class="muted">保护动作会写入操作记录，管理员可以在审计与证据中复核。</div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="item-title">敏感文本测试</div>
+            <p class="muted">测试只返回检测摘要，不会把输入保存为记忆。</p>
+            <label for="sensitiveTestText">待检查文本</label>
+            <textarea id="sensitiveTestText" placeholder="输入一段需要检查的文本"></textarea>
+            <button class="primary" onclick="testSensitiveText(event)">检查保护策略</button>
+            <div id="sensitiveTestResult" class="list" style="margin-top:12px"><div class="muted">尚未执行检查。</div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="health"><div class="item-title">最近敏感阻断</div><button class="secondary" onclick="loadSensitiveProtection(event)">刷新</button></div>
+          <div id="sensitiveBlockList" class="list" style="margin-top:12px"><div class="muted">正在读取最近保护结果…</div></div>
+        </div>
+        <details><summary>查看完整技术详情</summary><pre id="sensitiveOut" class="advanced-output"></pre></details>
+      </section>
+
       <section id="notifications">
         <h2>通知中心</h2>
         <p class="lead">通知中心记录重要记忆变化和风险事件。普通检索、缓存命中和本机智能检索降级不会频繁打扰桌面，只在这里保留状态变化。</p>
@@ -1350,6 +1425,28 @@ def _dashboard_html() -> str:
         <div id="forgetCards" class="list" style="margin-top:12px"></div>
         <details><summary>详细记录：操作回执</summary><pre id="forgetOut" class="advanced-output"></pre></details>
       </section>
+      <section id="evidence" data-min-role="admin">
+        <h2>审计与证据</h2>
+        <p class="lead">集中查看操作记录完整性、最近关键事件和本机状态证据。导出内容默认不包含记忆正文，适合交付复核和问题排查。</p>
+        <div class="grid two">
+          <div class="panel">
+            <div class="health"><div class="item-title">审计链状态</div><span id="evidenceAuditBadge" class="badge">待检查</span></div>
+            <p id="evidenceAuditSummary" class="muted">打开页面后会校验操作记录完整性。</p>
+            <button class="secondary" onclick="loadEvidenceHub(event)">重新校验</button>
+          </div>
+          <div class="panel">
+            <div class="item-title">证据导出</div>
+            <p class="muted">包含本机状态、审计链、检索策略、资源状态和复核项目说明，不包含记忆正文。</p>
+            <div class="actions"><button class="primary" onclick="exportEvidence(event)">导出证据包</button><button class="secondary" onclick="openTab('audit')">查看详细记录</button></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="item-title">最近关键事件</div>
+          <div id="evidenceEventList" class="list" style="margin-top:12px"><div class="muted">正在读取最近事件…</div></div>
+        </div>
+        <details><summary>查看完整技术详情</summary><pre id="evidenceOut" class="advanced-output"></pre></details>
+      </section>
+
       <section id="audit" data-min-role="admin">
         <h2>审计记录</h2>
         <div class="actions"><button class="primary" onclick="audit(event)">刷新</button></div>
@@ -1442,6 +1539,7 @@ def _dashboard_html() -> str:
           return openTab('overview');
         return;
       }
+      setOperationStatus('', '');
       document.querySelectorAll('nav button').forEach(item => item.classList.toggle('active', item.dataset.tab === tab));
       document.querySelectorAll('section').forEach(item => item.classList.toggle('active', item.id === tab));
       if (requestedButton) requestedButton.scrollIntoView({block:'nearest', inline:'nearest'});
@@ -1456,6 +1554,8 @@ def _dashboard_html() -> str:
         audit: audit,
         agent: loadAgentOverview,
         preferences: loadPreferences,
+        sensitive: loadSensitiveProtection,
+        evidence: loadEvidenceHub,
         notifications: loadNotifications,
         acceptance: loadAcceptancePlan,
       };
@@ -2182,6 +2282,71 @@ def _dashboard_html() -> str:
         document.getElementById('notificationOut').textContent = pretty(payload);
       });
     }
+    async function loadSensitiveProtection(event) {
+      const work = async () => {
+        const payload = await getJson('/api/feedback-home?limit=30');
+        const blocks = (payload.result || {}).recent_sensitive_blocks || [];
+        const box = document.getElementById('sensitiveBlockList');
+        if (!blocks.length) {
+          box.innerHTML = '<div class="item"><div class="item-title">最近没有需要展示的保护事件</div><div class="muted">系统仍会在每次写入和 Agent 交互前执行敏感检查。</div></div>';
+        } else {
+          renderNotifications(blocks, 'sensitiveBlockList');
+        }
+        document.getElementById('sensitiveOut').textContent = pretty(payload);
+        return operationFeedback('敏感保护状态已更新。', 'ok');
+      };
+      return event ? withBusy(event, work) : work();
+    }
+    async function testSensitiveText(event) {
+      const text = document.getElementById('sensitiveTestText').value.trim();
+      if (!text) {
+        setOperationStatus('请输入需要检查的文本。', 'warn');
+        return null;
+      }
+      return withBusy(event, async () => {
+        const payload = await getJson('/api/explain-extraction?text=' + encodeURIComponent(text) + '&source_kind=manual');
+        const result = payload.result || {};
+        const sensitivity = result.sensitivity || {};
+        const labels = sensitivity.labels || [];
+        const level = String(sensitivity.level || 'none').toLowerCase();
+        const blocked = level === 'high' || level === 'critical';
+        const action = blocked ? '阻止进入长期记忆' : (labels.length ? '脱敏后再评估' : '允许进入受控抽取');
+        document.getElementById('sensitiveTestResult').innerHTML = '<div class="item"><div class="health"><div class="item-title">检测结果：' + esc(sensitivityLabel(level)) + '</div><span class="badge ' + (blocked ? 'bad' : (labels.length ? 'warn' : 'ok')) + '">' + esc(action) + '</span></div><div class="muted">检测类型：' + esc(labels.length ? labels.join('、') : '未发现已知敏感特征') + '</div><div class="muted">本次测试不会保存输入文本，也不会写入 Agent 上下文。</div></div>';
+        document.getElementById('sensitiveOut').textContent = pretty(payload);
+        return operationFeedback(blocked ? '检测到高风险内容，系统会阻止保存。' : '敏感检查已完成。', blocked ? 'warn' : 'ok');
+      });
+    }
+    async function loadEvidenceHub(event) {
+      const work = async () => {
+        const settled = await Promise.all([getJson('/api/verify-audit'), getJson('/api/audit?limit=12'), getJson('/api/diagnostics')]);
+        const auditCheck = settled[0];
+        const events = settled[1].result || [];
+        const diagnosticsPayload = settled[2];
+        const auditOk = auditCheck.ok === true && (auditCheck.result || {}).ok === true;
+        const badgeNode = document.getElementById('evidenceAuditBadge');
+        badgeNode.className = 'badge ' + (auditOk ? 'ok' : 'bad');
+        badgeNode.textContent = auditOk ? '完整' : '需要处理';
+        document.getElementById('evidenceAuditSummary').textContent = auditOk
+          ? '操作记录校验通过，可以用于本机复核和证据导出。'
+          : '操作记录校验未通过，请先进入系统维护处理异常。';
+        document.getElementById('evidenceEventList').innerHTML = events.length ? events.map(item => '<div class="item"><div class="health"><div class="item-title">' + esc(auditEventLabel(item.event_type || 'event')) + '</div><span class="badge">已记录</span></div><div class="muted">审计编号 ' + esc(item.audit_id || '-') + ' · 关联记忆 ' + esc(item.memory_id || '无') + '</div></div>').join('') : '<div class="item"><div class="item-title">暂无关键事件</div><div class="muted">完成记忆写入、上下文构建或遗忘后会在这里显示。</div></div>';
+        document.getElementById('evidenceOut').textContent = pretty({audit:auditCheck, events:settled[1], diagnostics:diagnosticsPayload});
+        return operationFeedback(auditOk ? '审计与证据状态已更新。' : '审计状态需要处理。', auditOk ? 'ok' : 'bad');
+      };
+      return event ? withBusy(event, work) : work();
+    }
+    function auditEventLabel(value) {
+      const labels = {
+        ingest:'记忆写入', interaction_ingest:'Agent 交互', interaction_status:'Agent 状态检查',
+        context_build:'上下文构建', agent_context_build:'Agent 上下文构建',
+        preference_select:'偏好选择', preference_evidence:'偏好生效核验',
+        sensitive_block:'敏感保护', forget:'精准遗忘', forget_memory_ids:'精准遗忘',
+        compact:'存储整理', verify_audit:'审计校验', namespace_status:'资料库状态检查',
+        retrieval_status:'检索状态检查', memory_policy_status:'记忆策略检查',
+        temporal_status:'记忆有效期检查'
+      };
+      return labels[String(value || '')] || '系统操作';
+    }
     async function loadPreferences(event) {
       await withBusy(event, async () => {
         const payload = await getJson('/api/feedback-home?limit=30');
@@ -2500,8 +2665,14 @@ def _dashboard_html() -> str:
       });
     }
     async function exportDiagnostics(event) {
+      return downloadJsonExport(event, '/api/export-diagnostics', 'memguardos-diagnostics.json', '系统报告');
+    }
+    async function exportEvidence(event) {
+      return downloadJsonExport(event, '/api/export-evidence', 'memguardos-local-evidence.json', '证据包');
+    }
+    async function downloadJsonExport(event, url, fallbackFilename, label) {
       return withBusy(event, async () => {
-        const response = await fetchWithTimeout('/api/export-diagnostics', {headers: authHeaders()}, 90000);
+        const response = await fetchWithTimeout(url, {headers: authHeaders()}, 90000);
         if (!response.ok) {
           let payload = {};
           try {
@@ -2509,12 +2680,12 @@ def _dashboard_html() -> str:
           } catch (_err) {
             payload = {};
           }
-          throw requestError(userErrorMessage(payload, '系统报告没有生成，请重试。'));
+          throw requestError(userErrorMessage(payload, label + '没有生成，请重试。'));
         }
         const blob = await response.blob();
         const disposition = response.headers.get('Content-Disposition') || '';
         const match = disposition.match(/filename="?([^";]+)"?/i);
-        const filename = match && match[1] ? match[1] : 'memguardos-diagnostics.json';
+        const filename = match && match[1] ? match[1] : fallbackFilename;
         const objectUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = objectUrl;
@@ -2523,7 +2694,7 @@ def _dashboard_html() -> str:
         link.click();
         link.remove();
         window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
-        return operationFeedback('系统报告已生成，浏览器已开始下载。', 'ok');
+        return operationFeedback(label + '已生成，浏览器已开始下载。', 'ok');
       });
     }
     openHashTab();
