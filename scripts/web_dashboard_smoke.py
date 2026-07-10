@@ -70,6 +70,7 @@ def main() -> int:
             auth_token=auth_token,
         )
         exported = _http_get_json(base + "/api/export-diagnostics", auth_token=auth_token)
+        evidence_exported = _http_get_json(base + "/api/export-evidence", auth_token=auth_token)
         agent_overview = _http_get_json(
             base + "/api/agent-overview?session_id=web-smoke-session&task=%E6%9F%A5%E6%89%BE%E4%BB%A3%E7%A0%81",
             auth_token=auth_token,
@@ -113,6 +114,11 @@ def main() -> int:
             "enterprise_overview_ok": "能力概览" in page and "常用工作流" in page,
             "delivery_readiness_ok": "系统健康度" in page and "推荐操作路径" in page and "风险处置建议" in page,
             "product_workbench_ok": "治理闭环" in page and "今日工作流" in page and "系统报告内容清单" in page,
+            "consolidated_navigation_ok": "记忆中心" in page
+            and "偏好与策略" in page
+            and "敏感保护" in page
+            and "审计与证据" in page,
+            "sensitive_protection_ok": "敏感文本测试" in page and "最近敏感阻断" in page,
             "memory_value_visual_ok": "记忆价值指标" in page and "重复尝试" in page and "工具选择命中" in page,
             "forget_confirmation_copy_ok": "遗忘二次确认" in page and "影响范围预览" in page,
             "competition_copy_absent": "benchmark 用例/种子" not in page and "能力证据总览" not in page and "演示" not in page,
@@ -145,6 +151,8 @@ def main() -> int:
             "policy_ok": policy.get("ok") is True,
             "diagnostics_ok": diagnostics.get("ok") is True and "audit_chain" in diagnostics.get("result", {}),
             "export_ok": "doctor" in exported and "audit_chain" in exported,
+            "evidence_export_ok": evidence_exported.get("schema") == "memguardos-local-evidence-v1"
+            and evidence_exported.get("privacy", {}).get("contains_memory_plaintext") is False,
             "agent_overview_ok": agent_overview.get("ok") is True
             and agent_overview.get("result", {}).get("summary", {}).get("event_count") == 1,
             "agent_forget_preview_ok": agent_forget.get("ok") is True
@@ -175,6 +183,8 @@ def main() -> int:
             and result["enterprise_overview_ok"]
             and result["delivery_readiness_ok"]
             and result["product_workbench_ok"]
+            and result["consolidated_navigation_ok"]
+            and result["sensitive_protection_ok"]
             and result["memory_value_visual_ok"]
             and result["forget_confirmation_copy_ok"]
             and result["competition_copy_absent"]
@@ -195,6 +205,7 @@ def main() -> int:
             and result["policy_ok"]
             and result["diagnostics_ok"]
             and result["export_ok"]
+            and result["evidence_export_ok"]
             and result["agent_overview_ok"]
             and result["agent_forget_preview_ok"]
             and result["feedback_home_ok"]

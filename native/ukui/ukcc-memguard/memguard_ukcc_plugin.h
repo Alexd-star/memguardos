@@ -53,6 +53,10 @@ private:
     QLabel *desktopStatusIcon_ = nullptr;
     QLabel *desktopStatusLabel_ = nullptr;
     QLabel *behaviorSummary_ = nullptr;
+    QPushButton *recentMemoryButton_ = nullptr;
+    QPushButton *recentPreferenceButton_ = nullptr;
+    QPushButton *recentSensitiveButton_ = nullptr;
+    QPushButton *recentForgetButton_ = nullptr;
     QLabel *readinessValueLabel_ = nullptr;
     QProgressBar *readinessBar_ = nullptr;
     QPushButton *cancelOperationButton_ = nullptr;
@@ -64,6 +68,7 @@ private:
     QTreeWidget *components_ = nullptr;
     QTreeWidget *resourceSnapshot_ = nullptr;
     QTreeWidget *operationHistory_ = nullptr;
+    QTreeWidget *behaviorTimeline_ = nullptr;
     QTextEdit *details_ = nullptr;
     QToolButton *detailsToggle_ = nullptr;
     QToolButton *overviewDetailsToggle_ = nullptr;

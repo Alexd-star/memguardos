@@ -658,13 +658,39 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
         1, 1);
     layout->addWidget(healthBox);
 
-    auto *behaviorBox = new QGroupBox(QStringLiteral("最近的记忆变化"));
-    auto *behaviorLayout = new QHBoxLayout(behaviorBox);
+    auto *behaviorBox = new QGroupBox(QStringLiteral("最近记忆行为"));
+    auto *behaviorLayout = new QVBoxLayout(behaviorBox);
     applyPanelSpacing(behaviorLayout);
     behaviorSummary_ = new QLabel(QStringLiteral("正在读取最近新增记忆、偏好生效和风险处理结果。"));
     behaviorSummary_->setWordWrap(true);
-    behaviorSummary_->setAccessibleName(QStringLiteral("最近的记忆变化摘要"));
-    behaviorLayout->addWidget(behaviorSummary_, 1);
+    behaviorSummary_->setAccessibleName(QStringLiteral("最近记忆行为摘要"));
+    behaviorLayout->addWidget(behaviorSummary_);
+
+    auto *behaviorActions = new QGridLayout;
+    applyGridRhythm(behaviorActions);
+    recentMemoryButton_ = makeOperationButton(QStringLiteral("view-list-details"), QStringLiteral("最近新增记忆"), QStringLiteral("打开记忆中心查看最近新增内容"));
+    recentPreferenceButton_ = makeOperationButton(QStringLiteral("preferences-system"), QStringLiteral("最近生效偏好"), QStringLiteral("打开偏好与策略查看当前生效偏好"));
+    recentSensitiveButton_ = makeOperationButton(QStringLiteral("security-high"), QStringLiteral("最近已保护内容"), QStringLiteral("打开敏感保护查看最近保护结果"));
+    recentForgetButton_ = makeOperationButton(QStringLiteral("edit-delete"), QStringLiteral("最近遗忘验证"), QStringLiteral("打开精准遗忘查看最近验证结果"));
+    behaviorActions->addWidget(recentMemoryButton_, 0, 0);
+    behaviorActions->addWidget(recentPreferenceButton_, 0, 1);
+    behaviorActions->addWidget(recentSensitiveButton_, 1, 0);
+    behaviorActions->addWidget(recentForgetButton_, 1, 1);
+    behaviorLayout->addLayout(behaviorActions);
+
+    behaviorTimeline_ = new QTreeWidget;
+    behaviorTimeline_->setColumnCount(3);
+    behaviorTimeline_->setHeaderLabels({QStringLiteral("类型"), QStringLiteral("摘要"), QStringLiteral("状态")});
+    behaviorTimeline_->setRootIsDecorated(false);
+    behaviorTimeline_->setAlternatingRowColors(true);
+    behaviorTimeline_->setSelectionMode(QAbstractItemView::SingleSelection);
+    behaviorTimeline_->setMinimumHeight(128);
+    behaviorTimeline_->setAccessibleName(QStringLiteral("最近记忆行为事件列表"));
+    behaviorTimeline_->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    behaviorTimeline_->header()->setSectionResizeMode(1, QHeaderView::Stretch);
+    behaviorTimeline_->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    behaviorLayout->addWidget(behaviorTimeline_);
+
     auto *refreshBehavior = makeOperationButton(QStringLiteral("view-refresh"), QStringLiteral("查看最近变化"), QStringLiteral("查看最近新增记忆、Agent 偏好和风险处理结果"));
     behaviorLayout->addWidget(refreshBehavior);
     layout->addWidget(behaviorBox);
@@ -812,7 +838,8 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     detailsPanelLayout->addWidget(hint);
     moreLayout->addWidget(overviewDetailsPanel_);
     layout->addWidget(moreBox);
-    actionButtons_ << openConsole << openAgent << runJourney << openFiles << forgetEntry << refreshNow << refreshBehavior;
+    actionButtons_ << openConsole << openAgent << runJourney << openFiles << forgetEntry << refreshNow << refreshBehavior
+                   << recentMemoryButton_ << recentPreferenceButton_ << recentSensitiveButton_ << recentForgetButton_;
     connect(overviewDetailsToggle_, &QToolButton::toggled, this, [this](bool checked) {
         overviewDetailsToggle_->setArrowType(checked ? Qt::DownArrow : Qt::RightArrow);
         overviewDetailsPanel_->setVisible(checked);
@@ -832,6 +859,10 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     connect(refreshBehavior, &QPushButton::clicked, this, [this]() {
         runMemctl({QStringLiteral("feedback-home"), QStringLiteral("--limit"), QStringLiteral("6")}, QStringLiteral("feedback"));
     });
+    connect(recentMemoryButton_, &QPushButton::clicked, this, [this]() { openDashboardTarget(QStringLiteral("#memory")); });
+    connect(recentPreferenceButton_, &QPushButton::clicked, this, [this]() { openDashboardTarget(QStringLiteral("#preferences")); });
+    connect(recentSensitiveButton_, &QPushButton::clicked, this, [this]() { openDashboardTarget(QStringLiteral("#sensitive")); });
+    connect(recentForgetButton_, &QPushButton::clicked, this, [this]() { openDashboardTarget(QStringLiteral("#forget")); });
     scroll->setWidget(tab);
     return scroll;
 }
@@ -999,6 +1030,23 @@ QWidget *MemGuardUkccPlugin::buildDiagnosticsTab()
     maintenanceGrid->addWidget(maintenanceBox, 0, 1);
     layout->addLayout(maintenanceGrid);
 
+    auto *preflightBox = new QGroupBox(QStringLiteral("提交前复核"));
+    auto *preflightLayout = new QVBoxLayout(preflightBox);
+    applyPanelSpacing(preflightLayout);
+    preflightLayout->addWidget(makeMutedLabel(QStringLiteral("报告默认不包含记忆正文，适合在交付、验收或问题排查前复核本机状态。更多复核项会在 Web 验收中心分项执行。")));
+    auto *preflightButtons = new QGridLayout;
+    applyGridRhythm(preflightButtons);
+    auto *runAcceptance = makeOperationButton(QStringLiteral("system-run"), QStringLiteral("运行本机验收复核"), QStringLiteral("打开 Web 验收中心并运行分项复核"));
+    auto *exportOpenKylin = makeOperationButton(QStringLiteral("document-send"), QStringLiteral("导出 openKylin 证据"), QStringLiteral("导出带校验清单的 openKylin 本机证据"));
+    auto *exportSystemReport = makeOperationButton(QStringLiteral("document-save"), QStringLiteral("导出系统报告"), QStringLiteral("导出不包含记忆正文的系统状态报告"));
+    auto *openAcceptance = makeOperationButton(QStringLiteral("applications-internet"), QStringLiteral("打开 Web 验收中心"), QStringLiteral("打开本地 Web 验收中心"));
+    preflightButtons->addWidget(runAcceptance, 0, 0);
+    preflightButtons->addWidget(exportOpenKylin, 0, 1);
+    preflightButtons->addWidget(exportSystemReport, 1, 0);
+    preflightButtons->addWidget(openAcceptance, 1, 1);
+    preflightLayout->addLayout(preflightButtons);
+    layout->addWidget(preflightBox);
+
     auto *detailsBox = new QGroupBox(QStringLiteral("维护结果"));
     auto *detailsLayout = new QVBoxLayout(detailsBox);
     applyPanelSpacing(detailsLayout);
@@ -1016,7 +1064,8 @@ QWidget *MemGuardUkccPlugin::buildDiagnosticsTab()
     detailsLayout->addWidget(details_, 1);
     layout->addWidget(detailsBox, 1);
 
-    actionButtons_ << diagnostics << evidence << dashboard << refresh << verifyAudit << logs;
+    actionButtons_ << diagnostics << evidence << dashboard << refresh << verifyAudit << logs
+                   << runAcceptance << exportOpenKylin << exportSystemReport << openAcceptance;
     connect(detailsToggle_, &QToolButton::toggled, this, [this](bool checked) {
         detailsToggle_->setArrowType(checked ? Qt::DownArrow : Qt::RightArrow);
         details_->setVisible(checked);
@@ -1027,6 +1076,10 @@ QWidget *MemGuardUkccPlugin::buildDiagnosticsTab()
     connect(refresh, &QPushButton::clicked, this, &MemGuardUkccPlugin::refreshStatus);
     connect(verifyAudit, &QPushButton::clicked, this, [this]() { runMemctl({QStringLiteral("verify-audit")}, QStringLiteral("details")); });
     connect(logs, &QPushButton::clicked, this, [this]() { runProgram(QStringLiteral("journalctl"), {QStringLiteral("-u"), QStringLiteral("memguardd.service"), QStringLiteral("-n"), QStringLiteral("50"), QStringLiteral("--no-pager")}, QStringLiteral("details")); });
+    connect(runAcceptance, &QPushButton::clicked, this, [this]() { openDashboardTarget(QStringLiteral("#acceptance")); });
+    connect(exportOpenKylin, &QPushButton::clicked, this, [this]() { runMemctl({QStringLiteral("collect-openkylin-evidence")}, QStringLiteral("details")); });
+    connect(exportSystemReport, &QPushButton::clicked, this, [this]() { runMemctl({QStringLiteral("diagnostics")}, QStringLiteral("export")); });
+    connect(openAcceptance, &QPushButton::clicked, this, [this]() { openDashboardTarget(QStringLiteral("#acceptance")); });
     scroll->setWidget(tab);
     return scroll;
 }
@@ -1256,6 +1309,39 @@ void MemGuardUkccPlugin::renderFeedbackSummary(const QString &text)
     if (!forgetting.isEmpty())
         lines << QStringLiteral("最近完成遗忘：%1 次，可查看验证结果。 ").arg(forgetting.size());
     behaviorSummary_->setText(lines.join(QLatin1Char('\n')));
+
+    if (recentMemoryButton_)
+        recentMemoryButton_->setText(QStringLiteral("最近新增记忆 · %1").arg(memories.size()));
+    if (recentPreferenceButton_)
+        recentPreferenceButton_->setText(QStringLiteral("最近生效偏好 · %1").arg(preferences.size()));
+    if (recentSensitiveButton_)
+        recentSensitiveButton_->setText(QStringLiteral("最近已保护内容 · %1").arg(sensitive.size()));
+    if (recentForgetButton_)
+        recentForgetButton_->setText(QStringLiteral("最近遗忘验证 · %1").arg(forgetting.size()));
+
+    if (!behaviorTimeline_)
+        return;
+    behaviorTimeline_->clear();
+    const QJsonArray notifications = payload.value(QStringLiteral("notifications")).toArray();
+    for (int index = 0; index < notifications.size() && index < 6; ++index) {
+        const QJsonObject item = notifications.at(index).toObject();
+        const QString level = item.value(QStringLiteral("level")).toString();
+        const QString status = level == QStringLiteral("critical")
+            ? QStringLiteral("需要处理")
+            : (level == QStringLiteral("warning") ? QStringLiteral("需要确认") : QStringLiteral("已完成"));
+        auto *row = new QTreeWidgetItem(behaviorTimeline_);
+        row->setText(0, item.value(QStringLiteral("title")).toString(QStringLiteral("记忆变化")));
+        row->setText(1, item.value(QStringLiteral("summary")).toString(QStringLiteral("状态已经更新。")));
+        row->setText(2, status);
+        row->setIcon(2, levelIcon(level == QStringLiteral("critical") ? QStringLiteral("red") : (level == QStringLiteral("warning") ? QStringLiteral("yellow") : QStringLiteral("green"))));
+    }
+    if (behaviorTimeline_->topLevelItemCount() == 0) {
+        auto *empty = new QTreeWidgetItem(behaviorTimeline_);
+        empty->setText(0, QStringLiteral("暂无事件"));
+        empty->setText(1, QStringLiteral("完成一次记忆写入、Agent 任务或遗忘后，这里会显示结果。"));
+        empty->setText(2, QStringLiteral("正常"));
+        empty->setIcon(2, levelIcon(QStringLiteral("green")));
+    }
 }
 
 void MemGuardUkccPlugin::updateOperationGuide(const QString &message, bool busy)

@@ -319,7 +319,9 @@ def test_dashboard_uses_authenticated_blob_download_for_diagnostics():
     page = _dashboard_html()
 
     export_body = page[page.index("async function exportDiagnostics") : page.index("openHashTab();")]
-    assert "fetchWithTimeout('/api/export-diagnostics'" in export_body
+    assert "downloadJsonExport(event, '/api/export-diagnostics'" in export_body
+    assert "async function downloadJsonExport" in export_body
+    assert "fetchWithTimeout(url, {headers: authHeaders()}" in export_body
     assert "headers: authHeaders()" in export_body
     assert "await response.blob()" in export_body
     assert "URL.createObjectURL" in export_body
@@ -338,7 +340,7 @@ def test_dashboard_applies_role_capabilities_before_exposing_privileged_actions(
     assert "currentRoleRank" in page
     assert "当前访问权限不足" in page
     assert "loadSessionCapabilities().then" in page
-    assert '<button data-tab="audit" data-min-role="admin">审计记录</button>' in page
+    assert '<button data-tab="evidence" data-min-role="admin">审计与证据</button>' in page
     assert '<button data-tab="diagnostics">系统维护</button>' in page
     assert '<section id="audit" data-min-role="admin">' in page
     assert '<section id="diagnostics">' in page
@@ -437,3 +439,51 @@ def test_dashboard_json_boundaries_emit_standard_json(method_name, args):
     assert b"NaN" not in raw
     assert b"Infinity" not in raw
     assert json.loads(raw.decode("utf-8")) == {"value": None}
+
+
+def test_dashboard_uses_consolidated_memory_security_navigation():
+    page = _dashboard_html()
+
+    expected = [
+        'data-tab="overview">总览</button>',
+        'data-tab="agent">Agent 工作台</button>',
+        'data-tab="memory">记忆中心</button>',
+        'data-tab="preferences">偏好与策略</button>',
+        'data-tab="sensitive">敏感保护</button>',
+        'data-tab="forget">精准遗忘</button>',
+        'data-tab="evidence" data-min-role="admin">审计与证据</button>',
+        'data-tab="diagnostics">系统维护</button>',
+        'data-tab="acceptance" data-min-role="admin">本机验收</button>',
+    ]
+    for marker in expected:
+        assert marker in page
+
+    assert '<button data-tab="ingest">记忆写入</button>' not in page
+    assert '<button data-tab="search">记忆检索</button>' not in page
+    assert '<button data-tab="context">上下文预览</button>' not in page
+    assert '<button data-tab="memory-detail">记忆详情</button>' not in page
+
+
+def test_dashboard_product_hubs_reuse_existing_memory_and_evidence_flows():
+    page = _dashboard_html()
+
+    assert '<section id="memory">' in page
+    assert "写入记忆" in page
+    assert "搜索记忆" in page
+    assert "生成 Agent 上下文" in page
+    assert "查看记忆详情" in page
+    assert '<section id="sensitive">' in page
+    assert "敏感文本测试" in page
+    assert "最近敏感阻断" in page
+    assert "敏感内容不会默认进入长期记忆或 Agent 上下文" in page
+    assert '<section id="evidence" data-min-role="admin">' in page
+    assert "审计链状态" in page
+    assert "导出证据包" in page
+    assert "查看完整技术详情" in page
+
+
+def test_dashboard_clears_contextual_operation_feedback_when_switching_pages():
+    page = _dashboard_html()
+    open_tab = page[page.index("async function openTab") : page.index("async function loadTabData")]
+
+    assert "setOperationStatus('', '');" in open_tab

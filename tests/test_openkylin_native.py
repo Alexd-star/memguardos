@@ -1335,4 +1335,23 @@ def test_desktop_user_copy_uses_plain_product_language():
     assert "撤销本次导入" in peony
 
 
+def test_ukui_control_center_has_actionable_recent_behavior_and_preflight_review():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
+    header = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.h").read_text(encoding="utf-8")
+
+    assert "最近记忆行为" in source
+    assert "最近新增记忆" in source
+    assert "最近生效偏好" in source
+    assert "最近已保护内容" in source
+    assert "最近遗忘验证" in source
+    assert "behaviorTimeline_" in source
+    assert "behaviorTimeline_" in header
+    assert "提交前复核" in source
+    assert "运行本机验收复核" in source
+    assert "导出 openKylin 证据" in source
+    assert "打开 Web 验收中心" in source
+    assert "报告默认不包含记忆正文" in source
+
+
 
