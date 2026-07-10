@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 239,
-    "passed": 239,
+    "total": 241,
+    "passed": 241,
     "failed": 0,
     "warnings": 0
   },
@@ -11,7 +11,7 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 4584",
+      "detail": "中文字符数 4600",
       "severity": "P0"
     },
     {
@@ -109,7 +109,7 @@
       "category": "中文文档",
       "name": "docs/13_测试说明.md",
       "ok": true,
-      "detail": "中文字符数 502",
+      "detail": "中文字符数 510",
       "severity": "P0"
     },
     {
@@ -123,7 +123,7 @@
       "category": "中文文档",
       "name": "docs/15_更新日志.md",
       "ok": true,
-      "detail": "中文字符数 1127",
+      "detail": "中文字符数 1262",
       "severity": "P0"
     },
     {
@@ -151,7 +151,7 @@
       "category": "中文文档",
       "name": "docs/最终提交说明.md",
       "ok": true,
-      "detail": "中文字符数 3662",
+      "detail": "中文字符数 3677",
       "severity": "P0"
     },
     {
@@ -214,7 +214,7 @@
       "category": "中文文档",
       "name": "docs/openKylin验证记录.md",
       "ok": true,
-      "detail": "中文字符数 1672",
+      "detail": "中文字符数 1690",
       "severity": "P0"
     },
     {
@@ -249,14 +249,14 @@
       "category": "中文文档",
       "name": "docs/真实Agent闭环测试报告.md",
       "ok": true,
-      "detail": "中文字符数 1594",
+      "detail": "中文字符数 1612",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/真实Agent记忆价值评测报告.md",
       "ok": true,
-      "detail": "中文字符数 3303",
+      "detail": "中文字符数 3297",
       "severity": "P0"
     },
     {
@@ -277,21 +277,21 @@
       "category": "中文文档",
       "name": "docs/评委证据包索引.md",
       "ok": true,
-      "detail": "中文字符数 2151",
+      "detail": "中文字符数 2166",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/答辩提纲.md",
       "ok": true,
-      "detail": "中文字符数 1307",
+      "detail": "中文字符数 1325",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/答辩稿.md",
       "ok": true,
-      "detail": "中文字符数 6274",
+      "detail": "中文字符数 6294",
       "severity": "P0"
     },
     {
@@ -375,7 +375,7 @@
       "category": "中文文档",
       "name": "正式文档测试数字口径",
       "ok": true,
-      "detail": "正式材料使用当前 338/340 测试口径",
+      "detail": "正式材料使用当前 341/344 测试口径",
       "severity": "P0"
     },
     {
@@ -1276,6 +1276,13 @@
     },
     {
       "category": "openKylin原生证据",
+      "name": "service_restart.txt",
+      "ok": true,
+      "detail": "存在且非空",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
       "name": "polkit_assets.txt",
       "ok": true,
       "detail": "存在且非空",
@@ -1334,7 +1341,14 @@
       "category": "openKylin原生证据",
       "name": "证据对应当前 Git HEAD",
       "ok": true,
-      "detail": "e6a9b9b58b463b0ba8d2433f3e9b41355ad35ba0",
+      "detail": "15523ae0919265170d26f0ddc69f0ff2b185cb28",
+      "severity": "P0"
+    },
+    {
+      "category": "openKylin原生证据",
+      "name": "systemd 服务重启响应时间",
+      "ok": true,
+      "detail": "restart_ms=309",
       "severity": "P0"
     },
     {
@@ -1418,14 +1432,14 @@
       "category": "openKylin证据",
       "name": "manifest 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 20 个证据文件",
+      "detail": "覆盖 21 个证据文件",
       "severity": "P0"
     },
     {
       "category": "openKylin证据",
       "name": "SHA256SUMS 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 20 个证据文件",
+      "detail": "覆盖 21 个证据文件",
       "severity": "P0"
     },
     {

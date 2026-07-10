@@ -183,21 +183,21 @@ $ python3 -m memguard.cli.memctl openkylin-status
     "diagnosis_code": "ready",
     "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": "15654912",
+      "cgroup_memory_current": "20848640",
       "cgroup_memory_max": "536870912"
     },
     "cpu": {
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 270806,
-        "user_usec": 171336,
-        "system_usec": 99469,
+        "usage_usec": 288847,
+        "user_usec": 220915,
+        "system_usec": 67932,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 87,
-        "nr_throttled": 2,
-        "throttled_usec": 84007,
+        "nr_periods": 42,
+        "nr_throttled": 4,
+        "throttled_usec": 185402,
         "nr_bursts": 0,
         "burst_usec": 0
       }
@@ -207,13 +207,13 @@ $ python3 -m memguard.cli.memctl openkylin-status
   "namespace": {
     "namespace": "default",
     "is_default": true,
-    "home": "/var/tmp/memguardos-native-home.aulsQd",
+    "home": "/var/tmp/memguardos-native-home.TC7VXx",
     "home_exists": true,
-    "namespace_home": "/var/tmp/memguardos-native-home.aulsQd",
+    "namespace_home": "/var/tmp/memguardos-native-home.TC7VXx",
     "namespace_home_exists": true,
-    "store_path": "/var/tmp/memguardos-native-home.aulsQd/memory.segment",
-    "db_path": "/var/tmp/memguardos-native-home.aulsQd/memguard.sqlite3",
-    "custom_patterns_path": "/var/tmp/memguardos-native-home.aulsQd/sensitive_patterns.json",
+    "store_path": "/var/tmp/memguardos-native-home.TC7VXx/memory.segment",
+    "db_path": "/var/tmp/memguardos-native-home.TC7VXx/memguard.sqlite3",
+    "custom_patterns_path": "/var/tmp/memguardos-native-home.TC7VXx/sensitive_patterns.json",
     "store_exists": false,
     "db_exists": false,
     "custom_patterns_exists": false,
