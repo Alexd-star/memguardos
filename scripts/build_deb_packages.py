@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -260,7 +261,8 @@ class DebianPackageBuilder:
             self._write_maintainer_script(
                 stage / "DEBIAN/postinst",
                 "\n".join(
-                    [
+                    self._legacy_runtime_cleanup_lines()
+                    + [
                         "command -v systemctl >/dev/null 2>&1 && systemctl daemon-reload || true",
                         "command -v systemctl >/dev/null 2>&1 && systemctl enable --now memguardd.service >/dev/null 2>&1 || true",
                         "command -v systemctl >/dev/null 2>&1 && systemctl --global disable memguard-kylin-warmup.service >/dev/null 2>&1 || true",
@@ -307,6 +309,24 @@ class DebianPackageBuilder:
                     ]
                 ),
             )
+
+    def _legacy_runtime_cleanup_lines(self) -> list[str]:
+        lines = [
+            "# 清理早期单包或手工安装遗留的已知程序文件；只删除当前不属于任何 Debian 包的路径。",
+        ]
+        for source in sorted((self.root / "scripts").iterdir()):
+            if not source.is_file():
+                continue
+            legacy_path = shlex.quote(f"/opt/memguardos/scripts/{source.name}")
+            lines.extend(
+                [
+                    f"legacy_path={legacy_path}",
+                    'if [ -f "$legacy_path" ] && ! dpkg-query -S "$legacy_path" >/dev/null 2>&1; then',
+                    '  rm -f -- "$legacy_path"',
+                    "fi",
+                ]
+            )
+        return lines
 
     def _build_one(self, package: str, stage: Path) -> None:
         architecture = str(self.plan[package]["architecture"])

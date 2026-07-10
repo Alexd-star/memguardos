@@ -131,6 +131,29 @@ def test_agent_bridge_package_migrates_only_the_known_legacy_systemd_copy(tmp_pa
     assert "systemctl daemon-reload" in postinst
 
 
+def test_core_package_removes_only_known_unowned_legacy_runtime_scripts(tmp_path):
+    builder = DebianPackageBuilder(
+        root=ROOT,
+        output_dir=tmp_path / "dist",
+        build_root=tmp_path / "build",
+        version="0.1.0-2",
+        architecture="amd64",
+        multiarch="x86_64-linux-gnu",
+    )
+    stage = tmp_path / "stage"
+    (stage / "DEBIAN").mkdir(parents=True)
+
+    builder._write_metadata("memguardos-core", stage)
+
+    postinst = (stage / "DEBIAN/postinst").read_text(encoding="utf-8")
+    assert "/opt/memguardos/scripts/collect_openkylin_native_evidence.sh" in postinst
+    assert 'dpkg-query -S "$legacy_path"' in postinst
+    assert 'rm -f -- "$legacy_path"' in postinst
+    assert "rm -rf" not in postinst
+    assert "/var/lib/memguardos" not in postinst
+    assert ".memguardos" not in postinst
+
+
 def test_debian_staging_permissions_are_normalized_to_policy(monkeypatch, tmp_path):
     stage = tmp_path / "memguardos-core"
     payload_dir = stage / "usr/share/memguardos"
