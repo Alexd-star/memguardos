@@ -1,6 +1,12 @@
 from pathlib import Path
 from typing import Iterable, List, Optional
+from contextlib import contextmanager
 import mmap
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - Windows development fallback.
+    fcntl = None
 
 from memguard.models import MemoryRecord, MemorySource, Sensitivity, VersionInfo, AuditInfo, new_id, stable_hash, utc_now
 
@@ -17,14 +23,38 @@ class AppendOnlyMemoryStore:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.touch(exist_ok=True)
+        self.lock_path = self.path.with_suffix(self.path.suffix + ".lock")
+
+    @contextmanager
+    def _locked(self):
+        """Serialize readers, appenders and compact against other processes.
+
+        The daemon and CLI intentionally share one append-only segment.  Without
+        a process lock, compact can read a partially appended JSON line and either
+        fail or rewrite the segment while another process is writing to it.
+        """
+        if fcntl is None:
+            yield
+            return
+        with self.lock_path.open("a+b") as lock:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
     def append(self, record: MemoryRecord) -> MemoryRecord:
         payload = record.to_json() + "\n"
-        with self.path.open("ab") as fh:
-            fh.write(payload.encode("utf-8"))
+        with self._locked():
+            with self.path.open("ab") as fh:
+                fh.write(payload.encode("utf-8"))
         return record
 
     def scan(self) -> List[MemoryRecord]:
+        with self._locked():
+            return self._scan_unlocked()
+
+    def _scan_unlocked(self) -> List[MemoryRecord]:
         if self.path.stat().st_size == 0:
             return []
         records: List[MemoryRecord] = []
@@ -37,27 +67,30 @@ class AppendOnlyMemoryStore:
         return records
 
     def latest_records(self, include_deleted: bool = False) -> List[MemoryRecord]:
-        latest = {}
-        for record in self.scan():
-            latest[record.memory_id] = record
-        values = list(latest.values())
-        if include_deleted:
-            return values
-        return [record for record in values if not record.deleted]
+        with self._locked():
+            latest = {}
+            for record in self._scan_unlocked():
+                latest[record.memory_id] = record
+            values = list(latest.values())
+            if include_deleted:
+                return values
+            return [record for record in values if not record.deleted]
 
     def get_latest(self, memory_id: str, include_deleted: bool = False) -> Optional[MemoryRecord]:
-        result = None
-        for record in self.scan():
-            if record.memory_id == memory_id:
-                result = record
-        if result is None:
-            return None
-        if result.deleted and not include_deleted:
-            return None
-        return result
+        with self._locked():
+            result = None
+            for record in self._scan_unlocked():
+                if record.memory_id == memory_id:
+                    result = record
+            if result is None:
+                return None
+            if result.deleted and not include_deleted:
+                return None
+            return result
 
     def get_versions(self, memory_id: str) -> List[MemoryRecord]:
-        return [record for record in self.scan() if record.memory_id == memory_id]
+        with self._locked():
+            return [record for record in self._scan_unlocked() if record.memory_id == memory_id]
 
     def tombstone(self, record: MemoryRecord, reason: str) -> MemoryRecord:
         tombstone_version_id = new_id("ver")
@@ -102,8 +135,14 @@ class AppendOnlyMemoryStore:
             deleted=True,
         )
         record.invalidate(valid_to=tomb.temporal.valid_from, superseded_by=tombstone_version_id)
-        self.append(record)
-        return self.append(tomb)
+        with self._locked():
+            self._append_unlocked(record)
+            return self._append_unlocked(tomb)
+
+    def _append_unlocked(self, record: MemoryRecord) -> MemoryRecord:
+        with self.path.open("ab") as fh:
+            fh.write((record.to_json() + "\n").encode("utf-8"))
+        return record
 
     def compact(self) -> int:
         """Rewrite the segment with only latest non-deleted records.
@@ -112,13 +151,17 @@ class AppendOnlyMemoryStore:
         payload versions from the segment file while preserving live records.
         """
 
-        live = self.latest_records(include_deleted=False)
-        tmp = self.path.with_suffix(self.path.suffix + ".tmp")
-        with tmp.open("wb") as fh:
-            for record in live:
-                fh.write((record.to_json() + "\n").encode("utf-8"))
-        tmp.replace(self.path)
-        return len(live)
+        with self._locked():
+            latest = {}
+            for record in self._scan_unlocked():
+                latest[record.memory_id] = record
+            live = [record for record in latest.values() if not record.deleted]
+            tmp = self.path.with_suffix(self.path.suffix + ".tmp")
+            with tmp.open("wb") as fh:
+                for record in live:
+                    fh.write((record.to_json() + "\n").encode("utf-8"))
+            tmp.replace(self.path)
+            return len(live)
 
     def raw_contains(self, text: str) -> bool:
         if not text:
@@ -126,11 +169,13 @@ class AppendOnlyMemoryStore:
         needle = text.encode("utf-8")
         if self.path.stat().st_size == 0:
             return False
-        with self.path.open("rb") as fh:
-            with mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ) as mm:
-                return mm.find(needle) != -1
+        with self._locked():
+            with self.path.open("rb") as fh:
+                with mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ) as mm:
+                    return mm.find(needle) != -1
 
     def replace_all(self, records: Iterable[MemoryRecord]) -> None:
-        with self.path.open("wb") as fh:
-            for record in records:
-                fh.write((record.to_json() + "\n").encode("utf-8"))
+        with self._locked():
+            with self.path.open("wb") as fh:
+                for record in records:
+                    fh.write((record.to_json() + "\n").encode("utf-8"))
