@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -27,6 +28,7 @@ def build_package_plan(version: str, architecture: str, multiarch: str) -> Dict[
             "replaces": moved,
             "description": "MemGuardOS 本地记忆核心服务与系统集成",
             "files": [
+                "/usr/bin/memguard",
                 "/usr/bin/memctl",
                 "/usr/bin/memguardd",
                 "/lib/systemd/system/memguardd.service",
@@ -60,6 +62,7 @@ def build_package_plan(version: str, architecture: str, multiarch: str) -> Dict[
             "description": "MemGuardOS 外部 OS Agent 桥接与 OpenHands 适配入口",
             "files": [
                 "/lib/systemd/system/memguard-agent@.service",
+                "/usr/lib/memguardos/memguardos-agent-launcher.sh",
                 "/opt/memguardos/scripts/memguard_agent_bridge.py",
             ],
         },
@@ -129,6 +132,7 @@ class DebianPackageBuilder:
         self._verify_staged_ownership(stages)
         for package, stage in stages.items():
             self._write_metadata(package, stage)
+            _normalize_stage_permissions(stage)
             self._build_one(package, stage)
         manifest = {
             "schema": "memguardos-debian-package-set-v1",
@@ -153,6 +157,7 @@ class DebianPackageBuilder:
     def _stage_core(self, stage: Path) -> None:
         self._copy_tree(self.root / "memguard", stage / "opt/memguardos/memguard")
         self._copy_file(self.root / "pyproject.toml", stage / "opt/memguardos/pyproject.toml")
+        self._copy_file(self.root / "README.md", stage / "opt/memguardos/README.md")
         self._copy_file(self.root / "LICENSE", stage / "opt/memguardos/LICENSE")
         core_scripts = [
             "warmup_kylin_sdk.sh",
@@ -163,6 +168,7 @@ class DebianPackageBuilder:
         for name in core_scripts:
             self._copy_file(self.root / "scripts" / name, stage / "opt/memguardos/scripts" / name, executable=name.endswith(".sh"))
         self._copy_tree(self.root / "native/bpf_lsm", stage / "opt/memguardos/native/bpf_lsm")
+        self._write_wrapper(stage / "usr/bin/memguard", "memguard.cli.memguard")
         self._write_wrapper(stage / "usr/bin/memctl", "memguard.cli.memctl")
         self._write_wrapper(stage / "usr/bin/memguardd", "memguard.daemon")
         for unit in ("memguardd.service", "memguardd@.service"):
@@ -187,6 +193,11 @@ class DebianPackageBuilder:
 
     def _stage_agent(self, stage: Path) -> None:
         self._copy_file(self.root / "scripts/memguard-agent@.service", stage / "lib/systemd/system/memguard-agent@.service")
+        self._copy_file(
+            self.root / "scripts/memguardos-agent-launcher.sh",
+            stage / "usr/lib/memguardos/memguardos-agent-launcher.sh",
+            executable=True,
+        )
         for name in ("memguard_agent_bridge.py", "run_openhands_memguard_demo.py", "run_openhands_behavior_suite.py"):
             self._copy_file(self.root / "scripts" / name, stage / "opt/memguardos/scripts" / name)
 
@@ -241,15 +252,20 @@ class DebianPackageBuilder:
         )
         (stage / "DEBIAN/control").write_text("\n".join(fields) + "\n", encoding="utf-8")
         files = [path for path in stage.rglob("*") if path.is_file() and "DEBIAN" not in path.relative_to(stage).parts]
-        md5_lines = [f"{hashlib.md5(path.read_bytes()).hexdigest()}  {path.relative_to(stage).as_posix()}" for path in sorted(files)]
+        md5_lines = [
+            f"{hashlib.md5(path.read_bytes(), usedforsecurity=False).hexdigest()}  {path.relative_to(stage).as_posix()}"
+            for path in sorted(files)
+        ]
         (stage / "DEBIAN/md5sums").write_text("\n".join(md5_lines) + ("\n" if md5_lines else ""), encoding="utf-8")
         if package == "memguardos-core":
             self._write_maintainer_script(
                 stage / "DEBIAN/postinst",
                 "\n".join(
-                    [
+                    self._legacy_runtime_cleanup_lines()
+                    + [
                         "command -v systemctl >/dev/null 2>&1 && systemctl daemon-reload || true",
                         "command -v systemctl >/dev/null 2>&1 && systemctl enable --now memguardd.service >/dev/null 2>&1 || true",
+                        "command -v systemctl >/dev/null 2>&1 && systemctl --global disable memguard-kylin-warmup.service >/dev/null 2>&1 || true",
                         "command -v systemctl >/dev/null 2>&1 && systemctl --global enable memguard-kylin-warmup.service >/dev/null 2>&1 || true",
                     ]
                 ),
@@ -277,6 +293,40 @@ class DebianPackageBuilder:
             )
             self._write_maintainer_script(stage / "DEBIAN/postinst", desktop_refresh)
             self._write_maintainer_script(stage / "DEBIAN/postrm", desktop_refresh)
+        elif package == "memguardos-agent-bridge":
+            self._write_maintainer_script(
+                stage / "DEBIAN/postinst",
+                "\n".join(
+                    [
+                        "legacy_unit=/etc/systemd/system/memguard-agent@.service",
+                        "legacy_backup=/etc/systemd/system/memguard-agent@.service.memguardos-legacy",
+                        "legacy_exec='ExecStart=/opt/memguardos/.venv-agent/bin/python /opt/memguardos/scripts/memguard_agent_bridge.py --queue-root /var/lib/memguardos-agent/%i --namespace agent-%i'",
+                        'if [ -f "$legacy_unit" ] && grep -Fqx "$legacy_exec" "$legacy_unit"; then',
+                        '  [ -e "$legacy_backup" ] || cp -p "$legacy_unit" "$legacy_backup"',
+                        '  rm -f "$legacy_unit"',
+                        "fi",
+                        "command -v systemctl >/dev/null 2>&1 && systemctl daemon-reload || true",
+                    ]
+                ),
+            )
+
+    def _legacy_runtime_cleanup_lines(self) -> list[str]:
+        lines = [
+            "# 清理早期单包或手工安装遗留的已知程序文件；只删除当前不属于任何 Debian 包的路径。",
+        ]
+        for source in sorted((self.root / "scripts").iterdir()):
+            if not source.is_file():
+                continue
+            legacy_path = shlex.quote(f"/opt/memguardos/scripts/{source.name}")
+            lines.extend(
+                [
+                    f"legacy_path={legacy_path}",
+                    'if [ -f "$legacy_path" ] && ! dpkg-query -S "$legacy_path" >/dev/null 2>&1; then',
+                    '  rm -f -- "$legacy_path"',
+                    "fi",
+                ]
+            )
+        return lines
 
     def _build_one(self, package: str, stage: Path) -> None:
         architecture = str(self.plan[package]["architecture"])
@@ -341,6 +391,14 @@ def _command_output(command: Iterable[str], fallback: str) -> str:
 def _write_sha256(path: Path, files: Iterable[Path]) -> None:
     lines = [f"{hashlib.sha256(item.read_bytes()).hexdigest()}  {item.name}" for item in files]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _normalize_stage_permissions(stage: Path) -> None:
+    for path in [stage, *sorted(stage.rglob("*"))]:
+        if path.is_symlink():
+            continue
+        mode = 0o755 if path.is_dir() or path.stat().st_mode & 0o111 else 0o644
+        path.chmod(mode)
 
 
 def main() -> int:

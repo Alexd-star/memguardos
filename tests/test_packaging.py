@@ -1,6 +1,8 @@
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 import json
+import os
+import stat
 
 from scripts.inspect_submission_package import REQUIRED_PATHS, inspect_package
 from scripts.package_submission import COMPETITION_ROLES, ROOT, classify_file, should_skip
@@ -20,12 +22,43 @@ from scripts.check_competition_ready import (
     check_supply_chain_artifacts,
 )
 import scripts.check_competition_ready as readiness
+import scripts.build_deb_packages as deb_packages
 from scripts.generate_sbom import generate_sbom
-from scripts.build_deb_packages import build_package_plan, validate_no_overlap
+from scripts.build_deb_packages import (
+    DebianPackageBuilder,
+    build_package_plan,
+    validate_no_overlap,
+)
 
 
 def test_competition_ready_hygiene_ignores_local_output_workspaces():
     assert "outputs" in IGNORED_HYGIENE_PARTS
+
+
+def test_formal_doc_consistency_rejects_previously_current_test_counts(monkeypatch, tmp_path):
+    (tmp_path / "README.md").write_text(
+        "历史口径包括 341 passed、344 passed 和 527 passed。\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(readiness, "ROOT", tmp_path)
+
+    checks = readiness.check_formal_doc_consistency()
+    result = next(item for item in checks if item.name == "正式文档测试数字口径")
+
+    assert result.ok is False
+    assert "README.md:341 passed" in result.detail
+    assert "README.md:344 passed" in result.detail
+    assert "README.md:527 passed" in result.detail
+
+
+def test_formal_doc_consistency_does_not_hardcode_current_test_counts(monkeypatch, tmp_path):
+    monkeypatch.setattr(readiness, "ROOT", tmp_path)
+
+    checks = readiness.check_formal_doc_consistency()
+    result = next(item for item in checks if item.name == "正式文档测试数字口径")
+
+    assert result.ok is True
+    assert result.detail == "正式材料未引用已知过期测试数字"
 
 
 def test_split_debian_package_plan_has_enterprise_ownership_boundaries():
@@ -47,6 +80,7 @@ def test_split_debian_package_plan_has_enterprise_ownership_boundaries():
     assert "/usr/bin/memguardos-tray" in plan["memguardos-ukui"]["files"]
     assert "/usr/share/applications/memguardos-center.desktop" in plan["memguardos-ukui"]["files"]
     assert "/lib/systemd/system/memguard-agent@.service" in plan["memguardos-agent-bridge"]["files"]
+    assert "/usr/lib/memguardos/memguardos-agent-launcher.sh" in plan["memguardos-agent-bridge"]["files"]
     assert "/usr/share/doc/memguardos-doc/README.md" in plan["memguardos-doc"]["files"]
     assert validate_no_overlap(plan) == []
     assert (ROOT / "scripts/verify_deb_lifecycle.sh").exists()
@@ -57,18 +91,123 @@ def test_debian_packages_apply_openkylin_native_install_lifecycle():
     menu = (ROOT / "packaging/desktop/memguardos-center.desktop").read_text(encoding="utf-8")
 
     assert "systemctl enable --now memguardd.service" in builder
+    assert "systemctl --global disable memguard-kylin-warmup.service" in builder
     assert "systemctl --global enable memguard-kylin-warmup.service" in builder
+    assert 'stage / "opt/memguardos/README.md"' in builder
     assert "用户数据保留" in builder
     assert "update-desktop-database" in builder
     assert "xdg-desktop-menu forceupdate" in builder
     assert "gtk-update-icon-cache" in builder
     assert "peony -q" in builder
     assert "pkill -x ukui-control-center" in builder
+    assert "hashlib.md5(path.read_bytes(), usedforsecurity=False)" in builder
     assert "rm -rf /var/lib/memguardos" not in builder
     assert "rm -rf /opt/memguardos/data" not in builder
     assert "Name=MemGuardOS 记忆安全" in menu
     assert "Exec=ukui-control-center" in menu
     assert "Categories=Settings;Security;" in menu
+
+
+def test_agent_bridge_package_migrates_only_the_known_legacy_systemd_copy(tmp_path):
+    builder = DebianPackageBuilder(
+        root=ROOT,
+        output_dir=tmp_path / "dist",
+        build_root=tmp_path / "build",
+        version="0.1.0-2",
+        architecture="amd64",
+        multiarch="x86_64-linux-gnu",
+    )
+    stage = tmp_path / "stage"
+    (stage / "DEBIAN").mkdir(parents=True)
+
+    builder._write_metadata("memguardos-agent-bridge", stage)
+
+    postinst = (stage / "DEBIAN/postinst").read_text(encoding="utf-8")
+    assert "/etc/systemd/system/memguard-agent@.service" in postinst
+    assert "/opt/memguardos/.venv-agent/bin/python" in postinst
+    assert "memguard-agent@.service.memguardos-legacy" in postinst
+    assert "cp -p" in postinst
+    assert "rm -f" in postinst
+    assert "systemctl daemon-reload" in postinst
+
+
+def test_core_package_removes_only_known_unowned_legacy_runtime_scripts(tmp_path):
+    builder = DebianPackageBuilder(
+        root=ROOT,
+        output_dir=tmp_path / "dist",
+        build_root=tmp_path / "build",
+        version="0.1.0-2",
+        architecture="amd64",
+        multiarch="x86_64-linux-gnu",
+    )
+    stage = tmp_path / "stage"
+    (stage / "DEBIAN").mkdir(parents=True)
+
+    builder._write_metadata("memguardos-core", stage)
+
+    postinst = (stage / "DEBIAN/postinst").read_text(encoding="utf-8")
+    assert "/opt/memguardos/scripts/collect_openkylin_native_evidence.sh" in postinst
+    assert 'dpkg-query -S "$legacy_path"' in postinst
+    assert 'rm -f -- "$legacy_path"' in postinst
+    assert "rm -rf" not in postinst
+    assert "/var/lib/memguardos" not in postinst
+    assert ".memguardos" not in postinst
+
+
+def test_debian_staging_permissions_are_normalized_to_policy(monkeypatch, tmp_path):
+    stage = tmp_path / "memguardos-core"
+    payload_dir = stage / "usr/share/memguardos"
+    payload_dir.mkdir(parents=True)
+    regular_file = payload_dir / "settings.conf"
+    executable_file = stage / "usr/bin/memctl"
+    executable_file.parent.mkdir(parents=True)
+    regular_file.write_text("setting=true\n", encoding="utf-8")
+    executable_file.write_text("#!/bin/sh\n", encoding="utf-8")
+
+    original_stat = Path.stat
+    simulated_modes = {
+        stage: stat.S_IFDIR | 0o775,
+        stage / "usr": stat.S_IFDIR | 0o775,
+        stage / "usr/share": stat.S_IFDIR | 0o775,
+        payload_dir: stat.S_IFDIR | 0o775,
+        stage / "usr/bin": stat.S_IFDIR | 0o775,
+        regular_file: stat.S_IFREG | 0o664,
+        executable_file: stat.S_IFREG | 0o775,
+    }
+
+    def fake_stat(path, *args, **kwargs):
+        result = original_stat(path, *args, **kwargs)
+        mode = simulated_modes.get(path)
+        if mode is None:
+            return result
+        fields = list(result)
+        fields[0] = mode
+        return os.stat_result(fields)
+
+    applied_modes = {}
+
+    def record_chmod(path, mode):
+        applied_modes[path.relative_to(stage).as_posix() or "."] = mode
+
+    monkeypatch.setattr(Path, "stat", fake_stat)
+    monkeypatch.setattr(Path, "chmod", record_chmod)
+
+    deb_packages._normalize_stage_permissions(stage)
+
+    assert applied_modes["."] == 0o755
+    assert applied_modes["usr"] == 0o755
+    assert applied_modes["usr/share/memguardos/settings.conf"] == 0o644
+    assert applied_modes["usr/bin/memctl"] == 0o755
+
+
+def test_debian_builder_normalizes_permissions_after_metadata_before_build():
+    source = (ROOT / "scripts/build_deb_packages.py").read_text(encoding="utf-8")
+
+    metadata_offset = source.index("self._write_metadata(package, stage)")
+    normalize_offset = source.index("_normalize_stage_permissions(stage)")
+    build_offset = source.index("self._build_one(package, stage)")
+
+    assert metadata_offset < normalize_offset < build_offset
 
 
 def test_native_evidence_revision_rejects_unknown_and_mismatch(tmp_path):
@@ -101,6 +240,8 @@ def test_native_evidence_revision_allows_generated_readiness_reports(monkeypatch
         "_revision_delta_paths",
         lambda _source, _target: [
             "docs/evidence/openkylin_native_latest/openkylin_status.txt",
+            "README.md",
+            "docs/测试报告.md",
             "docs/competition_ready.json",
             "docs/竞赛就绪自检报告.md",
             "docs/超标准交付评分矩阵.md",
@@ -112,6 +253,18 @@ def test_native_evidence_revision_allows_generated_readiness_reports(monkeypatch
 
     assert result.ok is True
     assert "追加/更新原生证据" in result.detail
+
+
+def test_native_evidence_revision_rejects_runtime_changes_after_collection(monkeypatch, tmp_path):
+    expected = "b" * 40
+    revision = tmp_path / "source_revision.json"
+    revision.write_text(json.dumps({"source_revision": "a" * 40, "dirty": False}), encoding="utf-8")
+    monkeypatch.setattr(readiness, "_revision_delta_paths", lambda _source, _target: ["memguard/service.py"])
+
+    result = readiness.check_native_evidence_revision(tmp_path, expected)
+
+    assert result.ok is False
+    assert "不一致" in result.detail
 
 
 def test_native_evidence_revision_reads_unquoted_non_ascii_delta_paths():
@@ -182,6 +335,7 @@ def test_competition_package_requires_memory_value_code_data_and_evidence():
         "scripts/collect_openkylin_native_evidence.sh",
         "scripts/warmup_kylin_sdk.sh",
         "scripts/memguard-kylin-warmup.service",
+        "scripts/memguardos-agent-launcher.sh",
         "scripts/memguardos-native-helper.sh",
         "memguard/os_guard/openkylin_native.py",
         "memguard/desktop/peony_scan.py",
@@ -268,6 +422,7 @@ def test_competition_ready_requires_clean_security_scan_artifacts(tmp_path):
                 "ok": True,
                 "summary": {
                     "bandit_high_count": 0,
+                    "bandit_medium_count": 0,
                     "pip_audit_vulnerability_count": 0,
                     "missing_tools": [],
                 },
@@ -287,6 +442,13 @@ def test_competition_ready_requires_clean_security_scan_artifacts(tmp_path):
     assert by_name["安全扫描 JSON"].ok is True
     assert by_name["安全扫描中文报告"].ok is True
     assert by_name["安全扫描门禁通过"].ok is True
+
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["summary"]["bandit_medium_count"] = 1
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    checks = check_security_scan_artifacts(report_path, markdown_path)
+    by_name = {item.name: item for item in checks}
+    assert by_name["安全扫描门禁通过"].ok is False
 
 
 def test_memory_value_collector_supports_synchronized_tree_without_git_head():
@@ -484,7 +646,7 @@ def sample_submission_body(name: str) -> str:
     if name == "docs/evidence/real_agent_holdout_latest/metrics.json":
         return '{"case_count":8,"completed_case_count":8,"unclassified_failure_count":0,"memory_system_pass_rate":1.0,"agent_behavior_pass_rate":1.0,"failed_case_ids":[]}\n'
     if name == "docs/security_scan.json":
-        return '{"schema":"memguardos-security-scan-v1","ok":true,"summary":{"bandit_high_count":0,"pip_audit_vulnerability_count":0,"missing_tools":[]},"tools":{"bandit":{"status":"warnings"},"pip_audit":{"status":"clean"}}}\n'
+        return '{"schema":"memguardos-security-scan-v1","ok":true,"summary":{"bandit_high_count":0,"bandit_medium_count":0,"pip_audit_vulnerability_count":0,"missing_tools":[]},"tools":{"bandit":{"status":"warnings"},"pip_audit":{"status":"clean"}}}\n'
     if name == "docs/安全扫描报告.md":
         return "# MemGuardOS 安全扫描报告\n"
     if name == "docs/evidence/latest/sdk_embedding_probe.txt":

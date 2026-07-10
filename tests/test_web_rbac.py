@@ -1,3 +1,4 @@
+from http.client import RemoteDisconnected
 from threading import Thread
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -5,7 +6,10 @@ import json
 import socket
 import time
 
+import pytest
+
 from memguard.service import MemGuardService
+from memguard.web.acceptance import ACCEPTANCE_ITEMS
 from memguard.web.dashboard import run_dashboard
 
 
@@ -29,6 +33,8 @@ def request_json(url, token="", method="GET", payload=None):
             return response.status, json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         return exc.code, json.loads(exc.read().decode("utf-8"))
+    except RemoteDisconnected as exc:
+        raise AssertionError("dashboard disconnected without a JSON response") from exc
 
 
 def start_dashboard(tmp_path):
@@ -47,18 +53,50 @@ def start_dashboard(tmp_path):
     return service, "http://127.0.0.1:%d" % port
 
 
-def test_health_and_readiness_are_minimal_and_public(tmp_path):
+def complete_acceptance_results():
+    return [{"id": item.id, "status": "passed", "ok": True, "details": {}} for item in ACCEPTANCE_ITEMS]
+
+
+def test_health_is_public_but_readiness_requires_configured_authentication(tmp_path):
     service, base = start_dashboard(tmp_path)
     try:
         health_status, health = request_json(base + "/healthz")
-        ready_status, ready = request_json(base + "/readyz")
+        missing_status, missing = request_json(base + "/readyz")
+        ready_status, ready = request_json(base + "/readyz", "viewer-secret")
 
         assert health_status == 200
         assert health == {"ok": True, "status": "alive"}
+        assert missing_status == 401
+        assert missing == {"ok": False, "error": "unauthorized"}
         assert ready_status == 200
         assert ready["ok"] is True
         assert ready["status"] == "ready"
         assert "db_path" not in ready
+        assert "token" not in ready
+    finally:
+        service.close()
+
+
+def test_anonymous_session_exposes_only_empty_capabilities(tmp_path):
+    service, base = start_dashboard(tmp_path)
+    try:
+        status, body = request_json(base + "/api/session")
+
+        assert status == 200
+        assert body == {
+            "ok": True,
+            "result": {
+                "role": "anonymous",
+                "capabilities": {
+                    "read": False,
+                    "write_memory": False,
+                    "preview_forgetting": False,
+                    "confirm_forgetting": False,
+                    "run_acceptance": False,
+                    "administer": False,
+                },
+            },
+        }
     finally:
         service.close()
 
@@ -87,6 +125,40 @@ def test_viewer_can_read_but_cannot_mutate(tmp_path):
         service.close()
 
 
+@pytest.mark.parametrize(
+    ("token", "role", "can_write", "can_administer"),
+    [
+        ("viewer-secret", "viewer", False, False),
+        ("operator-secret", "operator", True, False),
+        ("admin-secret", "admin", True, True),
+    ],
+)
+def test_session_capabilities_reflect_the_authenticated_role(
+    tmp_path,
+    token,
+    role,
+    can_write,
+    can_administer,
+):
+    service, base = start_dashboard(tmp_path)
+    try:
+        status, body = request_json(base + "/api/session", token)
+
+        assert status == 200
+        assert body["ok"] is True
+        assert body["result"]["role"] == role
+        assert body["result"]["capabilities"] == {
+            "read": True,
+            "write_memory": can_write,
+            "preview_forgetting": can_write,
+            "confirm_forgetting": can_administer,
+            "run_acceptance": can_administer,
+            "administer": can_administer,
+        }
+    finally:
+        service.close()
+
+
 def test_operator_can_ingest_and_preview_but_only_admin_confirms_forgetting(tmp_path):
     service, base = start_dashboard(tmp_path)
     try:
@@ -96,7 +168,7 @@ def test_operator_can_ingest_and_preview_but_only_admin_confirms_forgetting(tmp_
             method="POST",
             payload={"text": "以后回答时使用中文。", "source_kind": "manual"},
         )
-        preview_status, _ = request_json(
+        preview_status, preview = request_json(
             base + "/api/forget",
             "operator-secret",
             method="POST",
@@ -112,13 +184,88 @@ def test_operator_can_ingest_and_preview_but_only_admin_confirms_forgetting(tmp_
             base + "/api/forget",
             "admin-secret",
             method="POST",
-            payload={"request": "忘掉回答语言偏好", "confirm": True, "compact": True},
+            payload={
+                "request": "忘掉回答语言偏好",
+                "confirm": True,
+                "compact": True,
+                "preview_token": preview["result"]["preview_token"],
+            },
         )
 
         assert ingest_status == 200 and ingest["ok"] is True
         assert preview_status == 200
         assert confirm_status == 403 and forbidden["required_role"] == "admin"
         assert admin_status == 200
+    finally:
+        service.close()
+
+
+def test_confirm_forgetting_requires_a_matching_unexpired_preview_receipt(tmp_path):
+    service, base = start_dashboard(tmp_path)
+    try:
+        request_json(
+            base + "/api/ingest",
+            "operator-secret",
+            method="POST",
+            payload={"text": "临时代号 BlueRiver 只用于本次测试。", "source_kind": "manual"},
+        )
+        direct_status, direct = request_json(
+            base + "/api/forget",
+            "admin-secret",
+            method="POST",
+            payload={"request": "忘掉 BlueRiver", "confirm": True, "compact": True},
+        )
+        preview_status, preview = request_json(
+            base + "/api/forget",
+            "operator-secret",
+            method="POST",
+            payload={"request": "忘掉 BlueRiver", "confirm": False},
+        )
+        stale_status, stale = request_json(
+            base + "/api/forget",
+            "admin-secret",
+            method="POST",
+            payload={
+                "request": "忘掉其他主题",
+                "confirm": True,
+                "compact": True,
+                "preview_token": preview["result"]["preview_token"],
+            },
+        )
+        confirm_status, confirmed = request_json(
+            base + "/api/forget",
+            "admin-secret",
+            method="POST",
+            payload={
+                "request": "忘掉 BlueRiver",
+                "confirm": True,
+                "compact": True,
+                "preview_token": preview["result"]["preview_token"],
+            },
+        )
+        replay_status, replay = request_json(
+            base + "/api/forget",
+            "admin-secret",
+            method="POST",
+            payload={
+                "request": "忘掉 BlueRiver",
+                "confirm": True,
+                "compact": True,
+                "preview_token": preview["result"]["preview_token"],
+            },
+        )
+
+        assert direct_status == 409
+        assert direct["error"] == "forget_preview_required"
+        assert preview_status == 200
+        assert preview["result"]["preview_token"]
+        assert preview["result"]["preview_candidate_count"] >= 1
+        assert stale_status == 409
+        assert stale["error"] == "forget_preview_stale"
+        assert confirm_status == 200
+        assert confirmed["ok"] is True
+        assert replay_status == 409
+        assert replay["error"] == "forget_preview_required"
     finally:
         service.close()
 
@@ -154,6 +301,82 @@ def test_acceptance_run_is_admin_only_and_uses_whitelist(tmp_path):
         assert "command" not in admin_body["result"]
         assert unknown_status == 400
         assert unknown_body["error"] == "unknown_acceptance_item"
+    finally:
+        service.close()
+
+
+def test_acceptance_report_returns_v2_report_for_valid_admin_results(tmp_path):
+    service, base = start_dashboard(tmp_path)
+    try:
+        status, body = request_json(
+            base + "/api/acceptance-report",
+            "admin-secret",
+            method="POST",
+            payload={"results": complete_acceptance_results()},
+        )
+
+        assert status == 200
+        assert body["ok"] is True
+        assert body["result"]["schema"] == "memguardos-acceptance-report-v2"
+        assert body["result"]["summary"]["ready_for_delivery"] is True
+    finally:
+        service.close()
+
+
+@pytest.mark.parametrize(
+    "results",
+    [
+        pytest.param({}, id="results-not-list"),
+        pytest.param([None], id="element-not-object"),
+        pytest.param([{"id": "UNKNOWN_ITEM", "status": "passed"}], id="unknown-id"),
+        pytest.param(
+            [
+                {"id": ACCEPTANCE_ITEMS[0].id, "status": "passed", "ok": True, "details": {}},
+                {"id": ACCEPTANCE_ITEMS[0].id, "status": "passed", "ok": True, "details": {}},
+            ],
+            id="duplicate-id",
+        ),
+        pytest.param(
+            [{"id": ACCEPTANCE_ITEMS[0].id, "status": "unexpected"}],
+            id="invalid-status",
+        ),
+        pytest.param(
+            [{"id": ACCEPTANCE_ITEMS[0].id, "status": "passed", "ok": 1, "details": {}}],
+            id="invalid-ok-type",
+        ),
+        pytest.param(
+            [{"id": ACCEPTANCE_ITEMS[0].id, "status": "passed", "ok": False, "details": {}}],
+            id="contradictory-ok",
+        ),
+        pytest.param(
+            [{"id": ACCEPTANCE_ITEMS[0].id, "status": "passed", "ok": True, "details": []}],
+            id="invalid-details",
+        ),
+        pytest.param(
+            [{"id": ACCEPTANCE_ITEMS[0].id, "status": "passed", "details": {}}],
+            id="missing-ok",
+        ),
+        pytest.param(
+            [{"id": ACCEPTANCE_ITEMS[0].id, "status": "passed", "ok": True}],
+            id="missing-details",
+        ),
+    ],
+)
+def test_acceptance_report_returns_structured_400_for_invalid_results(tmp_path, results):
+    service, base = start_dashboard(tmp_path)
+    try:
+        status, body = request_json(
+            base + "/api/acceptance-report",
+            "admin-secret",
+            method="POST",
+            payload={"results": results},
+        )
+
+        assert status == 400
+        assert body["ok"] is False
+        assert body["error"] == "invalid_acceptance_results"
+        assert isinstance(body["message"], str)
+        assert body["message"]
     finally:
         service.close()
 

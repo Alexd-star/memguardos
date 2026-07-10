@@ -1,17 +1,18 @@
 {
   "schema": "memguardos-security-scan-v1",
   "ok": true,
-  "elapsed_s": 2.881,
+  "elapsed_s": 2.823,
   "policy": {
     "bandit_high_severity_allowed": 0,
+    "bandit_medium_severity_allowed": 0,
     "pip_audit_known_vulnerabilities_allowed": 0,
     "missing_tools_allowed": false,
     "dependency_scope": "runtime"
   },
   "summary": {
     "bandit_high_count": 0,
-    "bandit_medium_count": 17,
-    "bandit_low_count": 39,
+    "bandit_medium_count": 0,
+    "bandit_low_count": 88,
     "pip_audit_vulnerability_count": 0,
     "missing_tools": []
   },
@@ -19,7 +20,7 @@
     "bandit": {
       "status": "warnings",
       "command": [
-        "C:\\Program Files\\Python39\\python.exe",
+        "python",
         "-m",
         "bandit",
         "-q",
@@ -31,25 +32,89 @@
       ],
       "returncode": 1,
       "high_count": 0,
-      "medium_count": 17,
-      "low_count": 39,
-      "issue_count": 56,
+      "medium_count": 0,
+      "low_count": 88,
+      "issue_count": 88,
       "issues": [
         {
-          "filename": "memguard\\config.py",
-          "line_number": 156,
-          "severity": "MEDIUM",
-          "confidence": "MEDIUM",
-          "test_id": "B608",
-          "issue_text": "Possible SQL injection vector through string-based query construction."
+          "filename": "memguard\\cli\\memctl.py",
+          "line_number": 11,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B404",
+          "issue_text": "Consider possible security implications associated with the subprocess module."
+        },
+        {
+          "filename": "memguard\\cli\\memctl.py",
+          "line_number": 960,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B607",
+          "issue_text": "Starting a process with a partial executable path"
+        },
+        {
+          "filename": "memguard\\cli\\memctl.py",
+          "line_number": 960,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B603",
+          "issue_text": "subprocess call - check for execution of untrusted input."
+        },
+        {
+          "filename": "memguard\\cli\\memctl.py",
+          "line_number": 963,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B607",
+          "issue_text": "Starting a process with a partial executable path"
+        },
+        {
+          "filename": "memguard\\cli\\memctl.py",
+          "line_number": 963,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B603",
+          "issue_text": "subprocess call - check for execution of untrusted input."
+        },
+        {
+          "filename": "memguard\\cli\\memctl.py",
+          "line_number": 1022,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B603",
+          "issue_text": "subprocess call - check for execution of untrusted input."
         },
         {
           "filename": "memguard\\daemon.py",
-          "line_number": 102,
+          "line_number": 101,
           "severity": "LOW",
           "confidence": "MEDIUM",
           "test_id": "B105",
           "issue_text": "Possible hardcoded password: ''"
+        },
+        {
+          "filename": "memguard\\desktop\\peony_scan.py",
+          "line_number": 7,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B404",
+          "issue_text": "Consider possible security implications associated with the subprocess module."
+        },
+        {
+          "filename": "memguard\\desktop\\peony_scan.py",
+          "line_number": 183,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B603",
+          "issue_text": "subprocess call - check for execution of untrusted input."
+        },
+        {
+          "filename": "memguard\\eval\\resource_control.py",
+          "line_number": 32,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B311",
+          "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes."
         },
         {
           "filename": "memguard\\eval\\run_eval.py",
@@ -69,7 +134,7 @@
         },
         {
           "filename": "memguard\\extraction\\semantic.py",
-          "line_number": 157,
+          "line_number": 161,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
@@ -85,7 +150,7 @@
         },
         {
           "filename": "memguard\\llm\\adapter.py",
-          "line_number": 5,
+          "line_number": 6,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B404",
@@ -93,19 +158,11 @@
         },
         {
           "filename": "memguard\\llm\\adapter.py",
-          "line_number": 82,
+          "line_number": 135,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
           "issue_text": "subprocess call - check for execution of untrusted input."
-        },
-        {
-          "filename": "memguard\\llm\\adapter.py",
-          "line_number": 136,
-          "severity": "MEDIUM",
-          "confidence": "HIGH",
-          "test_id": "B310",
-          "issue_text": "Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected."
         },
         {
           "filename": "memguard\\os_guard\\journald.py",
@@ -124,6 +181,78 @@
           "issue_text": "subprocess call - check for execution of untrusted input."
         },
         {
+          "filename": "memguard\\os_guard\\openkylin_native.py",
+          "line_number": 9,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B404",
+          "issue_text": "Consider possible security implications associated with the subprocess module."
+        },
+        {
+          "filename": "memguard\\os_guard\\openkylin_native.py",
+          "line_number": 473,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B603",
+          "issue_text": "subprocess call - check for execution of untrusted input."
+        },
+        {
+          "filename": "memguard\\os_guard\\openkylin_native.py",
+          "line_number": 481,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B603",
+          "issue_text": "subprocess call - check for execution of untrusted input."
+        },
+        {
+          "filename": "memguard\\os_guard\\openkylin_native.py",
+          "line_number": 489,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B603",
+          "issue_text": "subprocess call - check for execution of untrusted input."
+        },
+        {
+          "filename": "memguard\\os_guard\\openkylin_native.py",
+          "line_number": 648,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B603",
+          "issue_text": "subprocess call - check for execution of untrusted input."
+        },
+        {
+          "filename": "memguard\\os_guard\\privileged_actions.py",
+          "line_number": 5,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B404",
+          "issue_text": "Consider possible security implications associated with the subprocess module."
+        },
+        {
+          "filename": "memguard\\os_guard\\privileged_actions.py",
+          "line_number": 38,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B603",
+          "issue_text": "subprocess call - check for execution of untrusted input."
+        },
+        {
+          "filename": "memguard\\os_guard\\service_control.py",
+          "line_number": 6,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B404",
+          "issue_text": "Consider possible security implications associated with the subprocess module."
+        },
+        {
+          "filename": "memguard\\os_guard\\service_control.py",
+          "line_number": 58,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B603",
+          "issue_text": "subprocess call - check for execution of untrusted input."
+        },
+        {
           "filename": "memguard\\retrieval\\kylin_sdk.py",
           "line_number": 10,
           "severity": "LOW",
@@ -133,7 +262,7 @@
         },
         {
           "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 218,
+          "line_number": 247,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
@@ -141,23 +270,7 @@
         },
         {
           "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 306,
-          "severity": "MEDIUM",
-          "confidence": "MEDIUM",
-          "test_id": "B108",
-          "issue_text": "Probable insecure usage of temp file/directory."
-        },
-        {
-          "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 354,
-          "severity": "MEDIUM",
-          "confidence": "HIGH",
-          "test_id": "B310",
-          "issue_text": "Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected."
-        },
-        {
-          "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 394,
+          "line_number": 447,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B607",
@@ -165,7 +278,7 @@
         },
         {
           "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 394,
+          "line_number": 447,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
@@ -173,7 +286,7 @@
         },
         {
           "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 419,
+          "line_number": 472,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
@@ -181,7 +294,7 @@
         },
         {
           "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 446,
+          "line_number": 499,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B607",
@@ -189,7 +302,7 @@
         },
         {
           "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 446,
+          "line_number": 499,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
@@ -197,7 +310,7 @@
         },
         {
           "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 452,
+          "line_number": 505,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B110",
@@ -205,7 +318,7 @@
         },
         {
           "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 466,
+          "line_number": 519,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
@@ -213,7 +326,7 @@
         },
         {
           "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 480,
+          "line_number": 533,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B607",
@@ -221,7 +334,7 @@
         },
         {
           "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 480,
+          "line_number": 533,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
@@ -229,7 +342,7 @@
         },
         {
           "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 481,
+          "line_number": 534,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B607",
@@ -237,7 +350,7 @@
         },
         {
           "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 481,
+          "line_number": 534,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
@@ -245,198 +358,86 @@
         },
         {
           "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 523,
-          "severity": "MEDIUM",
-          "confidence": "MEDIUM",
-          "test_id": "B108",
-          "issue_text": "Probable insecure usage of temp file/directory."
-        },
-        {
-          "filename": "memguard\\retrieval\\kylin_sdk.py",
-          "line_number": 531,
+          "line_number": 597,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
           "issue_text": "subprocess call - check for execution of untrusted input."
         },
         {
-          "filename": "memguard\\store\\sqlite_meta.py",
-          "line_number": 494,
-          "severity": "MEDIUM",
-          "confidence": "MEDIUM",
-          "test_id": "B608",
-          "issue_text": "Possible SQL injection vector through string-based query construction."
+          "filename": "memguard\\web\\acceptance.py",
+          "line_number": 6,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B404",
+          "issue_text": "Consider possible security implications associated with the subprocess module."
         },
         {
-          "filename": "memguard\\store\\sqlite_meta.py",
-          "line_number": 505,
-          "severity": "MEDIUM",
-          "confidence": "MEDIUM",
-          "test_id": "B608",
-          "issue_text": "Possible SQL injection vector through string-based query construction."
-        },
-        {
-          "filename": "memguard\\store\\sqlite_meta.py",
-          "line_number": 512,
-          "severity": "MEDIUM",
-          "confidence": "MEDIUM",
-          "test_id": "B608",
-          "issue_text": "Possible SQL injection vector through string-based query construction."
-        },
-        {
-          "filename": "memguard\\store\\sqlite_meta.py",
-          "line_number": 518,
-          "severity": "MEDIUM",
-          "confidence": "MEDIUM",
-          "test_id": "B608",
-          "issue_text": "Possible SQL injection vector through string-based query construction."
-        },
-        {
-          "filename": "memguard\\store\\sqlite_meta.py",
-          "line_number": 547,
-          "severity": "MEDIUM",
-          "confidence": "MEDIUM",
-          "test_id": "B608",
-          "issue_text": "Possible SQL injection vector through string-based query construction."
-        },
-        {
-          "filename": "memguard\\store\\sqlite_meta.py",
-          "line_number": 568,
-          "severity": "MEDIUM",
-          "confidence": "LOW",
-          "test_id": "B608",
-          "issue_text": "Possible SQL injection vector through string-based query construction."
+          "filename": "memguard\\web\\acceptance.py",
+          "line_number": 260,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B603",
+          "issue_text": "subprocess call - check for execution of untrusted input."
         },
         {
           "filename": "memguard\\web\\dashboard.py",
-          "line_number": 14,
+          "line_number": 22,
           "severity": "LOW",
           "confidence": "MEDIUM",
           "test_id": "B107",
           "issue_text": "Possible hardcoded password: ''"
         },
         {
-          "filename": "scripts\\demo_smoke.py",
-          "line_number": 49,
-          "severity": "LOW",
-          "confidence": "MEDIUM",
-          "test_id": "B105",
-          "issue_text": "Possible hardcoded password: 'temporary project codename blue-river'"
-        },
-        {
-          "filename": "scripts\\release_preflight.py",
-          "line_number": 7,
+          "filename": "scripts\\backup_memguard.py",
+          "line_number": 10,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B404",
           "issue_text": "Consider possible security implications associated with the subprocess module."
         },
         {
-          "filename": "scripts\\release_preflight.py",
-          "line_number": 86,
+          "filename": "scripts\\backup_memguard.py",
+          "line_number": 87,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B607",
+          "issue_text": "Starting a process with a partial executable path"
+        },
+        {
+          "filename": "scripts\\backup_memguard.py",
+          "line_number": 87,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
           "issue_text": "subprocess call - check for execution of untrusted input."
         },
         {
-          "filename": "scripts\\run_security_scan.py",
-          "line_number": 9,
+          "filename": "scripts\\build_deb_packages.py",
+          "line_number": 13,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B404",
           "issue_text": "Consider possible security implications associated with the subprocess module."
         },
         {
-          "filename": "scripts\\smoke_submission_archive.py",
-          "line_number": 9,
+          "filename": "scripts\\build_deb_packages.py",
+          "line_number": 124,
           "severity": "LOW",
           "confidence": "HIGH",
-          "test_id": "B404",
-          "issue_text": "Consider possible security implications associated with the subprocess module."
+          "test_id": "B607",
+          "issue_text": "Starting a process with a partial executable path"
         },
         {
-          "filename": "scripts\\smoke_submission_archive.py",
-          "line_number": 67,
+          "filename": "scripts\\build_deb_packages.py",
+          "line_number": 124,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
           "issue_text": "subprocess call - check for execution of untrusted input."
-        },
-        {
-          "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 40,
-          "severity": "LOW",
-          "confidence": "MEDIUM",
-          "test_id": "B105",
-          "issue_text": "Possible hardcoded password: 'local-secret'"
-        },
-        {
-          "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 147,
-          "severity": "LOW",
-          "confidence": "MEDIUM",
-          "test_id": "B107",
-          "issue_text": "Possible hardcoded password: ''"
-        },
-        {
-          "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 158,
-          "severity": "LOW",
-          "confidence": "MEDIUM",
-          "test_id": "B107",
-          "issue_text": "Possible hardcoded password: ''"
-        },
-        {
-          "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 160,
-          "severity": "MEDIUM",
-          "confidence": "HIGH",
-          "test_id": "B310",
-          "issue_text": "Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected."
-        },
-        {
-          "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 164,
-          "severity": "LOW",
-          "confidence": "MEDIUM",
-          "test_id": "B107",
-          "issue_text": "Possible hardcoded password: ''"
-        },
-        {
-          "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 168,
-          "severity": "LOW",
-          "confidence": "MEDIUM",
-          "test_id": "B107",
-          "issue_text": "Possible hardcoded password: ''"
-        },
-        {
-          "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 171,
-          "severity": "MEDIUM",
-          "confidence": "HIGH",
-          "test_id": "B310",
-          "issue_text": "Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected."
-        },
-        {
-          "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 177,
-          "severity": "LOW",
-          "confidence": "MEDIUM",
-          "test_id": "B107",
-          "issue_text": "Possible hardcoded password: ''"
-        },
-        {
-          "filename": "scripts\\web_dashboard_smoke.py",
-          "line_number": 180,
-          "severity": "MEDIUM",
-          "confidence": "HIGH",
-          "test_id": "B310",
-          "issue_text": "Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected."
         }
       ],
-      "stderr_tail": ""
+      "stderr_tail": "[tester]\tWARNING\tnosec encountered (B108), but no failed test on file memguard\\os_guard\\openkylin_native.py:265\n"
     },
     "pip_audit": {
       "status": "clean",

@@ -10,6 +10,7 @@ import subprocess
 
 from memguard.config import namespace_status, normalize_namespace
 from memguard.os_guard.service_control import service_resource_status
+from memguard.os_guard.unix_socket_trust import inspect_unix_socket
 from memguard.retrieval.kylin_sdk import kylin_sdk_status
 
 
@@ -98,16 +99,48 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
     library_file = next((str(path) for path in embedding_library_candidates if path.exists()), "")
     warmup_state = _read_kylin_warmup_state()
     warmup_ready = _warmup_state_is_ready(warmup_state)
-    runtime_base = Path(f"/tmp/.kylin-ai-runtime-unix/{uid}")
+    runtime_base = Path(_embedding_runtime_base(uid))
     runtime_sockets = {
         "core-textembedding.sock": str(runtime_base / "core-textembedding.sock"),
         "config.sock": str(runtime_base / "config.sock"),
     }
-    vector_socket = Path(f"/tmp/kylin-ai-vector-engine-{uid}.sock")
+    runtime_trust = {
+        name: inspect_unix_socket(
+            path,
+            expected_uid=uid,
+            timeout=0.2,
+            root_user_runtime=True,
+        )
+        for name, path in runtime_sockets.items()
+    }
+    runtime_trusted = bool(runtime_trust) and all(item["trusted"] for item in runtime_trust.values())
+    runtime_failures = [
+        f"{name}: {item['reason']}"
+        for name, item in runtime_trust.items()
+        if not item["trusted"]
+    ]
+    runtime_warnings = [
+        f"{name}: {item['reason']}"
+        for name, item in runtime_trust.items()
+        if item["trusted"] and item["parent_directory_warning"]
+    ]
+    runtime_reason = "; ".join(runtime_failures or runtime_warnings) if (runtime_failures or runtime_warnings) else "Kylin runtime Unix socket 全部可信"
+    vector_socket = Path(_vector_socket_path(uid))
+    vector_trust = inspect_unix_socket(
+        str(vector_socket),
+        expected_uid=uid,
+        timeout=0.2,
+        root_user_runtime=True,
+    )
     vector_binary = Path("/usr/bin/kylin-ai-vector-engine")
     vector_header = Path("/usr/include/kysdk-vector-engine-client/Database.h")
-    embedding_available = bool(library_file or any(embedding_headers.values()) or has_text_models)
-    if has_text_models and embedding_available:
+    embedding_installed = bool(library_file or any(embedding_headers.values()) or has_text_models)
+    embedding_available = bool(embedding_installed and runtime_trusted)
+    if embedding_installed and not runtime_trusted:
+        capability_state = "runtime_untrusted"
+        user_message = "已检测到 SDK，但运行时 socket 未通过信任校验"
+        next_action = "已禁用端侧 SDK 并使用 hash fallback；请修复 socket owner、类型或对端身份"
+    elif has_text_models and embedding_available:
         if warmup_ready:
             capability_state = "recently_ready"
             user_message = "已安装，最近一次端侧向量预热成功"
@@ -125,21 +158,22 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
         user_message = "未检测到 Kylin embedding SDK"
         next_action = "可继续使用稳定检索路径，或安装 openKylin AI 组件"
     product_state = _embedding_product_state(
-        installed=bool(has_text_models and embedding_available),
+        installed=bool(has_text_models and embedding_installed),
         warmup_state=warmup_state,
         fallback="hash_embedding",
     )
     vector_service = services.get("kylin-ai-vector-engine.service", {}) if isinstance(services.get("kylin-ai-vector-engine.service"), dict) else {}
-    vector_socket_exists = vector_socket.exists()
-    vector_available = vector_binary.exists() or vector_header.exists() or vector_socket_exists
-    if vector_socket_exists:
+    vector_socket_exists = bool(vector_trust["exists"])
+    vector_socket_ready = bool(vector_trust["socket_ready"])
+    vector_available = vector_binary.exists() or vector_header.exists() or vector_socket_ready
+    if vector_socket_ready:
         vector_state = "socket_ready"
         vector_message = "向量服务接口可连接"
         vector_action = "可继续使用；如需服务管理状态，可在系统维护中刷新服务"
     elif vector_service.get("active"):
-        vector_state = "service_active"
-        vector_message = "向量服务正在运行"
-        vector_action = "可继续使用"
+        vector_state = "service_active_socket_untrusted"
+        vector_message = "向量服务正在运行，但 socket 未通过信任校验"
+        vector_action = "保持 fallback；请检查 socket 类型、owner、连接与 SO_PEERCRED"
     elif vector_available:
         vector_state = "metadata_available"
         vector_message = "已检测到向量组件，服务接口未连接"
@@ -162,7 +196,12 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
                 "base_dir": str(runtime_base),
                 "base_dir_exists": runtime_base.exists(),
                 "sockets": runtime_sockets,
-                "socket_exists": {name: Path(path).exists() for name, path in runtime_sockets.items()},
+                "socket_exists": {name: item["exists"] for name, item in runtime_trust.items()},
+                "socket_ready": {name: item["socket_ready"] for name, item in runtime_trust.items()},
+                "socket_trust": runtime_trust,
+                "trusted": runtime_trusted,
+                "reason": runtime_reason,
+                "parent_directory_warning": any(item["parent_directory_warning"] for item in runtime_trust.values()),
             },
             "kytensor": {
                 "service": services.get("kytensor.service", {}),
@@ -180,7 +219,7 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
             "inference_ready": None,
             "ready_for_default_retrieval": False,
             "capability_state": capability_state,
-            "component_ready": capability_state in {"installed_unwarmed", "recently_ready"},
+            "component_ready": runtime_trusted and capability_state in {"installed_unwarmed", "recently_ready"},
             "product_state": product_state,
             "user_message": user_message,
             "next_action": next_action,
@@ -201,14 +240,29 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
             "user_service": vector_service,
             "socket": str(vector_socket),
             "socket_exists": vector_socket_exists,
+            "socket_ready": vector_socket_ready,
+            "trusted": bool(vector_trust["trusted"]),
+            "reason": str(vector_trust["reason"]),
+            "socket_trust": vector_trust,
+            "parent_directory_warning": bool(vector_trust["parent_directory_warning"]),
             "available": vector_available,
             "capability_state": vector_state,
-            "component_ready": vector_state in {"socket_ready", "service_active"},
+            "component_ready": vector_state == "socket_ready",
             "user_message": vector_message,
             "next_action": vector_action,
             "fallback": "sqlite_fts_hash_vector",
         },
     }
+
+
+def _embedding_runtime_base(uid: int) -> str:
+    # Kylin platform protocol path; every socket is fully verified before status use.
+    return f"/tmp/.kylin-ai-runtime-unix/{uid}"  # nosec B108
+
+
+def _vector_socket_path(uid: int) -> str:
+    # Kylin platform protocol path; the socket is fully verified before status use.
+    return f"/tmp/kylin-ai-vector-engine-{uid}.sock"  # nosec B108
 
 
 def _augment_embedding_product_state(embedding: Dict[str, object]) -> None:
@@ -342,17 +396,35 @@ def _augment_vector_product_state(vector_store: Dict[str, object]) -> None:
     available = bool(vector_store.get("available"))
     user_service = vector_store.get("user_service", {})
     service_active = bool(user_service.get("active")) if isinstance(user_service, dict) else False
-    socket_ready = bool(vector_store.get("socket_exists"))
+    has_trust_status = any(
+        key in vector_store
+        for key in ("socket_ready", "trusted", "reason", "socket_trust")
+    )
+    socket_ready = bool(
+        vector_store.get("socket_ready")
+        if "socket_ready" in vector_store
+        else vector_store.get("socket_exists")
+    )
     if socket_ready:
         vector_store["capability_state"] = "socket_ready"
         vector_store["component_ready"] = True
         vector_store["user_message"] = "向量服务接口可连接"
         vector_store["next_action"] = "可继续使用；如需服务管理状态，可在系统维护中刷新服务"
     elif service_active:
-        vector_store["capability_state"] = "service_active"
-        vector_store["component_ready"] = True
-        vector_store["user_message"] = "向量服务正在运行"
-        vector_store["next_action"] = "可继续使用"
+        vector_store["capability_state"] = (
+            "service_active_socket_untrusted" if has_trust_status else "service_active"
+        )
+        vector_store["component_ready"] = not has_trust_status
+        vector_store["user_message"] = (
+            "向量服务正在运行，但 socket 尚未通过信任校验"
+            if has_trust_status
+            else "向量服务正在运行"
+        )
+        vector_store["next_action"] = (
+            "保持 fallback；请检查 socket 类型、owner、连接与 SO_PEERCRED"
+            if has_trust_status
+            else "可继续使用"
+        )
     elif available:
         vector_store["capability_state"] = "metadata_available"
         vector_store["component_ready"] = False

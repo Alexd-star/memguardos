@@ -1,9 +1,12 @@
 __pycache__/
 .pytest_cache/
+.pytest-tmp-*/
+.playwright-cli/
 .mypy_cache/
 .ruff_cache/
 .venv/
 dist/
+output/
 *.egg-info/
 *.pyc
 *.pyo
@@ -14,4 +17,6 @@ dist/
 local_notes/
 docs/evidence/openkylin_*/
 docs/evidence/kylin_embedding_diag_*/
+docs/eval_result_ci.json
+docs/eval_report_ci.md
 docs/release_preflight.json

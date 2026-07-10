@@ -46,7 +46,7 @@ bash scripts/collect_agent_evidence.sh
 
 最新结果：
 
-- 最新同 HEAD 单元测试：`313 passed`
+- 上一次 openKylin 单元测试快照由 `docs/evidence/openkylin_native_latest/pytest_openkylin.txt` 记录；本轮最终源代码 HEAD 同步后将重新采集，准确版本以同目录 `source_revision.json` 为准。
 - 真实 Agent：OpenHands 实际执行 `rg -n build_agent_context memguard` 并返回真实文件与行号
 - Agent 专项 benchmark：200 条，提取/遗忘/跨会话指标 1.0000，污染率/泄漏率 0，P95 113.97 ms
 - 负载评测：1000 条记忆，120 次检索请求
@@ -244,6 +244,7 @@ bash scripts/openkylin_verify.sh
 ```
 
 该脚本会运行 doctor、Kylin AI SDK 状态、向量数据库探针、单元测试、评测、auditd 规则预览、OS 事件 smoke test、真实 auditd 日志接入和审计链验证。
+
 
 
 

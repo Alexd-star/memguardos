@@ -13,10 +13,12 @@ Environment=MEMGUARD_HOME=/var/lib/memguardos-agent/%i/memory
 Environment=OPENHANDS_SUPPRESS_BANNER=1
 Environment=LITELLM_LOCAL_MODEL_COST_MAP=True
 EnvironmentFile=-/etc/memguardos/agent-%i.env
-ExecStart=/opt/memguardos/.venv-agent/bin/python /opt/memguardos/scripts/memguard_agent_bridge.py --queue-root /var/lib/memguardos-agent/%i --namespace agent-%i
+ExecStart=/usr/lib/memguardos/memguardos-agent-launcher.sh --queue-root /var/lib/memguardos-agent/%i --namespace agent-%i
 Restart=on-failure
 RestartSec=10
 UMask=0077
+StateDirectory=memguardos-agent/%i
+StateDirectoryMode=0700
 
 NoNewPrivileges=true
 PrivateTmp=true

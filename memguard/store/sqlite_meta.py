@@ -6,6 +6,38 @@ import sqlite3
 from memguard.models import MemoryRecord, stable_hash, utc_now
 
 
+_ALLOWED_COLUMN_MIGRATIONS = {
+    ("memory", "subtype", "TEXT NOT NULL DEFAULT 'general'"),
+    ("memory", "tier", "TEXT NOT NULL DEFAULT 'long_term'"),
+    ("memory", "sensitivity_redacted", "INTEGER NOT NULL DEFAULT 0"),
+    ("memory", "valid_from", "TEXT NOT NULL DEFAULT ''"),
+    ("memory", "valid_to", "TEXT"),
+    ("memory", "superseded_by", "TEXT"),
+    ("memory", "preference_topic", "TEXT NOT NULL DEFAULT ''"),
+    ("memory", "preference_value", "TEXT NOT NULL DEFAULT ''"),
+    ("memory", "preference_scope", "TEXT NOT NULL DEFAULT 'global'"),
+    ("memory", "preference_explicit", "INTEGER NOT NULL DEFAULT 1"),
+    ("memory", "agent_name", "TEXT NOT NULL DEFAULT ''"),
+    ("memory", "preference_session_id", "TEXT NOT NULL DEFAULT ''"),
+    ("memory", "project_root", "TEXT NOT NULL DEFAULT ''"),
+    ("memory", "task_type", "TEXT NOT NULL DEFAULT ''"),
+    ("memory", "trust_level", "TEXT NOT NULL DEFAULT 'trusted'"),
+    ("memory", "trust_score", "REAL NOT NULL DEFAULT 1.0"),
+    ("memory", "governance_state", "TEXT NOT NULL DEFAULT 'active'"),
+    ("memory", "governance_reason", "TEXT NOT NULL DEFAULT ''"),
+    ("audit", "prev_hash", "TEXT NOT NULL DEFAULT ''"),
+    ("audit", "event_hash", "TEXT NOT NULL DEFAULT ''"),
+    ("agent_events", "project_root", "TEXT NOT NULL DEFAULT ''"),
+    ("agent_events", "task_type", "TEXT NOT NULL DEFAULT ''"),
+    ("agent_events", "forgotten", "INTEGER NOT NULL DEFAULT 0"),
+    ("agent_events", "forgotten_at", "TEXT"),
+    ("preference_observations", "project_root", "TEXT NOT NULL DEFAULT ''"),
+    ("preference_observations", "task_type", "TEXT NOT NULL DEFAULT ''"),
+    ("preference_observations", "scope_agent_name", "TEXT NOT NULL DEFAULT ''"),
+    ("preference_observations", "scope_session_id", "TEXT NOT NULL DEFAULT ''"),
+}
+
+
 class SQLiteMetaStore:
     def __init__(self, path: Path):
         self.path = Path(path)
@@ -530,33 +562,46 @@ class SQLiteMetaStore:
         placeholders = ",".join("?" for _ in event_ids)
         memory_params: List[Any] = list(event_ids)
         if topic:
-            memory_rows = self.conn.execute(
+            # Only comma-separated SQLite parameter markers are interpolated; values remain bound parameters.
+            memory_query = (
                 """
                 SELECT DISTINCT promoted_memory_id AS memory_id
                 FROM preference_observations
                 WHERE event_id IN (%s) AND topic = ? AND promoted_memory_id IS NOT NULL
                 ORDER BY promoted_memory_id
                 """
-                % placeholders,
+                % placeholders  # nosec B608
+            )
+            memory_rows = self.conn.execute(
+                memory_query,
                 memory_params + [topic],
             ).fetchall()
+            observation_query = (
+                "SELECT COUNT(*) AS count FROM preference_observations "
+                "WHERE event_id IN (%s) AND topic = ?" % placeholders  # nosec B608
+            )
             observation_count = int(
                 self.conn.execute(
-                    "SELECT COUNT(*) AS count FROM preference_observations "
-                    "WHERE event_id IN (%s) AND topic = ?" % placeholders,
+                    observation_query,
                     memory_params + [topic],
                 ).fetchone()["count"]
             )
         else:
-            memory_rows = self.conn.execute(
+            memory_query = (
                 "SELECT DISTINCT memory_id FROM memory_event_links "
-                "WHERE event_id IN (%s) ORDER BY memory_id" % placeholders,
+                "WHERE event_id IN (%s) ORDER BY memory_id" % placeholders  # nosec B608
+            )
+            memory_rows = self.conn.execute(
+                memory_query,
                 memory_params,
             ).fetchall()
+            observation_query = (
+                "SELECT COUNT(*) AS count FROM preference_observations "
+                "WHERE event_id IN (%s)" % placeholders  # nosec B608
+            )
             observation_count = int(
                 self.conn.execute(
-                    "SELECT COUNT(*) AS count FROM preference_observations "
-                    "WHERE event_id IN (%s)" % placeholders,
+                    observation_query,
                     memory_params,
                 ).fetchone()["count"]
             )
@@ -583,7 +628,8 @@ class SQLiteMetaStore:
         if not event_ids:
             return 0
         placeholders = ",".join("?" for _ in event_ids)
-        cursor = self.conn.execute(
+        # Only SQLite parameter markers are interpolated; event IDs remain bound parameters.
+        update_query = (
             """
             UPDATE agent_events
             SET content = '', tool_args_json = '{}', tool_result = '',
@@ -591,7 +637,10 @@ class SQLiteMetaStore:
                 forgotten = 1, forgotten_at = ?
             WHERE event_id IN (%s)
             """
-            % placeholders,
+            % placeholders  # nosec B608
+        )
+        cursor = self.conn.execute(
+            update_query,
             [utc_now()] + list(event_ids),
         )
         self.conn.commit()
@@ -605,7 +654,11 @@ class SQLiteMetaStore:
         if not event_ids:
             return 0
         placeholders = ",".join("?" for _ in event_ids)
-        sql = "DELETE FROM preference_observations WHERE event_id IN (%s)" % placeholders
+        # Only SQLite parameter markers are interpolated; event IDs remain bound parameters.
+        sql = (
+            "DELETE FROM preference_observations WHERE event_id IN (%s)"
+            % placeholders  # nosec B608
+        )
         params: List[Any] = list(event_ids)
         if preference_topic:
             sql += " AND topic = ?"
@@ -903,7 +956,7 @@ class SQLiteMetaStore:
             self.conn.execute("BEGIN IMMEDIATE")
             prev_hash = self._last_audit_hash()
             event_hash = stable_hash("|".join([prev_hash, event_type, memory_id or "", detail_json, created_at]))
-            self.conn.execute(
+            cursor = self.conn.execute(
                 """
                 INSERT INTO audit(event_type, memory_id, detail, created_at, prev_hash, event_hash)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -914,7 +967,12 @@ class SQLiteMetaStore:
         except sqlite3.Error:
             self.conn.rollback()
             raise
-        return {"prev_hash": prev_hash, "event_hash": event_hash, "created_at": created_at}
+        return {
+            "audit_id": int(cursor.lastrowid),
+            "prev_hash": prev_hash,
+            "event_hash": event_hash,
+            "created_at": created_at,
+        }
 
     def list_audit(self, limit: int = 50, event_type: Optional[str] = None) -> List[Dict[str, Any]]:
         if event_type:
@@ -966,10 +1024,14 @@ class SQLiteMetaStore:
         return row["event_hash"] or ""
 
     def _ensure_column(self, table: str, column: str, declaration: str) -> None:
+        migration = (table, column, declaration)
+        if migration not in _ALLOWED_COLUMN_MIGRATIONS:
+            raise ValueError("unapproved schema migration: %s.%s" % (table, column))
+        # The complete table/column/declaration tuple is matched against a fixed schema allowlist.
         rows = self.conn.execute("PRAGMA table_info(%s)" % table).fetchall()
         names = {row["name"] for row in rows}
         if column not in names:
-            self.conn.execute("ALTER TABLE %s ADD COLUMN %s %s" % (table, column, declaration))
+            self.conn.execute("ALTER TABLE %s ADD COLUMN %s %s" % migration)
             self.conn.commit()
 
     def _upsert_graph(self, record: MemoryRecord) -> None:

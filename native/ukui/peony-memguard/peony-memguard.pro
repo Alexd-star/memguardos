@@ -1,10 +1,10 @@
-QT += widgets
+QT += widgets network
 TEMPLATE = lib
 CONFIG += plugin c++17
 TARGET = peony-menu-plugin-memguardos
 
 SOURCES += memguard_peony_plugin.cpp
-HEADERS += memguard_peony_plugin.h
+HEADERS += memguard_peony_plugin.h ../dashboard_launcher.h
 DISTFILES += common.json
 
 CONFIG += link_pkgconfig

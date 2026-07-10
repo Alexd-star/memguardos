@@ -1,4 +1,4 @@
-$ bash -lc cat /etc/os-release; uname -a; python3 --version; printf "desktop=%s\nsession=%s\n" "${XDG_CURRENT_DESKTOP:-}" "${DESKTOP_SESSION:-}"
+$ bash -lc cat\ /etc/os-release\;\ uname\ -a\;\ python3\ --version\;\ printf\ \"desktop=%s\\nsession=%s\\n\"\ \"\$\{XDG_CURRENT_DESKTOP:-\}\"\ \"\$\{DESKTOP_SESSION:-\}\"
 NAME="openKylin"
 FULL_NAME="openKylin"
 VERSION="2.0 SP2 (nile)"

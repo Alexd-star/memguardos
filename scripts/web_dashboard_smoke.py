@@ -19,6 +19,16 @@ from memguard.integrations.events import AgentInteractionEvent  # noqa: E402
 from memguard.web.dashboard import run_dashboard  # noqa: E402
 
 
+def _agent_replay_ok(payload: dict[str, object]) -> bool:
+    result = payload.get("result")
+    result = result if isinstance(result, dict) else {}
+    return bool(
+        payload.get("ok") is True
+        and result.get("execution_mode") == "replay"
+        and result.get("truthful_note")
+    )
+
+
 def main() -> int:
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -72,6 +82,28 @@ def main() -> int:
             },
             auth_token=auth_token,
         )
+        feedback_home = _http_get_json(base + "/api/feedback-home?limit=8", auth_token=auth_token)
+        notifications = _http_get_json(base + "/api/notifications?limit=20", auth_token=auth_token)
+        agent_run = _http_post(
+            base + "/api/agent-run",
+            {"task": "查找 MemGuardService 的定义", "mode": "replay"},
+            auth_token=auth_token,
+        )
+        replay_memories = (agent_run.get("result") or {}).get("memory_changes") or []
+        replay_memory_id = replay_memories[0].get("memory_id", "") if replay_memories else ""
+        memory_detail = _http_get_json(
+            base + "/api/memory-detail?memory_id=" + replay_memory_id,
+            auth_token=auth_token,
+        ) if replay_memory_id else {"ok": False}
+        preference_proof = _http_get_json(
+            base + "/api/preference-proof?memory_id=" + replay_memory_id,
+            auth_token=auth_token,
+        ) if replay_memory_id else {"ok": False}
+        forget_memory = _http_post(
+            base + "/api/forget-memory",
+            {"memory_ids": [replay_memory_id], "reason": "dashboard smoke feedback contract", "compact": True},
+            auth_token=auth_token,
+        ) if replay_memory_id else {"ok": False}
         invalid_json_status, invalid_json = _http_post_raw(base + "/api/ingest", b"{", "application/json", auth_token=auth_token)
         large_status, large_body = _http_post_raw(base + "/api/ingest", b"x" * 262145, "application/json", auth_token=auth_token)
         result = {
@@ -90,6 +122,12 @@ def main() -> int:
             and acceptance_plan.get("result", {}).get("summary", {}).get("manual", 0) >= 1
             and acceptance_run.get("ok") is True
             and acceptance_run.get("result", {}).get("status") == "passed",
+            "operation_feedback_ok": "operationStatus" in page
+            and "AbortController" in page
+            and "跳转处理" in page
+            and "处理建议" in page
+            and "最后刷新" not in page
+            and "toLocaleTimeString" not in page,
             "traffic_light_status_ok": "红黄绿状态" in page,
             "rag_visual_ok": "候选选择轨迹" in page,
             "forget_candidate_visual_ok": "候选会以卡片形式列出" in page,
@@ -111,6 +149,18 @@ def main() -> int:
             and agent_overview.get("result", {}).get("summary", {}).get("event_count") == 1,
             "agent_forget_preview_ok": agent_forget.get("ok") is True
             and agent_forget.get("result", {}).get("affected", {}).get("event_ids") == ["evt-web-smoke-agent"],
+            "feedback_home_ok": feedback_home.get("ok") is True
+            and feedback_home.get("result", {}).get("schema") == "memguardos-feedback-home-v1",
+            "notifications_ok": notifications.get("ok") is True and isinstance(notifications.get("result"), list),
+            "agent_run_replay_ok": _agent_replay_ok(agent_run),
+            "memory_detail_ok": memory_detail.get("ok") is True and memory_detail.get("result", {}).get("found") is True,
+            "preference_proof_ok": preference_proof.get("ok") is True and "proof" in preference_proof.get("result", {}),
+            "forget_memory_feedback_ok": forget_memory.get("ok") is True
+            and forget_memory.get("result", {}).get("verification_report", {}).get("schema") == "memguardos-forget-verification-report-v1",
+            "agent_run_memory_count": len(replay_memories),
+            "memory_detail_reason": memory_detail.get("result", {}).get("reason", ""),
+            "preference_proof_reason": preference_proof.get("result", {}).get("reason", ""),
+            "forget_memory_reason": forget_memory.get("error", ""),
             "auth_required_for_diagnostics": unauthorized_status == 401 and unauthorized_body.get("error") == "unauthorized",
             "invalid_json_rejected": invalid_json_status == 400 and invalid_json.get("error") == "invalid_json",
             "large_payload_rejected": large_status == 413 and large_body.get("error") == "payload_too_large",
@@ -129,6 +179,7 @@ def main() -> int:
             and result["forget_confirmation_copy_ok"]
             and result["competition_copy_absent"]
             and result["acceptance_review_ok"]
+            and result["operation_feedback_ok"]
             and result["traffic_light_status_ok"]
             and result["rag_visual_ok"]
             and result["forget_candidate_visual_ok"]
@@ -146,6 +197,12 @@ def main() -> int:
             and result["export_ok"]
             and result["agent_overview_ok"]
             and result["agent_forget_preview_ok"]
+            and result["feedback_home_ok"]
+            and result["notifications_ok"]
+            and result["agent_run_replay_ok"]
+            and result["memory_detail_ok"]
+            and result["preference_proof_ok"]
+            and result["forget_memory_feedback_ok"]
             and result["auth_required_for_diagnostics"]
             and result["invalid_json_rejected"]
             and result["large_payload_rejected"]
@@ -172,7 +229,8 @@ def _wait_until_ready(base: str, auth_token: str = "") -> None:
 
 def _http_get(url: str, auth_token: str = "") -> str:
     request = Request(url, headers=_auth_headers(auth_token), method="GET")
-    with urlopen(request, timeout=3) as response:
+    # Smoke requests are constructed from the script's loopback-only ephemeral server.
+    with urlopen(request, timeout=3) as response:  # nosec B310
         return response.read().decode("utf-8")
 
 
@@ -183,7 +241,7 @@ def _http_get_json(url: str, auth_token: str = "") -> dict:
 def _http_get_json_status(url: str, auth_token: str = "") -> tuple[int, dict]:
     request = Request(url, headers=_auth_headers(auth_token), method="GET")
     try:
-        with urlopen(request, timeout=3) as response:
+        with urlopen(request, timeout=3) as response:  # nosec B310
             return int(response.status), json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         return int(exc.code), json.loads(exc.read().decode("utf-8"))
@@ -192,7 +250,7 @@ def _http_get_json_status(url: str, auth_token: str = "") -> tuple[int, dict]:
 def _http_get_json_response_status(url: str, auth_token: str = "") -> tuple[int, dict, dict]:
     request = Request(url, headers=_auth_headers(auth_token), method="GET")
     try:
-        with urlopen(request, timeout=3) as response:
+        with urlopen(request, timeout=3) as response:  # nosec B310
             headers = {key.lower(): value for key, value in response.headers.items()}
             return int(response.status), headers, json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
@@ -202,7 +260,7 @@ def _http_get_json_response_status(url: str, auth_token: str = "") -> tuple[int,
 
 def _http_get_text_status(url: str, auth_token: str = "") -> tuple[int, dict, str]:
     request = Request(url, headers=_auth_headers(auth_token), method="GET")
-    with urlopen(request, timeout=3) as response:
+    with urlopen(request, timeout=3) as response:  # nosec B310
         headers = {key.lower(): value for key, value in response.headers.items()}
         return int(response.status), headers, response.read().decode("utf-8")
 
@@ -214,7 +272,7 @@ def _http_post(url: str, payload: dict, auth_token: str = "") -> dict:
         headers=_auth_headers(auth_token, {"Content-Type": "application/json"}),
         method="POST",
     )
-    with urlopen(request, timeout=3) as response:
+    with urlopen(request, timeout=3) as response:  # nosec B310
         return json.loads(response.read().decode("utf-8"))
 
 
@@ -226,7 +284,7 @@ def _http_post_raw(url: str, payload: bytes, content_type: str, auth_token: str 
         method="POST",
     )
     try:
-        with urlopen(request, timeout=3) as response:
+        with urlopen(request, timeout=3) as response:  # nosec B310
             return int(response.status), json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         return int(exc.code), json.loads(exc.read().decode("utf-8"))

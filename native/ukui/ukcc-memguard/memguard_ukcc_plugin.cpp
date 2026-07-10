@@ -1,7 +1,8 @@
 #include "memguard_ukcc_plugin.h"
+#include "../dashboard_launcher.h"
 
 #include <QAbstractItemView>
-#include <QColor>
+#include <QApplication>
 #include <QDesktopServices>
 #include <QDialog>
 #include <QDir>
@@ -32,6 +33,7 @@
 #include <QSize>
 #include <QSizePolicy>
 #include <QStandardPaths>
+#include <QStyle>
 #include <QTabWidget>
 #include <QTextEdit>
 #include <QTimer>
@@ -42,6 +44,14 @@
 #include <QVBoxLayout>
 
 namespace {
+
+QIcon themedIcon(
+    const QString &name,
+    QStyle::StandardPixmap standardPixmap = QStyle::SP_FileIcon)
+{
+    const QIcon icon = QIcon::fromTheme(name);
+    return icon.isNull() ? QApplication::style()->standardIcon(standardPixmap) : icon;
+}
 
 QString cleanedOutput(const QByteArray &raw)
 {
@@ -78,10 +88,10 @@ QString levelText(const QString &level)
 QIcon levelIcon(const QString &level)
 {
     if (level == QStringLiteral("green"))
-        return QIcon::fromTheme(QStringLiteral("dialog-ok-apply"));
+        return themedIcon(QStringLiteral("dialog-ok-apply"), QStyle::SP_DialogApplyButton);
     if (level == QStringLiteral("yellow"))
-        return QIcon::fromTheme(QStringLiteral("dialog-warning"));
-    return QIcon::fromTheme(QStringLiteral("dialog-error"));
+        return themedIcon(QStringLiteral("dialog-warning"), QStyle::SP_MessageBoxWarning);
+    return themedIcon(QStringLiteral("dialog-error"), QStyle::SP_MessageBoxCritical);
 }
 
 QString boolText(bool value)
@@ -110,7 +120,7 @@ QGroupBox *makeStatusCard(const QString &title, const QString &description, QLab
     layout->setSpacing(12);
     auto *icon = new QLabel;
     icon->setFixedSize(30, 30);
-    icon->setPixmap(QIcon::fromTheme(QStringLiteral("emblem-system")).pixmap(30, 30));
+    icon->setPixmap(themedIcon(QStringLiteral("emblem-system"), QStyle::SP_ComputerIcon).pixmap(30, 30));
     icon->setAccessibleName(title + QStringLiteral("状态图标"));
 
     auto *texts = new QVBoxLayout;
@@ -170,7 +180,7 @@ QWidget *makeSectionHeader(const QString &iconName, const QString &title, const 
 
     auto *icon = new QLabel;
     icon->setFixedSize(28, 28);
-    icon->setPixmap(QIcon::fromTheme(iconName).pixmap(28, 28));
+    icon->setPixmap(themedIcon(iconName, QStyle::SP_FileDialogDetailedView).pixmap(28, 28));
     icon->setAccessibleName(title + QStringLiteral("图标"));
 
     auto *texts = new QVBoxLayout;
@@ -190,21 +200,12 @@ QWidget *makeSectionHeader(const QString &iconName, const QString &title, const 
     return widget;
 }
 
-QColor levelColor(const QString &level)
-{
-    if (level == QStringLiteral("green"))
-        return QColor(4, 120, 87);
-    if (level == QStringLiteral("yellow"))
-        return QColor(180, 83, 9);
-    return QColor(180, 35, 24);
-}
-
 QLabel *makeMutedLabel(const QString &text)
 {
     auto *label = new QLabel(text);
     label->setWordWrap(true);
     QPalette palette = label->palette();
-    palette.setColor(QPalette::WindowText, QColor(102, 112, 133));
+    palette.setColor(QPalette::WindowText, palette.color(QPalette::Disabled, QPalette::WindowText));
     label->setPalette(palette);
     return label;
 }
@@ -231,7 +232,7 @@ QToolButton *makeDisclosureButton(const QString &text, const QString &accessible
 
 QPushButton *makeOperationButton(const QString &iconName, const QString &text, const QString &accessibleName)
 {
-    auto *button = new QPushButton(QIcon::fromTheme(iconName), text);
+    auto *button = new QPushButton(themedIcon(iconName, QStyle::SP_FileDialogDetailedView), text);
     button->setMinimumHeight(44);
     button->setMaximumHeight(52);
     button->setMaximumWidth(220);
@@ -594,9 +595,9 @@ QWidget *MemGuardUkccPlugin::pluginUi()
 
     tabs_ = new QTabWidget;
     tabs_->setAccessibleName(QStringLiteral("MemGuardOS 设置分类"));
-    overviewTabIndex_ = tabs_->addTab(buildOverviewTab(), QIcon::fromTheme(QStringLiteral("user-home")), QStringLiteral("日常使用"));
-    serviceTabIndex_ = tabs_->addTab(buildServiceTab(), QIcon::fromTheme(QStringLiteral("preferences-system")), QStringLiteral("管理员"));
-    diagnosticsTabIndex_ = tabs_->addTab(buildDiagnosticsTab(), QIcon::fromTheme(QStringLiteral("preferences-system")), QStringLiteral("系统维护"));
+    overviewTabIndex_ = tabs_->addTab(buildOverviewTab(), themedIcon(QStringLiteral("user-home"), QStyle::SP_DirHomeIcon), QStringLiteral("日常使用"));
+    serviceTabIndex_ = tabs_->addTab(buildServiceTab(), themedIcon(QStringLiteral("preferences-system"), QStyle::SP_ComputerIcon), QStringLiteral("管理员"));
+    diagnosticsTabIndex_ = tabs_->addTab(buildDiagnosticsTab(), themedIcon(QStringLiteral("preferences-system"), QStyle::SP_FileDialogDetailedView), QStringLiteral("系统维护"));
     layout->addWidget(tabs_, 1);
     applyNavigationTarget(takeNavigationTarget());
 
@@ -657,12 +658,25 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
         1, 1);
     layout->addWidget(healthBox);
 
+    auto *behaviorBox = new QGroupBox(QStringLiteral("最近的记忆变化"));
+    auto *behaviorLayout = new QHBoxLayout(behaviorBox);
+    applyPanelSpacing(behaviorLayout);
+    behaviorSummary_ = new QLabel(QStringLiteral("正在读取最近新增记忆、偏好生效和风险处理结果。"));
+    behaviorSummary_->setWordWrap(true);
+    behaviorSummary_->setAccessibleName(QStringLiteral("最近的记忆变化摘要"));
+    behaviorLayout->addWidget(behaviorSummary_, 1);
+    auto *refreshBehavior = makeOperationButton(QStringLiteral("view-refresh"), QStringLiteral("查看最近变化"), QStringLiteral("查看最近新增记忆、Agent 偏好和风险处理结果"));
+    behaviorLayout->addWidget(refreshBehavior);
+    layout->addWidget(behaviorBox);
+
     auto *taskBox = new QGroupBox(QStringLiteral("常用操作"));
     taskBox->setAccessibleName(QStringLiteral("普通用户常用入口"));
     auto *taskLayout = new QGridLayout(taskBox);
     applyPanelSpacing(taskLayout);
     applyGridRhythm(taskLayout);
     auto *openConsole = makeOperationButton(QStringLiteral("applications-internet"), QStringLiteral("打开本地控制台"), QStringLiteral("打开 MemGuardOS 本地控制台"));
+    auto *openAgent = makeOperationButton(QStringLiteral("system-run"), QStringLiteral("打开 Agent 工作台"), QStringLiteral("查看 Agent 交互、偏好生效和遗忘验证"));
+    auto *runJourney = makeOperationButton(QStringLiteral("media-playback-start"), QStringLiteral("运行体验流程"), QStringLiteral("运行一次本地可复现的记忆写入、使用、保护和遗忘流程"));
     auto *openFiles = makeOperationButton(QStringLiteral("system-file-manager"), QStringLiteral("打开文件管理器"), QStringLiteral("打开文件管理器后可右键文件进行记忆扫描"));
     auto *forgetEntry = makeOperationButton(QStringLiteral("edit-delete"), QStringLiteral("查看遗忘入口"), QStringLiteral("打开本地控制台查看记忆遗忘入口"));
     auto *refreshNow = makeOperationButton(QStringLiteral("view-refresh"), QStringLiteral("重新检查状态"), QStringLiteral("重新检查 MemGuardOS 状态"));
@@ -670,7 +684,9 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     taskLayout->addWidget(openFiles, 0, 1);
     taskLayout->addWidget(forgetEntry, 1, 0);
     taskLayout->addWidget(refreshNow, 1, 1);
-    taskLayout->addWidget(makeMutedLabel(QStringLiteral("日常操作只保留常用入口：查看服务状态、用文件管理器右键扫描文件、在本地控制台预览遗忘影响范围。日志、内核保护和系统授权放在【管理员】页。")), 2, 0, 1, 2);
+    taskLayout->addWidget(openAgent, 2, 0);
+    taskLayout->addWidget(runJourney, 2, 1);
+    taskLayout->addWidget(makeMutedLabel(QStringLiteral("日常操作只保留常用入口：查看服务状态、用文件管理器右键扫描文件、在本地控制台预览遗忘影响范围。日志、内核保护和系统授权放在【管理员】页。")), 3, 0, 1, 2);
     layout->addWidget(taskBox);
 
     auto *flowBox = new QGroupBox(QStringLiteral("记忆治理流程"));
@@ -796,12 +812,14 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     detailsPanelLayout->addWidget(hint);
     moreLayout->addWidget(overviewDetailsPanel_);
     layout->addWidget(moreBox);
-    actionButtons_ << openConsole << openFiles << forgetEntry << refreshNow;
+    actionButtons_ << openConsole << openAgent << runJourney << openFiles << forgetEntry << refreshNow << refreshBehavior;
     connect(overviewDetailsToggle_, &QToolButton::toggled, this, [this](bool checked) {
         overviewDetailsToggle_->setArrowType(checked ? Qt::DownArrow : Qt::RightArrow);
         overviewDetailsPanel_->setVisible(checked);
     });
     connect(openConsole, &QPushButton::clicked, this, &MemGuardUkccPlugin::openDashboard);
+    connect(openAgent, &QPushButton::clicked, this, [this]() { openDashboardTarget(QStringLiteral("#agent")); });
+    connect(runJourney, &QPushButton::clicked, this, &MemGuardUkccPlugin::runUserJourney);
     connect(openFiles, &QPushButton::clicked, this, [this]() {
         QDesktopServices::openUrl(QUrl::fromLocalFile(QDir::homePath()));
         appendHistory(QStringLiteral("打开文件管理器"), true, QStringLiteral("已打开文件管理器。选择文本文件后可通过 Peony 右键执行 MemGuardOS 记忆扫描。"));
@@ -811,6 +829,9 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
         openDashboard();
     });
     connect(refreshNow, &QPushButton::clicked, this, &MemGuardUkccPlugin::refreshStatus);
+    connect(refreshBehavior, &QPushButton::clicked, this, [this]() {
+        runMemctl({QStringLiteral("feedback-home"), QStringLiteral("--limit"), QStringLiteral("6")}, QStringLiteral("feedback"));
+    });
     scroll->setWidget(tab);
     return scroll;
 }
@@ -1011,7 +1032,7 @@ QWidget *MemGuardUkccPlugin::buildDiagnosticsTab()
 }
 
 bool MemGuardUkccPlugin::isShowOnHomePage() const { return true; }
-QIcon MemGuardUkccPlugin::icon() const { return QIcon::fromTheme(QStringLiteral("security-high")); }
+QIcon MemGuardUkccPlugin::icon() const { return themedIcon(QStringLiteral("security-high"), QStyle::SP_MessageBoxInformation); }
 bool MemGuardUkccPlugin::isEnable() const { return true; }
 const QString MemGuardUkccPlugin::name() const { return QStringLiteral("memguardos-memory-security"); }
 void MemGuardUkccPlugin::plugin_leave() {}
@@ -1075,8 +1096,12 @@ void MemGuardUkccPlugin::runProgram(const QString &program, const QStringList &a
                 currentProcess_.clear();
             QString summaryMessage = payload.value(QStringLiteral("message")).toString(output.left(240));
             bool exportSaved = true;
-            if (purpose == QStringLiteral("refresh") && !payload.isEmpty())
+            if (purpose == QStringLiteral("refresh") && !payload.isEmpty()) {
                 renderStatus(payload);
+                QTimer::singleShot(0, this, [this]() {
+                    runMemctl({QStringLiteral("feedback-home"), QStringLiteral("--limit"), QStringLiteral("6")}, QStringLiteral("feedback"));
+                });
+            }
             else if (purpose == QStringLiteral("export") && exitCode == 0) {
                 exportSaved = exportDiagnostics(output);
                 if (!exportSaved)
@@ -1087,6 +1112,8 @@ void MemGuardUkccPlugin::runProgram(const QString &program, const QStringList &a
                 else
                     showError(QStringLiteral("系统操作未完成"), payload.value(QStringLiteral("message")).toString(output));
                 QTimer::singleShot(0, this, &MemGuardUkccPlugin::refreshStatus);
+            } else if (purpose == QStringLiteral("feedback") && exitCode == 0) {
+                renderFeedbackSummary(output);
             } else if (exitCode != 0) {
                 showDetailsOutput(output, summaryMessage);
                 showError(QStringLiteral("操作失败"), output);
@@ -1131,6 +1158,10 @@ QString MemGuardUkccPlugin::operationStartMessage(const QStringList &arguments, 
         return QStringLiteral("正在等待系统授权并执行操作。");
     if (joined.contains(QStringLiteral("openkylin-status")) && joined.contains(QStringLiteral("--fast")))
         return QStringLiteral("正在快速刷新本机状态。");
+    if (joined.contains(QStringLiteral("feedback-home")))
+        return QStringLiteral("正在读取最近的记忆变化。");
+    if (joined.contains(QStringLiteral(" demo")) || joined == QStringLiteral("demo"))
+        return QStringLiteral("正在运行本地可复现体验流程，结果会显示在【系统维护】。");
     if (purpose == QStringLiteral("details"))
         return QStringLiteral("正在读取详情，结果会显示在【系统维护】。");
     return QStringLiteral("正在处理本次操作，窗口可保持打开。");
@@ -1154,6 +1185,10 @@ QString MemGuardUkccPlugin::operationCompleteMessage(const QStringList &argument
         return QStringLiteral("本机证据已导出，保存位置已显示在【系统维护】。");
     if (purpose == QStringLiteral("refresh"))
         return QStringLiteral("状态刷新已完成，可以继续操作。");
+    if (purpose == QStringLiteral("feedback"))
+        return QStringLiteral("最近的记忆变化已更新，可以继续操作。");
+    if (joined.contains(QStringLiteral(" demo")) || joined == QStringLiteral("demo"))
+        return QStringLiteral("体验流程已完成，结果已显示在【系统维护】>【维护结果】。");
     if (purpose == QStringLiteral("action"))
         return QStringLiteral("系统操作已完成，正在刷新状态。");
     if (purpose == QStringLiteral("details"))
@@ -1168,12 +1203,16 @@ int MemGuardUkccPlugin::operationTimeoutMs(const QStringList &arguments, const Q
         return 8000;
     if (joined.contains(QStringLiteral("openkylin-status")) && joined.contains(QStringLiteral("--fast")))
         return 10000;
+    if (joined.contains(QStringLiteral("feedback-home")))
+        return 15000;
     if (joined.contains(QStringLiteral("verify-audit")))
         return 20000;
     if (joined.contains(QStringLiteral("sdk-status")) || joined.contains(QStringLiteral("--probe-sdk")) || joined.contains(QStringLiteral("diagnostics")) || joined.contains(QStringLiteral("collect-openkylin-evidence")))
         return 120000;
     if (joined.contains(QStringLiteral("native-action")))
         return 90000;
+    if (joined.contains(QStringLiteral(" demo")) || joined == QStringLiteral("demo"))
+        return 60000;
     return purpose == QStringLiteral("details") ? 20000 : 60000;
 }
 
@@ -1186,6 +1225,37 @@ void MemGuardUkccPlugin::showDetailsOutput(const QString &text, const QString &s
     if (details_)
         details_->setPlainText(formatMaintenanceResult(text, summary));
     updateOperationGuide(QStringLiteral("已切换到【系统维护】>【维护结果】，可查看处理结果。"), false);
+}
+
+void MemGuardUkccPlugin::renderFeedbackSummary(const QString &text)
+{
+    if (!behaviorSummary_)
+        return;
+    const QJsonObject payload = parsedObject(text);
+    if (payload.isEmpty()) {
+        behaviorSummary_->setText(QStringLiteral("最近变化暂时无法读取。可以打开本地控制台查看记忆详情。"));
+        return;
+    }
+    QStringList lines;
+    const QJsonArray memories = payload.value(QStringLiteral("recent_memories")).toArray();
+    if (memories.isEmpty()) {
+        lines << QStringLiteral("最近没有新增可展示的记忆。");
+    } else {
+        lines << QStringLiteral("最近学到：%1 条").arg(memories.size());
+        for (int index = 0; index < memories.size() && index < 2; ++index) {
+            const QJsonObject item = memories.at(index).toObject();
+            lines << QStringLiteral("• %1").arg(item.value(QStringLiteral("summary_for_user")).toString(QStringLiteral("已形成一条受控记忆。")));
+        }
+    }
+    const QJsonArray preferences = payload.value(QStringLiteral("current_preferences")).toArray();
+    lines << QStringLiteral("当前生效偏好：%1 条").arg(preferences.size());
+    const QJsonArray sensitive = payload.value(QStringLiteral("recent_sensitive_blocks")).toArray();
+    if (!sensitive.isEmpty())
+        lines << QStringLiteral("最近已保护敏感内容：%1 条，可在通知中心查看。 ").arg(sensitive.size());
+    const QJsonArray forgetting = payload.value(QStringLiteral("recent_forgetting")).toArray();
+    if (!forgetting.isEmpty())
+        lines << QStringLiteral("最近完成遗忘：%1 次，可查看验证结果。 ").arg(forgetting.size());
+    behaviorSummary_->setText(lines.join(QLatin1Char('\n')));
 }
 
 void MemGuardUkccPlugin::updateOperationGuide(const QString &message, bool busy)
@@ -1374,7 +1444,7 @@ void MemGuardUkccPlugin::addRecommendationRow(const QString &text, const QString
     message->setWordWrap(true);
     message->setAccessibleName(QStringLiteral("处理建议内容"));
 
-    auto *action = new QPushButton(QIcon::fromTheme(actionIcon), actionText);
+    auto *action = new QPushButton(themedIcon(actionIcon, QStyle::SP_ArrowForward), actionText);
     action->setMinimumHeight(36);
     action->setIconSize(QSize(18, 18));
     action->setAccessibleName(QStringLiteral("处理建议操作：%1").arg(actionText));
@@ -1505,10 +1575,8 @@ void MemGuardUkccPlugin::setStatusBadge(QLabel *icon, QLabel *label, const QStri
     if (icon)
         icon->setPixmap(levelIcon(level).pixmap(30, 30));
     if (label) {
-        QPalette palette = label->palette();
-        palette.setColor(QPalette::WindowText, levelColor(level));
-        label->setPalette(palette);
         label->setText(QStringLiteral("%1：%2").arg(levelText(level), text));
+        label->setAccessibleDescription(QStringLiteral("%1，%2").arg(levelText(level), text));
     }
 }
 
@@ -1549,17 +1617,56 @@ bool MemGuardUkccPlugin::exportDiagnostics(const QString &text)
 
 void MemGuardUkccPlugin::openDashboard()
 {
+    openDashboardTarget(QString());
+}
+
+void MemGuardUkccPlugin::openDashboardTarget(const QString &fragment)
+{
+    const QString nameSpace = QStringLiteral("default");
+    const DashboardRuntimePaths runtimePaths = dashboardRuntimePaths(nameSpace);
+    QString authToken;
+    QString preparationError;
+    if (!ensureDashboardAuthToken(runtimePaths, &authToken, &preparationError)) {
+        showError(
+            QStringLiteral("本地控制台启动失败"),
+            QStringLiteral("%1 请重新登录后重试；仍失败时请导出系统报告并检查用户运行时目录。")
+                .arg(preparationError));
+        return;
+    }
+
     QString program = QFileInfo::exists(QStringLiteral("/usr/bin/memctl")) ? QStringLiteral("/usr/bin/memctl") : QStringLiteral("python3");
+    QStringList arguments = dashboardProcessArguments(runtimePaths, nameSpace);
+    if (program == QStringLiteral("python3")) {
+        arguments.prepend(QStringLiteral("memguard.cli.memctl"));
+        arguments.prepend(QStringLiteral("-m"));
+    }
+    qint64 launchedPid = 0;
+    const bool started = QProcess::startDetached(
+        program,
+        arguments,
+        QString(),
+        &launchedPid);
+    if (!started) {
+        showError(
+            QStringLiteral("本地控制台启动失败"),
+            QStringLiteral("请确认 memctl 已安装且可以运行，然后重新打开；仍失败时请导出系统报告检查安装状态。"));
+        return;
+    }
+    openDashboardWhenReady(this, runtimePaths, nameSpace, authToken, fragment, launchedPid, [this]() {
+        showError(
+            QStringLiteral("本地控制台暂时无法打开"),
+            QStringLiteral("控制台服务未通过身份校验或启动进程已退出。请重新打开；仍失败时请导出系统报告检查安装与用户运行时目录。"));
+    });
+}
+
+void MemGuardUkccPlugin::runUserJourney()
+{
+    QString program = QFileInfo::exists(QStringLiteral("/usr/bin/memguard")) ? QStringLiteral("/usr/bin/memguard") : QStringLiteral("python3");
     QStringList arguments;
     if (program == QStringLiteral("python3"))
-        arguments << QStringLiteral("-m") << QStringLiteral("memguard.cli.memctl");
-    arguments << QStringLiteral("web") << QStringLiteral("--host") << QStringLiteral("127.0.0.1") << QStringLiteral("--port") << QStringLiteral("8765");
-    const bool started = QProcess::startDetached(program, arguments);
-    if (started) {
-        QTimer::singleShot(800, this, []() { QDesktopServices::openUrl(QUrl(QStringLiteral("http://127.0.0.1:8765"))); });
-    } else {
-        showError(QStringLiteral("本地控制台启动失败"), QStringLiteral("请检查 memctl 是否已经安装。"));
-    }
+        arguments << QStringLiteral("-m") << QStringLiteral("memguard.cli.memguard");
+    arguments << QStringLiteral("demo");
+    runProgram(program, arguments, QStringLiteral("demo"));
 }
 
 void MemGuardUkccPlugin::setBusy(bool busy, const QString &message, bool lockActions)

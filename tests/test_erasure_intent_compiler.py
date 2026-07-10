@@ -71,6 +71,22 @@ def test_compiler_resolves_relative_time_ranges():
     assert recent_three_days["time_range"]["end_time"].startswith("2026-07-09T12:00:00")
 
 
+def test_compiler_stops_topic_before_counted_memory_phrase():
+    result = compile_request("忘记上周记录中关于 journalctl 的两条记忆，但保留其他主题。")
+
+    assert result["topic"] == "journalctl"
+    assert result["target_phrase"] == "journalctl"
+    assert result["topic_aliases"] == ["journalctl"]
+
+
+def test_compiler_exposes_plain_language_target_phrase_without_command_words():
+    template = compile_request("删除 systemd 服务单元模板记忆")
+    raw_log = compile_request("忘掉 type=PATH name=/etc/shadow 的 auditd 原始日志样例")
+
+    assert template["target_phrase"] == "systemd 服务单元模板"
+    assert raw_log["target_phrase"] == "type=PATH name=/etc/shadow 的 auditd 原始日志样例"
+
+
 def test_compiler_handles_broader_field_test_phrases():
     project = compile_request(
         "清除近7天 OpenHands 当前项目里关于 rg 工具偏好的记忆",

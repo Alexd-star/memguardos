@@ -1,0 +1,8 @@
+{
+  "schema": "memguardos-installed-web-smoke-v1",
+  "binary": "/usr/bin/memctl",
+  "unauthorized_status": 401,
+  "session_ok": true,
+  "status_ok": true,
+  "role": "admin"
+}

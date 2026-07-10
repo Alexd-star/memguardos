@@ -148,9 +148,13 @@ def _sqlite_status_counts(db_path: Path) -> Dict[str, object]:
 
 
 def _table_count(conn: sqlite3.Connection, table: str, *, include_deleted: bool) -> int:
+    if table not in {"memory", "audit"}:
+        raise ValueError("unsupported status table: %s" % table)
     exists = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()
     if not exists:
         return 0
     if table == "memory" and not include_deleted:
         return int(conn.execute("SELECT COUNT(*) FROM memory WHERE deleted = 0").fetchone()[0])
-    return int(conn.execute("SELECT COUNT(*) FROM %s" % table).fetchone()[0])
+    if table == "memory":
+        return int(conn.execute("SELECT COUNT(*) FROM memory").fetchone()[0])
+    return int(conn.execute("SELECT COUNT(*) FROM audit").fetchone()[0])

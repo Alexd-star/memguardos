@@ -52,6 +52,7 @@ private:
     QLabel *sdkStatusLabel_ = nullptr;
     QLabel *desktopStatusIcon_ = nullptr;
     QLabel *desktopStatusLabel_ = nullptr;
+    QLabel *behaviorSummary_ = nullptr;
     QLabel *readinessValueLabel_ = nullptr;
     QProgressBar *readinessBar_ = nullptr;
     QPushButton *cancelOperationButton_ = nullptr;
@@ -85,11 +86,14 @@ private:
     QString operationCompleteMessage(const QStringList &arguments, const QString &purpose, int exitCode) const;
     int operationTimeoutMs(const QStringList &arguments, const QString &purpose) const;
     void showDetailsOutput(const QString &text, const QString &summary);
+    void renderFeedbackSummary(const QString &text);
     void updateOperationGuide(const QString &message, bool busy);
     void setStatusBadge(QLabel *icon, QLabel *label, const QString &level, const QString &text);
     void appendHistory(const QString &operation, bool ok, const QString &message);
     bool exportDiagnostics(const QString &text);
     void openDashboard();
+    void openDashboardTarget(const QString &fragment);
+    void runUserJourney();
     void setBusy(bool busy, const QString &message, bool lockActions = true);
     void showError(const QString &title, const QString &message);
 };

@@ -155,13 +155,23 @@ python -m memguard.cli.memctl --namespace realagent-demo agent context \
 
 ## 7. systemd 队列桥
 
-`scripts/memguard-agent@.service` 用于把 Agent 任务放入独立 systemd 单元。安装后可按 Linux 用户启动：
+`scripts/memguard-agent@.service` 用于把 Agent 任务放入独立 systemd 单元。通过 `memguardos-agent-bridge` 软件包安装后，可直接按 Linux 用户启动：
 
 ```bash
-sudo cp scripts/memguard-agent@.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now memguard-agent@luo.service
 ```
+
+早期版本曾指导用户把模板手工复制到 `/etc/systemd/system/memguard-agent@.service`。该路径优先级高于软件包安装到 `/lib/systemd/system` 的新单元。升级安装时，`memguardos-agent-bridge` 只会识别包含旧版固定解释器 `ExecStart` 的已知模板，将其备份为 `memguard-agent@.service.memguardos-legacy` 后移除；管理员自行修改过、未匹配旧签名的单元不会被覆盖。升级后可用 `systemctl cat memguard-agent@luo.service` 确认当前加载的是软件包单元。
+
+服务通过 `/usr/lib/memguardos/memguardos-agent-launcher.sh` 选择 Python 解释器，顺序如下：
+
+1. 管理员在 `/etc/memguardos/agent-luo.env` 中设置的 `MEMGUARD_AGENT_PYTHON`；
+2. `/opt/memguardos/.venv-agent/bin/python`；
+3. 当前用户主目录下 `memguardos/.venv-agent/bin/python`；
+4. 系统 `/usr/bin/python3`。
+
+如果管理员显式配置的解释器不存在或不可执行，服务会停止并在 journald 中给出明确原因，不会静默换用其他环境。未安装 OpenHands 扩展时，系统 Python 仍可启动队列桥和返回结构化失败结果；要执行真实 Agent 任务，应先运行 `scripts/install_agent_extras_openkylin.sh`，或把 `MEMGUARD_AGENT_PYTHON` 指向已安装 `openhands-sdk` 的受控虚拟环境。
 
 任务以 JSON 文件写入用户队列目录。桥接进程只读取允许字段，不保存 OpenHands 原始任务归档：
 
@@ -174,7 +184,7 @@ sudo systemctl enable --now memguard-agent@luo.service
 }
 ```
 
-服务单元使用普通用户运行，并启用 `NoNewPrivileges`、`PrivateTmp`、`PrivateDevices`、`ProtectSystem=strict`、`MemoryMax=2G` 和 `CPUQuota=100%`。这些限制用于降低 Agent 工具执行的系统影响，不等同于容器或虚拟机级安全隔离。
+服务单元使用普通用户运行，并启用 `NoNewPrivileges`、`PrivateTmp`、`PrivateDevices`、`ProtectSystem=strict`、`MemoryMax=2G` 和 `CPUQuota=100%`。`StateDirectory=memguardos-agent/%i` 会由 systemd 自动创建权限为 `0700` 的用户状态目录，避免首次启动依赖人工创建 `/var/lib` 路径。这些限制用于降低 Agent 工具执行的系统影响，不等同于容器或虚拟机级安全隔离。
 
 ## 8. 精准遗忘 Agent 交互
 

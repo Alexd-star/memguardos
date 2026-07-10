@@ -58,7 +58,112 @@ $ python3 -m memguard.cli.memctl openkylin-status
         "socket_exists": {
           "core-textembedding.sock": true,
           "config.sock": true
-        }
+        },
+        "socket_ready": {
+          "core-textembedding.sock": true,
+          "config.sock": true
+        },
+        "socket_trust": {
+          "core-textembedding.sock": {
+            "path": "/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock",
+            "exists": true,
+            "trusted": true,
+            "socket_ready": true,
+            "reason": "Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit",
+            "socket": {
+              "owner": 1000,
+              "mode": "0o775",
+              "world_writable": false,
+              "sticky": false,
+              "is_symlink": false,
+              "is_socket": true,
+              "device": 2053,
+              "inode": 55
+            },
+            "parent_directory": {
+              "owner": 1000,
+              "mode": "0o777",
+              "world_writable": true,
+              "sticky": false,
+              "is_symlink": false,
+              "is_socket": false,
+              "device": 2053,
+              "inode": 54,
+              "path": "/tmp/.kylin-ai-runtime-unix/1000"
+            },
+            "parent_directory_warning": true,
+            "connection": {
+              "attempted": true,
+              "connected": true,
+              "closed": true,
+              "timeout_seconds": 0.2
+            },
+            "peer_credentials": {
+              "supported": true,
+              "verified": true,
+              "pid": 107279,
+              "uid": 1000,
+              "gid": 1000
+            },
+            "root_policy": {
+              "applies": false,
+              "allowed": true,
+              "environment_variable": "MEMGUARD_ALLOW_ROOT_KYLIN_USER_SOCKET",
+              "explicit_opt_in": false
+            }
+          },
+          "config.sock": {
+            "path": "/tmp/.kylin-ai-runtime-unix/1000/config.sock",
+            "exists": true,
+            "trusted": true,
+            "socket_ready": true,
+            "reason": "Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit",
+            "socket": {
+              "owner": 1000,
+              "mode": "0o775",
+              "world_writable": false,
+              "sticky": false,
+              "is_symlink": false,
+              "is_socket": true,
+              "device": 2053,
+              "inode": 58
+            },
+            "parent_directory": {
+              "owner": 1000,
+              "mode": "0o777",
+              "world_writable": true,
+              "sticky": false,
+              "is_symlink": false,
+              "is_socket": false,
+              "device": 2053,
+              "inode": 54,
+              "path": "/tmp/.kylin-ai-runtime-unix/1000"
+            },
+            "parent_directory_warning": true,
+            "connection": {
+              "attempted": true,
+              "connected": true,
+              "closed": true,
+              "timeout_seconds": 0.2
+            },
+            "peer_credentials": {
+              "supported": true,
+              "verified": true,
+              "pid": 107279,
+              "uid": 1000,
+              "gid": 1000
+            },
+            "root_policy": {
+              "applies": false,
+              "allowed": true,
+              "environment_variable": "MEMGUARD_ALLOW_ROOT_KYLIN_USER_SOCKET",
+              "explicit_opt_in": false
+            }
+          }
+        },
+        "trusted": true,
+        "reason": "core-textembedding.sock: Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit; config.sock: Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit",
+        "parent_directory_warning": true
       },
       "kytensor": {
         "service": {
@@ -100,7 +205,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
       "product_state": {
         "installed": true,
         "last_probe_success": true,
-        "last_success_at": "2026-07-09T18:26:53+08:00",
+        "last_success_at": "2026-07-10T21:35:33+08:00",
         "last_success_dim": 768,
         "last_success_model": "ensemble-embd_gte-base_uint8-text",
         "last_failure_at": "",
@@ -135,6 +240,58 @@ $ python3 -m memguard.cli.memctl openkylin-status
       },
       "socket": "/tmp/kylin-ai-vector-engine-1000.sock",
       "socket_exists": true,
+      "socket_ready": true,
+      "trusted": true,
+      "reason": "Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit",
+      "socket_trust": {
+        "path": "/tmp/kylin-ai-vector-engine-1000.sock",
+        "exists": true,
+        "trusted": true,
+        "socket_ready": true,
+        "reason": "Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit",
+        "socket": {
+          "owner": 1000,
+          "mode": "0o775",
+          "world_writable": false,
+          "sticky": false,
+          "is_symlink": false,
+          "is_socket": true,
+          "device": 2053,
+          "inode": 1861603
+        },
+        "parent_directory": {
+          "owner": 0,
+          "mode": "0o777",
+          "world_writable": true,
+          "sticky": false,
+          "is_symlink": true,
+          "is_socket": false,
+          "device": 2053,
+          "inode": 1653155,
+          "path": "/tmp"
+        },
+        "parent_directory_warning": true,
+        "connection": {
+          "attempted": true,
+          "connected": true,
+          "closed": true,
+          "timeout_seconds": 0.2
+        },
+        "peer_credentials": {
+          "supported": true,
+          "verified": true,
+          "pid": 105668,
+          "uid": 1000,
+          "gid": 1000
+        },
+        "root_policy": {
+          "applies": false,
+          "allowed": true,
+          "environment_variable": "MEMGUARD_ALLOW_ROOT_KYLIN_USER_SOCKET",
+          "explicit_opt_in": false
+        }
+      },
+      "parent_directory_warning": true,
       "available": true,
       "capability_state": "socket_ready",
       "component_ready": true,
@@ -183,21 +340,21 @@ $ python3 -m memguard.cli.memctl openkylin-status
     "diagnosis_code": "ready",
     "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": "17657856",
+      "cgroup_memory_current": "20819968",
       "cgroup_memory_max": "536870912"
     },
     "cpu": {
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 5530816,
-        "user_usec": 3027757,
-        "system_usec": 2503058,
+        "usage_usec": 341503,
+        "user_usec": 228651,
+        "system_usec": 112851,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 3002,
-        "nr_throttled": 5,
-        "throttled_usec": 200007,
+        "nr_periods": 110,
+        "nr_throttled": 4,
+        "throttled_usec": 138103,
         "nr_bursts": 0,
         "burst_usec": 0
       }
@@ -207,21 +364,21 @@ $ python3 -m memguard.cli.memctl openkylin-status
   "namespace": {
     "namespace": "default",
     "is_default": true,
-    "home": "/home/luo/.memguardos",
+    "home": "/var/tmp/memguardos-native-home.0epwG0",
     "home_exists": true,
-    "namespace_home": "/home/luo/.memguardos",
+    "namespace_home": "/var/tmp/memguardos-native-home.0epwG0",
     "namespace_home_exists": true,
-    "store_path": "/home/luo/.memguardos/memory.segment",
-    "db_path": "/home/luo/.memguardos/memguard.sqlite3",
-    "custom_patterns_path": "/home/luo/.memguardos/sensitive_patterns.json",
-    "store_exists": true,
-    "db_exists": true,
+    "store_path": "/var/tmp/memguardos-native-home.0epwG0/memory.segment",
+    "db_path": "/var/tmp/memguardos-native-home.0epwG0/memguard.sqlite3",
+    "custom_patterns_path": "/var/tmp/memguardos-native-home.0epwG0/sensitive_patterns.json",
+    "store_exists": false,
+    "db_exists": false,
     "custom_patterns_exists": false,
-    "store_bytes": 432503,
-    "db_bytes": 1363968,
-    "record_count": 193,
-    "live_record_count": 155,
-    "audit_event_count": 1439
+    "store_bytes": 0,
+    "db_bytes": 0,
+    "record_count": 0,
+    "live_record_count": 0,
+    "audit_event_count": 0
   },
   "summary": {
     "overall": "green",

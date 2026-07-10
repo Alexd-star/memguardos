@@ -25,10 +25,27 @@ IGNORED_HYGIENE_PARTS = {
 }
 
 POST_NATIVE_EVIDENCE_ALLOWED_PATHS = {
+    # These files only report the collected evidence. Runtime, test, packaging,
+    # and collector sources remain forbidden after evidence collection.
+    "README.md",
+    "docs/13_测试说明.md",
+    "docs/15_更新日志.md",
     "docs/competition_ready.json",
+    "docs/openKylin验证记录.md",
+    "docs/交付文档/MemGuardOS中文操作手册.md",
+    "docs/平台摘要.md",
+    "docs/最终提交说明.md",
+    "docs/测试报告.md",
+    "docs/真实Agent闭环测试报告.md",
     "docs/竞赛就绪自检报告.md",
+    "docs/答辩提纲.md",
+    "docs/答辩稿.md",
+    "docs/评委证据包索引.md",
+    "docs/赛题符合性说明.md",
+    "docs/赛题要求逐句符合性核查.md",
     "docs/超标准交付评分矩阵.md",
     "docs/真实Agent记忆价值评测报告.md",
+    "docs/项目介绍总览.md",
 }
 
 REQUIRED_DOCS = [
@@ -396,6 +413,12 @@ def check_formal_doc_consistency() -> List[Check]:
             "299 passed",
             "308 passed",
             "309 passed",
+            "338 passed",
+            "340 passed",
+            "341 passed",
+            "343 passed",
+            "344 passed",
+            "527 passed",
         ):
             if token in text:
                 stale_test_hits.append(f"{rel}:{token}")
@@ -404,7 +427,7 @@ def check_formal_doc_consistency() -> List[Check]:
             "中文文档",
             "正式文档测试数字口径",
             not stale_test_hits,
-            "正式材料使用当前 312/313 测试口径" if not stale_test_hits else "过期数字：%s" % "、".join(stale_test_hits),
+            "正式材料未引用已知过期测试数字" if not stale_test_hits else "过期数字：%s" % "、".join(stale_test_hits),
         )
     )
     product_docs = [
@@ -550,10 +573,12 @@ def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, 
         "environment.txt",
         "openkylin_status.txt",
         "openkylin_status_probe_sdk.txt",
+        "user_cli.txt",
         "peony_batch_preview.json",
         "peony_batch_apply.json",
         "peony_sensitive_preview.json",
         "systemd_cgroup.txt",
+        "service_restart.txt",
         "polkit_assets.txt",
         "tray_assets.txt",
         "desktop_build.txt",
@@ -568,6 +593,35 @@ def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, 
         path = evidence_dir / name
         checks.append(Check("openKylin原生证据", name, path.exists() and path.stat().st_size > 0, "存在且非空" if path.exists() and path.stat().st_size > 0 else "缺失或为空", severity=severity))
     checks.append(check_native_evidence_revision(evidence_dir, expected_revision, severity=severity))
+    restart_values = _parse_result_key_values(_read_text_if_exists(evidence_dir / "service_restart.txt"))
+    try:
+        restart_ms = int(restart_values.get("restart_ms", ""))
+    except ValueError:
+        restart_ms = -1
+    restart_ok = (
+        restart_values.get("restart_rc") == "0"
+        and restart_values.get("ActiveState") == "active"
+        and 0 <= restart_ms <= 5000
+    )
+    checks.append(
+        Check(
+            "openKylin原生证据",
+            "systemd 服务重启响应时间",
+            restart_ok,
+            "restart_ms=%s" % restart_ms if restart_ok else "服务重启失败、状态异常或耗时超过 5000 ms",
+            severity=severity,
+        )
+    )
+    user_cli_text = _read_text_if_exists(evidence_dir / "user_cli.txt")
+    checks.append(
+        Check(
+            "openKylin原生证据",
+            "用户友好 memguard 入口",
+            all(token in user_cli_text for token in ("记忆注入", "工具调用", "新增记忆", "遗忘验证")),
+            "memguard demo 输出完整闭环" if "记忆注入" in user_cli_text else "缺少 memguard demo 闭环输出",
+            severity=severity,
+        )
+    )
     polkit_text = _read_text_if_exists(evidence_dir / "polkit_assets.txt")
     polkit_values = _parse_result_key_values(polkit_text)
     readonly_polkit_staged = (
@@ -1340,11 +1394,13 @@ def check_security_scan_artifacts(report_path: Path, markdown_path: Path) -> Lis
     pip_status = _nested_get(tools, ["pip_audit", "status"]) if isinstance(tools, dict) else None
     missing_tools = summary.get("missing_tools", []) if isinstance(summary, dict) else []
     bandit_high = int(summary.get("bandit_high_count", -1)) if isinstance(summary, dict) else -1
+    bandit_medium = int(summary.get("bandit_medium_count", -1)) if isinstance(summary, dict) else -1
     vulnerabilities = int(summary.get("pip_audit_vulnerability_count", -1)) if isinstance(summary, dict) else -1
     ok = (
         report.get("schema") == "memguardos-security-scan-v1"
         and report.get("ok") is True
         and bandit_high == 0
+        and bandit_medium == 0
         and vulnerabilities == 0
         and missing_tools == []
         and bandit_status in {"clean", "warnings"}
@@ -1356,11 +1412,12 @@ def check_security_scan_artifacts(report_path: Path, markdown_path: Path) -> Lis
             "安全扫描门禁通过",
             ok,
             (
-                "bandit_high=%s pip_audit_vulnerabilities=%s "
+                "bandit_high=%s bandit_medium=%s pip_audit_vulnerabilities=%s "
                 "missing_tools=%s bandit=%s pip_audit=%s"
             )
             % (
                 bandit_high,
+                bandit_medium,
                 vulnerabilities,
                 missing_tools,
                 bandit_status,
@@ -1542,6 +1599,7 @@ def _sha256_file(path: Path) -> str:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 
 
 

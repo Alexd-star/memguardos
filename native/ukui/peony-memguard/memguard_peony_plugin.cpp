@@ -1,8 +1,11 @@
 #include "memguard_peony_plugin.h"
+#include "../dashboard_launcher.h"
 
 #include <QAction>
 #include <QAbstractItemView>
+#include <QApplication>
 #include <QCheckBox>
+#include <QCoreApplication>
 #include <QDesktopServices>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -22,6 +25,7 @@
 #include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
+#include <QStyle>
 #include <algorithm>
 
 namespace {
@@ -30,6 +34,12 @@ struct Command {
     QString program;
     QStringList arguments;
 };
+
+QIcon themedIcon(const QString &name, QStyle::StandardPixmap standardPixmap)
+{
+    const QIcon icon = QIcon::fromTheme(name);
+    return icon.isNull() ? QApplication::style()->standardIcon(standardPixmap) : icon;
+}
 
 Command memctlCommand(const QStringList &arguments)
 {
@@ -104,12 +114,46 @@ QString humanSize(qint64 bytes)
 
 void openLocalConsole(const QString &fragment = QString())
 {
-    const Command command = memctlCommand({QStringLiteral("web"), QStringLiteral("--host"), QStringLiteral("127.0.0.1"), QStringLiteral("--port"), QStringLiteral("8765")});
-    QProcess::startDetached(command.program, command.arguments);
-    QTimer::singleShot(800, [fragment]() {
-        const QString suffix = fragment.isEmpty() ? QString() : fragment;
-        QDesktopServices::openUrl(QUrl(QStringLiteral("http://127.0.0.1:8765%1").arg(suffix)));
-    });
+    const QString nameSpace = QStringLiteral("default");
+    const DashboardRuntimePaths runtimePaths = dashboardRuntimePaths(nameSpace);
+    QString authToken;
+    QString preparationError;
+    if (!ensureDashboardAuthToken(runtimePaths, &authToken, &preparationError)) {
+        QMessageBox::warning(
+            nullptr,
+            QStringLiteral("本地控制台启动失败"),
+            QStringLiteral("文件检查结果已经保留。%1 请重新登录后重试；仍失败时请联系管理员检查用户运行时目录。")
+                .arg(preparationError));
+        return;
+    }
+
+    const Command command = memctlCommand(dashboardProcessArguments(runtimePaths, nameSpace));
+    qint64 launchedPid = 0;
+    const bool started = QProcess::startDetached(
+        command.program,
+        command.arguments,
+        QString(),
+        &launchedPid);
+    if (!started) {
+        QMessageBox::warning(
+            nullptr,
+            QStringLiteral("本地控制台启动失败"),
+            QStringLiteral("文件检查结果已经保留。请确认 MemGuardOS 和 memctl 已安装，然后重新打开本地控制台。"));
+        return;
+    }
+    openDashboardWhenReady(
+        QCoreApplication::instance(),
+        runtimePaths,
+        nameSpace,
+        authToken,
+        fragment,
+        launchedPid,
+        []() {
+            QMessageBox::warning(
+                nullptr,
+                QStringLiteral("本地控制台暂时无法打开"),
+                QStringLiteral("文件检查结果已经保留。控制台服务未通过身份校验或启动进程已退出。请从记忆安全中心重新打开；仍失败时请导出系统报告。"));
+        });
 }
 
 } // namespace
@@ -131,7 +175,7 @@ const QString MemGuardPeonyPlugin::description()
 
 const QIcon MemGuardPeonyPlugin::icon()
 {
-    return QIcon::fromTheme(QStringLiteral("security-high"));
+    return themedIcon(QStringLiteral("security-high"), QStyle::SP_MessageBoxInformation);
 }
 
 void MemGuardPeonyPlugin::setEnable(bool enable)
@@ -163,7 +207,7 @@ QList<QAction *> MemGuardPeonyPlugin::menuActions(
     lastSelection_ = selectionUris;
     primaryUri_ = uri;
     auto *action = new QAction(
-        QIcon::fromTheme(QStringLiteral("security-high")),
+        themedIcon(QStringLiteral("security-high"), QStyle::SP_MessageBoxInformation),
         QStringLiteral("使用 MemGuardOS 检查记忆内容"));
     action->setObjectName(QStringLiteral("memguardos-peony-memory-scan"));
     action->setToolTip(QStringLiteral("预览文件风险，并在确认后导入安全内容"));
@@ -215,38 +259,58 @@ void MemGuardPeonyPlugin::runPreview(const QStringList &arguments)
 
     auto *process = new QProcess(this);
     process->setProcessChannelMode(QProcess::MergedChannels);
-    connect(progress, &QProgressDialog::canceled, process, &QProcess::kill);
+    connect(progress, &QProgressDialog::canceled, this, [progress, process]() {
+        if (process->property("handled").toBool())
+            return;
+        process->setProperty("cancelled", true);
+        progress->setLabelText(QStringLiteral("正在取消文件检查…"));
+        progress->setEnabled(false);
+        process->kill();
+    });
     connect(process, &QProcess::errorOccurred, this, [progress, process](QProcess::ProcessError) {
+        if (process->property("handled").toBool()
+            || process->property("cancelled").toBool()
+            || process->property("timedOut").toBool())
+            return;
+        process->setProperty("handled", true);
         progress->close();
         QMessageBox::critical(nullptr, QStringLiteral("MemGuardOS"), QStringLiteral("无法启动文件检查：%1").arg(process->errorString()));
         progress->deleteLater();
         process->deleteLater();
     });
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
-        [this, progress, process](int exitCode, QProcess::ExitStatus) {
+        [this, progress, process](int exitCode, QProcess::ExitStatus exitStatus) {
             progress->close();
-            if (process->property("handled").toBool())
+            if (process->property("handled").toBool()) {
+                progress->deleteLater();
+                process->deleteLater();
                 return;
+            }
             process->setProperty("handled", true);
-            const QByteArray output = process->readAll();
-            QString error;
-            const QJsonObject preview = parseJsonOutput(output, &error);
-            if (exitCode != 0 || preview.isEmpty() || !preview.value(QStringLiteral("ok")).toBool()) {
-                const QString message = !error.isEmpty() ? error : preview.value(QStringLiteral("message")).toString(QString::fromLocal8Bit(output));
-                QMessageBox::critical(nullptr, QStringLiteral("文件检查失败"), message.left(1200));
+            if (process->property("cancelled").toBool()) {
+            } else if (process->property("timedOut").toBool()) {
+                QMessageBox::critical(nullptr, QStringLiteral("文件检查超时"), QStringLiteral("检查超过 120 秒，请减少文件数量后重试。"));
             } else {
-                showPreviewDialog(preview);
+                const QByteArray output = process->readAll();
+                QString error;
+                const QJsonObject preview = parseJsonOutput(output, &error);
+                if (exitStatus != QProcess::NormalExit || exitCode != 0 || preview.isEmpty() || !preview.value(QStringLiteral("ok")).toBool()) {
+                    const QString message = !error.isEmpty() ? error : preview.value(QStringLiteral("message")).toString(QString::fromLocal8Bit(output));
+                    QMessageBox::critical(nullptr, QStringLiteral("文件检查失败"), message.left(1200));
+                } else {
+                    showPreviewDialog(preview);
+                }
             }
             progress->deleteLater();
             process->deleteLater();
         });
     QTimer::singleShot(120000, process, [process, progress]() {
-        if (process->state() == QProcess::NotRunning)
+        if (process->state() == QProcess::NotRunning || process->property("handled").toBool())
             return;
-        process->setProperty("handled", true);
+        process->setProperty("timedOut", true);
+        progress->setLabelText(QStringLiteral("文件检查等待时间过长，正在停止…"));
+        progress->setEnabled(false);
         process->kill();
-        progress->close();
-        QMessageBox::critical(nullptr, QStringLiteral("文件检查超时"), QStringLiteral("检查超过 120 秒，请减少文件数量后重试。"));
     });
     process->start(command.program, command.arguments);
     progress->show();
@@ -256,8 +320,9 @@ void MemGuardPeonyPlugin::showPreviewDialog(const QJsonObject &preview)
 {
     QDialog dialog;
     dialog.setWindowTitle(QStringLiteral("检查记忆内容"));
-    dialog.setWindowIcon(QIcon::fromTheme(QStringLiteral("security-high")));
-    dialog.resize(880, 480);
+    dialog.setWindowIcon(themedIcon(QStringLiteral("security-high"), QStyle::SP_MessageBoxInformation));
+    dialog.setMinimumSize(760, 460);
+    dialog.resize(960, 560);
     dialog.setAccessibleName(QStringLiteral("MemGuardOS 文件检查结果"));
     auto *layout = new QVBoxLayout(&dialog);
     const QJsonArray items = preview.value(QStringLiteral("items")).toArray();
@@ -281,8 +346,8 @@ void MemGuardPeonyPlugin::showPreviewDialog(const QJsonObject &preview)
     description->setWordWrap(true);
     layout->addWidget(description);
 
-    auto *table = new QTableWidget(items.size(), 7, &dialog);
-    table->setHorizontalHeaderLabels({QStringLiteral("选择"), QStringLiteral("文件"), QStringLiteral("大小"), QStringLiteral("风险"), QStringLiteral("系统建议"), QStringLiteral("原因"), QStringLiteral("内容预览")});
+    auto *table = new QTableWidget(items.size(), 8, &dialog);
+    table->setHorizontalHeaderLabels({QStringLiteral("选择"), QStringLiteral("文件"), QStringLiteral("位置"), QStringLiteral("大小"), QStringLiteral("风险"), QStringLiteral("系统建议"), QStringLiteral("原因"), QStringLiteral("内容预览")});
     table->verticalHeader()->setVisible(false);
     table->setSelectionBehavior(QAbstractItemView::SelectRows);
     table->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -294,7 +359,8 @@ void MemGuardPeonyPlugin::showPreviewDialog(const QJsonObject &preview)
     table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
     table->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
     table->horizontalHeader()->setSectionResizeMode(5, QHeaderView::ResizeToContents);
-    table->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Stretch);
+    table->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Interactive);
+    table->horizontalHeader()->setSectionResizeMode(7, QHeaderView::Stretch);
 
     QList<QCheckBox *> checkBoxes;
     for (int row = 0; row < items.size(); ++row) {
@@ -311,19 +377,22 @@ void MemGuardPeonyPlugin::showPreviewDialog(const QJsonObject &preview)
         auto *name = new QTableWidgetItem(QFileInfo(path).fileName());
         name->setToolTip(path);
         table->setItem(row, 1, name);
-        table->setItem(row, 2, new QTableWidgetItem(humanSize(item.value(QStringLiteral("size_bytes")).toVariant().toLongLong())));
-        table->setItem(row, 3, new QTableWidgetItem(riskLabel(item)));
-        table->setItem(row, 4, new QTableWidgetItem(actionLabel(item.value(QStringLiteral("recommended_action")).toString())));
-        table->setItem(row, 5, new QTableWidgetItem(candidateReason(item)));
+        auto *location = new QTableWidgetItem(QFileInfo(path).absolutePath());
+        location->setToolTip(path);
+        table->setItem(row, 2, location);
+        table->setItem(row, 3, new QTableWidgetItem(humanSize(item.value(QStringLiteral("size_bytes")).toVariant().toLongLong())));
+        table->setItem(row, 4, new QTableWidgetItem(riskLabel(item)));
+        table->setItem(row, 5, new QTableWidgetItem(actionLabel(item.value(QStringLiteral("recommended_action")).toString())));
+        table->setItem(row, 6, new QTableWidgetItem(candidateReason(item)));
         auto *content = new QTableWidgetItem(item.value(QStringLiteral("preview")).toString());
         content->setToolTip(item.value(QStringLiteral("preview")).toString());
-        table->setItem(row, 6, content);
+        table->setItem(row, 7, content);
     }
     layout->addWidget(table, 1);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Cancel, &dialog);
     auto *apply = buttons->addButton(QStringLiteral("导入所选文件"), QDialogButtonBox::AcceptRole);
-    apply->setIcon(QIcon::fromTheme(QStringLiteral("document-import")));
+    apply->setIcon(themedIcon(QStringLiteral("document-import"), QStyle::SP_DialogApplyButton));
     apply->setEnabled(false);
     apply->setAccessibleName(QStringLiteral("导入所选安全文件"));
     auto updateApply = [checkBoxes, apply]() {
@@ -353,27 +422,80 @@ void MemGuardPeonyPlugin::runApply(const QStringList &arguments)
 {
     const Command command = memctlCommand(arguments);
     auto *process = new QProcess(this);
-    auto *progress = new QProgressDialog(QStringLiteral("正在保存所选内容并写入操作记录…"), QString(), 0, 0);
+    auto *progress = new QProgressDialog(QStringLiteral("正在保存所选内容并写入操作记录…"), QStringLiteral("取消"), 0, 0);
     progress->setWindowTitle(QStringLiteral("MemGuardOS"));
     progress->setWindowModality(Qt::ApplicationModal);
     progress->setMinimumDuration(0);
-    progress->setCancelButton(nullptr);
+    progress->setAccessibleName(QStringLiteral("导入文件进度"));
     process->setProcessChannelMode(QProcess::MergedChannels);
+    connect(progress, &QProgressDialog::canceled, this, [progress, process]() {
+        if (process->property("handled").toBool())
+            return;
+        process->setProperty("cancelled", true);
+        progress->setLabelText(QStringLiteral("正在取消导入…"));
+        progress->setEnabled(false);
+        process->kill();
+    });
+    connect(process, &QProcess::errorOccurred, this, [progress, process](QProcess::ProcessError) {
+        if (process->property("handled").toBool()
+            || process->property("cancelled").toBool()
+            || process->property("timedOut").toBool())
+            return;
+        process->setProperty("handled", true);
+        progress->close();
+        QMessageBox::critical(
+            nullptr,
+            QStringLiteral("导入失败"),
+            QStringLiteral("无法启动内容导入：%1。请确认 MemGuardOS 已正确安装。").arg(process->errorString()));
+        progress->deleteLater();
+        process->deleteLater();
+    });
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
-        [this, progress, process](int, QProcess::ExitStatus) {
+        [this, progress, process](int exitCode, QProcess::ExitStatus exitStatus) {
             progress->close();
+            if (process->property("handled").toBool()) {
+                progress->deleteLater();
+                process->deleteLater();
+                return;
+            }
+            process->setProperty("handled", true);
+            const bool cancelled = process->property("cancelled").toBool();
+            const bool timedOut = process->property("timedOut").toBool();
+            const QByteArray output = process->readAll();
             QString error;
-            const QJsonObject result = parseJsonOutput(process->readAll(), &error);
-            if (result.isEmpty()) {
-                QMessageBox::critical(nullptr, QStringLiteral("导入失败"), error);
-            } else {
+            const QJsonObject result = parseJsonOutput(output, &error);
+            if (!cancelled && timedOut) {
+                QMessageBox::critical(nullptr, QStringLiteral("导入超时"), QStringLiteral("导入超过 120 秒，操作已停止。请减少文件数量后重试。"));
+            } else if (!cancelled && (exitStatus != QProcess::NormalExit || exitCode != 0 || result.isEmpty() || !result.value(QStringLiteral("ok")).toBool())) {
+                const QString message = !error.isEmpty()
+                    ? error
+                    : result.value(QStringLiteral("message")).toString(QString::fromLocal8Bit(output));
+                QMessageBox::critical(nullptr, QStringLiteral("导入失败"), message.left(1200));
+            } else if (!cancelled) {
                 const QJsonObject summary = result.value(QStringLiteral("summary")).toObject();
+                const QJsonObject feedback = result.value(QStringLiteral("memory_change_summary")).toObject();
                 const QString message = QStringLiteral("已保存 %1 个安全文件；%2 个敏感或不适合保存的项目已被保护性跳过；%3 个未选择；%4 个未完成。\n操作记录：%5")
                     .arg(summary.value(QStringLiteral("stored")).toInt())
                     .arg(summary.value(QStringLiteral("blocked")).toInt())
                     .arg(summary.value(QStringLiteral("skipped")).toInt())
                     .arg(summary.value(QStringLiteral("failed")).toInt())
                     .arg(result.value(QStringLiteral("audit_chain")).toObject().value(QStringLiteral("ok")).toBool() ? QStringLiteral("完整") : QStringLiteral("需要检查"));
+                QString feedbackMessage = message;
+                const QJsonArray newMemories = feedback.value(QStringLiteral("new_memories")).toArray();
+                if (!newMemories.isEmpty()) {
+                    feedbackMessage += QStringLiteral("\n\n记忆变化：新增 %1 条，可在 Agent 工作台测试生效。 ").arg(newMemories.size());
+                    for (int index = 0; index < newMemories.size() && index < 2; ++index) {
+                        const QJsonObject item = newMemories.at(index).toObject();
+                        feedbackMessage += QStringLiteral("\n• %1").arg(item.value(QStringLiteral("summary_for_user")).toString());
+                    }
+                }
+                const QJsonArray scopes = feedback.value(QStringLiteral("effective_scopes")).toArray();
+                if (!scopes.isEmpty()) {
+                    QStringList scopeLabels;
+                    for (const QJsonValue &scope : scopes)
+                        scopeLabels << scope.toString();
+                    feedbackMessage += QStringLiteral("\n适用场景：%1").arg(scopeLabels.join(QStringLiteral("、")));
+                }
                 QStringList storedIds;
                 const QJsonArray results = result.value(QStringLiteral("results")).toArray();
                 for (const QJsonValue &value : results) {
@@ -383,20 +505,31 @@ void MemGuardPeonyPlugin::runApply(const QStringList &arguments)
                 }
                 QMessageBox box(result.value(QStringLiteral("ok")).toBool() ? QMessageBox::Information : QMessageBox::Warning,
                     result.value(QStringLiteral("ok")).toBool() ? QStringLiteral("导入完成") : QStringLiteral("部分内容未导入"),
-                    message);
+                    feedbackMessage);
                 auto *view = box.addButton(QStringLiteral("查看结果"), QMessageBox::ActionRole);
+                auto *test = box.addButton(QStringLiteral("测试生效"), QMessageBox::ActionRole);
                 auto *forget = box.addButton(QStringLiteral("撤销本次导入"), QMessageBox::ActionRole);
                 forget->setEnabled(!storedIds.isEmpty());
                 box.addButton(QStringLiteral("关闭"), QMessageBox::RejectRole);
                 box.exec();
                 if (box.clickedButton() == view)
-                    openLocalConsole(QStringLiteral("#audit"));
+                    openLocalConsole(QStringLiteral("#agent"));
+                else if (box.clickedButton() == test)
+                    openLocalConsole(QStringLiteral("#preferences"));
                 else if (box.clickedButton() == forget)
                     runForgetImport(storedIds);
             }
             progress->deleteLater();
             process->deleteLater();
         });
+    QTimer::singleShot(120000, process, [progress, process]() {
+        if (process->state() == QProcess::NotRunning || process->property("handled").toBool())
+            return;
+        process->setProperty("timedOut", true);
+        progress->setLabelText(QStringLiteral("导入等待时间过长，正在停止…"));
+        progress->setEnabled(false);
+        process->kill();
+    });
     process->start(command.program, command.arguments);
     progress->show();
 }
@@ -407,34 +540,86 @@ void MemGuardPeonyPlugin::runForgetImport(const QStringList &memoryIds)
         QMessageBox::information(nullptr, QStringLiteral("MemGuardOS"), QStringLiteral("本次没有已导入的记忆可撤销。"));
         return;
     }
+    const QMessageBox::StandardButton confirmation = QMessageBox::question(
+        nullptr,
+        QStringLiteral("确认撤销本次导入"),
+        QStringLiteral("将遗忘本次导入形成的 %1 条记忆，并整理受管存储和索引。是否继续？").arg(memoryIds.size()),
+        QMessageBox::Yes | QMessageBox::Cancel,
+        QMessageBox::Cancel);
+    if (confirmation != QMessageBox::Yes)
+        return;
     QStringList args{QStringLiteral("desktop"), QStringLiteral("forget-import"), QStringLiteral("--compact"), QStringLiteral("--notify")};
     for (const QString &memoryId : memoryIds)
         args << QStringLiteral("--memory-id") << memoryId;
 
     const Command command = memctlCommand(args);
     auto *process = new QProcess(this);
-    auto *progress = new QProgressDialog(QStringLiteral("正在遗忘本次导入内容…"), QString(), 0, 0);
+    auto *progress = new QProgressDialog(QStringLiteral("正在遗忘本次导入内容…"), QStringLiteral("取消"), 0, 0);
     progress->setWindowTitle(QStringLiteral("遗忘本次导入内容"));
     progress->setWindowModality(Qt::ApplicationModal);
     progress->setMinimumDuration(0);
-    progress->setCancelButton(nullptr);
+    progress->setAccessibleName(QStringLiteral("撤销导入进度"));
     process->setProcessChannelMode(QProcess::MergedChannels);
+    connect(progress, &QProgressDialog::canceled, this, [progress, process]() {
+        if (process->property("handled").toBool())
+            return;
+        process->setProperty("cancelled", true);
+        progress->setLabelText(QStringLiteral("正在取消遗忘操作…"));
+        progress->setEnabled(false);
+        process->kill();
+    });
+    connect(process, &QProcess::errorOccurred, this, [progress, process](QProcess::ProcessError) {
+        if (process->property("handled").toBool()
+            || process->property("cancelled").toBool()
+            || process->property("timedOut").toBool())
+            return;
+        process->setProperty("handled", true);
+        progress->close();
+        QMessageBox::critical(
+            nullptr,
+            QStringLiteral("遗忘失败"),
+            QStringLiteral("无法启动遗忘操作：%1。请确认 MemGuardOS 已正确安装。").arg(process->errorString()));
+        progress->deleteLater();
+        process->deleteLater();
+    });
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
-        [progress, process](int, QProcess::ExitStatus) {
+        [progress, process](int exitCode, QProcess::ExitStatus exitStatus) {
             progress->close();
+            if (process->property("handled").toBool()) {
+                progress->deleteLater();
+                process->deleteLater();
+                return;
+            }
+            process->setProperty("handled", true);
+            const bool cancelled = process->property("cancelled").toBool();
+            const bool timedOut = process->property("timedOut").toBool();
+            const QByteArray output = process->readAll();
             QString error;
-            const QJsonObject result = parseJsonOutput(process->readAll(), &error);
-            if (result.isEmpty()) {
-                QMessageBox::critical(nullptr, QStringLiteral("遗忘失败"), error);
-            } else {
+            const QJsonObject result = parseJsonOutput(output, &error);
+            if (!cancelled && timedOut) {
+                QMessageBox::critical(nullptr, QStringLiteral("遗忘超时"), QStringLiteral("遗忘操作超过 90 秒，操作已停止。请重新打开记忆安全中心检查结果。"));
+            } else if (!cancelled && (exitStatus != QProcess::NormalExit || exitCode != 0 || result.isEmpty() || !result.value(QStringLiteral("ok")).toBool())) {
+                const QString message = !error.isEmpty()
+                    ? error
+                    : result.value(QStringLiteral("message")).toString(QString::fromLocal8Bit(output));
+                QMessageBox::critical(nullptr, QStringLiteral("遗忘失败"), message.left(1200));
+            } else if (!cancelled) {
                 const QJsonObject summary = result.value(QStringLiteral("summary")).toObject();
                 const QJsonObject audit = result.value(QStringLiteral("audit_chain")).toObject();
+                const QJsonObject verification = result.value(QStringLiteral("forget_verification_report")).toObject();
                 const bool ok = result.value(QStringLiteral("ok")).toBool();
-                const QString message = QStringLiteral("已遗忘 %1 条本次导入记忆；%2 条未找到；%3 条此前已遗忘。\n操作记录：%4")
+                QString message = QStringLiteral("已遗忘 %1 条本次导入记忆；%2 条未找到；%3 条此前已遗忘。\n操作记录：%4")
                     .arg(summary.value(QStringLiteral("forgotten")).toInt())
                     .arg(summary.value(QStringLiteral("missing")).toInt())
                     .arg(summary.value(QStringLiteral("already_deleted")).toInt())
                     .arg(audit.value(QStringLiteral("ok")).toBool() ? QStringLiteral("完整") : QStringLiteral("需要检查"));
+                message += QStringLiteral("\n\n验证摘要：%1").arg(verification.value(QStringLiteral("user_summary")).toString(QStringLiteral("请查看详细验证结果。")));
+                const QJsonArray steps = verification.value(QStringLiteral("verification_steps")).toArray();
+                for (int index = 0; index < steps.size() && index < 5; ++index) {
+                    const QJsonObject step = steps.at(index).toObject();
+                    message += QStringLiteral("\n• %1：%2").arg(step.value(QStringLiteral("name")).toString(), step.value(QStringLiteral("status")).toString());
+                }
+                message += QStringLiteral("\n外部日志、shell history、快照和备份不在 MemGuardOS 受管范围内。 ");
                 QMessageBox box(ok ? QMessageBox::Information : QMessageBox::Warning,
                     ok ? QStringLiteral("遗忘完成") : QStringLiteral("遗忘结果需要确认"),
                     message);
@@ -447,6 +632,14 @@ void MemGuardPeonyPlugin::runForgetImport(const QStringList &memoryIds)
             progress->deleteLater();
             process->deleteLater();
         });
+    QTimer::singleShot(90000, process, [progress, process]() {
+        if (process->state() == QProcess::NotRunning || process->property("handled").toBool())
+            return;
+        process->setProperty("timedOut", true);
+        progress->setLabelText(QStringLiteral("遗忘等待时间过长，正在停止…"));
+        progress->setEnabled(false);
+        process->kill();
+    });
     process->start(command.program, command.arguments);
     progress->show();
 }

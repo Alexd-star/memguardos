@@ -32,6 +32,7 @@ class Sensitivity:
     level: str = "none"
     labels: List[str] = field(default_factory=list)
     redacted: bool = False
+    decision_reason: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

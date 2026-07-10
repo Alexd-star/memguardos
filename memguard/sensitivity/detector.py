@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Dict, List, Pattern
 import re
@@ -35,7 +37,7 @@ class SensitiveDetector:
         findings: List[SensitiveFinding] = []
         for label, pattern in self.patterns.items():
             for match in pattern.finditer(text):
-                if label == "email" and self._documentation_example_email(match.group(0)):
+                if self._allowlist_hit(match.group(0), text):
                     continue
                 findings.append(
                     SensitiveFinding(
@@ -60,8 +62,9 @@ class SensitiveDetector:
 
     def classify(self, text: str, source_uri: str = "") -> Sensitivity:
         findings = self.detect(text, source_uri)
+        reason = self.decision_reason(text, source_uri, findings)
         if not findings:
-            return Sensitivity(level="none", labels=[])
+            return Sensitivity(level="none", labels=[], decision_reason=reason)
         levels = [finding.level for finding in findings]
         if "high" in levels:
             level = "high"
@@ -70,7 +73,8 @@ class SensitiveDetector:
         else:
             level = "low"
         labels = sorted({finding.label for finding in findings})
-        return Sensitivity(level=level, labels=labels)
+        reason["final_action"] = self._action_for_level(level)
+        return Sensitivity(level=level, labels=labels, decision_reason=reason)
 
     def redact(self, text: str, source_uri: str = "") -> str:
         result = text
@@ -91,6 +95,35 @@ class SensitiveDetector:
         if SensitiveDetector._sensitive_path(source_uri):
             return "high"
         return "low"
+
+    def decision_reason(self, text: str, source_uri: str = "", findings: List[SensitiveFinding] | None = None) -> Dict[str, object]:
+        findings = findings if findings is not None else self.detect(text, source_uri)
+        levels = [finding.level for finding in findings]
+        if "high" in levels:
+            level = "high"
+        elif "medium" in levels:
+            level = "medium"
+        elif findings:
+            level = "low"
+        else:
+            level = "none"
+        allowlist_hits = self._allowlist_matches(text)
+        return {
+            "matched_pattern": sorted({finding.label for finding in findings}),
+            "allowlist_hit": allowlist_hits,
+            "source_uri_sensitive": self._sensitive_path(source_uri),
+            "final_action": self._action_for_level(level),
+        }
+
+    @staticmethod
+    def _action_for_level(level: str) -> str:
+        if level == "high":
+            return "block"
+        if level == "medium":
+            return "redact"
+        if level == "low":
+            return "allow_low_risk"
+        return "allow"
 
     @staticmethod
     def _sensitive_path(source_uri: str) -> bool:
@@ -122,3 +155,35 @@ class SensitiveDetector:
         lowered = value.lower()
         example_domains = ("@example.invalid",)
         return lowered.endswith(example_domains)
+
+    @staticmethod
+    def _allowlist_hit(value: str, context: str) -> bool:
+        value_lower = value.lower()
+        context_lower = context.lower()
+        if value_lower.startswith("sk-demo-"):
+            return True
+        if value_lower.endswith("@example.invalid"):
+            return True
+        allow_terms = (
+            "example.com",
+            "token.service",
+            "password_length",
+            "map_private",
+            "private_keywords",
+        )
+        if value_lower in allow_terms:
+            return True
+        if value_lower == "private key" and "private_keywords" in context_lower:
+            return True
+        return False
+
+    @staticmethod
+    def _allowlist_matches(text: str) -> List[str]:
+        lowered = text.lower()
+        hits = []
+        for marker in ("sk-demo-", "example@example.invalid", "example.com", "token.service", "password_length", "map_private", "private_keywords"):
+            if marker in lowered:
+                hits.append(marker)
+        if re.search(r"\b[A-Za-z0-9._%+-]+@example\.invalid\b", text, flags=re.IGNORECASE):
+            hits.append("*.example.invalid")
+        return sorted(set(hits))

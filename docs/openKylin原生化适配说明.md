@@ -154,7 +154,9 @@ bash scripts/verify_deb_lifecycle.sh
 
 它会检查五包是否齐全、包间依赖是否正确、文件所有权是否冲突、离线解包安装是否成功、移除桌面包是否保留核心能力、重装桌面包是否可恢复，以及维护脚本是否不会删除用户记忆目录。
 
-需要准确说明的是：旧版单包已经有 openKylin 维护模式完整安装证据；新版五包已经完成构建和离线生命周期验证。最终提交前如果需要把五包 `apt install` 也作为视频证据，应在 openKylin 维护模式下重新执行并采集同 HEAD 证据。
+需要准确说明的是：新版五包已经完成构建、离线生命周期验证和 openKylin 维护模式完整 `apt install --reinstall` 复验。安装后继续验证了服务/cgroup、Peony 文件预览与敏感阻断、针对本次导入的遗忘、安装版 Web 鉴权、Polkit 白名单、托盘无面板存活和审计链。最终提交应读取 `docs/evidence/openkylin_native_latest/source_revision.json`，确认这些证据与提交 Git HEAD 一致。
+
+为处理早期单包或手工安装残留，`memguardos-core` 的维护脚本会逐项检查项目已知的旧程序文件，仅在文件不属于任何当前 Debian 包时删除。该逻辑不使用递归删除或目录通配符，不会删除未知自定义文件，也不会触碰用户记忆、数据库、审计链、配置、备份和日志。
 
 ## 8. 最终 HEAD 证据门禁
 

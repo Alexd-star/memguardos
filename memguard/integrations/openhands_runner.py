@@ -12,6 +12,7 @@ import sys
 from time import perf_counter
 
 from memguard.ingestion.tool_result import ToolResult
+from memguard.feedback import merge_memory_change_summaries
 from memguard.integrations.adherence import (
     build_adherence_repair_message,
     command_executable,
@@ -284,6 +285,13 @@ class OpenHandsMemoryRunner:
                 for stage, result in context_bundle["stages"].items()
             },
         }
+        feedback_snapshot = self.service.agent_dashboard_snapshot(
+            session_id=self.session_id,
+            task=str(task).strip(),
+            agent_name="openhands",
+            project_root=self.project_root,
+            task_type=self.task_type,
+        )
         return {
             "ok": (
                 blocked == 0
@@ -318,6 +326,18 @@ class OpenHandsMemoryRunner:
                 "event_types": dict(self._event_types),
                 "unknown_event_types": dict(self._unknown_events),
             },
+            "memory_change_summary": merge_memory_change_summaries(
+                [item.get("feedback", {}) for item in self._event_results],
+                namespace=self.service.namespace,
+                source="agent",
+                session_id=self.session_id,
+            ),
+            "sensitive_block_notices": [
+                item.get("sensitive_notice")
+                for item in self._event_results
+                if item.get("sensitive_notice")
+            ],
+            "preference_effect_proofs": feedback_snapshot.get("preference_effect_proofs", []),
         }
 
     def _reset_run_state(self) -> None:

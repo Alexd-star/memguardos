@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import ipaddress
 import shlex
 import subprocess
 import urllib.error
@@ -12,6 +13,58 @@ from typing import Any
 
 class LLMAdapterError(RuntimeError):
     pass
+
+
+def _endpoint_origin(parsed: urllib.parse.SplitResult) -> tuple[str, str, int]:
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise LLMAdapterError("openai-compatible endpoint contains an invalid port") from exc
+    if port is None:
+        port = 443 if parsed.scheme == "https" else 80
+    return parsed.scheme.lower(), (parsed.hostname or "").lower(), port
+
+
+def _validate_openai_endpoint(endpoint: str) -> tuple[str, urllib.parse.SplitResult]:
+    normalized = endpoint.strip()
+    parsed = urllib.parse.urlsplit(normalized)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc or not parsed.hostname:
+        raise LLMAdapterError("openai-compatible provider requires an http(s) endpoint URL")
+    if parsed.username is not None or parsed.password is not None:
+        raise LLMAdapterError("openai-compatible endpoint must not contain URL credentials")
+    if parsed.fragment:
+        raise LLMAdapterError("openai-compatible endpoint must not contain a URL fragment")
+    _endpoint_origin(parsed)
+    if parsed.scheme == "http":
+        hostname = parsed.hostname.lower()
+        is_loopback = hostname == "localhost"
+        try:
+            is_loopback = is_loopback or ipaddress.ip_address(hostname).is_loopback
+        except ValueError:
+            pass
+        if not is_loopback:
+            raise LLMAdapterError(
+                "openai-compatible HTTP endpoints are limited to the local machine; use HTTPS for remote providers"
+            )
+    return normalized, parsed
+
+
+class _SameOriginRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def __init__(self, origin: tuple[str, str, int]):
+        super().__init__()
+        self._origin = origin
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        normalized, parsed = _validate_openai_endpoint(newurl)
+        if _endpoint_origin(parsed) != self._origin:
+            raise urllib.error.HTTPError(
+                req.full_url,
+                code,
+                "openai-compatible endpoint refused a cross-origin redirect",
+                headers,
+                fp,
+            )
+        return super().redirect_request(req, fp, code, msg, headers, normalized)
 
 
 @dataclass
@@ -113,9 +166,16 @@ def _generate_with_openai_compatible(
         raise LLMAdapterError("openai-compatible provider requires --endpoint")
     if not model.strip():
         raise LLMAdapterError("openai-compatible provider requires --model")
-    parsed_endpoint = urllib.parse.urlparse(endpoint)
-    if parsed_endpoint.scheme not in {"http", "https"} or not parsed_endpoint.netloc:
-        raise LLMAdapterError("openai-compatible provider requires an http(s) endpoint URL")
+    normalized_endpoint, parsed_endpoint = _validate_openai_endpoint(endpoint)
+    display_endpoint = urllib.parse.urlunsplit(
+        (
+            parsed_endpoint.scheme,
+            parsed_endpoint.netloc,
+            parsed_endpoint.path,
+            "",
+            "",
+        )
+    )
 
     payload = {
         "model": model,
@@ -131,9 +191,17 @@ def _generate_with_openai_compatible(
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
-    request = urllib.request.Request(endpoint, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+    request = urllib.request.Request(
+        normalized_endpoint,
+        data=json.dumps(payload).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+    opener = urllib.request.build_opener(
+        _SameOriginRedirectHandler(_endpoint_origin(parsed_endpoint))
+    )
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with opener.open(request, timeout=timeout) as response:
             response_bytes = response.read(2 * 1024 * 1024 + 1)
     except urllib.error.URLError as exc:
         raise LLMAdapterError(f"openai-compatible request failed: {exc}") from exc
@@ -150,7 +218,7 @@ def _generate_with_openai_compatible(
         provider="openai-compatible",
         generated=True,
         model=model,
-        endpoint=endpoint,
+        endpoint=display_endpoint,
         prompt=prompt,
         answer=answer,
     )

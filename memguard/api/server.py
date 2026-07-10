@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import asdict, is_dataclass
 import hmac
 import hashlib
 import json
@@ -9,6 +8,7 @@ import socket
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
+from memguard.json_support import jsonable
 from memguard.service import MemGuardService
 
 
@@ -67,6 +67,50 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         return {"ok": True, "result": _jsonable(service.explain_extraction(text, source_kind=source_kind))}
     if command == "namespace_status":
         return {"ok": True, "result": service.namespace_status()}
+    if command == "feedback_home":
+        limit = _int_param(request, "limit", 8, minimum=1, maximum=50)
+        return {"ok": True, "result": _jsonable(service.feedback_home_snapshot(limit=limit))}
+    if command == "notifications":
+        limit = _int_param(request, "limit", 30, minimum=1, maximum=200)
+        return {"ok": True, "result": _jsonable(service.recent_notifications(limit=limit))}
+    if command == "memory_detail":
+        memory_id = _string_param(request, "memory_id", "", max_chars=128)
+        task = _string_param(request, "task", "验证这条记忆的适用范围", max_chars=4096)
+        agent_name = _string_param(request, "agent_name", "openhands", max_chars=128)
+        session_id = _string_param(request, "session_id", "detail-preview", max_chars=256)
+        return {
+            "ok": True,
+            "result": _jsonable(
+                service.memory_detail(
+                    memory_id,
+                    task=task,
+                    agent_name=agent_name,
+                    session_id=session_id,
+                )
+            ),
+        }
+    if command == "preference_effect_proof":
+        memory_id = _string_param(request, "memory_id", "", max_chars=128)
+        task = _string_param(request, "task", "验证当前偏好是否生效", max_chars=4096)
+        stage = _string_param(request, "stage", "tool_selection", max_chars=64)
+        agent_name = _string_param(request, "agent_name", "openhands", max_chars=128)
+        session_id = _string_param(request, "session_id", "proof-preview", max_chars=256)
+        result = service.preference_effect_proof(
+            memory_id,
+            task=task,
+            stage=stage,
+            agent_name=agent_name,
+            session_id=session_id,
+        )
+        return {"ok": bool(result.get("found")), "result": _jsonable(result)}
+    if command == "agent_replay":
+        task = _string_param(request, "task", "查找记忆服务实现位置", max_chars=4096)
+        mode = _string_param(request, "mode", "replay", max_chars=32)
+        session_id = _string_param(request, "session_id", "", max_chars=256)
+        return {
+            "ok": True,
+            "result": _jsonable(service.run_feedback_replay(task, mode=mode, session_id=session_id)),
+        }
     if command == "memory_policy":
         eviction_limit = _int_param(request, "eviction_limit", 10, minimum=1, maximum=100)
         return {"ok": True, "result": service.memory_policy_status(eviction_limit=eviction_limit)}
@@ -111,6 +155,17 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         confirm = bool(request.get("confirm", False))
         compact = bool(request.get("compact", False))
         return {"ok": True, "result": _jsonable(service.forget(forget_request, confirm=confirm, compact=compact))}
+    if command == "forget_memory_ids":
+        raw_ids = request.get("memory_ids")
+        if not isinstance(raw_ids, list):
+            raise ValueError("memory_ids must be an array")
+        memory_ids = [str(item).strip() for item in raw_ids if str(item).strip()]
+        if len(memory_ids) > 100:
+            raise ValueError("memory_ids must contain at most 100 items")
+        reason = _string_param(request, "reason", "user forget", max_chars=2048)
+        result = service.forget_memory_ids(memory_ids, reason, compact=bool(request.get("compact", True)))
+        result["verification_report"] = service.forget_verification_report(result, request=reason, dry_run=False)
+        return {"ok": bool(result.get("ok")), "result": _jsonable(result)}
     if command == "verify_forget":
         memory_id = _string_param(request, "memory_id", "", max_chars=128)
         probe = _string_param(request, "probe", "", max_chars=4096)
@@ -222,6 +277,8 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                     "namespace": service.namespace,
                     "tier": record.tier,
                     "extraction": result.get("extraction"),
+                    "feedback": result.get("feedback"),
+                    "audit_event_id": result.get("audit_event_id"),
                 },
             }
         sensitivity = result.get("sensitivity")
@@ -231,6 +288,9 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                 "stored": False,
                 "reason": result.get("reason"),
                 "sensitivity": sensitivity.__dict__ if sensitivity else None,
+                "feedback": result.get("feedback"),
+                "sensitive_notice": result.get("sensitive_notice"),
+                "audit_event_id": result.get("audit_event_id"),
             },
         }
     if command == "health":
@@ -375,14 +435,4 @@ def _dispatch_payload(service: MemGuardService, payload: bytes, auth_token: Opti
 
 
 def _jsonable(value: Any) -> Any:
-    if hasattr(value, "to_dict") and callable(value.to_dict):
-        return _jsonable(value.to_dict())
-    if is_dataclass(value):
-        return _jsonable(asdict(value))
-    if isinstance(value, dict):
-        return {str(key): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_jsonable(item) for item in value]
-    if isinstance(value, Path):
-        return str(value)
-    return value
+    return jsonable(value)

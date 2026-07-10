@@ -105,6 +105,46 @@ def test_security_scan_fails_on_high_severity_bandit_issue(tmp_path):
     assert report["summary"]["bandit_high_count"] == 1
 
 
+def test_security_scan_fails_on_unreviewed_medium_severity_bandit_issue(tmp_path):
+    runner = FakeRunner(
+        [
+            {
+                "returncode": 1,
+                "stdout": json.dumps(
+                    {
+                        "results": [
+                            {
+                                "filename": "memguard/llm/adapter.py",
+                                "line_number": 42,
+                                "issue_severity": "MEDIUM",
+                                "issue_confidence": "HIGH",
+                                "test_id": "B310",
+                                "issue_text": "unvalidated URL opener",
+                            }
+                        ]
+                    }
+                ),
+            },
+            {
+                "returncode": 0,
+                "stdout": json.dumps({"dependencies": []}),
+            },
+        ]
+    )
+
+    report = run_security_scan(
+        output_json=tmp_path / "security_scan.json",
+        output_markdown=tmp_path / "scan.md",
+        runner=runner,
+        python="python",
+        dependency_scope="environment",
+    )
+
+    assert report["ok"] is False
+    assert report["summary"]["bandit_medium_count"] == 1
+    assert report["policy"]["bandit_medium_severity_allowed"] == 0
+
+
 def test_security_scan_records_missing_tools_without_pretending_success(tmp_path):
     runner = FakeRunner(
         [
@@ -174,3 +214,35 @@ def test_security_scan_runtime_dependency_scope_is_clean_when_project_has_no_run
     assert report["tools"]["pip_audit"]["dependency_scope"] == "runtime"
     assert report["tools"]["pip_audit"]["dependency_count"] == 0
     assert len(runner.commands) == 1
+
+
+def test_security_scan_reports_portable_commands_without_local_python_paths(tmp_path):
+    local_python = r"D:\private-workspace\.venv\Scripts\python.exe"
+    output_json = tmp_path / "security_scan.json"
+    output_markdown = tmp_path / "安全扫描报告.md"
+    runner = FakeRunner(
+        [
+            {
+                "returncode": 0,
+                "stdout": json.dumps({"results": []}),
+            },
+            {
+                "returncode": 0,
+                "stdout": json.dumps({"dependencies": []}),
+            },
+        ]
+    )
+
+    report = run_security_scan(
+        output_json=output_json,
+        output_markdown=output_markdown,
+        runner=runner,
+        python=local_python,
+        dependency_scope="environment",
+    )
+
+    assert runner.commands[0][0] == local_python
+    assert report["tools"]["bandit"]["command"][0] == "python"
+    assert report["tools"]["pip_audit"]["command"][0] == "python"
+    assert local_python not in output_json.read_text(encoding="utf-8")
+    assert local_python not in output_markdown.read_text(encoding="utf-8")

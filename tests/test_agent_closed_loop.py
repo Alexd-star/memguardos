@@ -1904,6 +1904,10 @@ def test_agent_forget_dry_run_reports_precise_impact_and_external_residue(tmp_pa
         assert plan["affected"]["memory_ids"] == response["memory_ids"]
         assert plan["external_residue"]["risk"] == "external_agent_persistence"
         assert plan["external_residue"]["requires_separate_cleanup"] is True
+        assert plan["external_residue"]["user_explanation"] == (
+            "OpenHands 自身保存的会话副本不在 MemGuardOS 管理范围内；"
+            "如果已启用该功能，还需要在 OpenHands 中单独删除。"
+        )
     finally:
         service.close()
 

@@ -1,4 +1,4 @@
-$ bash -lc systemctl show memguardd.service --property=LoadState,ActiveState,SubState,ControlGroup,MemoryMax,CPUQuotaPerSecUSec --no-pager; CG=$(systemctl show memguardd.service -p ControlGroup --value); test -n "$CG"; for f in memory.current memory.max cpu.max cpu.stat; do printf "%s\n" "--- ${f} ---"; cat "/sys/fs/cgroup${CG}/${f}" 2>/dev/null || true; done
+$ bash -lc systemctl\ show\ memguardd.service\ --property=LoadState\,ActiveState\,SubState\,ControlGroup\,MemoryMax\,CPUQuotaPerSecUSec\ --no-pager\;\ CG=\$\(systemctl\ show\ memguardd.service\ -p\ ControlGroup\ --value\)\;\ test\ -n\ \"\$CG\"\;\ for\ f\ in\ memory.current\ memory.max\ cpu.max\ cpu.stat\;\ do\ printf\ \"%s\\n\"\ \"---\ \$\{f\}\ ---\"\;\ cat\ \"/sys/fs/cgroup\$\{CG\}/\$\{f\}\"\ 2\>/dev/null\ \|\|\ true\;\ done
 ControlGroup=/system.slice/memguardd.service
 CPUQuotaPerSecUSec=500ms
 MemoryMax=536870912
@@ -6,19 +6,19 @@ LoadState=loaded
 ActiveState=active
 SubState=running
 --- memory.current ---
-17629184
+20819968
 --- memory.max ---
 536870912
 --- cpu.max ---
 50000 100000
 --- cpu.stat ---
-usage_usec 5531381
-user_usec 3028067
-system_usec 2503313
+usage_usec 341981
+user_usec 228971
+system_usec 113009
 nice_usec 0
 core_sched.force_idle_usec 0
-nr_periods 3002
-nr_throttled 5
-throttled_usec 200007
+nr_periods 110
+nr_throttled 4
+throttled_usec 138103
 nr_bursts 0
 burst_usec 0

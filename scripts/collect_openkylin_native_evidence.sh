@@ -8,11 +8,31 @@ rm -rf "${OUT_DIR}"
 mkdir -p "${OUT_DIR}"
 export PYTHONPATH="$(pwd)${PYTHONPATH:+:$PYTHONPATH}"
 
+# Evidence collection must never write into the operator's real memory store.
+# The collector runs user-facing CLI and desktop flows, so isolate all generated
+# records while retaining only the exported evidence files in OUT_DIR.
+EVIDENCE_HOME="$(mktemp -d "${TMPDIR:-/tmp}/memguardos-native-home.XXXXXX")"
+TMP_SAMPLE_DIR=""
+cleanup() {
+  rm -rf "${EVIDENCE_HOME}"
+  if [ -n "${TMP_SAMPLE_DIR}" ]; then
+    rm -rf "${TMP_SAMPLE_DIR}"
+  fi
+}
+trap cleanup EXIT
+export MEMGUARD_HOME="${EVIDENCE_HOME}"
+
+print_command() {
+  printf '$'
+  printf ' %q' "$@"
+  printf '\n'
+}
+
 run_capture() {
   local name="$1"
   shift
   {
-    echo "$ $*"
+    print_command "$@"
     "$@"
   } >"${OUT_DIR}/${name}" 2>&1 || {
     local code="$?"
@@ -24,7 +44,7 @@ run_required_capture() {
   local name="$1"
   shift
   {
-    echo "$ $*"
+    print_command "$@"
     "$@"
   } >"${OUT_DIR}/${name}" 2>&1
 }
@@ -90,9 +110,9 @@ run_required_capture environment.txt bash -lc 'cat /etc/os-release; uname -a; py
 run_required_capture openkylin_status.txt python3 -m memguard.cli.memctl openkylin-status
 run_required_capture openkylin_status_probe_sdk.txt python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
 run_required_capture kylin_warmup.txt bash scripts/warmup_kylin_sdk.sh
+run_required_capture user_cli.txt python3 -m memguard.cli.memguard demo --task "查找精准遗忘的实现位置"
 
 TMP_SAMPLE_DIR="$(mktemp -d)"
-trap 'rm -rf "${TMP_SAMPLE_DIR}"' EXIT
 SAMPLE_A="${TMP_SAMPLE_DIR}/peony_preference.md"
 SAMPLE_B="${TMP_SAMPLE_DIR}/peony_knowledge.txt"
 SECRET="${TMP_SAMPLE_DIR}/peony_secret.env"
@@ -168,11 +188,28 @@ print("actions=" + ",".join(actions))
 PY
 HELPER_TO_TEST="${HELPER_TARGET}"
 test -x "${HELPER_TO_TEST}" || HELPER_TO_TEST="${STAGED_HELPER}"
-if "${HELPER_TO_TEST}" unsupported-action; then exit 3; else echo unknown_action_rejected=true; fi
+if run_root "${HELPER_TO_TEST}" unsupported-action; then exit 3; else echo unknown_action_rejected=true; fi
 test -s "${POLICY_TARGET}" && echo policy_installed=true || echo policy_installed=false
 test -x "${HELPER_TARGET}" && echo helper_installed=true || echo helper_installed=false
 ls -l "${POLICY_TARGET}" "${HELPER_TARGET}" "${STAGED_POLICY}" "${STAGED_HELPER}" 2>/dev/null || true'
 run_required_capture systemd_cgroup.txt bash -lc 'systemctl show memguardd.service --property=LoadState,ActiveState,SubState,ControlGroup,MemoryMax,CPUQuotaPerSecUSec --no-pager; CG=$(systemctl show memguardd.service -p ControlGroup --value); test -n "$CG"; for f in memory.current memory.max cpu.max cpu.stat; do printf "%s\n" "--- ${f} ---"; cat "/sys/fs/cgroup${CG}/${f}" 2>/dev/null || true; done'
+run_required_capture service_restart.txt bash -lc '
+START_MS=$(date +%s%3N)
+if [ "$(id -u)" -eq 0 ]; then
+  systemctl restart memguardd.service
+  RC=$?
+else
+  sudo -n systemctl restart memguardd.service
+  RC=$?
+fi
+END_MS=$(date +%s%3N)
+ELAPSED_MS=$((END_MS - START_MS))
+echo restart_rc=${RC}
+echo restart_ms=${ELAPSED_MS}
+systemctl show memguardd.service --property=ActiveState,SubState --no-pager
+test "${RC}" -eq 0
+test "${ELAPSED_MS}" -le 5000
+test "$(systemctl is-active memguardd.service)" = active'
 
 run_required_capture debian_packages.txt bash scripts/build_deb.sh
 run_required_capture deb_lifecycle.txt bash scripts/verify_deb_lifecycle.sh
