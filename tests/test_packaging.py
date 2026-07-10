@@ -1,6 +1,8 @@
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 import json
+import os
+import stat
 
 from scripts.inspect_submission_package import REQUIRED_PATHS, inspect_package
 from scripts.package_submission import COMPETITION_ROLES, ROOT, classify_file, should_skip
@@ -20,6 +22,7 @@ from scripts.check_competition_ready import (
     check_supply_chain_artifacts,
 )
 import scripts.check_competition_ready as readiness
+import scripts.build_deb_packages as deb_packages
 from scripts.generate_sbom import generate_sbom
 from scripts.build_deb_packages import build_package_plan, validate_no_overlap
 
@@ -98,6 +101,62 @@ def test_debian_packages_apply_openkylin_native_install_lifecycle():
     assert "Name=MemGuardOS 记忆安全" in menu
     assert "Exec=ukui-control-center" in menu
     assert "Categories=Settings;Security;" in menu
+
+
+def test_debian_staging_permissions_are_normalized_to_policy(monkeypatch, tmp_path):
+    stage = tmp_path / "memguardos-core"
+    payload_dir = stage / "usr/share/memguardos"
+    payload_dir.mkdir(parents=True)
+    regular_file = payload_dir / "settings.conf"
+    executable_file = stage / "usr/bin/memctl"
+    executable_file.parent.mkdir(parents=True)
+    regular_file.write_text("setting=true\n", encoding="utf-8")
+    executable_file.write_text("#!/bin/sh\n", encoding="utf-8")
+
+    original_stat = Path.stat
+    simulated_modes = {
+        stage: stat.S_IFDIR | 0o775,
+        stage / "usr": stat.S_IFDIR | 0o775,
+        stage / "usr/share": stat.S_IFDIR | 0o775,
+        payload_dir: stat.S_IFDIR | 0o775,
+        stage / "usr/bin": stat.S_IFDIR | 0o775,
+        regular_file: stat.S_IFREG | 0o664,
+        executable_file: stat.S_IFREG | 0o775,
+    }
+
+    def fake_stat(path, *args, **kwargs):
+        result = original_stat(path, *args, **kwargs)
+        mode = simulated_modes.get(path)
+        if mode is None:
+            return result
+        fields = list(result)
+        fields[0] = mode
+        return os.stat_result(fields)
+
+    applied_modes = {}
+
+    def record_chmod(path, mode):
+        applied_modes[path.relative_to(stage).as_posix() or "."] = mode
+
+    monkeypatch.setattr(Path, "stat", fake_stat)
+    monkeypatch.setattr(Path, "chmod", record_chmod)
+
+    deb_packages._normalize_stage_permissions(stage)
+
+    assert applied_modes["."] == 0o755
+    assert applied_modes["usr"] == 0o755
+    assert applied_modes["usr/share/memguardos/settings.conf"] == 0o644
+    assert applied_modes["usr/bin/memctl"] == 0o755
+
+
+def test_debian_builder_normalizes_permissions_after_metadata_before_build():
+    source = (ROOT / "scripts/build_deb_packages.py").read_text(encoding="utf-8")
+
+    metadata_offset = source.index("self._write_metadata(package, stage)")
+    normalize_offset = source.index("_normalize_stage_permissions(stage)")
+    build_offset = source.index("self._build_one(package, stage)")
+
+    assert metadata_offset < normalize_offset < build_offset
 
 
 def test_native_evidence_revision_rejects_unknown_and_mismatch(tmp_path):

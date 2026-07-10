@@ -130,6 +130,7 @@ class DebianPackageBuilder:
         self._verify_staged_ownership(stages)
         for package, stage in stages.items():
             self._write_metadata(package, stage)
+            _normalize_stage_permissions(stage)
             self._build_one(package, stage)
         manifest = {
             "schema": "memguardos-debian-package-set-v1",
@@ -348,6 +349,14 @@ def _command_output(command: Iterable[str], fallback: str) -> str:
 def _write_sha256(path: Path, files: Iterable[Path]) -> None:
     lines = [f"{hashlib.sha256(item.read_bytes()).hexdigest()}  {item.name}" for item in files]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _normalize_stage_permissions(stage: Path) -> None:
+    for path in [stage, *sorted(stage.rglob("*"))]:
+        if path.is_symlink():
+            continue
+        mode = 0o755 if path.is_dir() or path.stat().st_mode & 0o111 else 0o644
+        path.chmod(mode)
 
 
 def main() -> int:
