@@ -36,32 +36,32 @@ dpkg-deb: 正在 '/home/luo/memguardos/dist/memguardos_0.1.0-2_all.deb' 中构�
       "version": "0.1.0-2",
       "architecture": "amd64",
       "path": "/home/luo/memguardos/dist/memguardos-core_0.1.0-2_amd64.deb",
-      "bytes": 182496,
-      "sha256": "79aa8fc75c946165829b275b1c2add1b14861d7211716c9729ed564858f9be75"
+      "bytes": 184492,
+      "sha256": "3a7c419700cdeb7d7b56144ed56a647b28becec9d31f98ca2bcd6d14eb92fd0a"
     },
     {
       "package": "memguardos-ukui",
       "version": "0.1.0-2",
       "architecture": "amd64",
       "path": "/home/luo/memguardos/dist/memguardos-ukui_0.1.0-2_amd64.deb",
-      "bytes": 138568,
-      "sha256": "f5f3e01328dd63e68b20ccbe0d769360309d07dce77dbad41b7797784cc8bec0"
+      "bytes": 142004,
+      "sha256": "e2191ff223f8dd37a49be36c7e5fa318611019cbb7cdfa2fddc9238a1b57b3ef"
     },
     {
       "package": "memguardos-agent-bridge",
       "version": "0.1.0-2",
       "architecture": "amd64",
       "path": "/home/luo/memguardos/dist/memguardos-agent-bridge_0.1.0-2_amd64.deb",
-      "bytes": 8080,
-      "sha256": "3d6ea616060557d3fe5a4c565d232bb3051246156dbe933440bcca4063b6e32c"
+      "bytes": 8088,
+      "sha256": "d0ca8c8b76379b05f3f5ea010616430132dc2ee74887959309bfe87679dc39b4"
     },
     {
       "package": "memguardos-doc",
       "version": "0.1.0-2",
       "architecture": "all",
       "path": "/home/luo/memguardos/dist/memguardos-doc_0.1.0-2_all.deb",
-      "bytes": 196288,
-      "sha256": "46876f18c8e891a48b3621b1a05e7f90749514281d67454666764d30617655be"
+      "bytes": 196312,
+      "sha256": "d5e255ff89481c903f4ef32c25d27f79ce276f762ac58c9a688c9e7f01e9533b"
     },
     {
       "package": "memguardos",
@@ -69,7 +69,7 @@ dpkg-deb: 正在 '/home/luo/memguardos/dist/memguardos_0.1.0-2_all.deb' 中构�
       "architecture": "all",
       "path": "/home/luo/memguardos/dist/memguardos_0.1.0-2_all.deb",
       "bytes": 888,
-      "sha256": "a35a39b3557456ecadbac30b669090cb3f11a437a9c9e3a947b308311478112a"
+      "sha256": "681e91ebbbbae51279bbc46218b59f5276a7235304bc0b37f46d45d8986b2024"
     }
   ]
 }

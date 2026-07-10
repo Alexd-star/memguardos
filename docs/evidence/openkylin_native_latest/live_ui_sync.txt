@@ -1,0 +1,13 @@
+source_revision=12fbb74a33fb35ad6823236facd7aff524ced118
+deployment_mode=readonly_usr_bind_mount_and_opt_live_sync
+--- UKUI source/installed hashes ---
+dcc4d179b3dbdf429a208fcd4270457656b8ac5405076f4d01c0a00aaf614db1  native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so
+dcc4d179b3dbdf429a208fcd4270457656b8ac5405076f4d01c0a00aaf614db1  /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
+--- Web source/installed hashes ---
+a06e2d5e1e7282d5edd8ae34fa278e67687c5c45712abdb50408094e419b6220  memguard/web/dashboard.py
+a06e2d5e1e7282d5edd8ae34fa278e67687c5c45712abdb50408094e419b6220  /opt/memguardos/memguard/web/dashboard.py
+--- mounts ---
+/usr/lib/x86_64-linux-gnu/ukui-control-center 是一个挂载点
+/usr/lib/x86_64-linux-gnu/peony-extensions 是一个挂载点
+--- runtime ---
+17851 /usr/bin/ukui-control-center
