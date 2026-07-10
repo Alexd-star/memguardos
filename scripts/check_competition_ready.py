@@ -413,6 +413,9 @@ def check_formal_doc_consistency() -> List[Check]:
             "299 passed",
             "308 passed",
             "309 passed",
+            "338 passed",
+            "340 passed",
+            "343 passed",
         ):
             if token in text:
                 stale_test_hits.append(f"{rel}:{token}")
@@ -421,7 +424,7 @@ def check_formal_doc_consistency() -> List[Check]:
             "中文文档",
             "正式文档测试数字口径",
             not stale_test_hits,
-            "正式材料使用当前 340/343 测试口径" if not stale_test_hits else "过期数字：%s" % "、".join(stale_test_hits),
+            "正式材料使用当前 341/344 测试口径" if not stale_test_hits else "过期数字：%s" % "、".join(stale_test_hits),
         )
     )
     product_docs = [
