@@ -1,0 +1,7 @@
+$ QT_QPA_PLATFORM=offscreen timeout 8 /usr/bin/memguardos-tray
+QObject::connect: No such signal QPlatformNativeInterface::systemTrayWindowChanged(QScreen*)
+tray_timeout_rc=124
+Name=MemGuardOS 记忆安全
+Exec=/usr/bin/memguardos-tray
+OnlyShowIn=UKUI;
+X-GNOME-Autostart-enabled=true

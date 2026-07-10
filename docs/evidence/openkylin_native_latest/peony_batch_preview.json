@@ -1,11 +1,11 @@
 {
   "schema": "memguardos-desktop-scan-manifest-v1",
   "ok": true,
-  "manifest_id": "df4dd4af-5f72-4936-8749-e1197f31f996",
-  "nonce": "KwPyH1_0YlSaiBG3Bsc7icMocPk3miMS",
+  "manifest_id": "897c89b7-6240-43fa-a430-c3e643844f18",
+  "nonce": "uYqns9jPA1HbTTg8tKZfC-YTlap6EyCp",
   "namespace": "default",
-  "created_at": 1783654995.999829,
-  "expires_at": 1783655295.999829,
+  "created_at": 1783690533.8014812,
+  "expires_at": 1783690833.8014812,
   "used": false,
   "limits": {
     "max_files": 100,
@@ -16,7 +16,7 @@
   "items": [
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.KdtFflpWp1/peony_preference.md",
+      "path": "/var/tmp/tmp.7GbX0U6g4Q/peony_preference.md",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 57,
@@ -50,15 +50,15 @@
       "fingerprint": {
         "exists": true,
         "device": 2053,
-        "inode": 1861821,
+        "inode": 1861543,
         "size": 57,
-        "mtime_ns": 1783654995886156701,
+        "mtime_ns": 1783690533697951373,
         "mode": 33204
       }
     },
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.KdtFflpWp1/peony_knowledge.txt",
+      "path": "/var/tmp/tmp.7GbX0U6g4Q/peony_knowledge.txt",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 61,
@@ -92,13 +92,13 @@
       "fingerprint": {
         "exists": true,
         "device": 2053,
-        "inode": 1861899,
+        "inode": 1861544,
         "size": 61,
-        "mtime_ns": 1783654995886156701,
+        "mtime_ns": 1783690533697951373,
         "mode": 33204
       }
     }
   ],
-  "signature": "993551213c0041f7269594d4bc5643a40ade7e84d246c99b7ccc14401295500a",
-  "manifest_path": "/var/tmp/memguardos-native-home.TC7VXx/desktop-scans/df4dd4af-5f72-4936-8749-e1197f31f996.json"
+  "signature": "d12d0b22d56b12ffc33488a246f5768a19ccc19ac5aba6345bff68cd846a7430",
+  "manifest_path": "/var/tmp/memguardos-native-home.sa8z92/desktop-scans/897c89b7-6240-43fa-a430-c3e643844f18.json"
 }

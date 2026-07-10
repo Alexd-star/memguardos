@@ -1,0 +1,22 @@
+{
+  "schema": "memguardos-installed-product-e2e-v1",
+  "preview_files": 2,
+  "all_preview_selectable": true,
+  "stored": 2,
+  "sensitive_action": "block_sensitive",
+  "sensitive_selectable": false,
+  "forgotten": 2,
+  "verification_steps": [
+    "passed",
+    "skipped",
+    "passed",
+    "passed",
+    "passed",
+    "skipped",
+    "passed",
+    "skipped",
+    "passed"
+  ],
+  "verification_ok": true,
+  "audit_chain_ok": true
+}
