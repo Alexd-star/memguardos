@@ -1,7 +1,8 @@
-from pathlib import Path
-from typing import Iterable, List, Optional
 from contextlib import contextmanager
 import mmap
+import os
+from pathlib import Path
+from typing import Iterable, List, Optional
 
 try:
     import fcntl
@@ -44,17 +45,15 @@ class AppendOnlyMemoryStore:
                 fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
     def append(self, record: MemoryRecord) -> MemoryRecord:
-        payload = record.to_json() + "\n"
         with self._locked():
-            with self.path.open("ab") as fh:
-                fh.write(payload.encode("utf-8"))
-        return record
+            return self._append_unlocked(record)
 
     def scan(self) -> List[MemoryRecord]:
         with self._locked():
             return self._scan_unlocked()
 
     def _scan_unlocked(self) -> List[MemoryRecord]:
+        self._repair_incomplete_tail_unlocked()
         if self.path.stat().st_size == 0:
             return []
         records: List[MemoryRecord] = []
@@ -140,9 +139,63 @@ class AppendOnlyMemoryStore:
             return self._append_unlocked(tomb)
 
     def _append_unlocked(self, record: MemoryRecord) -> MemoryRecord:
+        self._repair_incomplete_tail_unlocked()
         with self.path.open("ab") as fh:
             fh.write((record.to_json() + "\n").encode("utf-8"))
         return record
+
+    def _repair_incomplete_tail_unlocked(self) -> int:
+        """Remove only a crash-truncated final JSONL record.
+
+        A malformed line that already ends with a newline remains visible to the
+        parser and raises normally; silently skipping mid-segment corruption
+        would hide data-integrity failures. Only an unterminated tail can be
+        proven to be an interrupted append from this store's write format.
+        """
+
+        original_size = self.path.stat().st_size
+        if original_size == 0:
+            return 0
+        with self.path.open("r+b") as fh:
+            fh.seek(-1, os.SEEK_END)
+            if fh.read(1) == b"\n":
+                return 0
+
+            boundary = 0
+            cursor = original_size
+            while cursor > 0:
+                block_size = min(8192, cursor)
+                cursor -= block_size
+                fh.seek(cursor)
+                block = fh.read(block_size)
+                newline = block.rfind(b"\n")
+                if newline >= 0:
+                    boundary = cursor + newline + 1
+                    break
+
+            fh.truncate(boundary)
+            fh.flush()
+            os.fsync(fh.fileno())
+        return original_size - boundary
+
+    def _replace_atomic_unlocked(self, records: Iterable[MemoryRecord]) -> None:
+        tmp = self.path.with_suffix(self.path.suffix + ".tmp")
+        try:
+            with tmp.open("wb") as fh:
+                for record in records:
+                    fh.write((record.to_json() + "\n").encode("utf-8"))
+                fh.flush()
+                os.fsync(fh.fileno())
+            tmp.replace(self.path)
+            if os.name != "nt":
+                directory_fd = os.open(str(self.path.parent), os.O_RDONLY)
+                try:
+                    os.fsync(directory_fd)
+                finally:
+                    os.close(directory_fd)
+        finally:
+            if tmp.exists():
+                tmp.unlink()
 
     def compact(self) -> int:
         """Rewrite the segment with only latest non-deleted records.
@@ -156,26 +209,21 @@ class AppendOnlyMemoryStore:
             for record in self._scan_unlocked():
                 latest[record.memory_id] = record
             live = [record for record in latest.values() if not record.deleted]
-            tmp = self.path.with_suffix(self.path.suffix + ".tmp")
-            with tmp.open("wb") as fh:
-                for record in live:
-                    fh.write((record.to_json() + "\n").encode("utf-8"))
-            tmp.replace(self.path)
+            self._replace_atomic_unlocked(live)
             return len(live)
 
     def raw_contains(self, text: str) -> bool:
         if not text:
             return False
         needle = text.encode("utf-8")
-        if self.path.stat().st_size == 0:
-            return False
         with self._locked():
+            self._repair_incomplete_tail_unlocked()
+            if self.path.stat().st_size == 0:
+                return False
             with self.path.open("rb") as fh:
                 with mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ) as mm:
                     return mm.find(needle) != -1
 
     def replace_all(self, records: Iterable[MemoryRecord]) -> None:
         with self._locked():
-            with self.path.open("wb") as fh:
-                for record in records:
-                    fh.write((record.to_json() + "\n").encode("utf-8"))
+            self._replace_atomic_unlocked(records)

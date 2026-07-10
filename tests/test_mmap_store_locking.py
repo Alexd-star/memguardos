@@ -9,6 +9,15 @@ from memguard.models import MemorySource, make_memory
 from memguard.store.mmap_store import AppendOnlyMemoryStore
 
 
+def _record(content: str):
+    return make_memory(
+        content,
+        memory_type="knowledge",
+        subtype="test",
+        source=MemorySource(kind="test", uri="storage-integrity"),
+    )
+
+
 def _hold_store_lock(path: str, ready) -> None:
     store = AppendOnlyMemoryStore(Path(path))
     with store._locked():
@@ -43,3 +52,35 @@ def test_append_waits_for_another_process_using_the_same_segment(tmp_path):
         if holder.is_alive():
             holder.terminate()
         assert holder.exitcode == 0
+
+
+def test_scan_repairs_an_interrupted_final_record(tmp_path):
+    path = tmp_path / "memory.segment"
+    store = AppendOnlyMemoryStore(path)
+    complete = _record("完整记录")
+    store.append(complete)
+    with path.open("ab") as handle:
+        handle.write(b'{"memory_id":"interrupted')
+
+    records = store.scan()
+
+    assert [item.memory_id for item in records] == [complete.memory_id]
+    assert path.read_bytes().endswith(b"\n")
+    assert b"interrupted" not in path.read_bytes()
+
+
+def test_replace_all_preserves_the_live_segment_when_generation_fails(tmp_path):
+    path = tmp_path / "memory.segment"
+    store = AppendOnlyMemoryStore(path)
+    original = _record("原始记录")
+    replacement = _record("替换记录")
+    store.append(original)
+
+    def broken_replacements():
+        yield replacement
+        raise RuntimeError("replacement generation failed")
+
+    with pytest.raises(RuntimeError, match="replacement generation failed"):
+        store.replace_all(broken_replacements())
+
+    assert [item.memory_id for item in store.scan()] == [original.memory_id]
