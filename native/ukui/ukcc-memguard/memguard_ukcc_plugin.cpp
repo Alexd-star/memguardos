@@ -1241,8 +1241,8 @@ void MemGuardUkccPlugin::renderFeedbackSummary(const QString &text)
         lines << QStringLiteral("最近没有新增可展示的记忆。");
     } else {
         lines << QStringLiteral("最近学到：%1 条").arg(memories.size());
-        for (const QJsonValue &value : memories.mid(0, 2)) {
-            const QJsonObject item = value.toObject();
+        for (int index = 0; index < memories.size() && index < 2; ++index) {
+            const QJsonObject item = memories.at(index).toObject();
             lines << QStringLiteral("• %1").arg(item.value(QStringLiteral("summary_for_user")).toString(QStringLiteral("已形成一条受控记忆。")));
         }
     }

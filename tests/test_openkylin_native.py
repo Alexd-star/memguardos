@@ -804,6 +804,7 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "系统维护" in source
     assert "导出系统报告" in source
     assert "导出本机证据" in source
+    assert "memories.mid" not in source
     assert "打开 Agent 工作台" in source
     assert "运行体验流程" in source
     assert "runUserJourney" in source
