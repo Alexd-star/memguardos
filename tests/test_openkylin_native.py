@@ -881,6 +881,16 @@ def test_native_evidence_collector_refreshes_manifest_after_manifest_log_write()
     assert source.index(first) < source.index(second)
 
 
+def test_native_evidence_collector_uses_an_isolated_user_store():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "scripts/collect_openkylin_native_evidence.sh").read_text(encoding="utf-8")
+
+    assert 'EVIDENCE_HOME="$(mktemp -d' in source
+    assert 'export MEMGUARD_HOME="${EVIDENCE_HOME}"' in source
+    assert 'rm -rf "${EVIDENCE_HOME}"' in source
+    assert 'trap cleanup EXIT' in source
+
+
 def test_privileged_actions_are_fixed_and_report_structured_result(monkeypatch):
     calls = []
     monkeypatch.setattr("memguard.os_guard.privileged_actions.shutil.which", lambda name: "/usr/bin/pkexec" if name == "pkexec" else None)

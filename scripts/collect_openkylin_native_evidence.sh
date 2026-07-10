@@ -8,6 +8,20 @@ rm -rf "${OUT_DIR}"
 mkdir -p "${OUT_DIR}"
 export PYTHONPATH="$(pwd)${PYTHONPATH:+:$PYTHONPATH}"
 
+# Evidence collection must never write into the operator's real memory store.
+# The collector runs user-facing CLI and desktop flows, so isolate all generated
+# records while retaining only the exported evidence files in OUT_DIR.
+EVIDENCE_HOME="$(mktemp -d "${TMPDIR:-/tmp}/memguardos-native-home.XXXXXX")"
+TMP_SAMPLE_DIR=""
+cleanup() {
+  rm -rf "${EVIDENCE_HOME}"
+  if [ -n "${TMP_SAMPLE_DIR}" ]; then
+    rm -rf "${TMP_SAMPLE_DIR}"
+  fi
+}
+trap cleanup EXIT
+export MEMGUARD_HOME="${EVIDENCE_HOME}"
+
 run_capture() {
   local name="$1"
   shift
@@ -93,7 +107,6 @@ run_required_capture kylin_warmup.txt bash scripts/warmup_kylin_sdk.sh
 run_required_capture user_cli.txt python3 -m memguard.cli.memguard demo --task "查找精准遗忘的实现位置"
 
 TMP_SAMPLE_DIR="$(mktemp -d)"
-trap 'rm -rf "${TMP_SAMPLE_DIR}"' EXIT
 SAMPLE_A="${TMP_SAMPLE_DIR}/peony_preference.md"
 SAMPLE_B="${TMP_SAMPLE_DIR}/peony_knowledge.txt"
 SECRET="${TMP_SAMPLE_DIR}/peony_secret.env"
