@@ -19,7 +19,7 @@ def _hold_store_lock(path: str, ready) -> None:
 @pytest.mark.skipif(mmap_store_module.fcntl is None, reason="process locking is Linux-specific")
 def test_append_waits_for_another_process_using_the_same_segment(tmp_path):
     path = tmp_path / "memory.segment"
-    context = multiprocessing.get_context("fork")
+    context = multiprocessing.get_context("spawn")
     ready = context.Event()
     holder = context.Process(target=_hold_store_lock, args=(str(path), ready))
     holder.start()
