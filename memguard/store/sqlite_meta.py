@@ -423,6 +423,19 @@ class SQLiteMetaStore:
         row = self.conn.execute("SELECT * FROM memory WHERE memory_id = ?", (memory_id,)).fetchone()
         return dict(row) if row else None
 
+    def find_active_memory_by_content(self, content: str, scope: str) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute(
+            """
+            SELECT * FROM memory
+            WHERE deleted = 0 AND governance_state = 'active'
+              AND scope = ? AND content = ?
+            ORDER BY updated_at DESC
+            LIMIT 1
+            """,
+            (scope, content),
+        ).fetchone()
+        return dict(row) if row else None
+
     def set_governance_state(
         self,
         memory_id: str,

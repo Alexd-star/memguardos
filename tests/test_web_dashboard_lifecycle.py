@@ -18,6 +18,56 @@ from memguard.service import MemGuardService
 from memguard.web.dashboard import run_dashboard
 
 
+def test_dashboard_memory_workspace_prioritizes_identity_and_explanation():
+    page = dashboard_module._dashboard_html()
+
+    assert "memory-workspace" in page
+    assert "memory-result-row" in page
+    assert "shortMemoryId" in page
+    assert "matchReasonLabel" in page
+    assert "更多相关结果" in page
+    assert "复制编号" in page
+    assert "搜索与筛选" in page
+
+
+def test_dashboard_overview_is_task_first_instead_of_health_card_wall():
+    page = dashboard_module._dashboard_html()
+
+    assert "overview-status-banner" in page
+    assert "查看记忆" in page
+    assert "搜索记忆" in page
+    assert "精准遗忘" in page
+    assert "overview-primary-actions" in page
+
+
+def test_dashboard_separates_daily_actions_and_humanizes_agent_records():
+    page = dashboard_module._dashboard_html()
+
+    ordinary_start = page.index('<div class="nav-group">普通用户</div>')
+    admin_start = page.index('<div class="nav-group" data-min-role="admin">管理员视图</div>')
+    ordinary_navigation = page[ordinary_start:admin_start]
+
+    assert "系统维护" not in ordinary_navigation
+    assert "我的偏好" in ordinary_navigation
+    assert "内容保护" in ordinary_navigation
+    assert "最近动态" in page
+    assert "<strong>需要关注</strong>" not in page
+    assert "agentWorkspace" not in page
+    assert "formatAgentEventBody" in page
+    assert "执行命令：" in page
+    assert "pretty(item.tool_args)" not in page
+
+
+def test_evidence_page_uses_lightweight_status_and_groups_repeated_events():
+    page = dashboard_module._dashboard_html()
+    evidence_loader = page[page.index("async function loadEvidenceHub") : page.index("function auditEventLabel")]
+
+    assert "getJson('/api/status')" in evidence_loader
+    assert "getJson('/api/diagnostics')" not in evidence_loader
+    assert "summarizeAuditEvents" in page
+    assert "最近同类事件" in page
+
+
 def _request_json(
     url: str,
     *,

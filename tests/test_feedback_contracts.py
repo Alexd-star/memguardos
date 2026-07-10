@@ -15,8 +15,11 @@ from memguard.web.dashboard import _dashboard_html
 from memguard.service import MemGuardService
 
 
-def test_memory_change_summary_explains_stored_record_and_next_actions():
-    service = MemGuardService(store_path=None, db_path=None)
+def test_memory_change_summary_explains_stored_record_and_next_actions(tmp_path):
+    service = MemGuardService(
+        store_path=tmp_path / "memory.segment",
+        db_path=tmp_path / "memguard.sqlite3",
+    )
     try:
         result = service.ingest_text(
             "以后查代码优先使用 rg。",

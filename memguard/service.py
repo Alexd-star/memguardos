@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import perf_counter
 from typing import Dict, List, Optional, Tuple, Union
 import json
+import re
 
 from memguard.config import (
     DEFAULT_NAMESPACE,
@@ -46,8 +47,8 @@ from memguard.models import AuditInfo, MemoryRecord, MemorySource, VersionInfo, 
 from memguard.os_guard.events import parse_os_event
 from memguard.os_guard.cgroup import cgroup_status
 from memguard.os_guard.journald import JournaldLogger
-from memguard.retrieval.conflict import ConflictResolver
-from memguard.retrieval.hybrid import HybridRetriever, expand_query_aliases
+from memguard.retrieval.conflict import ConflictResolver, preference_topic as inferred_preference_topic
+from memguard.retrieval.hybrid import HybridRetriever, expand_query_aliases, tokenize_literal
 from memguard.sensitivity.custom_patterns import PatternValidationError, load_patterns, save_pattern, save_pattern_from_instruction, suggest_pattern_from_instruction
 from memguard.sensitivity.detector import SensitiveDetector
 from memguard.store.mmap_store import AppendOnlyMemoryStore
@@ -133,6 +134,39 @@ class MemGuardService:
         governance = assess_memory_source(stored_text, source_kind, source_uri)
         memory_type = extraction.memory_type
         subtype = extraction.subtype
+        existing = self.meta.find_active_memory_by_content(stored_text, self.namespace)
+        if existing is not None:
+            existing_record = self.store.get_latest(str(existing["memory_id"]))
+            if existing_record is not None:
+                audit = self._audit(
+                    "ingest_duplicate",
+                    existing_record.memory_id,
+                    {
+                        "source_kind": source_kind,
+                        "source_uri": source_uri,
+                        "existing_source_kind": existing.get("source_kind", ""),
+                        "existing_source_uri": existing.get("source_uri", ""),
+                        "reason": "identical active memory already exists",
+                    },
+                )
+                result = {
+                    "stored": False,
+                    "duplicate": True,
+                    "reason": "duplicate_memory_reused",
+                    "record": existing_record,
+                    "quality": quality.to_dict(),
+                    "extraction": extraction.to_dict(),
+                    "governance": governance.to_dict(),
+                    "audit_event_id": _audit_event_id(audit),
+                }
+                result["feedback"] = build_memory_change_summary(
+                    result,
+                    namespace=self.namespace,
+                    source=source_kind,
+                    session_id=source_uri,
+                    audit_event_ids=[result["audit_event_id"]],
+                ).to_dict()
+                return result
         record = make_memory(
             content=stored_text,
             memory_type=memory_type,
@@ -777,18 +811,52 @@ class MemGuardService:
         return notifications_from_audit(self.audit(limit=max(1, min(int(limit), 200))))
 
     def feedback_home_snapshot(self, limit: int = 8) -> Dict[str, object]:
-        recent = self.list_memories(include_deleted=False)[: max(1, min(int(limit), 30))]
+        effective_limit = max(1, min(int(limit), 30))
+        recent_candidates = self.list_memories(include_deleted=False, limit=500)
+        recent_groups: Dict[Tuple[str, ...], Dict[str, object]] = {}
+        for row in recent_candidates:
+            preference_identity = self._preference_identity(row)
+            if preference_identity:
+                key = ("preference",) + preference_identity
+            else:
+                summary_for_user = " ".join(memory_summary_for_user(row).casefold().split())
+                key = (
+                    str(row.get("type") or ""),
+                    str(row.get("subtype") or ""),
+                    str(row.get("scope") or ""),
+                    summary_for_user,
+                )
+            existing = recent_groups.get(key)
+            if existing is None:
+                item = dict(row)
+                item["duplicate_count"] = 1
+                item["duplicate_memory_ids"] = [str(row.get("memory_id") or "")]
+                recent_groups[key] = item
+                continue
+            ids = list(existing.get("duplicate_memory_ids") or [])
+            memory_id = str(row.get("memory_id") or "")
+            if memory_id and memory_id not in ids:
+                ids.append(memory_id)
+            existing["duplicate_memory_ids"] = ids
+            existing["duplicate_count"] = len(ids)
+        recent = list(recent_groups.values())[:effective_limit]
         recent_memory_changes = []
         for row in recent:
             recent_memory_changes.append(
                 {
                     "memory_id": row.get("memory_id"),
                     "type": row.get("type"),
+                    "subtype": row.get("subtype"),
                     "summary_for_user": memory_summary_for_user(row),
                     "preference_topic": row.get("preference_topic"),
                     "preference_value": row.get("preference_value"),
                     "scope": row.get("scope"),
                     "tier": row.get("tier"),
+                    "source_kind": row.get("source_kind"),
+                    "sensitivity_level": row.get("sensitivity_level"),
+                    "governance_state": row.get("governance_state"),
+                    "duplicate_count": row.get("duplicate_count", 1),
+                    "duplicate_memory_ids": row.get("duplicate_memory_ids", [row.get("memory_id")]),
                     "actions": ["view", "test_effect", "forget"],
                 }
             )
@@ -1278,11 +1346,13 @@ class MemGuardService:
         include_deleted: bool = False,
         tier: Optional[str] = None,
         governance_state: Optional[str] = "active",
+        limit: Optional[int] = None,
     ) -> List[Dict[str, object]]:
         return self.meta.list_memories(
             include_deleted=include_deleted,
             tier=tier,
             governance_state=governance_state,
+            limit=limit,
         )
 
     def list_quarantined_memories(self, limit: int = 100) -> List[Dict[str, object]]:
@@ -1719,7 +1789,7 @@ class MemGuardService:
             return results
 
         candidates = self._search_candidates(query, limit=max(limit * 8, 64))
-        ranked = self.retriever.rank(query, candidates, limit=limit)
+        ranked = self.retriever.rank(query, candidates, limit=max(limit * 3, limit))
         results = []
         seen = set()
         for score, record in ranked:
@@ -1745,9 +1815,13 @@ class MemGuardService:
                 record["score"] = 0.1
                 record["match_source"] = "text"
                 results.append(record)
+        results = self._collapse_search_duplicates(results)
+        for rank, item in enumerate(results, start=1):
+            item["rank"] = rank
+            item["match_reason"] = self._search_match_reason(item)
+        results = results[:limit]
         if audit:
             self._audit("search", None, {"query": clean_query, "count": len(results), "cache": "miss"})
-        results = results[:limit]
         self._remember_search(cache_key, results)
         return [dict(item) for item in results]
 
@@ -2891,6 +2965,105 @@ class MemGuardService:
         self._search_cache.move_to_end(cache_key)
         while len(self._search_cache) > self._search_cache_limit:
             self._search_cache.popitem(last=False)
+
+    @classmethod
+    def _collapse_search_duplicates(cls, results: List[Dict[str, object]]) -> List[Dict[str, object]]:
+        collapsed: List[Dict[str, object]] = []
+        for raw in results:
+            item = dict(raw)
+            item.setdefault("duplicate_count", 1)
+            item.setdefault("duplicate_memory_ids", [str(item.get("memory_id") or "")])
+            duplicate_of: Optional[Dict[str, object]] = None
+            for existing in collapsed:
+                if cls._search_items_are_duplicates(existing, item):
+                    duplicate_of = existing
+                    break
+            if duplicate_of is None:
+                collapsed.append(item)
+                continue
+            ids = list(duplicate_of.get("duplicate_memory_ids") or [])
+            memory_id = str(item.get("memory_id") or "")
+            if memory_id and memory_id not in ids:
+                ids.append(memory_id)
+            duplicate_of["duplicate_memory_ids"] = ids
+            duplicate_of["duplicate_count"] = len(ids)
+        return collapsed
+
+    @classmethod
+    def _search_items_are_duplicates(cls, left: Dict[str, object], right: Dict[str, object]) -> bool:
+        if str(left.get("memory_id") or "") == str(right.get("memory_id") or ""):
+            return True
+        left_identity = cls._preference_identity(left)
+        right_identity = cls._preference_identity(right)
+        if left_identity and left_identity == right_identity:
+            return True
+        left_topic = str(left.get("preference_topic") or "").strip()
+        right_topic = str(right.get("preference_topic") or "").strip()
+        if left_topic and left_topic == right_topic:
+            return (
+                str(left.get("preference_value") or "").strip().casefold()
+                == str(right.get("preference_value") or "").strip().casefold()
+                and str(left.get("preference_scope") or "global")
+                == str(right.get("preference_scope") or "global")
+            )
+        if str(left.get("type") or "") != str(right.get("type") or ""):
+            return False
+        if str(left.get("subtype") or "") != str(right.get("subtype") or ""):
+            return False
+        left_text = " ".join(str(left.get("content") or "").casefold().split())
+        right_text = " ".join(str(right.get("content") or "").casefold().split())
+        if left_text == right_text and left_text:
+            return True
+        left_tokens = set(tokenize_literal(left_text))
+        right_tokens = set(tokenize_literal(right_text))
+        if not left_tokens or not right_tokens:
+            return False
+        similarity = len(left_tokens & right_tokens) / float(len(left_tokens | right_tokens))
+        return similarity >= 0.92
+
+    @staticmethod
+    def _preference_identity(item: Dict[str, object]) -> Tuple[str, ...]:
+        if str(item.get("type") or "") not in {"preference", "sensitive_policy"}:
+            return ()
+        topic = str(item.get("preference_topic") or "").strip()
+        if not topic:
+            topic = inferred_preference_topic(item)
+        value = str(item.get("preference_value") or "").strip().casefold()
+        text = " ".join(
+            [
+                str(item.get("summary") or ""),
+                str(item.get("summary_for_user") or ""),
+                str(item.get("content") or ""),
+            ]
+        ).casefold()
+        if topic == "code_search_tool":
+            if value in {"rg", "ripgrep"} or re.search(r"(?:^|\W)(?:rg|ripgrep)(?:$|\W)", text):
+                value = "rg"
+            elif value == "grep" or re.search(r"(?:^|\W)grep(?:$|\W)", text):
+                value = "grep"
+        if not topic or not value:
+            return ()
+        scope = str(item.get("preference_scope") or "global").strip() or "global"
+        return topic, value, scope
+
+    @staticmethod
+    def _search_match_reason(item: Dict[str, object]) -> str:
+        if item.get("match_source") == "graph":
+            return "与相关实体或关系直接关联"
+        if item.get("match_source") == "text":
+            return "正文或摘要包含查询关键词"
+        breakdown = item.get("score_breakdown") if isinstance(item.get("score_breakdown"), dict) else {}
+        if float(breakdown.get("exact_phrase_score", 0.0)) > 0:
+            return "包含完整查询内容"
+        if float(breakdown.get("topic_score", 0.0)) > 0 or float(breakdown.get("subtype_score", 0.0)) > 0:
+            return "主题和记忆类型与当前任务一致"
+        if float(breakdown.get("entity_score", 0.0)) > 0:
+            return "命中查询中的关键实体"
+        if float(breakdown.get("summary_score", 0.0)) > 0:
+            return "摘要关键词与查询匹配"
+        if float(breakdown.get("content_score", 0.0)) > 0:
+            return "正文关键词与查询匹配"
+        return "综合语义相关度较高"
 
     @staticmethod
     def _enrich_graph(record: MemoryRecord) -> None:

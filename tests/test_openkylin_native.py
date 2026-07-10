@@ -786,10 +786,10 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "结果位置" in source
     assert "operationGuide_" in source
     assert "updateOperationGuide" in source
-    assert "日常操作" in source
+    assert "我的记忆与安全" in source
     assert "完整检查" not in source
     assert "导出快速报告" in source
-    assert "日志、内核保护和系统授权放在【管理员】页" in source
+    assert "服务控制、日志和系统授权位于【管理员】" in source
     assert "操作历史" in source
     assert "资源快照" in source
     assert "更多状态" in source
@@ -803,14 +803,14 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "日常使用" in source
     assert "管理员" in source
     assert "打开文件管理器" in source
-    assert "查看遗忘入口" in source
-    assert "服务健康" in source
-    assert "普通用户常用入口" in source
+    assert "打开精准遗忘" in source
+    assert "服务运行" in source
+    assert "日常使用只保留最常用的记忆操作" in source
     assert "任务入口" not in source
     assert "普通用户" in source
-    assert "文件安全" in source
-    assert "已保护敏感内容" in source
-    assert "遗忘指定记忆" in source
+    assert "桌面集成" in source
+    assert "安全记录" in source
+    assert "精准遗忘" in source
     assert "处理建议" in source
     assert "recommendations" in source
     assert "addRecommendationRow" in source
@@ -838,7 +838,7 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "服务日志已显示在【系统维护】" in source
     assert "summaryDescription_->setText(message)" in source
     assert 'runMemctl({QStringLiteral("diagnostics")}, QStringLiteral("export"))' in source
-    assert "保存 → 理解 → 使用 → 遗忘" in source
+    assert "先确认记忆服务是否可用，再查看、搜索或遗忘本机记忆" in source
     assert "服务运行" in source
     assert "桌面集成" in source
     assert "setStatusBadge" in source
@@ -887,8 +887,8 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "导出系统报告" in source
     assert "导出本机证据" in source
     assert "memories.mid" not in source
-    assert "打开 Agent 工作台" in source
-    assert "运行体验流程" in source
+    assert "Agent 工作台" in source
+    assert "验证记忆效果" in source
     assert "runUserJourney" in source
     assert "验收证据" not in source[source.index("QWidget *MemGuardUkccPlugin::pluginUi") :]
     assert "collect-openkylin-evidence" in source
@@ -914,8 +914,8 @@ def test_ukui_control_center_has_spacious_native_layout_tokens():
     assert "QSizePolicy::Expanding" in source
     assert "makeSectionHeader" in source
     assert "makeDisclosureButton" in source
-    assert "日常使用概览" in source
-    assert "常用操作" in source
+    assert "我的记忆与安全" in source
+    assert "我的记忆" in source
     assert "管理员控制台" in source
     assert "维护与报告" in source
     assert "setFrameShape(QFrame::NoFrame)" in source
@@ -1157,6 +1157,17 @@ def test_ukui_tray_follows_system_theme_and_deduplicates_notifications():
     assert "tray" in build
 
 
+def test_ukui_daily_page_uses_task_first_memory_actions():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
+
+    assert "我的记忆" in source
+    assert "查看记忆" in source
+    assert "搜索记忆" in source
+    assert "精准遗忘" in source
+    assert "日常使用只保留最常用的记忆操作" in source
+
+
 def test_ukui_tray_stays_alive_while_the_desktop_panel_is_starting():
     root = Path(__file__).resolve().parents[1]
     source = (root / "native/ukui/tray/memguard_tray.cpp").read_text(encoding="utf-8")
@@ -1291,7 +1302,8 @@ def test_ukui_control_center_keeps_user_ui_product_facing():
     root = Path(__file__).resolve().parents[1]
     source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
 
-    assert "普通用户常用入口" in source
+    assert "我的记忆与安全" in source
+    assert "日常使用只保留最常用的记忆操作" in source
     assert "管理员工具" in source
     assert "系统维护" in source
     assert "JSON" not in source[source.index("QWidget *MemGuardUkccPlugin::pluginUi") : source.index("void MemGuardUkccPlugin::renderStatus")]
@@ -1324,9 +1336,9 @@ def test_desktop_user_copy_uses_plain_product_language():
             assert awkward_term not in user_surface
 
     assert "本机智能检索" in overview
-    assert "操作记录完整性" in overview
-    assert "已保护敏感内容" in overview
-    assert "遗忘指定记忆" in overview
+    assert "安全记录" in overview
+    assert "当前保护状态" in overview
+    assert "精准遗忘" in overview
     assert "本机智能检索" in tray
     assert "查看操作记录" in tray
     assert "查看已保护内容" in tray
@@ -1352,6 +1364,3 @@ def test_ukui_control_center_has_actionable_recent_behavior_and_preflight_review
     assert "导出 openKylin 证据" in source
     assert "打开 Web 验收中心" in source
     assert "报告默认不包含记忆正文" in source
-
-
-

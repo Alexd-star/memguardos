@@ -119,7 +119,18 @@ def build_memory_change_summary(
         audit_event_ids=[str(item) for item in audit_event_ids if str(item)],
     )
     record = result.get("record")
-    if result.get("stored") and record is not None:
+    if result.get("duplicate") and record is not None:
+        item = _memory_item(record, result)
+        summary.skipped_items.append(
+            {
+                "reason": "duplicate_memory_reused",
+                "memory_id": item.get("memory_id", ""),
+                "summary_for_user": "相同内容已存在，本次未重复保存；继续使用原有记忆编号。",
+            }
+        )
+        summary.effective_scopes.extend(_where_it_applies(item))
+        summary.suggested_next_actions.extend(["view", "test_effect"])
+    elif result.get("stored") and record is not None:
         item = _memory_item(record, result)
         summary.new_memories.append(item)
         summary.effective_scopes.extend(_where_it_applies(item))
