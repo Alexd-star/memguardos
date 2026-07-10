@@ -134,6 +134,7 @@ def test_openkylin_status_fast_uses_light_sdk_status(tmp_path, monkeypatch, caps
         "recently_ready",
         "not_installed",
         "metadata_incomplete",
+        "runtime_untrusted",
     }
     assert payload["sdk"]["embedding"]["user_message"]
     assert payload["sdk"]["embedding"]["next_action"]
@@ -141,6 +142,7 @@ def test_openkylin_status_fast_uses_light_sdk_status(tmp_path, monkeypatch, caps
     assert payload["sdk"]["vector_store"]["capability_state"] in {
         "socket_ready",
         "service_active",
+        "service_active_socket_untrusted",
         "metadata_available",
         "not_installed",
     }

@@ -11,6 +11,9 @@ import struct
 ROOT_USER_SOCKET_OPT_IN_ENV = "MEMGUARD_ALLOW_ROOT_KYLIN_USER_SOCKET"
 """Explicit opt-in for root to use Kylin user-runtime sockets after peer verification."""
 
+_OPENKYLIN_TMP_SYMLINK = Path("/tmp")
+_OPENKYLIN_TMP_TARGET = Path("/var/tmp")
+
 
 def _current_uid() -> Optional[int]:
     return int(os.getuid()) if hasattr(os, "getuid") else None
@@ -113,6 +116,25 @@ def _base_result(path: str, timeout: float) -> Dict[str, object]:
     }
 
 
+def _trusted_openkylin_tmp_symlink(
+    parent: Path,
+    parent_stat: os.stat_result,
+) -> bool:
+    if parent != _OPENKYLIN_TMP_SYMLINK or int(parent_stat.st_uid) != 0:
+        return False
+    try:
+        resolved = Path(os.path.realpath(parent))
+        target_stat = os.lstat(resolved)
+    except OSError:
+        return False
+    return bool(
+        resolved == _OPENKYLIN_TMP_TARGET
+        and stat.S_ISDIR(target_stat.st_mode)
+        and int(target_stat.st_uid) == 0
+        and target_stat.st_mode & stat.S_ISVTX
+    )
+
+
 def _parent_stats(path: str) -> tuple[Optional[os.stat_result], Optional[str], Optional[str]]:
     absolute = Path(os.path.abspath(path))
     immediate: Optional[os.stat_result] = None
@@ -124,6 +146,8 @@ def _parent_stats(path: str) -> tuple[Optional[os.stat_result], Optional[str], O
         if index == 0:
             immediate = parent_stat
         if stat.S_ISLNK(parent_stat.st_mode):
+            if _trusted_openkylin_tmp_symlink(parent, parent_stat):
+                continue
             return immediate, str(parent), "symlink"
     return immediate, None, None
 

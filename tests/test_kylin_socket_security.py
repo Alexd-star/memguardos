@@ -165,6 +165,46 @@ def test_symlinked_parent_directory_is_rejected_before_connect(tmp_path):
     assert accepted["count"] == 0
 
 
+@pytest.mark.skipif(os.name != "posix", reason="需要 POSIX 绝对路径语义")
+def test_openkylin_root_owned_tmp_symlink_to_sticky_var_tmp_is_allowed(monkeypatch):
+    path = "/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock"
+    original_lstat = unix_socket_trust.os.lstat
+
+    def fake_stat(mode: int, uid: int) -> os.stat_result:
+        fields = [0] * 10
+        fields[0] = mode
+        fields[4] = uid
+        return os.stat_result(fields)
+
+    stats = {
+        "/": fake_stat(stat.S_IFDIR | 0o755, 0),
+        "/tmp": fake_stat(stat.S_IFLNK | 0o777, 0),
+        "/var/tmp": fake_stat(stat.S_IFDIR | 0o1777, 0),
+        "/tmp/.kylin-ai-runtime-unix": fake_stat(stat.S_IFDIR | 0o777, os.getuid()),
+        "/tmp/.kylin-ai-runtime-unix/1000": fake_stat(stat.S_IFDIR | 0o777, os.getuid()),
+    }
+
+    def fake_lstat(raw_path):
+        normalized = os.fspath(raw_path)
+        if normalized in stats:
+            return stats[normalized]
+        return original_lstat(raw_path)
+
+    monkeypatch.setattr(unix_socket_trust.os, "lstat", fake_lstat)
+    monkeypatch.setattr(
+        unix_socket_trust.os.path,
+        "realpath",
+        lambda raw_path: "/var/tmp" if os.fspath(raw_path) == "/tmp" else os.fspath(raw_path),
+    )
+
+    immediate, unsafe_parent, parent_error = unix_socket_trust._parent_stats(path)
+
+    assert immediate is not None
+    assert immediate.st_uid == os.getuid()
+    assert unsafe_parent is None
+    assert parent_error is None
+
+
 @pytest.mark.skipif(not HAS_UNIX_PEERCRED, reason="需要 Linux AF_UNIX SO_PEERCRED")
 def test_wrong_socket_owner_is_rejected_before_connect(monkeypatch, tmp_path):
     path = tmp_path / "wrong-owner.sock"
