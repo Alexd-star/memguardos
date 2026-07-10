@@ -187,6 +187,23 @@ test -s "${POLICY_TARGET}" && echo policy_installed=true || echo policy_installe
 test -x "${HELPER_TARGET}" && echo helper_installed=true || echo helper_installed=false
 ls -l "${POLICY_TARGET}" "${HELPER_TARGET}" "${STAGED_POLICY}" "${STAGED_HELPER}" 2>/dev/null || true'
 run_required_capture systemd_cgroup.txt bash -lc 'systemctl show memguardd.service --property=LoadState,ActiveState,SubState,ControlGroup,MemoryMax,CPUQuotaPerSecUSec --no-pager; CG=$(systemctl show memguardd.service -p ControlGroup --value); test -n "$CG"; for f in memory.current memory.max cpu.max cpu.stat; do printf "%s\n" "--- ${f} ---"; cat "/sys/fs/cgroup${CG}/${f}" 2>/dev/null || true; done'
+run_required_capture service_restart.txt bash -lc '
+START_MS=$(date +%s%3N)
+if [ "$(id -u)" -eq 0 ]; then
+  systemctl restart memguardd.service
+  RC=$?
+else
+  sudo -n systemctl restart memguardd.service
+  RC=$?
+fi
+END_MS=$(date +%s%3N)
+ELAPSED_MS=$((END_MS - START_MS))
+echo restart_rc=${RC}
+echo restart_ms=${ELAPSED_MS}
+systemctl show memguardd.service --property=ActiveState,SubState --no-pager
+test "${RC}" -eq 0
+test "${ELAPSED_MS}" -le 5000
+test "$(systemctl is-active memguardd.service)" = active'
 
 run_required_capture debian_packages.txt bash scripts/build_deb.sh
 run_required_capture deb_lifecycle.txt bash scripts/verify_deb_lifecycle.sh

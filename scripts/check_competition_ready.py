@@ -555,6 +555,7 @@ def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, 
         "peony_batch_apply.json",
         "peony_sensitive_preview.json",
         "systemd_cgroup.txt",
+        "service_restart.txt",
         "polkit_assets.txt",
         "tray_assets.txt",
         "desktop_build.txt",
@@ -569,6 +570,25 @@ def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, 
         path = evidence_dir / name
         checks.append(Check("openKylin原生证据", name, path.exists() and path.stat().st_size > 0, "存在且非空" if path.exists() and path.stat().st_size > 0 else "缺失或为空", severity=severity))
     checks.append(check_native_evidence_revision(evidence_dir, expected_revision, severity=severity))
+    restart_values = _parse_result_key_values(_read_text_if_exists(evidence_dir / "service_restart.txt"))
+    try:
+        restart_ms = int(restart_values.get("restart_ms", ""))
+    except ValueError:
+        restart_ms = -1
+    restart_ok = (
+        restart_values.get("restart_rc") == "0"
+        and restart_values.get("ActiveState") == "active"
+        and 0 <= restart_ms <= 5000
+    )
+    checks.append(
+        Check(
+            "openKylin原生证据",
+            "systemd 服务重启响应时间",
+            restart_ok,
+            "restart_ms=%s" % restart_ms if restart_ok else "服务重启失败、状态异常或耗时超过 5000 ms",
+            severity=severity,
+        )
+    )
     user_cli_text = _read_text_if_exists(evidence_dir / "user_cli.txt")
     checks.append(
         Check(
