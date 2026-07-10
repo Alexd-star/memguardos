@@ -57,6 +57,7 @@ def test_memctl_web_reads_explicit_token_file_without_exposing_token_in_argument
     monkeypatch.delenv("MEMGUARD_NAMESPACE", raising=False)
     token_file = tmp_path / "dashboard.token"
     token_file.write_text("file-secret\n", encoding="utf-8")
+    token_file.chmod(0o600)
     captured = {}
 
     def fake_run_dashboard(
