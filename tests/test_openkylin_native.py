@@ -1023,6 +1023,7 @@ def test_native_evidence_collector_installs_and_records_polkit_assets():
     assert "policy_staged=true" in collector
     assert "helper_staged=true" in collector
     assert "unknown_action_rejected=true" in collector
+    assert 'if run_root "${HELPER_TO_TEST}" unsupported-action' in collector
     assert "Polkit policy 交付状态" in readiness
     assert "Polkit helper 交付状态" in readiness
 

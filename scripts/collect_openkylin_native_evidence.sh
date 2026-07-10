@@ -188,7 +188,7 @@ print("actions=" + ",".join(actions))
 PY
 HELPER_TO_TEST="${HELPER_TARGET}"
 test -x "${HELPER_TO_TEST}" || HELPER_TO_TEST="${STAGED_HELPER}"
-if "${HELPER_TO_TEST}" unsupported-action; then exit 3; else echo unknown_action_rejected=true; fi
+if run_root "${HELPER_TO_TEST}" unsupported-action; then exit 3; else echo unknown_action_rejected=true; fi
 test -s "${POLICY_TARGET}" && echo policy_installed=true || echo policy_installed=false
 test -x "${HELPER_TARGET}" && echo helper_installed=true || echo helper_installed=false
 ls -l "${POLICY_TARGET}" "${HELPER_TARGET}" "${STAGED_POLICY}" "${STAGED_HELPER}" 2>/dev/null || true'
