@@ -39,9 +39,11 @@ def run_security_scan(
         if result["status"] == "missing"
     ]
     bandit_high_count = int(bandit.get("high_count", 0))
+    bandit_medium_count = int(bandit.get("medium_count", 0))
     pip_vulnerability_count = int(pip_audit.get("vulnerability_count", 0))
     ok = (
         bandit_high_count == 0
+        and bandit_medium_count == 0
         and pip_vulnerability_count == 0
         and (allow_missing_tools or not missing_tools)
         and bandit["status"] not in {"error"}
@@ -53,13 +55,14 @@ def run_security_scan(
         "elapsed_s": round(time.perf_counter() - started, 3),
         "policy": {
             "bandit_high_severity_allowed": 0,
+            "bandit_medium_severity_allowed": 0,
             "pip_audit_known_vulnerabilities_allowed": 0,
             "missing_tools_allowed": bool(allow_missing_tools),
             "dependency_scope": dependency_scope,
         },
         "summary": {
             "bandit_high_count": bandit_high_count,
-            "bandit_medium_count": int(bandit.get("medium_count", 0)),
+            "bandit_medium_count": bandit_medium_count,
             "bandit_low_count": int(bandit.get("low_count", 0)),
             "pip_audit_vulnerability_count": pip_vulnerability_count,
             "missing_tools": missing_tools,
@@ -344,7 +347,7 @@ def _render_markdown(report: dict[str, Any]) -> str:
         "",
         "- 状态：`%s`" % bandit["status"],
         "- 命令：`%s`" % " ".join(str(part) for part in bandit.get("command", [])),
-        "- 策略：不允许高危问题进入最终提交。",
+        "- 策略：不允许未审查的中危或高危问题进入最终提交。",
         "",
     ]
     if bandit["status"] == "missing":

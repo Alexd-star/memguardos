@@ -1,15 +1,25 @@
 import json
 import socket
+import sqlite3
 import sys
 import threading
 import time
 from pathlib import Path
 
+import pytest
+
 from memguard.api.server import handle_request, serve_unix_socket
 from memguard.cli.memctl import main as memctl_main
-from memguard.config import default_db_path, default_store_path, list_namespaces, namespace_status, normalize_namespace
+from memguard.config import (
+    _table_count,
+    default_db_path,
+    default_store_path,
+    list_namespaces,
+    namespace_status,
+    normalize_namespace,
+)
 from memguard.ingestion.behavior import parse_shell_history
-from memguard.llm.adapter import generate_answer
+from memguard.llm.adapter import LLMAdapterError, generate_answer
 from memguard.llm.prompt import render_generation_prompt
 from memguard.service import MemGuardService
 from memguard.ingestion.tool_result import ToolResult
@@ -694,6 +704,40 @@ def test_search_candidates_fill_remaining_budget_without_duplicates(tmp_path, mo
         service.close()
 
 
+def test_search_candidates_use_offline_aliases_before_recent_fallback(tmp_path, monkeypatch):
+    service = make_service(tmp_path)
+    try:
+        calls = []
+
+        def search_text(query, limit):
+            calls.append(query)
+            if query == "cgroup":
+                return [{"memory_id": "cross-language-match"}]
+            return []
+
+        monkeypatch.setattr(service.meta, "search_text", search_text)
+        monkeypatch.setattr(service.meta, "graph_search", lambda query, limit: [])
+        monkeypatch.setattr(
+            service.meta,
+            "list_recent_memories",
+            lambda limit, exclude_ids=None: [{"memory_id": "recent-fallback"}],
+            raising=False,
+        )
+
+        candidates = service._search_candidates(
+            "Which resource limits should be checked before restarting a service?",
+            limit=2,
+        )
+
+        assert "cgroup" in calls
+        assert [item["memory_id"] for item in candidates] == [
+            "cross-language-match",
+            "recent-fallback",
+        ]
+    finally:
+        service.close()
+
+
 def test_search_uses_bounded_candidate_pool_for_top_five(tmp_path, monkeypatch):
     service = make_service(tmp_path)
     try:
@@ -1153,6 +1197,42 @@ def test_optional_llm_adapter_is_explicit_and_safe_by_default():
         command=f'"{sys.executable}" -c "import sys; print(sys.stdin.read())" & echo SHOULD_NOT_RUN',
     )
     assert injected.answer == "memguard"
+
+
+def test_openai_compatible_endpoint_rejects_unsafe_urls_before_network_access():
+    for endpoint in (
+        "file:///tmp/model-response.json",
+        "http://example.com/v1/chat/completions",
+        "https://user:secret@example.com/v1/chat/completions",
+        "https://example.com/v1/chat/completions#debug",
+    ):
+        with pytest.raises(LLMAdapterError):
+            generate_answer(
+                "hello",
+                provider="openai-compatible",
+                model="demo",
+                endpoint=endpoint,
+            )
+
+
+def test_sqlite_schema_helpers_reject_unapproved_identifiers(tmp_path):
+    connection = sqlite3.connect(":memory:")
+    try:
+        connection.execute("CREATE TABLE memory (deleted INTEGER NOT NULL DEFAULT 0)")
+        assert _table_count(connection, "memory", include_deleted=False) == 0
+        with pytest.raises(ValueError):
+            _table_count(connection, "memory; DROP TABLE memory", include_deleted=True)
+    finally:
+        connection.close()
+
+    store = SQLiteMetaStore(tmp_path / "schema.sqlite3")
+    try:
+        with pytest.raises(ValueError):
+            store._ensure_column("memory", "unsafe_column", "TEXT")
+        with pytest.raises(ValueError):
+            store._ensure_column("memory", "subtype", "TEXT; DROP TABLE memory")
+    finally:
+        store.close()
 
 
 def test_entity_relation_extraction():

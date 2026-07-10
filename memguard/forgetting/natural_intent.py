@@ -54,6 +54,7 @@ class ErasureIntentCompiler:
         scope = self._scope(text, context)
         agent_name = self._agent_name(text, context)
         topic = self._topic(text, memory_types)
+        target_phrase = self._target_phrase(text, topic)
         preference_topic = self._preference_topic(text, topic)
         normalized_preference_topic = self._normalized_preference_topic(text, preference_topic)
         topic_aliases = self._topic_aliases(text, topic, normalized_preference_topic or preference_topic)
@@ -88,6 +89,7 @@ class ErasureIntentCompiler:
             "execution_mode": "dry_run",
             "memory_types": memory_types,
             "topic": topic,
+            "target_phrase": target_phrase,
             "topic_aliases": topic_aliases,
             "normalized_preference_topic": normalized_preference_topic,
             "agent_name": agent_name,
@@ -188,9 +190,20 @@ class ErasureIntentCompiler:
 
     @staticmethod
     def _topic(text: str, memory_types: List[str]) -> str:
-        match = re.search(r"关于\s*([^，。,；;]+?)(?:的)?(?:所有|全部|工具偏好|偏好|知识|记忆|$)", text)
+        match = re.search(
+            r"关于\s*([^，。,；;]+?)(?:的)?"
+            r"(?:(?:所有|全部|若干|[一二两三四五六七八九十\d]+)条)?"
+            r"(?:所有|全部|工具偏好|偏好|安全策略|策略|知识|记忆|$)",
+            text,
+        )
         if match:
-            return match.group(1).strip()
+            topic = match.group(1).strip()
+            topic = re.sub(
+                r"\s*的\s*(?:所有|全部|若干|[一二两三四五六七八九十\d]+)条?$",
+                "",
+                topic,
+            ).strip()
+            return topic
         project_match = re.search(r"忘(?:记|掉)?\s*([^，。,；;]+?项目)的偏好", text)
         if project_match:
             return project_match.group(1).strip()
@@ -211,6 +224,23 @@ class ErasureIntentCompiler:
         if memory_types == ["all"]:
             return ""
         return ""
+
+    @staticmethod
+    def _target_phrase(text: str, topic: str) -> str:
+        target = re.split(r"[，,]?\s*(?:但是|但)?\s*保留", text, maxsplit=1)[0].strip(" ，。,；;")
+        target = re.sub(r"^(?:请\s*)?(?:帮我\s*)?(?:把\s*)?(?:忘记|忘掉|遗忘|删除|清除)\s*", "", target)
+        if "关于" in target:
+            target = target.split("关于", 1)[1].strip()
+        target = re.sub(
+            r"\s*(?:的)?"
+            r"(?:(?:所有|全部|若干|[一二两三四五六七八九十\d]+)条)?"
+            r"(?:所有|全部)?(?:记忆|这条知识|知识)$",
+            "",
+            target,
+        ).strip(" ，。,；;")
+        if topic and topic.lower() in target.lower():
+            return topic
+        return target or topic
 
     @staticmethod
     def _preference_topic(text: str, topic: str) -> str:

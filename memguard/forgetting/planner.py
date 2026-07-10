@@ -74,15 +74,17 @@ class ForgetPlanner:
         intent = self.intent_compiler.compile(request)
         aliases = [str(alias).lower() for alias in intent.get("topic_aliases") or [] if str(alias).strip()]
         preference_topic = str(intent.get("normalized_preference_topic") or intent.get("preference_topic") or "")
-        keywords = self.keywords(request + " " + " ".join(aliases) + " " + preference_topic)
+        target_phrase = str(intent.get("target_phrase") or "")
+        keywords = self.keywords(request + " " + target_phrase + " " + " ".join(aliases) + " " + preference_topic)
         distinctive_keywords = [keyword for keyword in keywords if keyword not in GENERIC_MATCH_TERMS]
         ranked = self.retriever.rank(" ".join(keywords) or request, records, limit=limit)
         if not ranked:
             return []
-        max_score = ranked[0][0]
         results = []
         for score, record in ranked:
-            if score < max(0.18, max_score * 0.62):
+            if score < 0.18:
+                continue
+            if not _record_type_matches(intent, record):
                 continue
             text = "%s %s %s %s" % (
                 record.get("memory_id", ""),
@@ -90,12 +92,22 @@ class ForgetPlanner:
                 record.get("summary", ""),
                 record.get("content", ""),
             )
+            if not _required_qualifiers_match(request, text):
+                continue
+            if not _sensitive_labels_match(intent, text):
+                continue
             matched = [keyword for keyword in keywords if keyword and keyword.lower() in text.lower()]
             if not matched:
                 continue
             matched_distinctive = [keyword for keyword in distinctive_keywords if keyword and keyword.lower() in text.lower()]
             if aliases:
                 matched_distinctive.extend(alias for alias in aliases if alias and alias in text.lower() and alias not in matched_distinctive)
+                if not any(alias in text.lower() for alias in aliases) and not _alias_fallback_passes(
+                    intent,
+                    target_phrase,
+                    text,
+                ):
+                    continue
             if preference_topic and (
                 preference_topic == str(record.get("preference_topic") or "")
                 or preference_topic in text.lower()
@@ -119,7 +131,77 @@ class ForgetPlanner:
                     "type": record.get("type", ""),
                 }
             )
-        return results
+        if not results:
+            return []
+        top_score = max(float(item["score"]) for item in results)
+        relative_floor = 0.50 if preference_topic else 0.80
+        score_floor = max(0.18, top_score * relative_floor)
+        return [item for item in results if float(item["score"]) >= score_floor]
+
+
+def _record_type_matches(intent: Dict[str, object], record: Dict[str, str]) -> bool:
+    requested = {str(item) for item in intent.get("memory_types") or []}
+    record_type = str(record.get("type") or "")
+    subtype = str(record.get("subtype") or "")
+    preference_topic = str(intent.get("normalized_preference_topic") or intent.get("preference_topic") or "")
+    if preference_topic and requested in (set(), {"all"}):
+        return record_type in {"preference", "sensitive_policy"}
+    if not requested or "all" in requested:
+        return True
+    for memory_type in requested:
+        if memory_type == "preference" and record_type in {"preference", "sensitive_policy"}:
+            return True
+        if memory_type == "security_policy" and record_type in {"preference", "sensitive_policy"}:
+            return True
+        if memory_type == "knowledge" and record_type == "knowledge":
+            return True
+        if (
+            memory_type == "tool_trace"
+            and record_type == "knowledge"
+            and subtype in {"tool_trace", "procedural_trace", "tool_failure_case"}
+        ):
+            return True
+    return False
+
+
+def _required_qualifiers_match(request: str, text: str) -> bool:
+    for qualifier in ("模板", "案例", "原始日志"):
+        if qualifier in request and qualifier not in text:
+            return False
+    return True
+
+
+def _sensitive_labels_match(intent: Dict[str, object], text: str) -> bool:
+    labels = {str(item) for item in intent.get("sensitive_labels") or []}
+    if not labels:
+        return True
+    lowered = text.lower()
+    marker_groups = {
+        "api_key": ("api key", "apikey", "api_key"),
+        "token": ("token",),
+        "password": ("密码", "password", "passwd"),
+        "private_key": ("私钥", "private key"),
+        "id_card_cn": ("身份证",),
+        "phone_cn": ("手机号", "手机号码"),
+        "email": ("邮箱", "email"),
+        "person_name_cn": ("姓名",),
+    }
+    return any(any(marker in lowered for marker in marker_groups.get(label, (label,))) for label in labels)
+
+
+def _alias_fallback_passes(intent: Dict[str, object], target_phrase: str, text: str) -> bool:
+    if intent.get("sensitive_labels") and _sensitive_labels_match(intent, text):
+        return True
+    requested_terms = {
+        term.lower()
+        for term in re.findall(r"[A-Za-z][A-Za-z0-9_\-]{2,}", target_phrase)
+        if term.lower() not in {"agent", "memory", "project", "session"}
+    }
+    if not requested_terms:
+        return False
+    matched_terms = {term for term in requested_terms if term in text.lower()}
+    required = max(1, int(len(requested_terms) * 0.6 + 0.999))
+    return len(matched_terms) >= required
 
 
 def _preference_topic_matches(preference_topic: str, text: str) -> bool:
@@ -197,6 +279,13 @@ def _anchor_policy_passes(request: str, matched_distinctive: List[str], strong_m
         return has_bpf and "lsm" in matched
     if "systemd" in lowered_request:
         return "systemd" in matched
+    requested_latin_terms = {
+        term.lower()
+        for term in re.findall(r"[A-Za-z][A-Za-z0-9_\-]{2,}", request)
+        if term.lower() not in {"agent", "memory", "project", "session"}
+    }
+    if requested_latin_terms:
+        return bool(requested_latin_terms & matched)
     latin_terms = [keyword for keyword in matched_distinctive if re.search(r"[A-Za-z]", keyword)]
     if latin_terms:
         return bool(strong_matches)

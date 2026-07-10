@@ -28,6 +28,32 @@ def test_competition_ready_hygiene_ignores_local_output_workspaces():
     assert "outputs" in IGNORED_HYGIENE_PARTS
 
 
+def test_formal_doc_consistency_rejects_previously_current_test_counts(monkeypatch, tmp_path):
+    (tmp_path / "README.md").write_text(
+        "历史口径包括 341 passed、344 passed 和 527 passed。\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(readiness, "ROOT", tmp_path)
+
+    checks = readiness.check_formal_doc_consistency()
+    result = next(item for item in checks if item.name == "正式文档测试数字口径")
+
+    assert result.ok is False
+    assert "README.md:341 passed" in result.detail
+    assert "README.md:344 passed" in result.detail
+    assert "README.md:527 passed" in result.detail
+
+
+def test_formal_doc_consistency_does_not_hardcode_current_test_counts(monkeypatch, tmp_path):
+    monkeypatch.setattr(readiness, "ROOT", tmp_path)
+
+    checks = readiness.check_formal_doc_consistency()
+    result = next(item for item in checks if item.name == "正式文档测试数字口径")
+
+    assert result.ok is True
+    assert result.detail == "正式材料未引用已知过期测试数字"
+
+
 def test_split_debian_package_plan_has_enterprise_ownership_boundaries():
     plan = build_package_plan(version="0.1.0-2", architecture="amd64", multiarch="x86_64-linux-gnu")
 
@@ -57,13 +83,16 @@ def test_debian_packages_apply_openkylin_native_install_lifecycle():
     menu = (ROOT / "packaging/desktop/memguardos-center.desktop").read_text(encoding="utf-8")
 
     assert "systemctl enable --now memguardd.service" in builder
+    assert "systemctl --global disable memguard-kylin-warmup.service" in builder
     assert "systemctl --global enable memguard-kylin-warmup.service" in builder
+    assert 'stage / "opt/memguardos/README.md"' in builder
     assert "用户数据保留" in builder
     assert "update-desktop-database" in builder
     assert "xdg-desktop-menu forceupdate" in builder
     assert "gtk-update-icon-cache" in builder
     assert "peony -q" in builder
     assert "pkill -x ukui-control-center" in builder
+    assert "hashlib.md5(path.read_bytes(), usedforsecurity=False)" in builder
     assert "rm -rf /var/lib/memguardos" not in builder
     assert "rm -rf /opt/memguardos/data" not in builder
     assert "Name=MemGuardOS 记忆安全" in menu
@@ -282,6 +311,7 @@ def test_competition_ready_requires_clean_security_scan_artifacts(tmp_path):
                 "ok": True,
                 "summary": {
                     "bandit_high_count": 0,
+                    "bandit_medium_count": 0,
                     "pip_audit_vulnerability_count": 0,
                     "missing_tools": [],
                 },
@@ -301,6 +331,13 @@ def test_competition_ready_requires_clean_security_scan_artifacts(tmp_path):
     assert by_name["安全扫描 JSON"].ok is True
     assert by_name["安全扫描中文报告"].ok is True
     assert by_name["安全扫描门禁通过"].ok is True
+
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["summary"]["bandit_medium_count"] = 1
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    checks = check_security_scan_artifacts(report_path, markdown_path)
+    by_name = {item.name: item for item in checks}
+    assert by_name["安全扫描门禁通过"].ok is False
 
 
 def test_memory_value_collector_supports_synchronized_tree_without_git_head():
@@ -498,7 +535,7 @@ def sample_submission_body(name: str) -> str:
     if name == "docs/evidence/real_agent_holdout_latest/metrics.json":
         return '{"case_count":8,"completed_case_count":8,"unclassified_failure_count":0,"memory_system_pass_rate":1.0,"agent_behavior_pass_rate":1.0,"failed_case_ids":[]}\n'
     if name == "docs/security_scan.json":
-        return '{"schema":"memguardos-security-scan-v1","ok":true,"summary":{"bandit_high_count":0,"pip_audit_vulnerability_count":0,"missing_tools":[]},"tools":{"bandit":{"status":"warnings"},"pip_audit":{"status":"clean"}}}\n'
+        return '{"schema":"memguardos-security-scan-v1","ok":true,"summary":{"bandit_high_count":0,"bandit_medium_count":0,"pip_audit_vulnerability_count":0,"missing_tools":[]},"tools":{"bandit":{"status":"warnings"},"pip_audit":{"status":"clean"}}}\n'
     if name == "docs/安全扫描报告.md":
         return "# MemGuardOS 安全扫描报告\n"
     if name == "docs/evidence/latest/sdk_embedding_probe.txt":

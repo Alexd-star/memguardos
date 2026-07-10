@@ -19,6 +19,16 @@ from memguard.integrations.events import AgentInteractionEvent  # noqa: E402
 from memguard.web.dashboard import run_dashboard  # noqa: E402
 
 
+def _agent_replay_ok(payload: dict[str, object]) -> bool:
+    result = payload.get("result")
+    result = result if isinstance(result, dict) else {}
+    return bool(
+        payload.get("ok") is True
+        and result.get("execution_mode") == "replay"
+        and result.get("truthful_note")
+    )
+
+
 def main() -> int:
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -142,9 +152,7 @@ def main() -> int:
             "feedback_home_ok": feedback_home.get("ok") is True
             and feedback_home.get("result", {}).get("schema") == "memguardos-feedback-home-v1",
             "notifications_ok": notifications.get("ok") is True and isinstance(notifications.get("result"), list),
-            "agent_run_replay_ok": agent_run.get("ok") is True
-            and agent_run.get("result", {}).get("execution_mode") == "replay"
-            and agent_run.get("result", {}).get("truthful_note"),
+            "agent_run_replay_ok": _agent_replay_ok(agent_run),
             "memory_detail_ok": memory_detail.get("ok") is True and memory_detail.get("result", {}).get("found") is True,
             "preference_proof_ok": preference_proof.get("ok") is True and "proof" in preference_proof.get("result", {}),
             "forget_memory_feedback_ok": forget_memory.get("ok") is True
@@ -221,7 +229,8 @@ def _wait_until_ready(base: str, auth_token: str = "") -> None:
 
 def _http_get(url: str, auth_token: str = "") -> str:
     request = Request(url, headers=_auth_headers(auth_token), method="GET")
-    with urlopen(request, timeout=3) as response:
+    # Smoke requests are constructed from the script's loopback-only ephemeral server.
+    with urlopen(request, timeout=3) as response:  # nosec B310
         return response.read().decode("utf-8")
 
 
@@ -232,7 +241,7 @@ def _http_get_json(url: str, auth_token: str = "") -> dict:
 def _http_get_json_status(url: str, auth_token: str = "") -> tuple[int, dict]:
     request = Request(url, headers=_auth_headers(auth_token), method="GET")
     try:
-        with urlopen(request, timeout=3) as response:
+        with urlopen(request, timeout=3) as response:  # nosec B310
             return int(response.status), json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         return int(exc.code), json.loads(exc.read().decode("utf-8"))
@@ -241,7 +250,7 @@ def _http_get_json_status(url: str, auth_token: str = "") -> tuple[int, dict]:
 def _http_get_json_response_status(url: str, auth_token: str = "") -> tuple[int, dict, dict]:
     request = Request(url, headers=_auth_headers(auth_token), method="GET")
     try:
-        with urlopen(request, timeout=3) as response:
+        with urlopen(request, timeout=3) as response:  # nosec B310
             headers = {key.lower(): value for key, value in response.headers.items()}
             return int(response.status), headers, json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
@@ -251,7 +260,7 @@ def _http_get_json_response_status(url: str, auth_token: str = "") -> tuple[int,
 
 def _http_get_text_status(url: str, auth_token: str = "") -> tuple[int, dict, str]:
     request = Request(url, headers=_auth_headers(auth_token), method="GET")
-    with urlopen(request, timeout=3) as response:
+    with urlopen(request, timeout=3) as response:  # nosec B310
         headers = {key.lower(): value for key, value in response.headers.items()}
         return int(response.status), headers, response.read().decode("utf-8")
 
@@ -263,7 +272,7 @@ def _http_post(url: str, payload: dict, auth_token: str = "") -> dict:
         headers=_auth_headers(auth_token, {"Content-Type": "application/json"}),
         method="POST",
     )
-    with urlopen(request, timeout=3) as response:
+    with urlopen(request, timeout=3) as response:  # nosec B310
         return json.loads(response.read().decode("utf-8"))
 
 
@@ -275,7 +284,7 @@ def _http_post_raw(url: str, payload: bytes, content_type: str, auth_token: str 
         method="POST",
     )
     try:
-        with urlopen(request, timeout=3) as response:
+        with urlopen(request, timeout=3) as response:  # nosec B310
             return int(response.status), json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         return int(exc.code), json.loads(exc.read().decode("utf-8"))

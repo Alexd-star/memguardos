@@ -6,6 +6,7 @@ from typing import Callable
 import subprocess
 import sys
 
+from memguard.json_support import jsonable
 from memguard.service import MemGuardService
 
 
@@ -33,12 +34,12 @@ class AcceptanceItem:
 
 ACCEPTANCE_ITEMS: tuple[AcceptanceItem, ...] = (
     AcceptanceItem("A02_DOCTOR", "基础环境", "基础诊断", "检查当前命名空间、存储和基础服务是否可访问。", "运行快速诊断", "能返回命名空间和存储状态"),
-    AcceptanceItem("A03_SERVICE", "基础环境", "后台服务状态", "检查 memguardd 是否作为系统服务运行。", "读取 systemd 服务状态", "服务可查询；openKylin 上建议为 active/running"),
+    AcceptanceItem("A03_SERVICE", "基础环境", "后台服务状态", "检查 memguardd 是否作为系统服务运行。", "读取 systemd 服务状态", "服务可查询；openKylin 上应显示为运行中"),
     AcceptanceItem("A04_CGROUP", "基础环境", "服务资源限制", "检查服务级 cgroup 资源信息是否可见。", "读取 cgroup 状态", "能看到 cgroup v2 或资源状态说明"),
     AcceptanceItem("A06_OPENKYLIN_STATUS", "openKylin 适配", "系统状态总览", "检查 openKylin、桌面插件、SDK 和安全组件状态。", "运行 openkylin-status 快速检查", "状态返回正常，不影响基础使用"),
-    AcceptanceItem("A13_INGEST_PREF", "记忆功能", "写入偏好记忆", "写入一条用户与 Agent 交互偏好。", "写入固定测试偏好", "返回 stored=true 和 memory_id"),
+    AcceptanceItem("A13_INGEST_PREF", "记忆功能", "写入偏好记忆", "写入一条用户与 Agent 交互偏好。", "写入固定测试偏好", "返回已保存状态和记忆编号"),
     AcceptanceItem("A14_SEARCH_PREF", "记忆功能", "检索偏好记忆", "验证刚写入或既有偏好可以被检索。", "写入后检索关键词", "至少命中一条相关记忆"),
-    AcceptanceItem("A15_BUILD_CONTEXT", "记忆功能", "构建 Agent 上下文", "验证系统能为 Agent 任务组织可解释上下文。", "构建固定任务上下文", "返回 memories 和 explainability"),
+    AcceptanceItem("A15_BUILD_CONTEXT", "记忆功能", "构建 Agent 上下文", "验证系统能为 Agent 任务组织可解释上下文。", "构建固定任务上下文", "返回记忆列表和选择说明"),
     AcceptanceItem("A16_GRAPH", "记忆功能", "层次图谱检索", "验证摘要层、实体关系层和原文层检索链路。", "检索 systemd 相关实体", "返回层次检索结构"),
     AcceptanceItem("A11_SENSITIVE", "安全与遗忘", "敏感内容阻断", "验证密码类内容不会被当作普通长期记忆保存。", "写入含敏感字段文本", "返回敏感阻断或高风险拒绝"),
     AcceptanceItem("A17_FORGET_DRY", "安全与遗忘", "遗忘预演", "验证遗忘前先展示候选影响范围。", "写入 blue-river 测试内容后 dry-run", "返回候选或预演结果，不直接删除"),
@@ -46,8 +47,8 @@ ACCEPTANCE_ITEMS: tuple[AcceptanceItem, ...] = (
     AcceptanceItem("A21_VERIFY_AUDIT", "安全与遗忘", "操作记录完整性", "验证审计哈希链没有断裂。", "校验审计链", "verify-audit 返回 ok=true"),
     AcceptanceItem("A22_WEB_DIAGNOSTICS", "系统维护", "系统报告", "验证管理员能导出本地系统维护报告。", "生成快速诊断报告", "报告包含审计、检索和分层状态"),
     AcceptanceItem("A24_PYTEST", "测试与证据", "自动测试", "运行完整 pytest，适合最终提交前执行。", "运行 python -m pytest -q", "全部测试通过"),
-    AcceptanceItem("A25_READY", "测试与证据", "赛题就绪检查", "运行赛题门禁检查。", "运行 check_competition_ready.py", "全部门禁通过且 warning 为 0"),
-    AcceptanceItem("A26_EVIDENCE_DIR", "测试与证据", "证据目录", "检查 openKylin 原生证据目录和哈希清单。", "检查 evidence 目录", "manifest.json 和 SHA256SUMS.txt 存在"),
+    AcceptanceItem("A25_READY", "测试与证据", "交付就绪检查", "运行最终交付门禁检查。", "运行交付就绪检查", "全部检查通过且没有警告"),
+    AcceptanceItem("A26_EVIDENCE_DIR", "测试与证据", "交付记录目录", "检查 openKylin 本机记录目录和校验清单。", "检查本机交付记录", "清单文件和 SHA-256 校验文件存在"),
     AcceptanceItem("M01_PEONY_MENU", "人工截图", "Peony 右键菜单", "需要用户在文件管理器中右键文件后确认入口可见。", "人工打开 Peony 并截图", "截图包含 MemGuardOS 文件扫描入口", mode="manual"),
     AcceptanceItem("M02_PEONY_DIALOG", "人工截图", "Peony 扫描结果弹窗", "需要用户点击扫描入口后确认预览和导入结果。", "人工点击右键菜单并截图", "截图包含预览、风险提示和确认按钮", mode="manual"),
     AcceptanceItem("M03_UKUI_DETAIL", "人工截图", "UKUI 控制中心详情页", "需要用户打开设置里的记忆安全中心并确认页面体验。", "人工打开 UKUI 控制中心并截图", "截图包含普通用户页、管理员页或系统维护页", mode="manual"),
@@ -102,7 +103,7 @@ def _result(item: AcceptanceItem, status: str, ok: bool, summary: str, details: 
         "ok": ok,
         "summary": summary,
         "pass_standard": item.pass_standard,
-        "details": details,
+        "details": jsonable(details),
     }
 
 
@@ -132,12 +133,23 @@ def _cgroup(_: MemGuardService) -> tuple[str, bool, str, dict[str, object]]:
 
 def _openkylin_status(_: MemGuardService) -> tuple[str, bool, str, dict[str, object]]:
     try:
-        from memguard.os_guard.openkylin_native import collect_openkylin_status
+        from memguard.os_guard.openkylin_native import openkylin_native_status
 
-        status = collect_openkylin_status(probe_sdk=False)
+        status = openkylin_native_status(probe_sdk=False, fast=True)
     except Exception as exc:  # pragma: no cover - platform dependent
-        status = {"error": str(exc)}
-    return "passed", True, "已完成本机 openKylin 快速状态检查。", status
+        return "failed", False, "无法完成本机 openKylin 状态检查。", {"error": type(exc).__name__, "message": str(exc)}
+
+    system = status.get("system") if isinstance(status.get("system"), dict) else {}
+    summary = status.get("summary") if isinstance(status.get("summary"), dict) else {}
+    if not bool(system.get("is_openkylin_like")):
+        return "warning", True, "当前为非 openKylin 环境，本项只记录兼容性状态。", status
+
+    overall = str(summary.get("overall") or "red").lower()
+    if overall == "green":
+        return "passed", True, "openKylin 原生组件状态正常。", status
+    if overall == "yellow":
+        return "warning", True, "openKylin 原生组件可以使用，但有项目建议确认。", status
+    return "failed", False, "openKylin 原生组件存在不可用项目，请按建议处理。", status
 
 
 def _ingest_preference(service: MemGuardService) -> tuple[str, bool, str, dict[str, object]]:
@@ -222,10 +234,10 @@ def _pytest(_: MemGuardService) -> tuple[str, bool, str, dict[str, object]]:
 def _ready(_: MemGuardService) -> tuple[str, bool, str, dict[str, object]]:
     script = Path("scripts/check_competition_ready.py")
     if not script.exists():
-        return "warning", True, "当前目录没有赛题就绪脚本。", {"script": str(script)}
+        return "warning", True, "当前目录没有交付就绪检查脚本。", {"script": str(script)}
     output = _run_fixed_command([sys.executable, str(script), "--output", "docs/competition_ready.json", "--markdown", "docs/竞赛就绪自检报告.md"], timeout=60)
     ok = output["returncode"] == 0
-    return ("passed" if ok else "failed", ok, "赛题就绪检查通过。" if ok else "赛题就绪检查未通过。", output)
+    return ("passed" if ok else "failed", ok, "交付就绪检查通过。" if ok else "交付就绪检查未通过。", output)
 
 
 def _evidence_dir(_: MemGuardService) -> tuple[str, bool, str, dict[str, object]]:
@@ -277,23 +289,85 @@ _RUNNERS: dict[str, Callable[[MemGuardService], tuple[str, bool, str, dict[str, 
 }
 
 
-def acceptance_report(results: list[dict[str, object]]) -> dict[str, object]:
-    total = len(results)
-    passed = sum(1 for item in results if item.get("status") == "passed")
-    failed = sum(1 for item in results if item.get("status") == "failed")
-    warning = sum(1 for item in results if item.get("status") == "warning")
-    manual = sum(1 for item in results if item.get("status") == "manual")
+_ACCEPTANCE_STATUS_OK = {
+    "passed": True,
+    "failed": False,
+    "warning": True,
+    "skipped": True,
+    "not_run": False,
+    "manual": True,
+}
+
+
+def acceptance_report(results: object) -> dict[str, object]:
+    if not isinstance(results, list):
+        raise ValueError("acceptance results must be a list")
+
+    known_item_ids = {item.id for item in ACCEPTANCE_ITEMS}
+    provided_results: dict[str, dict[str, object]] = {}
+    for index, result in enumerate(results):
+        if not isinstance(result, dict):
+            raise ValueError(f"acceptance result must be an object at index {index}")
+        item_id = result.get("id")
+        if not isinstance(item_id, str) or not item_id.strip():
+            raise ValueError(f"acceptance item id must be a non-empty string at index {index}")
+        if item_id not in known_item_ids:
+            raise ValueError(f"unknown acceptance item: {item_id!r}")
+        if item_id in provided_results:
+            raise ValueError(f"duplicate acceptance item: {item_id}")
+        status = result.get("status")
+        if not isinstance(status, str) or status not in _ACCEPTANCE_STATUS_OK:
+            raise ValueError(f"unknown acceptance status: {status!r}")
+        expected_ok = _ACCEPTANCE_STATUS_OK[status]
+        if "ok" not in result:
+            raise ValueError(f"acceptance ok is required for item {item_id}")
+        ok = result["ok"]
+        if not isinstance(ok, bool):
+            raise ValueError(f"acceptance ok must be a boolean for item {item_id}")
+        if ok is not expected_ok:
+            raise ValueError(f"acceptance ok contradicts status {status!r} for item {item_id}")
+        if "details" not in result:
+            raise ValueError(f"acceptance details are required for item {item_id}")
+        if not isinstance(result["details"], dict):
+            raise ValueError(f"acceptance details must be an object for item {item_id}")
+        provided_results[item_id] = result
+
+    normalized_results: list[dict[str, object]] = []
+    for item in ACCEPTANCE_ITEMS:
+        provided = provided_results.get(item.id)
+        if provided is None:
+            if item.mode == "manual":
+                normalized_results.append(_result(item, "manual", True, "该项目需要人工确认。", {}))
+            else:
+                normalized_results.append(_result(item, "not_run", False, "该项目尚未运行。", {}))
+            continue
+
+        status = str(provided["status"])
+        details = provided["details"]
+        normalized_results.append(
+            _result(
+                item,
+                status,
+                _ACCEPTANCE_STATUS_OK[status],
+                str(provided.get("summary", "")),
+                details,
+            )
+        )
+
+    total = len(normalized_results)
+    counts = {
+        status: sum(1 for item in normalized_results if item.get("status") == status)
+        for status in _ACCEPTANCE_STATUS_OK
+    }
     return {
-        "schema": "memguardos-acceptance-report-v1",
+        "schema": "memguardos-acceptance-report-v2",
         "summary": {
             "total": total,
-            "passed": passed,
-            "failed": failed,
-            "warning": warning,
-            "manual": manual,
-            "ready_for_final_demo": failed == 0 and manual == 0,
+            **counts,
+            "ready_for_delivery": counts["passed"] == total
+            and all(counts[status] == 0 for status in ("failed", "warning", "skipped", "not_run", "manual")),
         },
-        "results": results,
+        "results": normalized_results,
     }
 
 
@@ -308,6 +382,8 @@ def report_to_markdown(report: dict[str, object]) -> str:
         f"| 通过 | {summary.get('passed', 0)} |",
         f"| 不通过 | {summary.get('failed', 0)} |",
         f"| 警告 | {summary.get('warning', 0)} |",
+        f"| 跳过 | {summary.get('skipped', 0)} |",
+        f"| 未运行 | {summary.get('not_run', 0)} |",
         f"| 需人工确认 | {summary.get('manual', 0)} |",
         "",
         "| 编号 | 分组 | 名称 | 状态 | 摘要 |",

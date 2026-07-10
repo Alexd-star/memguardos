@@ -1,4 +1,12 @@
-from memguard.web.dashboard import _dashboard_html
+import io
+import inspect
+import json
+import re
+import shutil
+import subprocess
+import pytest
+
+from memguard.web.dashboard import _DashboardHandler, _dashboard_html
 
 
 def test_dashboard_uses_role_oriented_product_navigation_without_contest_copy():
@@ -42,7 +50,7 @@ def test_dashboard_has_visual_product_affordances_not_only_text_blocks():
     assert "health-matrix" in page
     assert "lifecycle" in page
     assert "status-dot" in page
-    assert "memory-funnel" in page
+    assert "memory-funnel" not in page
     assert "服务健康" in page
     assert "采集" in page and "抽取" in page and "上下文" in page and "遗忘" in page
     assert "acceptanceList" in page
@@ -72,7 +80,7 @@ def test_dashboard_initial_load_is_lightweight_and_tab_data_is_lazy_loaded():
 
     assert "loadTabData" in page
     assert "loadedTabs" in page
-    assert "refresh();" in page
+    assert "loadSessionCapabilities().then(() => refresh()).catch(handleInitialLoadFailure);" in page
     assert "refresh(); audit(null)" not in page
     assert "audit(null); loadAgentOverview(null)" not in page
     assert "loadAgentOverview(null); loadAcceptancePlan(null)" not in page
@@ -97,3 +105,312 @@ def test_dashboard_declares_click_handlers_for_all_inline_buttons():
 
     for handler in handlers:
         assert f"function {handler}" in page or f"async function {handler}" in page
+
+
+def test_dashboard_inline_script_has_valid_javascript_syntax(tmp_path):
+    page = _dashboard_html()
+    match = re.search(r"<script>(?P<script>[\s\S]*?)</script>", page)
+    assert match is not None
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is unavailable for the browser script syntax gate")
+
+    script = tmp_path / "dashboard-inline.js"
+    script.write_text(match.group("script"), encoding="utf-8")
+    completed = subprocess.run(
+        [node, "--check", str(script)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_dashboard_declares_an_inline_favicon_to_avoid_console_noise():
+    page = _dashboard_html()
+
+    assert '<link rel="icon" href="data:,">' in page
+
+
+def test_dashboard_uses_product_language_and_collapses_technical_receipts():
+    page = _dashboard_html()
+
+    assert "当前资料库：加载中" in page
+    assert "命名空间：加载中" not in page
+    assert "验证记忆效果" in page
+    assert "一键体验流程" not in page
+    assert '<option value="manual">手动输入</option>' in page
+    assert '<option value="dashboard">本地控制台</option>' in page
+    assert '<option value="tool_result">工具执行结果</option>' in page
+    assert '<option value="user_behavior">用户与 Agent 交互</option>' in page
+    assert '<option value="os_event">系统事件</option>' in page
+    assert '<option value="working">临时工作记忆</option>' in page
+    assert '<option value="session">当前会话记忆</option>' in page
+    assert '<option value="long_term">长期记忆</option>' in page
+    assert "<details open>" not in page
+
+
+def test_dashboard_keeps_access_token_in_admin_settings_not_header():
+    page = _dashboard_html()
+    header = re.search(r"<header>(?P<header>[\s\S]*?)</header>", page)
+    diagnostics = re.search(r'<section id="diagnostics"[^>]*>(?P<section>[\s\S]*?)</section>', page)
+
+    assert header is not None
+    assert diagnostics is not None
+    assert 'id="apiToken"' not in header.group("header")
+    assert 'id="apiToken"' in diagnostics.group("section")
+
+
+def test_dashboard_bootstraps_bearer_from_fragment_then_immediately_removes_credentials():
+    page = _dashboard_html()
+
+    assert "new URLSearchParams(window.location.hash.slice(1))" in page
+    assert "bootstrapParams.get('token')" in page
+    assert "sessionStorage.setItem('memguardos_api_token', bootstrapToken)" in page
+    assert "window.history.replaceState(null, '', cleanLocation)" in page
+    assert "bootstrapParams.get('tab')" in page
+    assert "tokenInput.value = sessionStorage.getItem('memguardos_api_token') || ''" in page
+    assert "?token=" not in page
+    assert "launch_token" not in page
+
+
+def test_dashboard_adapts_status_grids_before_labels_wrap_vertically():
+    page = _dashboard_html()
+
+    assert "@media (max-width: 1180px)" in page
+    assert ".grid.four, .health-matrix { grid-template-columns:repeat(2,minmax(0,1fr)); }" in page
+    assert ".health-tile .health-title > span:not(.status-dot) { white-space:nowrap; }" in page
+    assert "@media (max-width: 760px)" in page
+    assert "nav { display:flex; overflow-x:auto;" in page
+    assert "scroll-snap-type:x proximity;" in page
+    assert "requestedButton.scrollIntoView({block:'nearest', inline:'nearest'});" in page
+
+
+def test_dashboard_password_field_is_grouped_in_a_non_submitting_form():
+    page = _dashboard_html()
+    diagnostics = re.search(r'<section id="diagnostics"[^>]*>(?P<section>[\s\S]*?)</section>', page)
+
+    assert diagnostics is not None
+    assert '<form id="dashboardAuthForm" onsubmit="event.preventDefault()">' in diagnostics.group("section")
+    assert diagnostics.group("section").index('<form id="dashboardAuthForm"') < diagnostics.group("section").index('id="apiToken"')
+    assert diagnostics.group("section").index('id="apiToken"') < diagnostics.group("section").index("</form>")
+
+
+def test_dashboard_uses_user_facing_status_labels_instead_of_backend_names():
+    page = _dashboard_html()
+
+    assert "function retrievalModeLabel" in page
+    assert "基础检索" in page
+    assert "本机增强" in page
+    assert "runtime.cgroup_v2 ? 'cgroup v2'" not in page
+
+
+def test_dashboard_translates_internal_enums_before_rendering_user_results():
+    page = _dashboard_html()
+
+    for helper in (
+        "sourceLabel",
+        "tierLabel",
+        "sensitivityLabel",
+        "matchSourceLabel",
+        "selectionReasonLabel",
+        "stageLabel",
+        "scopeLabel",
+        "eventRoleLabel",
+        "eventTypeLabel",
+        "topicLabel",
+        "memorySubtypeLabel",
+        "memorySummaryLabel",
+    ):
+        assert f"function {helper}" in page
+
+    assert "esc(row.summary || row.memory_id)" not in page
+    assert "esc(row.match_source)" not in page
+    assert "esc(row.tier)" not in page
+    assert "esc(item.role)" not in page
+    assert "esc(item.event_type)" not in page
+    assert "esc(proof.stage)" not in page
+    assert "selected_by_hybrid_graph_or_text_search" in page
+    assert "与问题内容和关联信息匹配" in page
+    assert "memorySummaryLabel(item)" in page
+    assert "topicLabel(item.topic)" in page
+    assert "scopeLabel(item.scope" in page
+    assert "evidencebench_v2:'系统验证'" in page
+    assert "evidencebench_v2:'评测样例'" not in page
+    assert "row.summary_for_user ||" in page
+    assert "memorySubtypeLabel(memory.subtype" in page
+    assert "暂无使用证据" in page
+
+
+def test_dashboard_request_failures_are_local_to_each_operation():
+    page = _dashboard_html()
+
+    assert "let requestFailure" not in page
+    assert "requestFailure =" not in page
+    assert "function requestError" in page
+    assert "throw requestError(message);" in page
+    assert "return {ok:false, error:String(err)};" not in page
+    assert "loadSessionCapabilities().then(() => refresh()).catch(handleInitialLoadFailure);" in page
+
+
+def test_dashboard_labels_are_associated_with_form_controls():
+    page = _dashboard_html()
+    labels = re.findall(r"<label(?P<attrs>[^>]*)>", page)
+
+    assert labels
+    assert all('for="' in attrs for attrs in labels)
+    for target in re.findall(r'<label[^>]*for="([^"]+)"', page):
+        assert f'id="{target}"' in page
+
+
+def test_dashboard_risk_advice_only_lists_unresolved_checks():
+    page = _dashboard_html()
+
+    assert "checks.filter(item => !item.ok).concat(" not in page
+    assert "当前没有需要立即处理的风险" in page
+    assert "所有基础检查均已满足" in page
+
+
+def test_dashboard_all_tab_entry_points_share_retryable_lazy_loading():
+    page = _dashboard_html()
+
+    assert "async function openTab(tab)" in page
+    assert "await loadTabData(tab, null);" in page
+    assert "async function loadTabData(tab, event)" in page
+    assert "loadedTabs.add(tab);" in page
+    assert "const result = await loader(event);\n      if (result !== null)\n        loadedTabs.add(tab);" in page
+    assert "openTab(btn.dataset.tab);\n      loadTabData(btn.dataset.tab, null);" not in page
+
+
+def test_dashboard_refresh_renders_partial_results_and_preserves_mutation_success():
+    page = _dashboard_html()
+
+    assert "Promise.allSettled" in page
+    assert "renderStatusPayload" in page
+    assert "renderDiagnosticsPayload" in page
+    assert "refreshAfterMutation" in page
+    assert "保存已经完成" in page
+    assert "遗忘已经完成" in page
+    assert "校验已经完成" in page
+    assert "，但部分概览暂未更新。" in page
+
+
+def test_dashboard_operation_feedback_is_sequenced_and_supports_noop_results():
+    page = _dashboard_html()
+
+    assert "let operationSequence = 0;" in page
+    assert "const operationId = ++operationSequence;" in page
+    assert "operationId === operationSequence" in page
+    assert "function operationFeedback" in page
+    assert "if (!id) {" in page
+    assert "请先选择一条记忆。" in page
+    assert page.index("if (!id) {") < page.index("await withBusy(event, async () => {", page.index("async function loadMemoryDetail"))
+
+
+def test_dashboard_uses_authenticated_blob_download_for_diagnostics():
+    page = _dashboard_html()
+
+    export_body = page[page.index("async function exportDiagnostics") : page.index("openHashTab();")]
+    assert "fetchWithTimeout('/api/export-diagnostics'" in export_body
+    assert "headers: authHeaders()" in export_body
+    assert "await response.blob()" in export_body
+    assert "URL.createObjectURL" in export_body
+    assert "URL.revokeObjectURL" in export_body
+    assert "Content-Disposition" in export_body
+    assert "window.location.href = '/api/export-diagnostics'" not in page
+
+
+def test_dashboard_applies_role_capabilities_before_exposing_privileged_actions():
+    page = _dashboard_html()
+
+    assert "async function loadSessionCapabilities" in page
+    assert "function applySessionCapabilities" in page
+    assert "data-min-role=\"operator\"" in page
+    assert "data-min-role=\"admin\"" in page
+    assert "currentRoleRank" in page
+    assert "当前访问权限不足" in page
+    assert "loadSessionCapabilities().then" in page
+    assert '<button data-tab="audit" data-min-role="admin">审计记录</button>' in page
+    assert '<button data-tab="diagnostics" data-min-role="admin">系统维护</button>' in page
+    assert '<section id="audit" data-min-role="admin">' in page
+    assert '<section id="diagnostics" data-min-role="admin">' in page
+    assert '<section id="acceptance" data-min-role="admin">' in page
+    assert 'data-min-role="admin" onclick="openTab(\'diagnostics\')">系统维护</button>' in page
+    assert "requestedButton && requestedButton.hidden" in page
+    assert "当前访问权限不足，已返回个人工作台。" in page
+    assert "function privilegedActionMarkup" in page
+    assert "此操作需要管理员处理" in page
+
+
+def test_dashboard_overview_uses_real_product_state_without_internal_paths_or_fixed_demo_metrics():
+    page = _dashboard_html()
+
+    assert "当前记忆" in page
+    assert "当前资料库" in page
+    assert "仅保存在本机" in page
+    assert "<span>存储目录</span>" not in page
+    assert "width:82%" not in page
+    assert "width:64%" not in page
+    assert "width:38%" not in page
+    assert "条形图表示流程阶段" not in page
+    assert "等待输入" in page
+    assert "确认后执行" in page
+
+
+def test_dashboard_requires_a_current_forget_preview_before_confirmation():
+    page = _dashboard_html()
+
+    assert 'id="forgetConfirmButton"' in page
+    assert 'id="agentForgetConfirmButton"' in page
+    assert "let forgetPreview = null;" in page
+    assert "let agentForgetPreview = null;" in page
+    assert "invalidateForgetPreview" in page
+    assert "preview_token:confirmForget ? forgetPreview.previewToken : ''" in page
+    assert "preview_token:confirmForget ? agentForgetPreview.previewToken : ''" in page
+    assert "候选数量" in page
+    assert "请先重新预览影响范围" in page
+
+
+def test_dashboard_serializes_mutations_and_renders_a_search_empty_state():
+    page = _dashboard_html()
+
+    assert "let activeMutation = null;" in page
+    assert "async function withMutation" in page
+    assert "当前已有一项修改正在处理" in page
+    assert "return withMutation(event, '保存记忆'" in page
+    assert "return withMutation(event, '精准遗忘'" in page
+    assert "没有找到相关记忆" in page
+    assert "调整关键词或先写入一条记忆" in page
+
+
+def test_dashboard_memory_detail_uses_real_source_and_preference_scope_fields():
+    page = _dashboard_html()
+
+    assert "memory.preference_scope || memory.scope" in page
+    assert "memory.source_kind || (memory.source || {}).kind" in page
+    assert "default:'当前记忆空间'" in page
+
+
+@pytest.mark.parametrize(
+    ("method_name", "args"),
+    [
+        ("_send_json", ({"value": float("nan")},)),
+        ("_send_json_attachment", ({"value": float("nan")}, "diagnostics.json")),
+    ],
+)
+def test_dashboard_json_boundaries_emit_standard_json(method_name, args):
+    handler = object.__new__(_DashboardHandler)
+    handler.wfile = io.BytesIO()
+    handler.send_response = lambda status: None
+    handler.send_header = lambda name, value: None
+    handler.end_headers = lambda: None
+
+    assert "allow_nan=False" in inspect.getsource(getattr(_DashboardHandler, method_name))
+
+    getattr(handler, method_name)(*args)
+
+    raw = handler.wfile.getvalue()
+    assert b"NaN" not in raw
+    assert b"Infinity" not in raw
+    assert json.loads(raw.decode("utf-8")) == {"value": None}

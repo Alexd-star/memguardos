@@ -110,10 +110,10 @@ Agent 交互记忆专项 benchmark 共 200 条，组成如下：
 
 ## 6. 自动化测试
 
-新增记忆价值配对评测、真实行为判定、偏好合规守卫和程序性记忆自动沉淀后，本地工作树全量测试为 `341 passed, 3 skipped`；openKylin 目录现保存当前 HEAD 快照 `344 passed`，source revision 与当前 Git HEAD 一致：
+新增记忆价值配对评测、真实行为判定、偏好合规守卫和程序性记忆自动沉淀后，本地工作树全量测试为 `529 passed, 13 skipped`；openKylin 目录保留上一次实机快照，本轮将在最终源代码 HEAD 下重采并校验 source revision：
 
 ```text
-344 passed（对应可执行代码基线实机复验；准确版本见原生证据目录 `source_revision.json`）
+最终 HEAD 实机结果将在本轮同步后写入原生证据目录，并由 `source_revision.json` 绑定版本。
 ```
 
 其中新增测试覆盖：

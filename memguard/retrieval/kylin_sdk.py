@@ -12,6 +12,8 @@ import sys
 import urllib.error
 import urllib.request
 
+from memguard.os_guard.unix_socket_trust import inspect_unix_socket
+
 
 EMBEDDING_HEADERS = [
     "/usr/include/kylin-ai/coreai/embedding/embedding.h",
@@ -71,13 +73,14 @@ class KylinEmbeddingBackend:
         lib_path = find_library("kysdk-coreai-embedding") or self.library_name
         lib_file = self._resolve_library_file(lib_path)
         headers = {path: Path(path).exists() for path in EMBEDDING_HEADERS}
+        runtime = self._runtime_status()
         report: Dict[str, object] = {
             "backend": "kylin_coreai_embedding",
             "library": lib_path,
             "library_file": lib_file,
             "library_loadable": False,
             "headers": headers,
-            "runtime": self._runtime_status(),
+            "runtime": runtime,
             "kytensor": self._kytensor_status(),
             "plugins": self._plugin_status(),
             "packages": self._package_status(EMBEDDING_PACKAGES),
@@ -96,6 +99,11 @@ class KylinEmbeddingBackend:
                 "timeout_hint": "If model_info is present but embedding_probe returns 'Timeout was reached', inspect kylin-ai-runtime sockets, kytensor.service, Triton repository index, ondevice plugin logs, and model repository links.",
             },
         }
+        if not runtime["trusted"]:
+            report["disabled_reason"] = f"Kylin runtime Unix socket 不可信：{runtime['reason']}"
+            if probe:
+                report["ready_for_default_retrieval"] = False
+            return report
         try:
             lib = self._load_library(lib_path)
             report["library_loadable"] = True
@@ -116,6 +124,15 @@ class KylinEmbeddingBackend:
         return info
 
     def model_info_with_session_report(self, lib: Optional[CDLL] = None) -> tuple[Optional[Dict[str, object]], Dict[str, object]]:
+        runtime = self._runtime_status()
+        if not runtime["trusted"]:
+            return None, {
+                "created": False,
+                "init_code": None,
+                "init_ok": False,
+                "runtime_trusted": False,
+                "error": f"Kylin runtime Unix socket 不可信：{runtime['reason']}",
+            }
         lib = lib or self._load_library()
         session, init_code = self._create_initialized_session(lib)
         report: Dict[str, object] = {
@@ -146,6 +163,18 @@ class KylinEmbeddingBackend:
             self._destroy_session(lib, session)
 
     def embed(self, text: str, lib: Optional[CDLL] = None, raise_on_error: bool = True) -> Dict[str, object]:
+        runtime = self._runtime_status()
+        if not runtime["trusted"]:
+            result = {
+                "ok": False,
+                "error": f"Kylin runtime Unix socket 不可信：{runtime['reason']}",
+                "runtime_trusted": False,
+                "runtime": runtime,
+                "fallback": "hash_embedding",
+            }
+            if raise_on_error:
+                raise RuntimeError(result["error"])
+            return result
         lib = lib or self._load_library()
         session, init_code = self._create_initialized_session(lib)
         if not session.value:
@@ -303,18 +332,41 @@ print(json.dumps(result, ensure_ascii=False))
     @staticmethod
     def _runtime_base_dir() -> str:
         uid = os.getuid() if hasattr(os, "getuid") else 1000
-        return f"/tmp/.kylin-ai-runtime-unix/{uid}"
+        # Kylin platform protocol path; every socket is fully verified before SDK use.
+        return f"/tmp/.kylin-ai-runtime-unix/{uid}"  # nosec B108
 
     def _runtime_status(self) -> Dict[str, object]:
         base = self._runtime_base_dir()
         sockets = {name: f"{base}/{name}" for name in RUNTIME_SOCKET_NAMES}
+        uid = os.getuid() if hasattr(os, "getuid") else 1000
+        socket_trust = {
+            name: inspect_unix_socket(
+                path,
+                expected_uid=uid,
+                timeout=0.2,
+                root_user_runtime=True,
+            )
+            for name, path in sockets.items()
+        }
+        trusted = bool(socket_trust) and all(item["trusted"] for item in socket_trust.values())
+        failed = [f"{name}: {item['reason']}" for name, item in socket_trust.items() if not item["trusted"]]
+        warnings = [
+            f"{name}: {item['reason']}"
+            for name, item in socket_trust.items()
+            if item["trusted"] and item["parent_directory_warning"]
+        ]
         return {
             "binary": shutil.which("kylin-ai-runtime"),
             "user_service": self._user_service_state("kylin-ai-runtime.service"),
             "base_dir": base,
             "base_dir_exists": Path(base).exists(),
             "sockets": sockets,
-            "socket_exists": {name: Path(path).exists() for name, path in sockets.items()},
+            "socket_exists": {name: item["exists"] for name, item in socket_trust.items()},
+            "socket_ready": {name: item["socket_ready"] for name, item in socket_trust.items()},
+            "socket_trust": socket_trust,
+            "trusted": trusted,
+            "reason": "; ".join(failed or warnings) if (failed or warnings) else "Kylin runtime Unix socket 全部可信",
+            "parent_directory_warning": any(item["parent_directory_warning"] for item in socket_trust.values()),
             "session_bus": bool(os.environ.get("DBUS_SESSION_BUS_ADDRESS")),
             "xdg_runtime_dir": os.environ.get("XDG_RUNTIME_DIR", ""),
         }
@@ -351,7 +403,8 @@ print(json.dumps(result, ensure_ascii=False))
     def _triton_repository_index() -> Dict[str, object]:
         request = urllib.request.Request("http://127.0.0.1:8000/v2/repository/index", method="POST")
         try:
-            with urllib.request.urlopen(request, timeout=3) as response:
+            # The Kytensor/Triton repository API is a fixed loopback-only endpoint.
+            with urllib.request.urlopen(request, timeout=3) as response:  # nosec B310
                 raw = response.read().decode("utf-8", "replace")
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             return {"available": False, "ok": False, "error": str(exc)}
@@ -496,6 +549,13 @@ class KylinVectorStoreProbe:
         headers = {path: Path(path).exists() for path in VECTOR_HEADERS}
         lib_path = find_library("kysdk-vector-engine-client") or "libkysdk-vector-engine-client.so"
         service_socket = self._vector_socket()
+        uid = os.getuid() if hasattr(os, "getuid") else 1000
+        socket_trust = inspect_unix_socket(
+            service_socket,
+            expected_uid=uid,
+            timeout=0.2,
+            root_user_runtime=True,
+        )
         report = {
             "backend": "kysdk_vector_engine_client",
             "library": lib_path,
@@ -505,7 +565,12 @@ class KylinVectorStoreProbe:
             "default_binary": shutil.which("kylin-ai-vector-engine-default"),
             "user_service": self._user_service_state("kylin-ai-vector-engine.service"),
             "socket": service_socket,
-            "socket_exists": Path(service_socket).exists() if service_socket else False,
+            "socket_exists": socket_trust["exists"],
+            "socket_ready": socket_trust["socket_ready"],
+            "trusted": socket_trust["trusted"],
+            "reason": socket_trust["reason"],
+            "socket_trust": socket_trust,
+            "parent_directory_warning": socket_trust["parent_directory_warning"],
             "available": False,
             "fallback": "sqlite_fts_hash_vector",
         }
@@ -514,13 +579,14 @@ class KylinVectorStoreProbe:
             report["library_loadable"] = True
         except Exception as exc:  # pragma: no cover - platform-dependent SDK path
             report["error"] = str(exc)
-        report["available"] = bool(report["library_loadable"] and report["socket_exists"])
+        report["available"] = bool(report["library_loadable"] and report["trusted"])
         return report
 
     @staticmethod
     def _vector_socket() -> str:
         uid = os.getuid() if hasattr(os, "getuid") else 1000
-        return "/tmp/kylin-ai-vector-engine-%s.sock" % uid
+        # Kylin platform protocol path; the socket is fully verified before use.
+        return "/tmp/kylin-ai-vector-engine-%s.sock" % uid  # nosec B108
 
     @staticmethod
     def _user_service_state(unit: str) -> Dict[str, object]:

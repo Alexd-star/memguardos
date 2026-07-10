@@ -11,7 +11,7 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 4600",
+      "detail": "中文字符数 4614",
       "severity": "P0"
     },
     {
@@ -109,7 +109,7 @@
       "category": "中文文档",
       "name": "docs/13_测试说明.md",
       "ok": true,
-      "detail": "中文字符数 510",
+      "detail": "中文字符数 521",
       "severity": "P0"
     },
     {
@@ -123,7 +123,7 @@
       "category": "中文文档",
       "name": "docs/15_更新日志.md",
       "ok": true,
-      "detail": "中文字符数 1262",
+      "detail": "中文字符数 1267",
       "severity": "P0"
     },
     {
@@ -151,21 +151,21 @@
       "category": "中文文档",
       "name": "docs/最终提交说明.md",
       "ok": true,
-      "detail": "中文字符数 3677",
+      "detail": "中文字符数 3683",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/平台摘要.md",
       "ok": true,
-      "detail": "中文字符数 2678",
+      "detail": "中文字符数 2708",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/项目介绍总览.md",
       "ok": true,
-      "detail": "中文字符数 6058",
+      "detail": "中文字符数 6060",
       "severity": "P0"
     },
     {
@@ -214,7 +214,7 @@
       "category": "中文文档",
       "name": "docs/openKylin验证记录.md",
       "ok": true,
-      "detail": "中文字符数 1690",
+      "detail": "中文字符数 1699",
       "severity": "P0"
     },
     {
@@ -235,7 +235,7 @@
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 4117",
+      "detail": "中文字符数 4139",
       "severity": "P0"
     },
     {
@@ -249,21 +249,21 @@
       "category": "中文文档",
       "name": "docs/真实Agent闭环测试报告.md",
       "ok": true,
-      "detail": "中文字符数 1612",
+      "detail": "中文字符数 1627",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/真实Agent记忆价值评测报告.md",
       "ok": true,
-      "detail": "中文字符数 3297",
+      "detail": "中文字符数 3318",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/赛题符合性说明.md",
       "ok": true,
-      "detail": "中文字符数 1155",
+      "detail": "中文字符数 1163",
       "severity": "P0"
     },
     {
@@ -277,21 +277,21 @@
       "category": "中文文档",
       "name": "docs/评委证据包索引.md",
       "ok": true,
-      "detail": "中文字符数 2166",
+      "detail": "中文字符数 2174",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/答辩提纲.md",
       "ok": true,
-      "detail": "中文字符数 1325",
+      "detail": "中文字符数 1331",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/答辩稿.md",
       "ok": true,
-      "detail": "中文字符数 6294",
+      "detail": "中文字符数 6321",
       "severity": "P0"
     },
     {
@@ -305,7 +305,7 @@
       "category": "中文文档",
       "name": "docs/超标准交付评分矩阵.md",
       "ok": true,
-      "detail": "中文字符数 1268",
+      "detail": "中文字符数 1281",
       "severity": "P0"
     },
     {
@@ -319,7 +319,7 @@
       "category": "中文文档",
       "name": "docs/安全扫描报告.md",
       "ok": true,
-      "detail": "中文字符数 304",
+      "detail": "中文字符数 311",
       "severity": "P0"
     },
     {
@@ -375,7 +375,7 @@
       "category": "中文文档",
       "name": "正式文档测试数字口径",
       "ok": true,
-      "detail": "正式材料使用当前 341/344 测试口径",
+      "detail": "正式材料未引用已知过期测试数字",
       "severity": "P0"
     },
     {
@@ -760,14 +760,14 @@
       "category": "量化评测",
       "name": "精准遗忘候选精确率",
       "ok": true,
-      "detail": "当前 1.0000，要求 >= 0.9000",
+      "detail": "当前 0.9655，要求 >= 0.9000",
       "severity": "P0"
     },
     {
       "category": "量化评测",
       "name": "精准遗忘候选召回率",
       "ok": true,
-      "detail": "当前 1.0000，要求 >= 0.9000",
+      "detail": "当前 0.9425，要求 >= 0.9000",
       "severity": "P0"
     },
     {
@@ -781,7 +781,7 @@
       "category": "量化评测",
       "name": "负载 P95 延迟小于 500ms",
       "ok": true,
-      "detail": "当前 0.4290，要求 <= 500.0000",
+      "detail": "当前 4.7740，要求 <= 500.0000",
       "severity": "P0"
     },
     {
@@ -852,210 +852,210 @@
       "name": "证据目录",
       "ok": true,
       "detail": "docs/evidence/latest",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "pytest.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "eval_1k.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "eval_10k.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "sdk_status.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "sdk_embedding_probe.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "embedding_cpp_probe.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "vector_probe.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "kylin_retrieval.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "build_context_explainability.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "hierarchical_graph_search.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "temporal_status.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "namespace_isolation.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "systemd_cgroup.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "systemd_namespace.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "auditd_ingest.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "audit_concurrency.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "verify_audit.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "bpf_lsm_enforcer.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "deb_package.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "deb_apt_install_maintenance.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "deb_apt_install_verify.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "deb_apt_install_sdk_after_fix.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "ukui_plugin_build.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "ukui_plugin_install.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "ukui_plugin_visible_final.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "ukui_peony_visible_manual_confirmation.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "ukui_control_center_visible_manual_confirmation.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "natural_patterns.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "peony_file_scan_smoke.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
@@ -1125,322 +1125,322 @@
       "name": "Kylin embedding 真实推理",
       "ok": true,
       "detail": "inference_ready=True",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin指标",
       "name": "Kylin embedding 维度 768",
       "ok": true,
       "detail": "dim=768",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin指标",
       "name": "build-context 解释性证据",
       "ok": true,
       "detail": "包含 explainability 与 selection_trace",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin指标",
       "name": "层次图谱三层证据",
       "ok": true,
       "detail": "包含 summary/entity_relation/chunk/retrieval_path",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin指标",
       "name": "Peony 文件扫描闭环",
       "ok": true,
       "detail": "stored=True search_hits=2 audit_ok=True",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin指标",
       "name": ".deb 维护模式 apt 安装",
       "ok": true,
       "detail": "apt install 输出包含 memguardos 安装过程",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin指标",
       "name": ".deb 安装后 systemd 服务",
       "ok": true,
       "detail": "dpkg 状态正常且 memguardd.service active",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin指标",
       "name": ".deb 安装后桌面插件依赖",
       "ok": true,
       "detail": "Peony/UKUI 插件已打包且 ldd 无缺失依赖",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin指标",
       "name": ".deb 安装后审计链",
       "ok": true,
       "detail": "memctl verify-audit 返回 ok=true",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin指标",
       "name": ".deb 安装后 Kylin embedding 推理",
       "ok": true,
       "detail": "Python/C++ 探针均返回 768 维 embedding",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "manifest 覆盖全部证据文件",
       "ok": true,
       "detail": "覆盖 71 个证据文件",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "SHA256SUMS 覆盖全部证据文件",
       "ok": true,
       "detail": "覆盖 71 个证据文件",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "证据目录",
       "ok": true,
       "detail": "docs/evidence/openkylin_native_latest",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "source_revision.json",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "environment.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "openkylin_status.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "openkylin_status_probe_sdk.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "user_cli.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "peony_batch_preview.json",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "peony_batch_apply.json",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "peony_sensitive_preview.json",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "systemd_cgroup.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "service_restart.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "polkit_assets.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "tray_assets.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "desktop_build.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "debian_packages.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "deb_lifecycle.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "pytest_openkylin.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "manifest.json",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "SHA256SUMS.txt",
       "ok": true,
       "detail": "存在且非空",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "证据对应当前 Git HEAD",
       "ok": true,
-      "detail": "15523ae0919265170d26f0ddc69f0ff2b185cb28",
-      "severity": "P0"
+      "detail": "source=15523ae0919265170d26f0ddc69f0ff2b185cb28；当前 HEAD 仅追加/更新原生证据文件 23 个",
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "systemd 服务重启响应时间",
       "ok": true,
       "detail": "restart_ms=309",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "用户友好 memguard 入口",
       "ok": true,
       "detail": "memguard demo 输出完整闭环",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "Polkit policy 交付状态",
       "ok": true,
       "detail": "system installed",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "Polkit helper 交付状态",
       "ok": true,
       "detail": "system installed",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "Polkit helper 拒绝未知动作",
       "ok": true,
       "detail": "unknown_action_rejected=true",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "Debian 五包生命周期",
       "ok": true,
       "detail": "package_count=5 offline_install=ok",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "Debian 桌面包卸载重装",
       "ok": true,
       "detail": "桌面包卸载/重装通过",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "Debian 用户数据保护",
       "ok": true,
       "detail": "user_data_delete_guard=ok",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "Peony 批量预览确认契约",
       "ok": true,
       "detail": "批量预览可选择安全项",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "Peony 确认导入与审计链",
       "ok": true,
       "detail": "stored>=2 audit_chain=true",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "Peony 敏感文件阻断",
       "ok": true,
       "detail": "block_sensitive selectable=false",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin原生证据",
       "name": "UKUI 托盘安装资产",
       "ok": true,
       "detail": "托盘程序与 UKUI autostart 存在",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "manifest 覆盖全部证据文件",
       "ok": true,
       "detail": "覆盖 21 个证据文件",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "openKylin证据",
       "name": "SHA256SUMS 覆盖全部证据文件",
       "ok": true,
       "detail": "覆盖 21 个证据文件",
-      "severity": "P0"
+      "severity": "P1"
     },
     {
       "category": "性能与消融证据",
@@ -1670,7 +1670,7 @@
       "category": "安全扫描",
       "name": "安全扫描门禁通过",
       "ok": true,
-      "detail": "bandit_high=0 pip_audit_vulnerabilities=0 missing_tools=[] bandit=warnings pip_audit=clean",
+      "detail": "bandit_high=0 bandit_medium=0 pip_audit_vulnerabilities=0 missing_tools=[] bandit=warnings pip_audit=clean",
       "severity": "P0"
     },
     {

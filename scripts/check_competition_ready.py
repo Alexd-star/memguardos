@@ -415,7 +415,10 @@ def check_formal_doc_consistency() -> List[Check]:
             "309 passed",
             "338 passed",
             "340 passed",
+            "341 passed",
             "343 passed",
+            "344 passed",
+            "527 passed",
         ):
             if token in text:
                 stale_test_hits.append(f"{rel}:{token}")
@@ -424,7 +427,7 @@ def check_formal_doc_consistency() -> List[Check]:
             "中文文档",
             "正式文档测试数字口径",
             not stale_test_hits,
-            "正式材料使用当前 341/344 测试口径" if not stale_test_hits else "过期数字：%s" % "、".join(stale_test_hits),
+            "正式材料未引用已知过期测试数字" if not stale_test_hits else "过期数字：%s" % "、".join(stale_test_hits),
         )
     )
     product_docs = [
@@ -1391,11 +1394,13 @@ def check_security_scan_artifacts(report_path: Path, markdown_path: Path) -> Lis
     pip_status = _nested_get(tools, ["pip_audit", "status"]) if isinstance(tools, dict) else None
     missing_tools = summary.get("missing_tools", []) if isinstance(summary, dict) else []
     bandit_high = int(summary.get("bandit_high_count", -1)) if isinstance(summary, dict) else -1
+    bandit_medium = int(summary.get("bandit_medium_count", -1)) if isinstance(summary, dict) else -1
     vulnerabilities = int(summary.get("pip_audit_vulnerability_count", -1)) if isinstance(summary, dict) else -1
     ok = (
         report.get("schema") == "memguardos-security-scan-v1"
         and report.get("ok") is True
         and bandit_high == 0
+        and bandit_medium == 0
         and vulnerabilities == 0
         and missing_tools == []
         and bandit_status in {"clean", "warnings"}
@@ -1407,11 +1412,12 @@ def check_security_scan_artifacts(report_path: Path, markdown_path: Path) -> Lis
             "安全扫描门禁通过",
             ok,
             (
-                "bandit_high=%s pip_audit_vulnerabilities=%s "
+                "bandit_high=%s bandit_medium=%s pip_audit_vulnerabilities=%s "
                 "missing_tools=%s bandit=%s pip_audit=%s"
             )
             % (
                 bandit_high,
+                bandit_medium,
                 vulnerabilities,
                 missing_tools,
                 bandit_status,

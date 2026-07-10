@@ -1,3 +1,5 @@
+#include "../dashboard_launcher.h"
+
 #include <QAction>
 #include <QApplication>
 #include <QDesktopServices>
@@ -111,14 +113,15 @@ public:
         tray_.setIcon(themedIcon(QStringLiteral("security-high"), QStyle::SP_MessageBoxInformation));
         auto *menu = new QMenu;
         auto *openCenter = menu->addAction(themedIcon(QStringLiteral("preferences-system"), QStyle::SP_FileDialogDetailedView), QStringLiteral("打开记忆安全中心"));
-        auto *openSdk = menu->addAction(themedIcon(QStringLiteral("system-search"), QStyle::SP_FileDialogContentsView), QStringLiteral("查看本机智能检索"));
-        auto *openAudit = menu->addAction(themedIcon(QStringLiteral("security-high"), QStyle::SP_DialogApplyButton), QStringLiteral("查看操作记录"));
-        auto *openSensitive = menu->addAction(themedIcon(QStringLiteral("dialog-warning"), QStyle::SP_MessageBoxWarning), QStringLiteral("查看已保护内容"));
-        auto *openRecentMemory = menu->addAction(themedIcon(QStringLiteral("document-save"), QStyle::SP_FileDialogInfoView), QStringLiteral("最近学到的记忆"));
-        auto *openRecentPreference = menu->addAction(themedIcon(QStringLiteral("preferences-desktop"), QStyle::SP_FileDialogInfoView), QStringLiteral("最近生效的偏好"));
-        auto *openRecentAgent = menu->addAction(themedIcon(QStringLiteral("system-run"), QStyle::SP_ComputerIcon), QStringLiteral("最近 Agent 任务"));
-        auto *openRecentForget = menu->addAction(themedIcon(QStringLiteral("edit-delete"), QStyle::SP_TrashIcon), QStringLiteral("最近遗忘验证"));
-        auto *openWorkspace = menu->addAction(themedIcon(QStringLiteral("applications-internet"), QStyle::SP_DesktopIcon), QStringLiteral("打开 Agent 工作台"));
+        auto *recentMenu = menu->addMenu(themedIcon(QStringLiteral("document-open-recent"), QStyle::SP_FileDialogInfoView), QStringLiteral("最近变化"));
+        auto *openRecentMemory = recentMenu->addAction(themedIcon(QStringLiteral("document-save"), QStyle::SP_FileDialogInfoView), QStringLiteral("最近学到的记忆"));
+        auto *openRecentPreference = recentMenu->addAction(themedIcon(QStringLiteral("preferences-desktop"), QStyle::SP_FileDialogInfoView), QStringLiteral("最近生效的偏好"));
+        auto *openRecentAgent = recentMenu->addAction(themedIcon(QStringLiteral("system-run"), QStyle::SP_ComputerIcon), QStringLiteral("最近 Agent 任务"));
+        auto *openRecentForget = recentMenu->addAction(themedIcon(QStringLiteral("edit-delete"), QStyle::SP_TrashIcon), QStringLiteral("最近遗忘验证"));
+        auto *openSensitive = recentMenu->addAction(themedIcon(QStringLiteral("dialog-warning"), QStyle::SP_MessageBoxWarning), QStringLiteral("查看已保护内容"));
+        auto *systemMenu = menu->addMenu(themedIcon(QStringLiteral("utilities-system-monitor"), QStyle::SP_ComputerIcon), QStringLiteral("系统状态"));
+        auto *openSdk = systemMenu->addAction(themedIcon(QStringLiteral("system-search"), QStyle::SP_FileDialogContentsView), QStringLiteral("查看本机智能检索"));
+        auto *openAudit = systemMenu->addAction(themedIcon(QStringLiteral("security-high"), QStyle::SP_DialogApplyButton), QStringLiteral("查看操作记录"));
         auto *openDashboardAction = menu->addAction(themedIcon(QStringLiteral("applications-internet"), QStyle::SP_DesktopIcon), QStringLiteral("打开本地控制台"));
         auto *refresh = menu->addAction(themedIcon(QStringLiteral("view-refresh"), QStyle::SP_BrowserReload), QStringLiteral("重新检查状态"));
         auto *pauseNotifications = menu->addAction(themedIcon(QStringLiteral("notifications-disabled"), QStyle::SP_MessageBoxInformation), QStringLiteral("暂停通知 1 小时"));
@@ -134,7 +137,6 @@ public:
         connect(openRecentPreference, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#preferences")); });
         connect(openRecentAgent, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#agent")); });
         connect(openRecentForget, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#forget")); });
-        connect(openWorkspace, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#agent")); });
         connect(openDashboardAction, &QAction::triggered, this, [this]() { openDashboard(); });
         connect(refresh, &QAction::triggered, this, &TrayController::refresh);
         connect(pauseNotifications, &QAction::toggled, this, [this, pauseNotifications](bool checked) {
@@ -185,13 +187,35 @@ private:
         QStringList arguments{QStringLiteral("openkylin-status"), QStringLiteral("--fast")};
         const QString program = memctlProgram(&arguments);
         current_ = new QProcess(this);
-        current_->setProcessChannelMode(QProcess::MergedChannels);
-        connect(current_, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
-            [this](int exitCode, QProcess::ExitStatus) {
-                QProcess *finished = current_;
+        QProcess *process = current_;
+        process->setProcessChannelMode(QProcess::MergedChannels);
+        connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError) {
+            if (process->property("handled").toBool() || process->property("timedOut").toBool())
+                return;
+            process->setProperty("handled", true);
+            if (current_ == process)
                 current_ = nullptr;
-                const QJsonObject payload = parseObject(finished->readAll());
-                if (exitCode != 0 || payload.isEmpty()) {
+            applyState(
+                QStringLiteral("error"),
+                QStringLiteral("状态检查失败"),
+                QStringLiteral("无法启动 MemGuardOS 状态检查，请打开记忆安全中心查看。"));
+            process->deleteLater();
+        });
+        connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
+            [this, process](int exitCode, QProcess::ExitStatus exitStatus) {
+                if (process->property("handled").toBool()) {
+                    if (current_ == process)
+                        current_ = nullptr;
+                    process->deleteLater();
+                    return;
+                }
+                process->setProperty("handled", true);
+                if (current_ == process)
+                    current_ = nullptr;
+                const QJsonObject payload = parseObject(process->readAll());
+                if (process->property("timedOut").toBool()) {
+                    applyState(QStringLiteral("error"), QStringLiteral("状态检查超时"), QStringLiteral("状态检查等待时间过长，请稍后重新检查。"));
+                } else if (exitStatus != QProcess::NormalExit || exitCode != 0 || payload.isEmpty()) {
                     applyState(QStringLiteral("error"), QStringLiteral("状态检查失败"), QStringLiteral("无法读取 MemGuardOS 状态，请打开控制中心查看。"));
                 } else {
                     const QJsonObject summary = payload.value(QStringLiteral("summary")).toObject();
@@ -210,10 +234,16 @@ private:
                         title,
                         recommendation.isEmpty() ? body : QStringLiteral("%1\n下一步：%2").arg(body, recommendation));
                 }
-                finished->deleteLater();
+                process->deleteLater();
                 refreshNotifications();
             });
-        current_->start(program, arguments);
+        QTimer::singleShot(15000, process, [process]() {
+            if (process->state() == QProcess::NotRunning || process->property("handled").toBool())
+                return;
+            process->setProperty("timedOut", true);
+            process->kill();
+        });
+        process->start(program, arguments);
     }
 
     void refreshNotifications()
@@ -223,17 +253,42 @@ private:
         QStringList arguments{QStringLiteral("notifications"), QStringLiteral("--limit"), QStringLiteral("20")};
         const QString program = memctlProgram(&arguments);
         notificationProcess_ = new QProcess(this);
-        notificationProcess_->setProcessChannelMode(QProcess::MergedChannels);
-        connect(notificationProcess_, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
-            [this](int exitCode, QProcess::ExitStatus) {
-                QProcess *finished = notificationProcess_;
+        QProcess *process = notificationProcess_;
+        process->setProcessChannelMode(QProcess::MergedChannels);
+        connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError) {
+            if (process->property("handled").toBool() || process->property("timedOut").toBool())
+                return;
+            process->setProperty("handled", true);
+            if (notificationProcess_ == process)
                 notificationProcess_ = nullptr;
-                const QJsonArray notifications = parseArray(finished->readAll());
-                if (exitCode == 0 && !notifications.isEmpty())
+            process->deleteLater();
+        });
+        connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
+            [this, process](int exitCode, QProcess::ExitStatus exitStatus) {
+                if (process->property("handled").toBool()) {
+                    if (notificationProcess_ == process)
+                        notificationProcess_ = nullptr;
+                    process->deleteLater();
+                    return;
+                }
+                process->setProperty("handled", true);
+                if (notificationProcess_ == process)
+                    notificationProcess_ = nullptr;
+                const QJsonArray notifications = parseArray(process->readAll());
+                if (!process->property("timedOut").toBool()
+                    && exitStatus == QProcess::NormalExit
+                    && exitCode == 0
+                    && !notifications.isEmpty())
                     consumeNotifications(notifications);
-                finished->deleteLater();
+                process->deleteLater();
             });
-        notificationProcess_->start(program, arguments);
+        QTimer::singleShot(10000, process, [process]() {
+            if (process->state() == QProcess::NotRunning || process->property("handled").toBool())
+                return;
+            process->setProperty("timedOut", true);
+            process->kill();
+        });
+        process->start(program, arguments);
     }
 
     bool isUserNotification(const QJsonObject &notification) const
@@ -312,11 +367,42 @@ private:
 
     void openDashboard(const QString &fragment)
     {
-        QStringList arguments{QStringLiteral("web"), QStringLiteral("--host"), QStringLiteral("127.0.0.1"), QStringLiteral("--port"), QStringLiteral("8765")};
+        const QString nameSpace = QStringLiteral("default");
+        const DashboardRuntimePaths runtimePaths = dashboardRuntimePaths(nameSpace);
+        QString authToken;
+        QString preparationError;
+        if (!ensureDashboardAuthToken(runtimePaths, &authToken, &preparationError)) {
+            tray_.showMessage(
+                QStringLiteral("MemGuardOS：本地控制台启动失败"),
+                QStringLiteral("%1 请重新登录后重试；仍失败时请从记忆安全中心导出系统报告。")
+                    .arg(preparationError),
+                tray_.icon(),
+                6000);
+            return;
+        }
+
+        QStringList arguments = dashboardProcessArguments(runtimePaths, nameSpace);
         const QString program = memctlProgram(&arguments);
-        QProcess::startDetached(program, arguments);
-        QTimer::singleShot(800, this, [fragment]() {
-            QDesktopServices::openUrl(QUrl(QStringLiteral("http://127.0.0.1:8765%1").arg(fragment)));
+        qint64 launchedPid = 0;
+        const bool started = QProcess::startDetached(
+            program,
+            arguments,
+            QString(),
+            &launchedPid);
+        if (!started) {
+            tray_.showMessage(
+                QStringLiteral("MemGuardOS：本地控制台启动失败"),
+                QStringLiteral("请确认 MemGuardOS 和 memctl 已安装且可以运行，然后从托盘重新打开。"),
+                tray_.icon(),
+                6000);
+            return;
+        }
+        openDashboardWhenReady(this, runtimePaths, nameSpace, authToken, fragment, launchedPid, [this]() {
+            tray_.showMessage(
+                QStringLiteral("MemGuardOS：本地控制台暂时无法打开"),
+                QStringLiteral("控制台服务未通过身份校验或启动进程已退出。请重新打开；仍失败时请从记忆安全中心导出系统报告。"),
+                tray_.icon(),
+                6000);
         });
     }
 };

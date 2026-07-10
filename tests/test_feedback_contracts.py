@@ -37,8 +37,36 @@ def test_memory_change_summary_explains_stored_record_and_next_actions():
     assert payload["schema"] == "memguardos-memory-change-summary-v1"
     assert payload["new_memories"][0]["memory_id"] == result["record"].memory_id
     assert payload["new_memories"][0]["summary_for_user"]
+    assert "code_search_tool" not in payload["new_memories"][0]["summary_for_user"]
+    assert "global" not in payload["new_memories"][0]["summary_for_user"]
     assert payload["new_memories"][0]["why_extracted"]
     assert "test_effect" in payload["new_memories"][0]["actions"]
+
+
+def test_memory_change_summary_translates_structured_preference_fields():
+    summary = build_memory_change_summary(
+        {
+            "stored": True,
+            "record": {
+                "memory_id": "mem-pref-1",
+                "type": "preference",
+                "subtype": "tool_preference",
+                "tier": "long_term",
+                "scope": "user",
+                "summary": "用户交互偏好：code_search_tool=rg（global）",
+                "preference_topic": "code_search_tool",
+                "preference_value": "rg",
+                "preference_scope": "global",
+            },
+        }
+    )
+
+    item = summary.to_dict()["new_memories"][0]
+    assert item["summary_for_user"] == "用户偏好：代码搜索工具为 rg，适用于全部会话。"
+    assert item["preference_topic"] == "code_search_tool"
+    assert item["preference_value"] == "rg"
+    assert "code_search_tool" not in item["summary_for_user"]
+    assert "global" not in item["summary_for_user"]
 
 
 def test_sensitive_block_notice_proves_not_stored_or_entered_rag():
@@ -125,6 +153,66 @@ def test_notifications_filter_to_user_relevant_events():
     assert [item["kind"] for item in notifications] == ["sensitive_block", "forget"]
     assert notifications[0]["level"] == "critical"
     assert notifications[1]["level"] == "info"
+
+
+def test_notifications_collapse_repeated_identical_status_updates():
+    rows = [
+        {"audit_id": 15, "event_type": "retrieval_status", "detail": '{"backend":"kylin"}'},
+        {"audit_id": 14, "event_type": "retrieval_status", "detail": '{"backend":"hash"}'},
+        {"audit_id": 13, "event_type": "retrieval_status", "detail": '{"backend":"hash"}'},
+        {"audit_id": 12, "event_type": "sdk_fallback", "detail": '{"backend":"hash"}'},
+        {"audit_id": 11, "event_type": "sdk_fallback", "detail": '{"backend":"hash"}'},
+        {"audit_id": 10, "event_type": "forget", "detail": '{"forgotten":["mem-1"]}'},
+    ]
+
+    notifications = notifications_from_audit(rows)
+
+    assert [item["kind"] for item in notifications] == ["sdk_status", "sdk_status", "sdk_status", "forget"]
+    assert [item["notification_id"] for item in notifications] == ["audit-15", "audit-14", "audit-12", "audit-10"]
+
+
+def test_notifications_preserve_each_sensitive_forget_failure_and_service_error_event():
+    rows = [
+        {"audit_id": 9, "event_type": "sensitive_block", "detail": '{"labels":["api_key"]}'},
+        {"audit_id": 8, "event_type": "sensitive_block", "detail": '{"labels":["api_key"]}'},
+        {"audit_id": 7, "event_type": "forget_failed", "detail": '{"memory_id":"mem-1"}'},
+        {"audit_id": 6, "event_type": "forget_failed", "detail": '{"memory_id":"mem-1"}'},
+        {"audit_id": 5, "event_type": "api_internal_error", "detail": '{"operation":"forget"}'},
+        {"audit_id": 4, "event_type": "api_internal_error", "detail": '{"operation":"forget"}'},
+    ]
+
+    notifications = notifications_from_audit(rows)
+
+    assert [item["kind"] for item in notifications] == [
+        "sensitive_block",
+        "sensitive_block",
+        "forget",
+        "forget",
+        "service_error",
+        "service_error",
+    ]
+    assert [item["notification_id"] for item in notifications] == [
+        "audit-9",
+        "audit-8",
+        "audit-7",
+        "audit-6",
+        "audit-5",
+        "audit-4",
+    ]
+
+
+def test_ingest_notification_translates_internal_memory_type_for_users():
+    rows = [
+        {"audit_id": 2, "event_type": "ingest", "detail": '{"type":"knowledge"}'},
+        {"audit_id": 1, "event_type": "ingest", "detail": '{"type":"preference"}'},
+    ]
+
+    notifications = notifications_from_audit(rows)
+
+    assert notifications[0]["summary"] == "系统已保存一条知识记忆，稍后可在 Agent 工作台查看它的适用范围。"
+    assert notifications[1]["summary"] == "系统已保存一条偏好记忆，稍后可在 Agent 工作台查看它的适用范围。"
+    assert "knowledge" not in notifications[0]["summary"]
+    assert "preference" not in notifications[1]["summary"]
 
 
 def test_notification_policy_only_prompts_for_high_signal_events():

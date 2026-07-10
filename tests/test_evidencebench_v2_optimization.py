@@ -78,6 +78,89 @@ def test_query_alias_expansion_records_trace_for_cross_language_terms():
     assert expanded["expansion_trace"]
 
 
+def test_query_alias_expansion_covers_openkylin_service_resource_language():
+    expanded = expand_query_aliases(
+        "Which resource limits should be checked before restarting an openKylin service?"
+    )
+
+    assert "cgroup" in expanded["expanded_query"]
+    canonicals = [item["canonical"] for item in expanded["expansion_trace"]]
+    assert len(canonicals) == len(set(canonicals))
+    assert expanded["expansion_trace"]
+
+
+def test_hash_rank_drops_records_supported_only_by_hash_collision(monkeypatch):
+    retriever = HybridRetriever(embedding_backend="hash")
+    monkeypatch.setattr(
+        retriever,
+        "_score_with_vectors",
+        lambda query, record, query_vector, text_vector: 0.35,
+    )
+    monkeypatch.setattr(
+        retriever,
+        "lightweight_score_breakdown",
+        lambda query, record: {
+            "summary_score": 0.0,
+            "content_score": 0.0,
+            "entity_score": 0.0,
+            "topic_score": 0.0,
+            "subtype_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "scope_penalty": 0.0,
+            "alias_expansion": {
+                "query": query,
+                "expanded_query": query,
+                "aliases": [],
+                "expansion_trace": [],
+            },
+            "total": 0.0,
+        },
+    )
+
+    ranked = retriever.rank(
+        "openKylin service memory limits",
+        [
+            {
+                "memory_id": "unrelated",
+                "type": "knowledge",
+                "summary": "桌面壁纸轮换计划",
+                "content": "只记录主题颜色。",
+            }
+        ],
+        limit=5,
+    )
+
+    assert ranked == []
+
+
+def test_query_aliases_do_not_turn_a_document_false_friend_into_a_match():
+    retriever = HybridRetriever(embedding_backend="hash")
+
+    ranked = retriever.rank(
+        "How is managed plaintext absence verified after segment compaction?",
+        [
+            {
+                "memory_id": "mmap-tutorial",
+                "type": "knowledge",
+                "summary": "mmap 教程介绍 MAP_PRIVATE 的写时复制语义。",
+                "content": "mmap 教程介绍 MAP_PRIVATE 的写时复制语义。",
+            }
+        ],
+        limit=5,
+    )
+
+    assert ranked == []
+
+
+def test_latin_alias_matching_does_not_treat_compact_as_compaction():
+    expanded = expand_query_aliases(
+        "How is managed plaintext absence verified after segment compaction?"
+    )
+
+    assert "compact" in expanded["aliases"]
+
+
 def test_sensitivity_allowlist_distinguishes_demo_tokens_and_code_terms():
     detector = SensitiveDetector()
 
@@ -110,6 +193,46 @@ def test_forget_planner_recalls_high_risk_confirmation_without_hitting_keep_text
 
         assert delete["record"].memory_id in candidate_ids
         assert keep["record"].memory_id not in candidate_ids
+    finally:
+        service.close()
+
+
+def test_forget_planner_keeps_all_topic_peers_and_excludes_other_topics(tmp_path: Path):
+    service = MemGuardService(store_path=tmp_path / "memory.segment", db_path=tmp_path / "memguard.sqlite3")
+    try:
+        primary = service.ingest_text("自然语言请求：高风险命令需要二次确认，不因效率偏好绕过安全策略。")
+        peer = service.ingest_text("自然语言请求补充：二次确认是本任务必须复核的关键点。")
+        other_agent = service.ingest_text("另一个 Agent 偏好在回答前先列出假设。")
+        unrelated = service.ingest_text("独立主题记录：API 文档使用保留域名作为占位邮箱。")
+
+        plan = service.forget("忘记自然语言请求中关于二次确认的两条记忆，但保留其他主题。")
+        candidate_ids = {item["memory_id"] for item in plan["candidates"]}
+
+        assert candidate_ids == {
+            primary["record"].memory_id,
+            peer["record"].memory_id,
+        }
+        assert other_agent["record"].memory_id not in candidate_ids
+        assert unrelated["record"].memory_id not in candidate_ids
+    finally:
+        service.close()
+
+
+def test_forget_planner_requires_the_requested_latin_anchor(tmp_path: Path):
+    service = MemGuardService(store_path=tmp_path / "memory.segment", db_path=tmp_path / "memguard.sqlite3")
+    try:
+        primary = service.ingest_text("上周记录：服务重启前先查看 journalctl 和 cgroup 限制。")
+        peer = service.ingest_text("上周记录补充：journalctl 是本任务必须复核的关键点。")
+        unrelated = service.ingest_text("独立主题记录：systemd 单元 token.service 当前处于 active 状态。")
+
+        plan = service.forget("忘记上周记录中关于 journalctl 的两条记忆，但保留其他主题。")
+        candidate_ids = {item["memory_id"] for item in plan["candidates"]}
+
+        assert candidate_ids == {
+            primary["record"].memory_id,
+            peer["record"].memory_id,
+        }
+        assert unrelated["record"].memory_id not in candidate_ids
     finally:
         service.close()
 

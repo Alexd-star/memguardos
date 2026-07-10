@@ -20,6 +20,7 @@ from memguard.feedback import (
     build_memory_change_summary,
     build_preference_effect_proof,
     build_sensitive_block_notice,
+    memory_summary_for_user,
     merge_memory_change_summaries,
     notifications_from_audit,
 )
@@ -46,7 +47,7 @@ from memguard.os_guard.events import parse_os_event
 from memguard.os_guard.cgroup import cgroup_status
 from memguard.os_guard.journald import JournaldLogger
 from memguard.retrieval.conflict import ConflictResolver
-from memguard.retrieval.hybrid import HybridRetriever
+from memguard.retrieval.hybrid import HybridRetriever, expand_query_aliases
 from memguard.sensitivity.custom_patterns import PatternValidationError, load_patterns, save_pattern, save_pattern_from_instruction, suggest_pattern_from_instruction
 from memguard.sensitivity.detector import SensitiveDetector
 from memguard.store.mmap_store import AppendOnlyMemoryStore
@@ -783,7 +784,9 @@ class MemGuardService:
                 {
                     "memory_id": row.get("memory_id"),
                     "type": row.get("type"),
-                    "summary_for_user": " ".join(str(row.get("summary") or row.get("content") or "").split())[:240],
+                    "summary_for_user": memory_summary_for_user(row),
+                    "preference_topic": row.get("preference_topic"),
+                    "preference_value": row.get("preference_value"),
                     "scope": row.get("scope"),
                     "tier": row.get("tier"),
                     "actions": ["view", "test_effect", "forget"],
@@ -2245,10 +2248,23 @@ class MemGuardService:
                 if len(candidates) >= candidate_limit:
                     return
 
-        add_unique(self.meta.search_text(query, limit=candidate_limit))
+        expanded = expand_query_aliases(query)
+        text_queries = [str(query or "").strip()]
+        text_queries.extend(str(alias).strip() for alias in expanded.get("aliases", []))
+        text_queries = list(dict.fromkeys(item for item in text_queries if item))[:12]
+        for text_query in text_queries:
+            if len(candidates) >= candidate_limit:
+                break
+            add_unique(
+                self.meta.search_text(
+                    text_query,
+                    limit=candidate_limit - len(candidates),
+                )
+            )
         if len(candidates) < candidate_limit:
             remaining = candidate_limit - len(candidates)
-            add_unique(self.meta.graph_search(query, limit=max(10, remaining)))
+            graph_query = str(expanded.get("expanded_query") or query)
+            add_unique(self.meta.graph_search(graph_query, limit=max(10, remaining)))
         if len(candidates) < candidate_limit:
             remaining = candidate_limit - len(candidates)
             add_unique(self.meta.list_recent_memories(remaining, exclude_ids=list(seen)))

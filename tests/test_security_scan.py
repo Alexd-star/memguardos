@@ -105,6 +105,46 @@ def test_security_scan_fails_on_high_severity_bandit_issue(tmp_path):
     assert report["summary"]["bandit_high_count"] == 1
 
 
+def test_security_scan_fails_on_unreviewed_medium_severity_bandit_issue(tmp_path):
+    runner = FakeRunner(
+        [
+            {
+                "returncode": 1,
+                "stdout": json.dumps(
+                    {
+                        "results": [
+                            {
+                                "filename": "memguard/llm/adapter.py",
+                                "line_number": 42,
+                                "issue_severity": "MEDIUM",
+                                "issue_confidence": "HIGH",
+                                "test_id": "B310",
+                                "issue_text": "unvalidated URL opener",
+                            }
+                        ]
+                    }
+                ),
+            },
+            {
+                "returncode": 0,
+                "stdout": json.dumps({"dependencies": []}),
+            },
+        ]
+    )
+
+    report = run_security_scan(
+        output_json=tmp_path / "security_scan.json",
+        output_markdown=tmp_path / "scan.md",
+        runner=runner,
+        python="python",
+        dependency_scope="environment",
+    )
+
+    assert report["ok"] is False
+    assert report["summary"]["bandit_medium_count"] == 1
+    assert report["policy"]["bandit_medium_severity_allowed"] == 0
+
+
 def test_security_scan_records_missing_tools_without_pretending_success(tmp_path):
     runner = FakeRunner(
         [

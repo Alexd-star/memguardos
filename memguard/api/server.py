@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import asdict, is_dataclass
 import hmac
 import hashlib
 import json
@@ -9,6 +8,7 @@ import socket
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
+from memguard.json_support import jsonable
 from memguard.service import MemGuardService
 
 
@@ -435,14 +435,4 @@ def _dispatch_payload(service: MemGuardService, payload: bytes, auth_token: Opti
 
 
 def _jsonable(value: Any) -> Any:
-    if hasattr(value, "to_dict") and callable(value.to_dict):
-        return _jsonable(value.to_dict())
-    if is_dataclass(value):
-        return _jsonable(asdict(value))
-    if isinstance(value, dict):
-        return {str(key): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_jsonable(item) for item in value]
-    if isinstance(value, Path):
-        return str(value)
-    return value
+    return jsonable(value)

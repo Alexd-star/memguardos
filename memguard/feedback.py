@@ -315,6 +315,7 @@ def build_forget_verification_report(
 def notifications_from_audit(rows: Iterable[Mapping[str, Any]], *, limit: int = 30) -> list[dict[str, Any]]:
     """Project relevant audit events into a compact notification history."""
     output: list[dict[str, Any]] = []
+    seen_status_updates: set[tuple[str, str]] = set()
     for row in rows:
         event_type = str(row.get("event_type") or "")
         mapped = _notification_mapping(event_type)
@@ -330,6 +331,14 @@ def notifications_from_audit(rows: Iterable[Mapping[str, Any]], *, limit: int = 
         summary = _notification_summary(event_type, detail)
         if mapped[1] == "tool_block":
             summary = _notification_summary("tool_policy_block", detail)
+        if event_type in {"retrieval_status", "sdk_fallback"}:
+            dedupe_key = (
+                event_type,
+                json.dumps(detail, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str),
+            )
+            if dedupe_key in seen_status_updates:
+                continue
+            seen_status_updates.add(dedupe_key)
         output.append(
             {
                 "notification_id": "audit-%s" % str(row.get("audit_id") or row.get("event_hash") or ""),
@@ -372,14 +381,66 @@ def _memory_item(record: Any, result: Mapping[str, Any]) -> dict[str, Any]:
         "subtype": subtype,
         "tier": str(row.get("tier") or "long_term"),
         "scope": str(row.get("scope") or "user"),
-        "summary_for_user": _summary_for_user(row),
+        "preference_topic": topic,
+        "preference_value": str(row.get("preference_value") or ""),
+        "summary_for_user": memory_summary_for_user(row),
         "why_extracted": _why_extracted(memory_type, subtype, topic, result),
         "where_it_will_apply": _where_it_applies(row),
         "actions": ["view", "test_effect", "forget"],
     }
 
 
-def _summary_for_user(row: Mapping[str, Any]) -> str:
+def memory_summary_for_user(row: Mapping[str, Any]) -> str:
+    topic = str(row.get("preference_topic") or "")
+    value = str(row.get("preference_value") or "")
+    parsed_scope = ""
+    if not topic or not value:
+        raw_summary = " ".join(str(row.get("summary") or row.get("content") or "").split())
+        legacy_preference = re.search(
+            r"\b(?P<topic>[a-z][a-z0-9_]*)\s*=\s*(?P<value>[^()\s，。,；;]+)"
+            r"(?:\s*\((?P<scope>[a-z_]+)\))?",
+            raw_summary,
+            flags=re.IGNORECASE,
+        )
+        known_topics = {
+            "code_search_tool",
+            "test_runner_command",
+            "service_log_tool",
+            "response_order",
+            "response_language",
+            "response_verbosity",
+            "high_risk_confirmation",
+        }
+        if legacy_preference and legacy_preference.group("topic").lower() in known_topics:
+            topic = legacy_preference.group("topic").lower()
+            value = legacy_preference.group("value")
+            parsed_scope = str(legacy_preference.group("scope") or "")
+    if topic and value:
+        topic_label = {
+            "code_search_tool": "代码搜索工具",
+            "test_runner_command": "测试运行命令",
+            "service_log_tool": "服务日志工具",
+            "response_order": "回答顺序",
+            "response_language": "回答语言",
+            "response_verbosity": "回答详细度",
+            "high_risk_confirmation": "高风险操作确认",
+        }.get(topic, "交互偏好")
+        value_label = {
+            "command_then_explanation": "先给命令或结论，再说明原因",
+            "required": "操作前必须确认",
+            "zh-CN": "中文",
+            "concise": "简洁回答",
+        }.get(value, value)
+        scope = str(parsed_scope or row.get("preference_scope") or row.get("scope") or "global")
+        scope_label = {
+            "global": "全部会话",
+            "agent": "当前 Agent",
+            "project": "当前项目",
+            "task_type": "同类任务",
+            "session": "当前会话",
+            "user": "当前用户",
+        }.get(scope, "相关任务")
+        return "用户偏好：%s为 %s，适用于%s。" % (topic_label, value_label, scope_label)
     summary = str(row.get("summary") or row.get("content") or "").strip()
     return " ".join(summary.split())[:240] or "已形成一条受控记忆。"
 
@@ -490,7 +551,13 @@ def _notification_mapping(event_type: str) -> tuple[str, str, str, str] | None:
 
 def _notification_summary(event_type: str, detail: Mapping[str, Any]) -> str:
     if event_type == "ingest":
-        kind = str(detail.get("type") or "记忆")
+        kind = {
+            "preference": "偏好记忆",
+            "knowledge": "知识记忆",
+            "procedure": "操作经验",
+            "event": "事件记忆",
+            "memory": "记忆",
+        }.get(str(detail.get("type") or "memory").lower(), "记忆")
         return "系统已保存一条%s，稍后可在 Agent 工作台查看它的适用范围。" % kind
     if event_type == "sensitive_block":
         labels = ", ".join(str(item) for item in detail.get("labels") or [])

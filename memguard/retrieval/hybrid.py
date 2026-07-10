@@ -63,15 +63,25 @@ def expand_query_aliases(query: str) -> Dict[str, Any]:
     aliases = _technical_aliases()
     for canonical, values in aliases.items():
         terms = [canonical] + values
-        matched = [term for term in terms if term and term.lower() in lowered]
+        matched = [term for term in terms if term and _term_in_text(term, lowered)]
         if not matched:
             continue
         for term in terms:
-            if term and term not in additions and term.lower() not in lowered:
+            if term and term not in additions and not _term_in_text(term, lowered):
                 additions.append(term)
         trace.append({"canonical": canonical, "matched": matched[0], "added": ", ".join(additions[-max(1, len(terms)) :])})
     expanded = " ".join([text] + additions)
     return {"query": text, "expanded_query": expanded, "aliases": additions, "expansion_trace": trace}
+
+
+def _term_in_text(term: str, lowered_text: str) -> bool:
+    lowered_term = str(term or "").lower()
+    if not lowered_term:
+        return False
+    if re.search(r"[a-z0-9_]", lowered_term):
+        pattern = r"(?<![a-z0-9_])%s(?![a-z0-9_])" % re.escape(lowered_term)
+        return re.search(pattern, lowered_text) is not None
+    return lowered_term in lowered_text
 
 
 def tokenize(text: str) -> List[str]:
@@ -81,7 +91,15 @@ def tokenize(text: str) -> List[str]:
 @lru_cache(maxsize=8192)
 def _tokenize_cached(text: str) -> Tuple[str, ...]:
     expanded_info = expand_query_aliases(text)
-    text = str(expanded_info["expanded_query"])
+    return _tokenize_literal_cached(str(expanded_info["expanded_query"]))
+
+
+def tokenize_literal(text: str) -> List[str]:
+    return list(_tokenize_literal_cached(str(text or "")))
+
+
+@lru_cache(maxsize=8192)
+def _tokenize_literal_cached(text: str) -> Tuple[str, ...]:
     latin = re.findall(r"[A-Za-z0-9_\-]+", text.lower())
     cjk_sequences = re.findall(r"[\u4e00-\u9fff]+", text)
     cjk = []
@@ -129,6 +147,9 @@ class HashEmbeddingProvider:
 
     def vector(self, text: str) -> List[float]:
         return hashed_vector(tokenize(text), dim=self.dim)
+
+    def vector_literal(self, text: str) -> List[float]:
+        return hashed_vector(tokenize_literal(text), dim=self.dim)
 
     def status(self) -> Dict[str, object]:
         return {
@@ -264,8 +285,8 @@ class HybridRetriever:
 
     def _score_with_vectors(self, query: str, record: Dict[str, str], query_vector: List[float], text_vector: List[float]) -> float:
         text = "%s %s %s" % (record.get("type", ""), record.get("summary", ""), record.get("content", ""))
-        query_tokens = tokenize(query)
-        text_tokens = tokenize(text)
+        query_tokens = tokenize_literal(query)
+        text_tokens = tokenize_literal(text)
         if not text_tokens:
             return 0.0
         query_set = set(query_tokens)
@@ -291,9 +312,35 @@ class HybridRetriever:
         source_kind = str(record.get("source_kind") or "")
         combined = " ".join([record_type, subtype, preference_topic, summary, content])
         combined_lower = combined.lower()
-        query_tokens = set(tokenize(query_text))
-        summary_tokens = set(tokenize(summary))
-        content_tokens = set(tokenize(content))
+        query_tokens = set(tokenize_literal(query_text))
+        summary_tokens = set(tokenize_literal(summary))
+        content_tokens = set(tokenize_literal(content))
+        lexical_hits = query_tokens & (summary_tokens | content_tokens)
+        distinctive_latin_terms = {
+            term
+            for term in re.findall(r"[A-Za-z][A-Za-z0-9_\-]{2,}", str(query or "").lower())
+            if term
+            not in {
+                "after",
+                "and",
+                "are",
+                "before",
+                "can",
+                "directly",
+                "for",
+                "from",
+                "how",
+                "is",
+                "related",
+                "should",
+                "the",
+                "what",
+                "when",
+                "where",
+                "which",
+                "with",
+            }
+        }
         summary_score = min(0.28, 0.04 * len(query_tokens & summary_tokens))
         content_score = min(0.24, 0.035 * len(query_tokens & content_tokens))
         exact_phrase_score = 0.0
@@ -322,6 +369,9 @@ class HybridRetriever:
         return {
             "summary_score": round(summary_score, 4),
             "content_score": round(content_score, 4),
+            "query_token_count": len(query_tokens),
+            "lexical_hit_count": len(lexical_hits),
+            "distinctive_latin_token_count": len(distinctive_latin_terms),
             "entity_score": round(entity_score, 4),
             "topic_score": round(topic_score, 4),
             "subtype_score": round(subtype_score, 4),
@@ -340,22 +390,34 @@ class HybridRetriever:
         records = list(records)
         expanded_info = expand_query_aliases(query)
         expanded_query = str(expanded_info["expanded_query"])
-        hash_query_vector = self.hash_provider.vector(expanded_query)
+        hash_query_vector = self.hash_provider.vector_literal(expanded_query)
         scored = []
+        semantic_pool = []
         for record in records:
             text = "%s %s %s" % (record.get("type", ""), record.get("summary", ""), record.get("content", ""))
-            score = self._score_with_vectors(expanded_query, record, hash_query_vector, self.hash_provider.vector(text))
+            score = self._score_with_vectors(
+                expanded_query,
+                record,
+                hash_query_vector,
+                self.hash_provider.vector_literal(text),
+            )
             breakdown = self.lightweight_score_breakdown(query, record)
+            if self.requested_backend == "hash" and not _has_grounded_relevance(breakdown):
+                continue
             score += float(breakdown["total"])
             item = dict(record)
             item["_score_breakdown"] = breakdown
             item["_expansion_trace"] = expanded_info["expansion_trace"]
-            scored.append((score, item))
+            if score > 0:
+                semantic_pool.append((score, item))
+            if score > 0 and self._hash_evidence_is_sufficient(breakdown):
+                scored.append((score, item))
         scored = [item for item in scored if item[0] > 0]
         scored.sort(key=lambda item: item[0], reverse=True)
+        semantic_pool.sort(key=lambda item: item[0], reverse=True)
         self.last_backend_used = "hash"
 
-        if self.kylin_provider is None or not scored:
+        if self.kylin_provider is None or not semantic_pool:
             return self._tag_backend(scored[:limit], "hash")
 
         sdk_started = time.perf_counter()
@@ -365,7 +427,7 @@ class HybridRetriever:
         if self._kylin_budget_exceeded(sdk_started):
             return self._tag_backend(scored[:limit], "hash")
 
-        rerank_pool = scored[: max(30, limit * 6)]
+        rerank_pool = semantic_pool[: max(30, limit * 6)]
         reranked = []
         for _, record in rerank_pool:
             text = "%s %s %s" % (record.get("type", ""), record.get("summary", ""), record.get("content", ""))
@@ -379,6 +441,24 @@ class HybridRetriever:
         reranked.sort(key=lambda item: item[0], reverse=True)
         self.last_backend_used = "kylin_sdk"
         return self._tag_backend(reranked[:limit], "kylin_sdk")
+
+    @staticmethod
+    def _hash_evidence_is_sufficient(breakdown: Dict[str, float | dict]) -> bool:
+        if float(breakdown.get("total", 0.0)) <= 0:
+            return False
+        if any(
+            float(breakdown.get(key, 0.0)) > 0
+            for key in ("exact_phrase_score", "topic_score", "subtype_score")
+        ):
+            return True
+        lexical_hits = int(breakdown.get("lexical_hit_count", 0))
+        query_tokens = int(breakdown.get("query_token_count", 0))
+        if lexical_hits >= 2:
+            return True
+        distinctive_latin_tokens = int(breakdown.get("distinctive_latin_token_count", 0))
+        if lexical_hits == 1 and (query_tokens <= 2 or distinctive_latin_tokens == 1):
+            return True
+        return float(breakdown.get("entity_score", 0.0)) >= 0.2
 
     def _kylin_budget_exceeded(self, started: float) -> bool:
         if self.requested_backend in {"kylin", "kylin_sdk"} or self.kylin_rerank_budget_ms <= 0:
@@ -403,6 +483,20 @@ class HybridRetriever:
 
 def _technical_entities(text: str) -> List[str]:
     return re.findall(r"[A-Za-z][A-Za-z0-9_\-.]{1,}|[\u4e00-\u9fff]{2,}", text)
+
+
+def _has_grounded_relevance(breakdown: Dict[str, Any]) -> bool:
+    return any(
+        float(breakdown.get(key, 0.0)) > 0.0
+        for key in (
+            "summary_score",
+            "content_score",
+            "entity_score",
+            "topic_score",
+            "subtype_score",
+            "exact_phrase_score",
+        )
+    )
 
 
 def _topic_score(query_lower: str, combined_lower: str, record_type: str, subtype: str, preference_topic: str) -> float:

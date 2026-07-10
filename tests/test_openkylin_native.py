@@ -34,7 +34,11 @@ def test_memctl_feedback_home_exposes_recent_user_facing_memory_data(tmp_path, m
     monkeypatch.delenv("MEMGUARD_NAMESPACE", raising=False)
     service = MemGuardService()
     try:
-        service.ingest_text("以后查代码优先使用 rg。", source_kind="agent", source_uri="feedback-test")
+        service.ingest_text(
+            "用户交互偏好: code_search_tool=rg (global)",
+            source_kind="agent",
+            source_uri="feedback-test",
+        )
     finally:
         service.close()
 
@@ -42,6 +46,70 @@ def test_memctl_feedback_home_exposes_recent_user_facing_memory_data(tmp_path, m
     payload = json.loads(capsys.readouterr().out)
     assert payload["schema"] == "memguardos-feedback-home-v1"
     assert payload["recent_memories"]
+    summary = payload["recent_memories"][0]["summary_for_user"]
+    assert "代码搜索工具" in summary
+    assert "code_search_tool" not in summary
+    assert "global" not in summary
+
+
+def test_memctl_web_reads_explicit_token_file_without_exposing_token_in_arguments(tmp_path, monkeypatch):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+    monkeypatch.delenv("MEMGUARD_NAMESPACE", raising=False)
+    token_file = tmp_path / "dashboard.token"
+    token_file.write_text("file-secret\n", encoding="utf-8")
+    captured = {}
+
+    def fake_run_dashboard(
+        service,
+        *,
+        host,
+        port,
+        auth_token,
+        state_file,
+        lock_file,
+        idle_timeout,
+        show_access_url,
+    ):
+        captured.update(
+            namespace=service.namespace,
+            host=host,
+            port=port,
+            auth_token=auth_token,
+            state_file=state_file,
+            lock_file=lock_file,
+            idle_timeout=idle_timeout,
+            show_access_url=show_access_url,
+        )
+
+    monkeypatch.setattr("memguard.web.dashboard.run_dashboard", fake_run_dashboard)
+
+    assert (
+        memctl_main(
+            [
+                "--namespace",
+                "default",
+                "web",
+                "--host",
+                "127.0.0.1",
+                "--port", "0",
+                "--auth-token-file", str(token_file),
+                "--state-file", str(tmp_path / "dashboard.json"),
+                "--lock-file", str(tmp_path / "dashboard.lock"),
+                "--idle-timeout", "300",
+            ]
+        )
+        == 0
+    )
+    assert captured == {
+        "namespace": "default",
+        "host": "127.0.0.1",
+        "port": 0,
+        "auth_token": "file-secret",
+        "state_file": tmp_path / "dashboard.json",
+        "lock_file": tmp_path / "dashboard.lock",
+        "idle_timeout": 300.0,
+        "show_access_url": False,
+    }
 
 
 def test_openkylin_status_fast_uses_light_sdk_status(tmp_path, monkeypatch, capsys):
@@ -427,6 +495,17 @@ def test_openkylin_native_packaging_assets_exist():
     build_script = (root / "scripts" / "build_deb.sh").read_text(encoding="utf-8")
     assert "org.memguardos.policy" in build_script
     assert "memguard-kylin-warmup.service" in build_script
+
+
+def test_kylin_warmup_runs_only_for_graphical_sessions_without_invalid_documentation_url():
+    root = Path(__file__).resolve().parents[1]
+    unit = (root / "scripts" / "memguard-kylin-warmup.service").read_text(encoding="utf-8")
+
+    assert "Documentation=file:/opt/memguardos/README.md" in unit
+    assert "PartOf=graphical-session.target" in unit
+    assert "WantedBy=graphical-session.target" in unit
+    assert "WantedBy=default.target" not in unit
+    assert "麒麟SDK集成证据.md" not in unit
 
 
 def test_service_resource_status_reads_systemd_control_group(monkeypatch, tmp_path):
@@ -844,6 +923,18 @@ def test_ukui_control_center_has_spacious_native_layout_tokens():
     assert "处理进度：" in source
 
 
+def test_ukui_control_center_uses_system_palette_and_icon_fallbacks():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
+
+    assert "QIcon themedIcon" in source
+    assert "QApplication::style()->standardIcon" in source
+    assert "palette.color(QPalette::Disabled, QPalette::WindowText)" in source
+    assert "levelColor" not in source
+    assert "QColor(" not in source
+    assert "setAccessibleDescription" in source
+
+
 def test_ukui_control_center_does_not_block_user_actions_on_background_refresh():
     root = Path(__file__).resolve().parents[1]
     source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
@@ -1058,6 +1149,126 @@ def test_ukui_tray_follows_system_theme_and_deduplicates_notifications():
     assert "Exec=/usr/bin/memguardos-tray" in desktop
     assert "OnlyShowIn=UKUI;" in desktop
     assert "tray" in build
+
+
+def test_peony_apply_and_forget_processes_have_complete_user_control_and_failure_handling():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
+    apply_body = source[source.index("void MemGuardPeonyPlugin::runApply") : source.index("void MemGuardPeonyPlugin::runForgetImport")]
+    forget_body = source[source.index("void MemGuardPeonyPlugin::runForgetImport") :]
+
+    for body in (apply_body, forget_body):
+        assert "&QProcess::errorOccurred" in body
+        assert "QProgressDialog::canceled" in body
+        assert 'property("handled")' in body
+        assert 'property("cancelled")' in body
+        assert 'property("timedOut")' in body
+        assert "QTimer::singleShot" in body
+        assert "exitCode != 0" in body
+        assert "setCancelButton(nullptr)" not in body
+
+    assert "QMessageBox::question" in forget_body
+    assert "将遗忘本次导入形成的 %1 条记忆" in forget_body
+
+
+def test_peony_preview_uses_theme_fallback_and_a_dedicated_location_column():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
+
+    assert "QIcon themedIcon" in source
+    assert "QApplication::style()->standardIcon" in source
+    assert "QTableWidget(items.size(), 8" in source
+    assert 'QStringLiteral("位置")' in source
+    assert "QFileInfo(path).absolutePath()" in source
+    assert "dialog.setMinimumSize" in source
+
+
+def test_tray_background_processes_timeout_and_recover_without_stalling_future_refreshes():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/tray/memguard_tray.cpp").read_text(encoding="utf-8")
+    refresh_body = source[source.index("void refresh()") : source.index("void refreshNotifications()")]
+    notification_body = source[source.index("void refreshNotifications()") : source.index("bool isUserNotification")]
+
+    for body, pointer in ((refresh_body, "current_"), (notification_body, "notificationProcess_")):
+        assert "&QProcess::errorOccurred" in body
+        assert "QTimer::singleShot" in body
+        assert 'property("handled")' in body
+        assert 'property("timedOut")' in body
+        assert f"{pointer} = nullptr" in body
+        assert "deleteLater()" in body
+
+    assert "menu->addMenu" in source
+    assert "最近变化" in source
+    assert "系统状态" in source
+
+
+def test_openkylin_desktop_entries_wait_for_dashboard_health_before_opening_browser():
+    root = Path(__file__).resolve().parents[1]
+    launcher = (root / "native/ukui/dashboard_launcher.h").read_text(encoding="utf-8")
+    sources = {
+        "ukcc": (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8"),
+        "peony": (root / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8"),
+        "tray": (root / "native/ukui/tray/memguard_tray.cpp").read_text(encoding="utf-8"),
+    }
+    projects = {
+        "ukcc": (root / "native/ukui/ukcc-memguard/ukcc-memguard.pro").read_text(encoding="utf-8"),
+        "peony": (root / "native/ukui/peony-memguard/peony-memguard.pro").read_text(encoding="utf-8"),
+        "tray": (root / "native/ukui/tray/memguard-tray.pro").read_text(encoding="utf-8"),
+    }
+
+    assert "QNetworkAccessManager" in launcher
+    assert "QStandardPaths::RuntimeLocation" in launcher
+    assert "QSaveFile" in launcher
+    assert "QFileDevice::ReadOwner | QFileDevice::WriteOwner" in launcher
+    assert "const QFileDevice::Permissions required" in launcher
+    assert "QFileDevice::ExeOwner | QFileDevice::ReadGroup" in launcher
+    assert "ensureDashboardAuthToken" in launcher
+    assert "QRandomGenerator::system()" in launcher
+    assert "stateFile" in launcher
+    assert "dashboardProcessArguments" in launcher
+    assert 'QStringLiteral("--auth-token-file")' in launcher
+    assert 'QStringLiteral("--state-file")' in launcher
+    assert 'QStringLiteral("--lock-file")' in launcher
+    assert 'QStringLiteral("--idle-timeout")' in launcher
+    assert 'QStringLiteral("--port")' in launcher
+    assert 'QStringLiteral("0")' in launcher
+    assert "Authorization" in launcher
+    assert "Bearer " in launcher
+    assert 'QStringLiteral("http://127.0.0.1:%1/readyz")' in launcher
+    assert "openDashboardWhenReady" in launcher
+    assert "QDesktopServices::openUrl" in launcher
+    assert "QUrlQuery" in launcher
+    assert 'addQueryItem(QStringLiteral("token")' in launcher
+    assert 'addQueryItem(QStringLiteral("tab")' in launcher
+    assert "QElapsedTimer" in launcher
+    assert "30000" in launcher
+    assert "expectedNamespace" in launcher
+    assert 'QStringLiteral("default")' in launcher
+    assert 'value(QStringLiteral("status"))' in launcher
+    assert 'value(QStringLiteral("namespace"))' in launcher
+    assert 'value(QStringLiteral("launch_token"))' not in launcher
+    assert "QJsonDocument::fromJson" in launcher
+    assert "qMin(2000" in launcher
+    assert "8765" not in launcher
+    assert "QTcpServer" not in launcher
+    assert "findAvailableDashboardPort" not in launcher
+    assert "QTimer::singleShot(800" not in launcher
+    for name, source in sources.items():
+        assert '#include "../dashboard_launcher.h"' in source, name
+        assert "dashboardRuntimePaths" in source, name
+        assert "ensureDashboardAuthToken" in source, name
+        assert "dashboardProcessArguments" in source, name
+        assert 'QStringLiteral("--launch-token")' not in source, name
+        assert "findAvailableDashboardPort" not in source, name
+        assert 'QStringLiteral("default")' in source, name
+        assert "openDashboardWhenReady" in source, name
+        assert "const bool started = QProcess::startDetached" in source, name
+        assert "if (!started)" in source, name
+        assert "8765" not in source, name
+        assert "QTimer::singleShot(800" not in source, name
+    for name, project in projects.items():
+        assert "QT += widgets network" in project, name
+        assert "../dashboard_launcher.h" in project, name
 
 
 def test_ukui_control_center_keeps_user_ui_product_facing():

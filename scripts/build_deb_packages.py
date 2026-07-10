@@ -154,6 +154,7 @@ class DebianPackageBuilder:
     def _stage_core(self, stage: Path) -> None:
         self._copy_tree(self.root / "memguard", stage / "opt/memguardos/memguard")
         self._copy_file(self.root / "pyproject.toml", stage / "opt/memguardos/pyproject.toml")
+        self._copy_file(self.root / "README.md", stage / "opt/memguardos/README.md")
         self._copy_file(self.root / "LICENSE", stage / "opt/memguardos/LICENSE")
         core_scripts = [
             "warmup_kylin_sdk.sh",
@@ -243,7 +244,10 @@ class DebianPackageBuilder:
         )
         (stage / "DEBIAN/control").write_text("\n".join(fields) + "\n", encoding="utf-8")
         files = [path for path in stage.rglob("*") if path.is_file() and "DEBIAN" not in path.relative_to(stage).parts]
-        md5_lines = [f"{hashlib.md5(path.read_bytes()).hexdigest()}  {path.relative_to(stage).as_posix()}" for path in sorted(files)]
+        md5_lines = [
+            f"{hashlib.md5(path.read_bytes(), usedforsecurity=False).hexdigest()}  {path.relative_to(stage).as_posix()}"
+            for path in sorted(files)
+        ]
         (stage / "DEBIAN/md5sums").write_text("\n".join(md5_lines) + ("\n" if md5_lines else ""), encoding="utf-8")
         if package == "memguardos-core":
             self._write_maintainer_script(
@@ -252,6 +256,7 @@ class DebianPackageBuilder:
                     [
                         "command -v systemctl >/dev/null 2>&1 && systemctl daemon-reload || true",
                         "command -v systemctl >/dev/null 2>&1 && systemctl enable --now memguardd.service >/dev/null 2>&1 || true",
+                        "command -v systemctl >/dev/null 2>&1 && systemctl --global disable memguard-kylin-warmup.service >/dev/null 2>&1 || true",
                         "command -v systemctl >/dev/null 2>&1 && systemctl --global enable memguard-kylin-warmup.service >/dev/null 2>&1 || true",
                     ]
                 ),

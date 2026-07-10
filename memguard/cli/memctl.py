@@ -5,7 +5,9 @@ import hashlib
 import json
 import os
 import platform
+import secrets
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -186,7 +188,10 @@ def build_parser() -> argparse.ArgumentParser:
     web = sub.add_parser("web", help="Run a localhost Web dashboard for local operation and inspection")
     web.add_argument("--host", default="127.0.0.1")
     web.add_argument("--port", type=int, default=8765)
-    web.add_argument("--auth-token-file", default="", help="Optional bearer token file for dashboard API calls")
+    web.add_argument("--auth-token-file", default="", help="Bearer token file for dashboard API calls")
+    web.add_argument("--state-file", default="", help="Runtime state file written after the server binds its port")
+    web.add_argument("--lock-file", default="", help="Single-instance runtime lock file")
+    web.add_argument("--idle-timeout", type=float, default=900.0, help="Stop after this many idle seconds; 0 disables cleanup")
 
     desktop = sub.add_parser("desktop", help="Desktop integration operations for UKUI/Peony")
     desktop_sub = desktop.add_subparsers(dest="desktop_command", required=True)
@@ -282,6 +287,31 @@ def build_parser() -> argparse.ArgumentParser:
     agent_forget.add_argument("--no-external-persistence", action="store_true")
 
     return parser
+
+
+def _read_dashboard_token_file(path: Path) -> str:
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise ValueError("Dashboard token file must be a readable regular file") from exc
+    try:
+        file_stat = os.fstat(descriptor)
+        if not stat.S_ISREG(file_stat.st_mode):
+            raise ValueError("Dashboard token file must be a regular file")
+        if os.name == "posix" and file_stat.st_mode & (stat.S_IRWXG | stat.S_IRWXO):
+            raise ValueError("Dashboard token file permissions must be owner-only (0600)")
+        with os.fdopen(descriptor, "r", encoding="utf-8") as token_stream:
+            descriptor = -1
+            token = token_stream.read().strip()
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+    if not token:
+        raise ValueError("Dashboard token file is empty")
+    return token
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -685,10 +715,30 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if result.get("ok") else 2
 
         if args.command == "web":
-            token = Path(args.auth_token_file).read_text(encoding="utf-8").strip() if args.auth_token_file else ""
+            try:
+                token = (
+                    _read_dashboard_token_file(Path(args.auth_token_file))
+                    if args.auth_token_file
+                    else secrets.token_urlsafe(32)
+                )
+            except ValueError:
+                print(
+                    "无法启动本地控制台：访问凭据文件不可用或权限不安全。",
+                    file=sys.stderr,
+                )
+                return 2
             from memguard.web.dashboard import run_dashboard
 
-            run_dashboard(service, host=args.host, port=args.port, auth_token=token)
+            run_dashboard(
+                service,
+                host=args.host,
+                port=args.port,
+                auth_token=token,
+                state_file=Path(args.state_file) if args.state_file else "",
+                lock_file=Path(args.lock_file) if args.lock_file else "",
+                idle_timeout=max(0.0, float(args.idle_timeout)),
+                show_access_url=not bool(args.auth_token_file),
+            )
             return 0
 
         if args.command == "patterns":
