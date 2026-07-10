@@ -62,9 +62,13 @@ def test_agent_bridge_rejects_path_traversal_and_does_not_echo_secrets(tmp_path)
 
 
 def test_agent_systemd_unit_is_unprivileged_and_resource_limited():
-    unit = (Path(__file__).parents[1] / "scripts" / "memguard-agent@.service").read_text(
+    root = Path(__file__).parents[1]
+    unit = (root / "scripts" / "memguard-agent@.service").read_text(
         encoding="utf-8"
     )
+    launcher = (
+        root / "scripts" / "memguardos-agent-launcher.sh"
+    ).read_text(encoding="utf-8")
 
     for directive in (
         "User=%i",
@@ -75,5 +79,17 @@ def test_agent_systemd_unit_is_unprivileged_and_resource_limited():
         "MemoryMax=",
         "CPUQuota=",
         "EnvironmentFile=-/etc/memguardos/agent-%i.env",
+        "StateDirectory=memguardos-agent/%i",
+        "StateDirectoryMode=0700",
     ):
         assert directive in unit
+    assert (
+        "ExecStart=/usr/lib/memguardos/memguardos-agent-launcher.sh"
+        in unit
+    )
+    assert "ExecStart=/opt/memguardos/.venv-agent/bin/python" not in unit
+    assert "MEMGUARD_AGENT_PYTHON" in launcher
+    assert "/opt/memguardos/.venv-agent/bin/python" in launcher
+    assert "${HOME}/memguardos/.venv-agent/bin/python" in launcher
+    assert "/usr/bin/python3" in launcher
+    assert 'exec "${PYTHON}" /opt/memguardos/scripts/memguard_agent_bridge.py "$@"' in launcher

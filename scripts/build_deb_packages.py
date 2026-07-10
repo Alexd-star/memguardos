@@ -61,6 +61,7 @@ def build_package_plan(version: str, architecture: str, multiarch: str) -> Dict[
             "description": "MemGuardOS 外部 OS Agent 桥接与 OpenHands 适配入口",
             "files": [
                 "/lib/systemd/system/memguard-agent@.service",
+                "/usr/lib/memguardos/memguardos-agent-launcher.sh",
                 "/opt/memguardos/scripts/memguard_agent_bridge.py",
             ],
         },
@@ -191,6 +192,11 @@ class DebianPackageBuilder:
 
     def _stage_agent(self, stage: Path) -> None:
         self._copy_file(self.root / "scripts/memguard-agent@.service", stage / "lib/systemd/system/memguard-agent@.service")
+        self._copy_file(
+            self.root / "scripts/memguardos-agent-launcher.sh",
+            stage / "usr/lib/memguardos/memguardos-agent-launcher.sh",
+            executable=True,
+        )
         for name in ("memguard_agent_bridge.py", "run_openhands_memguard_demo.py", "run_openhands_behavior_suite.py"):
             self._copy_file(self.root / "scripts" / name, stage / "opt/memguardos/scripts" / name)
 

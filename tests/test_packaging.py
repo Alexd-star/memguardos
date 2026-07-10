@@ -76,6 +76,7 @@ def test_split_debian_package_plan_has_enterprise_ownership_boundaries():
     assert "/usr/bin/memguardos-tray" in plan["memguardos-ukui"]["files"]
     assert "/usr/share/applications/memguardos-center.desktop" in plan["memguardos-ukui"]["files"]
     assert "/lib/systemd/system/memguard-agent@.service" in plan["memguardos-agent-bridge"]["files"]
+    assert "/usr/lib/memguardos/memguardos-agent-launcher.sh" in plan["memguardos-agent-bridge"]["files"]
     assert "/usr/share/doc/memguardos-doc/README.md" in plan["memguardos-doc"]["files"]
     assert validate_no_overlap(plan) == []
     assert (ROOT / "scripts/verify_deb_lifecycle.sh").exists()
@@ -284,6 +285,7 @@ def test_competition_package_requires_memory_value_code_data_and_evidence():
         "scripts/collect_openkylin_native_evidence.sh",
         "scripts/warmup_kylin_sdk.sh",
         "scripts/memguard-kylin-warmup.service",
+        "scripts/memguardos-agent-launcher.sh",
         "scripts/memguardos-native-helper.sh",
         "memguard/os_guard/openkylin_native.py",
         "memguard/desktop/peony_scan.py",

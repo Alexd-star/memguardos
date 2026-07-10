@@ -45,6 +45,7 @@ REQUIRED_PATHS = {
     "scripts/web_dashboard_smoke.py",
     "scripts/memguard-agent@.service",
     "scripts/memguard-kylin-warmup.service",
+    "scripts/memguardos-agent-launcher.sh",
     "scripts/memguard_agent_bridge.py",
     "scripts/memguardos-native-helper.sh",
     "scripts/warmup_kylin_sdk.sh",

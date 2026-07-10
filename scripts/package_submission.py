@@ -130,6 +130,7 @@ FORMAL_SCRIPTS = {
     "scripts/memguardd@.service",
     "scripts/memguard-agent@.service",
     "scripts/memguard-kylin-warmup.service",
+    "scripts/memguardos-agent-launcher.sh",
     "scripts/memguardos-native-helper.sh",
     "packaging/debian/packages.json",
     "packaging/desktop/memguardos-tray.desktop",
