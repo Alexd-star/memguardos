@@ -24,7 +24,11 @@ from scripts.check_competition_ready import (
 import scripts.check_competition_ready as readiness
 import scripts.build_deb_packages as deb_packages
 from scripts.generate_sbom import generate_sbom
-from scripts.build_deb_packages import build_package_plan, validate_no_overlap
+from scripts.build_deb_packages import (
+    DebianPackageBuilder,
+    build_package_plan,
+    validate_no_overlap,
+)
 
 
 def test_competition_ready_hygiene_ignores_local_output_workspaces():
@@ -102,6 +106,29 @@ def test_debian_packages_apply_openkylin_native_install_lifecycle():
     assert "Name=MemGuardOS 记忆安全" in menu
     assert "Exec=ukui-control-center" in menu
     assert "Categories=Settings;Security;" in menu
+
+
+def test_agent_bridge_package_migrates_only_the_known_legacy_systemd_copy(tmp_path):
+    builder = DebianPackageBuilder(
+        root=ROOT,
+        output_dir=tmp_path / "dist",
+        build_root=tmp_path / "build",
+        version="0.1.0-2",
+        architecture="amd64",
+        multiarch="x86_64-linux-gnu",
+    )
+    stage = tmp_path / "stage"
+    (stage / "DEBIAN").mkdir(parents=True)
+
+    builder._write_metadata("memguardos-agent-bridge", stage)
+
+    postinst = (stage / "DEBIAN/postinst").read_text(encoding="utf-8")
+    assert "/etc/systemd/system/memguard-agent@.service" in postinst
+    assert "/opt/memguardos/.venv-agent/bin/python" in postinst
+    assert "memguard-agent@.service.memguardos-legacy" in postinst
+    assert "cp -p" in postinst
+    assert "rm -f" in postinst
+    assert "systemctl daemon-reload" in postinst
 
 
 def test_debian_staging_permissions_are_normalized_to_policy(monkeypatch, tmp_path):

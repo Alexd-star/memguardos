@@ -291,6 +291,22 @@ class DebianPackageBuilder:
             )
             self._write_maintainer_script(stage / "DEBIAN/postinst", desktop_refresh)
             self._write_maintainer_script(stage / "DEBIAN/postrm", desktop_refresh)
+        elif package == "memguardos-agent-bridge":
+            self._write_maintainer_script(
+                stage / "DEBIAN/postinst",
+                "\n".join(
+                    [
+                        "legacy_unit=/etc/systemd/system/memguard-agent@.service",
+                        "legacy_backup=/etc/systemd/system/memguard-agent@.service.memguardos-legacy",
+                        "legacy_exec='ExecStart=/opt/memguardos/.venv-agent/bin/python /opt/memguardos/scripts/memguard_agent_bridge.py --queue-root /var/lib/memguardos-agent/%i --namespace agent-%i'",
+                        'if [ -f "$legacy_unit" ] && grep -Fqx "$legacy_exec" "$legacy_unit"; then',
+                        '  [ -e "$legacy_backup" ] || cp -p "$legacy_unit" "$legacy_backup"',
+                        '  rm -f "$legacy_unit"',
+                        "fi",
+                        "command -v systemctl >/dev/null 2>&1 && systemctl daemon-reload || true",
+                    ]
+                ),
+            )
 
     def _build_one(self, package: str, stage: Path) -> None:
         architecture = str(self.plan[package]["architecture"])

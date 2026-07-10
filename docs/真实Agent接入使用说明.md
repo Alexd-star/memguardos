@@ -162,6 +162,8 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now memguard-agent@luo.service
 ```
 
+早期版本曾指导用户把模板手工复制到 `/etc/systemd/system/memguard-agent@.service`。该路径优先级高于软件包安装到 `/lib/systemd/system` 的新单元。升级安装时，`memguardos-agent-bridge` 只会识别包含旧版固定解释器 `ExecStart` 的已知模板，将其备份为 `memguard-agent@.service.memguardos-legacy` 后移除；管理员自行修改过、未匹配旧签名的单元不会被覆盖。升级后可用 `systemctl cat memguard-agent@luo.service` 确认当前加载的是软件包单元。
+
 服务通过 `/usr/lib/memguardos/memguardos-agent-launcher.sh` 选择 Python 解释器，顺序如下：
 
 1. 管理员在 `/etc/memguardos/agent-luo.env` 中设置的 `MEMGUARD_AGENT_PYTHON`；
