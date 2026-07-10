@@ -58,6 +58,14 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/status":
             self._send_api({"command": "namespace_status"})
             return
+        if parsed.path == "/api/feedback-home":
+            params = parse_qs(parsed.query)
+            self._send_api({"command": "feedback_home", "limit": _safe_int(params.get("limit", ["8"])[0], 8)})
+            return
+        if parsed.path == "/api/notifications":
+            params = parse_qs(parsed.query)
+            self._send_api({"command": "notifications", "limit": _safe_int(params.get("limit", ["30"])[0], 30)})
+            return
         if parsed.path == "/api/memory-policy":
             self._send_api({"command": "memory_policy"})
             return
@@ -94,6 +102,31 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                 {
                     "command": "preference_evidence",
                     "memory_id": params.get("memory_id", [""])[0],
+                }
+            )
+            return
+        if parsed.path == "/api/memory-detail":
+            params = parse_qs(parsed.query)
+            self._send_api(
+                {
+                    "command": "memory_detail",
+                    "memory_id": params.get("memory_id", [""])[0],
+                    "task": params.get("task", ["验证这条记忆的适用范围"])[0],
+                    "agent_name": params.get("agent_name", ["openhands"])[0],
+                    "session_id": params.get("session_id", ["detail-preview"])[0],
+                }
+            )
+            return
+        if parsed.path == "/api/preference-proof":
+            params = parse_qs(parsed.query)
+            self._send_api(
+                {
+                    "command": "preference_effect_proof",
+                    "memory_id": params.get("memory_id", [""])[0],
+                    "task": params.get("task", ["验证当前偏好是否生效"])[0],
+                    "stage": params.get("stage", ["tool_selection"])[0],
+                    "agent_name": params.get("agent_name", ["openhands"])[0],
+                    "session_id": params.get("session_id", ["proof-preview"])[0],
                 }
             )
             return
@@ -163,6 +196,30 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                     "source_kind": str(payload.get("source_kind", "dashboard")),
                     "source_uri": "web_dashboard",
                     "tier": payload.get("tier") or None,
+                }
+            )
+            return
+        if parsed.path in {"/api/agent-run", "/api/journey"}:
+            if not self._require_role("operator"):
+                return
+            self._send_api(
+                {
+                    "command": "agent_replay",
+                    "task": str(payload.get("task", "")),
+                    "mode": str(payload.get("mode", "replay")),
+                    "session_id": str(payload.get("session_id", "")),
+                }
+            )
+            return
+        if parsed.path == "/api/forget-memory":
+            if not self._require_role("admin"):
+                return
+            self._send_api(
+                {
+                    "command": "forget_memory_ids",
+                    "memory_ids": payload.get("memory_ids") if isinstance(payload.get("memory_ids"), list) else [],
+                    "reason": str(payload.get("reason", "user forget")),
+                    "compact": bool(payload.get("compact", True)),
                 }
             )
             return
@@ -430,21 +487,21 @@ def _dashboard_html() -> str:
   <style>
     :root {
       color-scheme: light;
-      --ink:#17202a; --muted:#667085; --line:#d0d5dd; --accent:#0f766e; --accent-2:#2563eb;
-      --warn:#b45309; --bad:#b42318; --ok:#047857; --bg:#f5f7fa; --panel:#ffffff; --soft:#eef6f4;
+      --ink:#1f2937; --muted:#667085; --line:#d6dee8; --accent:#1677c8; --accent-2:#356f9f;
+      --warn:#a15c00; --bad:#b42318; --ok:#087443; --bg:#f4f6f8; --panel:#ffffff; --soft:#f3f8fc;
     }
     * { box-sizing: border-box; }
     body { margin:0; font-family:"Segoe UI","Microsoft YaHei",Arial,sans-serif; color:var(--ink); background:var(--bg); letter-spacing:0; }
-    header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 24px; background:#111827; color:white; border-bottom:4px solid #0f766e; }
-    header h1 { margin:0; font-size:19px; font-weight:700; }
-    header .subtitle { margin-top:4px; font-size:12px; color:#cbd5e1; }
-    header .meta { font-size:12px; color:#d0d5dd; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:15px 24px; background:#fff; color:var(--ink); border-bottom:1px solid #cbd8e5; box-shadow:0 1px 3px rgba(31,41,55,.04); }
+    header h1 { margin:0; font-size:19px; font-weight:700; color:#175c96; }
+    header .subtitle { margin-top:4px; font-size:12px; color:var(--muted); }
+    header .meta { font-size:12px; color:var(--muted); }
     main { display:grid; grid-template-columns:280px 1fr; min-height:calc(100vh - 72px); }
-    nav { border-right:1px solid var(--line); background:#fff; padding:18px 14px; }
+    nav { border-right:1px solid var(--line); background:#f8fafc; padding:18px 14px; }
     .nav-group { margin:4px 0 8px; padding:0 2px; color:var(--muted); font-size:12px; font-weight:700; }
     .nav-group + button { margin-top:0; }
-    nav button { width:100%; min-height:40px; margin:0 0 8px; text-align:left; border:1px solid transparent; background:#fff; color:var(--ink); padding:9px 11px; border-radius:8px; cursor:pointer; font-weight:600; }
-    nav button.active, nav button:hover { border-color:#99f6e4; background:#ecfdf5; color:#115e59; }
+    nav button { width:100%; min-height:40px; margin:0 0 7px; text-align:left; border:1px solid transparent; background:transparent; color:var(--ink); padding:9px 11px; border-radius:6px; cursor:pointer; font-weight:600; }
+    nav button.active, nav button:hover { border-color:#b7d5ed; background:#eaf4fc; color:#145b92; }
     section { display:none; padding:20px 24px 28px; }
     section.active { display:block; }
     h2 { font-size:22px; margin:0 0 8px; }
@@ -454,7 +511,7 @@ def _dashboard_html() -> str:
     .grid.three { grid-template-columns:repeat(3,minmax(0,1fr)); }
     .grid.four { grid-template-columns:repeat(4,minmax(0,1fr)); }
     .panel { min-width:0; overflow:hidden; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px; }
-    .panel.emphasis { border-color:#99f6e4; background:linear-gradient(180deg,#ffffff,#f0fdfa); }
+    .panel.emphasis { border-color:#b7d5ed; background:#f8fbfe; }
     .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0; }
     label { display:block; font-size:13px; color:var(--muted); margin:10px 0 5px; }
     textarea, input, select { width:100%; border:1px solid var(--line); border-radius:6px; padding:9px 10px; font:14px/1.45 Consolas, "Microsoft YaHei", monospace; background:white; color:var(--ink); }
@@ -501,7 +558,7 @@ def _dashboard_html() -> str:
     .progress span { display:block; height:100%; background:var(--accent); width:0%; }
     .trace { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
     .trace .step { border:1px solid var(--line); background:#fff; border-radius:8px; padding:10px; }
-    .step b { display:block; color:#115e59; margin-bottom:4px; }
+    .step b { display:block; color:#145b92; margin-bottom:4px; }
     .timeline { position:relative; display:grid; gap:0; }
     .timeline::before { content:""; position:absolute; left:11px; top:8px; bottom:8px; width:1px; background:var(--line); }
     .timeline-row { position:relative; padding:0 0 14px 34px; min-width:0; }
@@ -518,12 +575,16 @@ def _dashboard_html() -> str:
     details summary { cursor:pointer; padding:10px 12px; font-weight:700; color:var(--ink); }
     details[open] summary { border-bottom:1px solid var(--line); }
     .advanced-output { margin:0; border-radius:0 0 8px 8px; min-height:140px; }
-    .operation-status { display:none; margin:12px 24px 0; border:1px solid #bfdbfe; background:#eff6ff; color:#1e3a8a; border-radius:8px; padding:10px 12px; font-size:13px; }
+    .operation-status { display:none; margin:12px 24px 0; border:1px solid #b7d5ed; background:#eef7ff; color:#185a91; border-radius:6px; padding:10px 12px; font-size:13px; }
     .operation-status.ok { border-color:#bbf7d0; background:#f0fdf4; color:#166534; }
     .operation-status.warn { border-color:#fde68a; background:#fffbeb; color:#92400e; }
     .operation-status.bad { border-color:#fecaca; background:#fef2f2; color:#991b1b; }
     .button-label { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
     .mini-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+    button:hover { filter:brightness(.98); }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline:2px solid #78b5e3; outline-offset:2px; }
+    .health { min-width:0; }
+    .health > * { min-width:0; }
     #storageRoot { word-break:break-all; overflow-wrap:anywhere; }
     @media (max-width: 900px) {
       main { grid-template-columns: 1fr; }
@@ -551,8 +612,11 @@ def _dashboard_html() -> str:
       <button data-tab="ingest">记忆写入</button>
       <button data-tab="search">记忆检索</button>
       <button data-tab="context">上下文包</button>
-      <button data-tab="agent">Agent 习惯</button>
-      <button data-tab="forget">精准遗忘</button>
+      <button data-tab="agent">Agent 工作台</button>
+      <button data-tab="preferences">偏好生效</button>
+      <button data-tab="memory-detail">记忆详情</button>
+      <button data-tab="forget">遗忘验证</button>
+      <button data-tab="notifications">通知中心</button>
       <div class="nav-group">管理员视图</div>
       <button data-tab="audit">审计记录</button>
       <button data-tab="diagnostics">系统维护</button>
@@ -569,9 +633,21 @@ def _dashboard_html() -> str:
           <span class="label">快捷操作</span>
           <button class="primary" onclick="openTab('ingest')">写入记忆</button>
           <button class="secondary" onclick="openTab('context')">查看上下文</button>
+          <button class="secondary" onclick="openTab('agent')">打开 Agent 工作台</button>
           <button class="secondary" onclick="openTab('forget')">预览遗忘</button>
+          <button class="secondary" onclick="runJourney(event)">一键体验流程</button>
           <button class="secondary" onclick="openTab('diagnostics')">系统维护</button>
           <span class="muted">普通操作在左侧前半区，管理员操作在【系统维护】中处理。</span>
+        </div>
+        <div class="grid two" style="margin-top:12px">
+          <div class="panel emphasis">
+            <div class="health"><div class="item-title">最近学到的内容</div><button class="secondary" onclick="loadFeedbackHome(event)">更新</button></div>
+            <div id="recentMemoriesList" class="list" style="margin-top:10px"><div class="muted">正在读取最近变化…</div></div>
+          </div>
+          <div class="panel">
+            <div class="health"><div class="item-title">最近需要关注</div><button class="secondary" onclick="openTab('notifications')">查看全部</button></div>
+            <div id="homeNotifications" class="list" style="margin-top:10px"><div class="muted">正在读取通知…</div></div>
+          </div>
         </div>
         <div class="grid four">
           <div class="panel emphasis"><div class="health-title"><span class="status-dot ok"></span><span>实时记忆</span></div><div class="metric" id="liveCount">-</div></div>
@@ -684,6 +760,7 @@ def _dashboard_html() -> str:
           <label>记忆层级</label><select id="tier"><option value="">自动</option><option>working</option><option>session</option><option>long_term</option></select>
           <div class="actions"><button class="primary" onclick="ingest(event)">写入</button><button class="secondary" onclick="explainExtraction(event)">解释抽取</button></div>
         </div>
+        <div id="ingestFeedback" class="list" style="margin-top:12px"></div>
         <details><summary>详细记录：操作回执</summary><pre id="ingestOut" class="advanced-output"></pre></details>
       </section>
       <section id="search">
@@ -715,7 +792,13 @@ def _dashboard_html() -> str:
             <div><label>会话 ID（可选）</label><input id="agentSession" placeholder="留空查看最近事件"></div>
             <div><label>上下文预览任务</label><input id="agentTask" value="查找精准遗忘的实现位置"></div>
           </div>
-          <div class="actions"><button class="primary" onclick="loadAgentOverview(event)">刷新 Agent 状态</button><button class="secondary" onclick="exportDiagnostics(event)">导出系统报告</button></div>
+          <div class="grid three">
+            <div><label>工作区</label><input id="agentWorkspace" value="当前命名空间" aria-label="Agent 工作区"></div>
+            <div><label>运行方式</label><select id="agentMode"><option value="replay">本地回放（可复现）</option><option value="dry-run">只读预览</option><option value="openhands">真实 OpenHands（需外部模型）</option></select></div>
+            <div><label>Agent</label><select id="agentName"><option value="openhands">OpenHands</option></select></div>
+          </div>
+          <div class="actions"><button class="primary" onclick="runAgentTask(event)">运行任务</button><button class="secondary" onclick="loadAgentOverview(event)">查看已有记录</button><button class="secondary" onclick="exportDiagnostics(event)">导出系统报告</button></div>
+          <p class="muted">本地回放会真实写入并读取 MemGuardOS 事件，用于核验反馈链；只读预览不写入；真实 OpenHands 只在模型和工作区可用时运行，结果会明确标注执行方式。</p>
         </div>
         <div id="agentMetrics" class="grid four" style="margin-top:12px"></div>
         <div class="panel" style="margin-top:12px">
@@ -733,6 +816,7 @@ def _dashboard_html() -> str:
           <div class="panel"><div class="item-title">偏好依据</div><div id="agentPreferences" class="list" style="margin-top:12px"></div></div>
         </div>
         <div class="panel" style="margin-top:12px"><div class="item-title">三阶段上下文对比</div><div id="agentContexts" class="stage-columns" style="margin-top:12px"></div></div>
+        <div class="panel" style="margin-top:12px"><div class="item-title">偏好生效证明</div><p class="muted">只有观察到实际工具命令或回答内容时才会判定“通过”；没有真实行为时显示“暂无证据”，不会把上下文注入误当成 Agent 已遵循。</p><div id="preferenceProofs" class="list" style="margin-top:12px"></div></div>
         <div class="panel" style="margin-top:12px">
           <div class="item-title">按交互主题精准遗忘</div>
           <div class="grid two">
@@ -743,6 +827,36 @@ def _dashboard_html() -> str:
           <div id="agentForgetImpact" class="list" style="margin-top:12px"></div>
         </div>
         <details><summary>详细记录：操作回执</summary><pre id="agentOut" class="advanced-output"></pre></details>
+      </section>
+      <section id="preferences">
+        <h2>偏好生效</h2>
+        <p class="lead">这里展示当前生效的 Agent 偏好、作用范围和最近一次可验证行为。只注入上下文但没有观察到实际行为的偏好，会明确标记为“暂无证据”。</p>
+        <div class="panel">
+          <div class="grid two">
+            <div><label>验证任务</label><input id="proofTask" value="查找 MemGuardService 的定义"></div>
+            <div><label>验证阶段</label><select id="proofStage"><option value="tool_selection">工具选择</option><option value="planning">任务规划</option><option value="response_generation">回答生成</option></select></div>
+          </div>
+          <div class="actions"><button class="primary" onclick="loadPreferences(event)">刷新偏好</button><button class="secondary" onclick="runAgentTask(event)">运行验证任务</button></div>
+        </div>
+        <div id="preferenceList" class="list" style="margin-top:12px"></div>
+        <details><summary>详细记录：偏好证明</summary><pre id="preferenceOut" class="advanced-output"></pre></details>
+      </section>
+      <section id="memory-detail">
+        <h2>记忆详情</h2>
+        <p class="lead">输入记忆编号后，可以查看摘要、来源事件、作用域、版本、图谱关系和最近生效阶段；正文和敏感字段仍遵循系统治理边界。</p>
+        <div class="panel">
+          <label>记忆编号</label><input id="memoryDetailId" placeholder="从最近学到的内容或检索结果中选择">
+          <div class="actions"><button class="primary" onclick="loadMemoryDetail(event)">查看详情</button><button class="danger" onclick="forgetMemoryFromDetail(event)">遗忘这条记忆</button></div>
+        </div>
+        <div id="memoryDetailCards" class="list" style="margin-top:12px"></div>
+        <details><summary>详细记录：记忆详情</summary><pre id="memoryDetailOut" class="advanced-output"></pre></details>
+      </section>
+      <section id="notifications">
+        <h2>通知中心</h2>
+        <p class="lead">通知中心记录重要记忆变化和风险事件。普通检索、缓存命中和本机智能检索降级不会频繁打扰桌面，只在这里保留状态变化。</p>
+        <div class="toolbar"><button class="primary" onclick="loadNotifications(event)">刷新通知</button><button class="secondary" onclick="openTab('diagnostics')">查看系统维护</button></div>
+        <div id="notificationList" class="list"></div>
+        <details><summary>详细记录：通知来源</summary><pre id="notificationOut" class="advanced-output"></pre></details>
       </section>
       <section id="forget">
         <h2>精准遗忘</h2>
@@ -846,14 +960,24 @@ def _dashboard_html() -> str:
       document.querySelectorAll('section').forEach(item => item.classList.toggle('active', item.id === tab));
       const section = document.getElementById(tab);
       if (section) section.scrollIntoView({block:'start'});
+      if (window.location.hash !== '#' + tab) window.history.replaceState(null, '', '#' + tab);
     }
     function loadTabData(tab, event) {
       if (!tab || loadedTabs.has(tab)) return;
       loadedTabs.add(tab);
       if (tab === 'audit') audit(event);
       if (tab === 'agent') loadAgentOverview(event);
+      if (tab === 'preferences') loadPreferences(event);
+      if (tab === 'notifications') loadNotifications(event);
       if (tab === 'acceptance') loadAcceptancePlan(event);
     }
+    function openHashTab() {
+      const tab = window.location.hash.replace(/^#/, '');
+      if (!tab || !document.getElementById(tab)) return;
+      openTab(tab);
+      loadTabData(tab, null);
+    }
+    window.addEventListener('hashchange', openHashTab);
     const tokenInput = document.getElementById('apiToken');
     tokenInput.value = sessionStorage.getItem('memguardos_api_token') || '';
     tokenInput.addEventListener('change', () => sessionStorage.setItem('memguardos_api_token', tokenInput.value));
@@ -1085,11 +1209,23 @@ def _dashboard_html() -> str:
     function renderForgetCards(payload, confirmed) {
       const plan = payload.result || {};
       const candidates = plan.candidates || [];
-      document.getElementById('forgetCards').innerHTML = candidates.length ? candidates.map((item, idx) =>
+      const candidateHtml = candidates.length ? candidates.map((item, idx) =>
         '<div class="item"><div class="item-title">候选 #' + (idx + 1) + ' · ' + esc(item.type || 'memory') + '</div>'
         + '<div class="muted">' + esc(item.summary || item.memory_id) + '</div>'
-        + '<div class="muted">分数 ' + esc(item.score) + ' · 命中关键词 ' + esc((item.matched_keywords || []).join(', ')) + '</div></div>'
+        + '<div class="muted">匹配依据：' + esc((item.matched_keywords || []).join(', ') || '语义和作用域匹配') + '</div>'
+        + '<div class="mini-actions"><button class="secondary" onclick="openMemoryDetail(\'' + esc(item.memory_id || '') + '\')">查看记忆</button></div></div>'
       ).join('') : '<div class="item"><div class="item-title">' + (confirmed ? '已执行' : '未发现候选') + '</div><div class="muted">请展开详细记录查看操作回执。</div></div>';
+      document.getElementById('forgetCards').innerHTML = candidateHtml + renderVerificationReport(plan.verification_report);
+    }
+    function renderVerificationReport(report) {
+      if (!report) return '';
+      const steps = report.verification_steps || [];
+      const statusText = {passed:'已通过', failed:'需要处理', skipped:'未执行'};
+      const statusClass = {passed:'ok', failed:'bad', skipped:'warn'};
+      return '<div class="panel" style="margin-top:12px"><div class="item-title">遗忘验证链</div>'
+        + '<p class="muted">' + esc(report.user_summary || '') + '</p>'
+        + '<div class="list">' + steps.map(step => '<div class="item"><div class="health"><span>' + esc(step.name) + '</span><span class="badge ' + (statusClass[step.status] || 'warn') + '">' + esc(statusText[step.status] || step.status) + '</span></div><div class="muted">' + esc(step.detail || '') + '</div></div>').join('') + '</div>'
+        + '<div class="item" style="margin-top:10px"><div class="item-title">外部边界</div><div class="muted">OpenHands 原始日志、模型服务日志、shell history、虚拟机快照和文件备份不属于 MemGuardOS 受管范围，需要按各自系统单独清理。</div></div></div>';
     }
     function renderAgentOverview(payload) {
       const result = payload.result || {};
@@ -1130,6 +1266,21 @@ def _dashboard_html() -> str:
           + (memories.length ? memories.map(item => '<div class="item" style="margin-top:8px"><b>' + esc(item.preference_topic || item.subtype || item.type) + '</b><div class="muted">' + esc(item.selection_reason || '') + '</div></div>').join('') : '<div class="muted" style="margin-top:8px">无适用记忆</div>')
           + '</div>';
       }).join('');
+      renderPreferenceProofs(result.preference_effect_proofs || []);
+    }
+    function renderPreferenceProofs(proofs) {
+      const box = document.getElementById('preferenceProofs');
+      if (!box) return;
+      if (!proofs.length) {
+        box.innerHTML = '<div class="item"><div class="item-title">暂无可验证偏好</div><div class="muted">先运行回放任务或接入真实 Agent，再查看工具和回答是否遵循偏好。</div></div>';
+        return;
+      }
+      const labels = {passed:'已观察到并通过', failed:'未遵循', not_applicable:'暂无实际行为证据'};
+      const classes = {passed:'ok', failed:'bad', not_applicable:'warn'};
+      box.innerHTML = proofs.map(proof => '<div class="item"><div class="health"><div class="item-title">' + esc((proof.preference || {}).topic || '偏好') + ' = ' + esc((proof.preference || {}).value || '') + '</div><span class="badge ' + (classes[proof.compliance] || 'warn') + '">' + esc(labels[proof.compliance] || proof.compliance) + '</span></div>'
+        + '<div class="muted">阶段：' + esc(proof.stage) + ' · 注入上下文：' + (proof.injected ? '是' : '否') + '</div>'
+        + '<div class="muted">实际行为：' + esc((proof.actual_behavior || {}).command || (proof.actual_behavior || {}).response || '尚未观察到') + '</div>'
+        + (proof.failure_reason ? '<div class="warning">' + esc(proof.failure_reason) + '</div>' : '') + '</div>').join('');
     }
     async function loadAgentOverview(event) {
       await withBusy(event, async () => {
@@ -1143,6 +1294,108 @@ def _dashboard_html() -> str:
     async function loadPreferenceEvidence(event, memoryId) {
       await withBusy(event, async () => {
         agentOut.textContent = pretty(await getJson('/api/agent-evidence?memory_id=' + encodeURIComponent(memoryId)));
+      });
+    }
+    async function runAgentTask(event) {
+      await withBusy(event, async () => {
+        const payload = await postJson('/api/agent-run', {
+          task: document.getElementById('agentTask').value,
+          mode: document.getElementById('agentMode').value,
+          session_id: document.getElementById('agentSession').value
+        });
+        const result = payload.result || {};
+        if (result.session_id) document.getElementById('agentSession').value = result.session_id;
+        document.getElementById('agentOut').textContent = pretty(payload);
+        if (result.truthful_note) setOperationStatus(result.truthful_note, result.ok ? 'ok' : 'warn');
+        if (result.preference_effect_proofs) renderPreferenceProofs(result.preference_effect_proofs);
+        if (result.ok) await loadAgentOverview(null);
+        await loadFeedbackHome(null);
+      });
+    }
+    async function runJourney(event) {
+      document.getElementById('agentTask').value = '查找 MemGuardService 的定义并说明如何验证记忆遗忘';
+      document.getElementById('agentMode').value = 'replay';
+      openTab('agent');
+      await runAgentTask(event);
+    }
+    async function loadFeedbackHome(event) {
+      const work = async () => {
+        const payload = await getJson('/api/feedback-home?limit=8');
+        const result = payload.result || {};
+        const memories = result.recent_memories || [];
+        document.getElementById('recentMemoriesList').innerHTML = memories.length ? memories.map(item => '<div class="item"><div class="item-title">' + esc(item.summary_for_user || '已形成新记忆') + '</div><div class="muted">' + esc(item.type || '记忆') + ' · ' + esc(item.tier || '') + '</div><div class="mini-actions"><button class="secondary" onclick="openMemoryDetail(\'' + esc(item.memory_id || '') + '\')">查看详情</button></div></div>').join('') : '<div class="muted">还没有新的可展示记忆。</div>';
+        renderNotifications(result.notifications || [], 'homeNotifications');
+      };
+      if (event) return withBusy(event, work);
+      return work();
+    }
+    function renderNotifications(items, targetId) {
+      const box = document.getElementById(targetId || 'notificationList');
+      if (!box) return;
+      if (!items.length) {
+        box.innerHTML = '<div class="item"><div class="item-title">暂无需要关注的变化</div><div class="muted">重要记忆变化、风险阻断和遗忘结果会显示在这里。</div></div>';
+        return;
+      }
+      const labels = {critical:'需要处理', warning:'建议确认', info:'已完成'};
+      const classes = {critical:'bad', warning:'warn', info:'ok'};
+      box.innerHTML = items.map(item => '<div class="item"><div class="health"><div class="item-title">' + esc(item.title || '') + '</div><span class="badge ' + (classes[item.level] || '') + '">' + esc(labels[item.level] || item.level) + '</span></div><div class="muted">' + esc(item.summary || '') + '</div><div class="mini-actions"><button class="secondary" onclick="openNotificationTarget(\'' + esc(item.action || '') + '\')">查看处理</button></div></div>').join('');
+    }
+    function openNotificationTarget(action) {
+      if (action.indexOf('记忆') >= 0) openTab('memory-detail');
+      else if (action.indexOf('Agent') >= 0) openTab('agent');
+      else if (action.indexOf('遗忘') >= 0) openTab('forget');
+      else if (action.indexOf('记录') >= 0) openTab('audit');
+      else openTab('diagnostics');
+    }
+    async function loadNotifications(event) {
+      await withBusy(event, async () => {
+        const payload = await getJson('/api/notifications?limit=50');
+        renderNotifications((payload.result || []), 'notificationList');
+        document.getElementById('notificationOut').textContent = pretty(payload);
+      });
+    }
+    async function loadPreferences(event) {
+      await withBusy(event, async () => {
+        const payload = await getJson('/api/feedback-home?limit=30');
+        const items = (payload.result || {}).current_preferences || [];
+        const box = document.getElementById('preferenceList');
+        box.innerHTML = items.length ? items.map(item => '<div class="item"><div class="health"><div class="item-title">' + esc(item.topic || '') + ' = ' + esc(item.value || '') + '</div><span class="badge ' + (item.stable ? 'ok' : 'warn') + '">' + (item.stable ? '稳定' : '候选') + '</span></div><div class="muted">作用范围：' + esc(item.scope || '全局') + '</div><div class="mini-actions">' + (item.memory_id ? '<button class="secondary" onclick="loadPreferenceProof(event,\'' + esc(item.memory_id) + '\')">查看生效证明</button><button class="secondary" onclick="openMemoryDetail(\'' + esc(item.memory_id) + '\')">查看记忆</button>' : '<span class="muted">暂无对应记忆编号</span>') + '</div></div>').join('') : '<div class="item"><div class="item-title">暂无稳定偏好</div><div class="muted">通过 Agent 工作台运行任务后，这里会显示可复用偏好。</div></div>';
+        document.getElementById('preferenceOut').textContent = pretty(payload);
+      });
+    }
+    async function loadPreferenceProof(event, memoryId) {
+      await withBusy(event, async () => {
+        const url = '/api/preference-proof?memory_id=' + encodeURIComponent(memoryId) + '&task=' + encodeURIComponent(document.getElementById('proofTask').value) + '&stage=' + encodeURIComponent(document.getElementById('proofStage').value);
+        const payload = await getJson(url);
+        document.getElementById('preferenceOut').textContent = pretty(payload);
+        renderPreferenceProofs((payload.result || {}).proof ? [(payload.result || {}).proof] : []);
+        openTab('agent');
+      });
+    }
+    function openMemoryDetail(memoryId) {
+      document.getElementById('memoryDetailId').value = memoryId || '';
+      openTab('memory-detail');
+      loadMemoryDetail(null);
+    }
+    async function loadMemoryDetail(event) {
+      await withBusy(event, async () => {
+        const id = document.getElementById('memoryDetailId').value.trim();
+        if (!id) { setOperationStatus('请先选择一条记忆。', 'warn'); return; }
+        const payload = await getJson('/api/memory-detail?memory_id=' + encodeURIComponent(id));
+        const result = payload.result || {};
+        const memory = result.memory || {};
+        document.getElementById('memoryDetailCards').innerHTML = result.found ? '<div class="item"><div class="item-title">' + esc(memory.summary || memory.content || id) + '</div><div class="muted">类型：' + esc(memory.type || '') + ' · 子类型：' + esc(memory.subtype || '') + ' · 层级：' + esc(memory.tier || '') + '</div><div class="muted">作用域：' + esc(memory.scope || '') + ' · 来源：' + esc((memory.source || {}).kind || '') + '</div></div><div class="grid two"><div class="panel"><div class="item-title">来源与版本</div><div class="muted">来源事件 ' + esc((result.source_events || []).length) + ' 条 · 版本 ' + esc((result.versions || []).length) + ' 个</div><div class="muted">最近生效阶段：' + esc((result.agent_usage || {}).last_stage || '暂无证据') + '</div></div><div class="panel"><div class="item-title">图谱关系</div><div class="muted">实体 ' + esc(((result.graph || {}).entities || []).length) + ' 个 · 关系 ' + esc(((result.graph || {}).relations || []).length) + ' 条</div></div></div>' : '<div class="item"><div class="item-title">没有找到这条记忆</div><div class="muted">请从首页最近学到的内容或检索结果中重新选择。</div></div>';
+        document.getElementById('memoryDetailOut').textContent = pretty(payload);
+      });
+    }
+    async function forgetMemoryFromDetail(event) {
+      const id = document.getElementById('memoryDetailId').value.trim();
+      if (!id || !window.confirm('确认遗忘这条记忆？系统会先执行受管记录验证，并保留外部日志边界说明。')) return;
+      await withBusy(event, async () => {
+        const payload = await postJson('/api/forget-memory', {memory_ids:[id], reason:'用户从记忆详情发起遗忘', compact:true});
+        document.getElementById('memoryDetailOut').textContent = pretty(payload);
+        setOperationStatus(payload.ok ? '这条记忆的遗忘验证已完成。' : '遗忘未完全完成，请查看验证报告。', payload.ok ? 'ok' : 'bad');
+        await loadFeedbackHome(null);
       });
     }
     async function agentForget(event, confirmForget) {
@@ -1195,6 +1448,7 @@ def _dashboard_html() -> str:
       document.getElementById('lastUpdated').textContent = '状态已刷新';
       renderStatusSummary(status, diag);
       renderRefreshWarnings(diag, retrieval, runtime, sdkAvailable);
+      await loadFeedbackHome(null);
     }
     function renderRefreshWarnings(diag, retrieval, runtime, sdkAvailable) {
       const warnings = [];
@@ -1233,9 +1487,27 @@ def _dashboard_html() -> str:
     async function ingest(event) {
       await withBusy(event, async () => {
         const data = {text: ingestText.value, source_kind: sourceKind.value, tier: tier.value};
-        ingestOut.textContent = pretty(await postJson('/api/ingest', data));
+        const payload = await postJson('/api/ingest', data);
+        ingestOut.textContent = pretty(payload);
+        renderIngestFeedback(payload);
         await refresh();
       });
+    }
+    function renderIngestFeedback(payload) {
+      const box = document.getElementById('ingestFeedback');
+      const result = payload.result || {};
+      const feedback = result.feedback || {};
+      const notice = result.sensitive_notice || {};
+      if (notice.user_summary) {
+        box.innerHTML = '<div class="item"><div class="health"><div class="item-title">' + esc(notice.action === 'blocked' ? '敏感内容已保护' : '内容已脱敏') + '</div><span class="badge bad">未进入长期记忆</span></div><div class="muted">' + esc(notice.user_summary) + '</div><div class="mini-actions"><button class="secondary" onclick="openTab(\'audit\')">查看操作记录</button></div></div>';
+        return;
+      }
+      const item = (feedback.new_memories || [])[0] || (feedback.updated_memories || [])[0];
+      if (!item) {
+        box.innerHTML = '<div class="item"><div class="item-title">本次没有形成可保存记忆</div><div class="muted">' + esc(((feedback.skipped_items || [])[0] || {}).summary_for_user || '请检查输入内容和保存策略。') + '</div></div>';
+        return;
+      }
+      box.innerHTML = '<div class="item"><div class="health"><div class="item-title">已学到：' + esc(item.summary_for_user) + '</div><span class="badge ok">已保存</span></div><div class="muted">为什么保存：' + esc(item.why_extracted) + '</div><div class="muted">适用范围：' + esc((item.where_it_will_apply || []).join('、')) + '</div><div class="mini-actions"><button class="secondary" onclick="openMemoryDetail(\'' + esc(item.memory_id || '') + '\')">查看详情</button><button class="secondary" onclick="loadPreferenceProof(event,\'' + esc(item.memory_id || '') + '\')">测试生效</button></div></div>';
     }
     async function explainExtraction(event) {
       await withBusy(event, async () => {
@@ -1298,6 +1570,7 @@ def _dashboard_html() -> str:
       setOperationStatus('正在准备系统报告。下载开始后可在浏览器下载列表中查看文件。', 'warn');
       window.location.href = '/api/export-diagnostics';
     }
+    openHashTab();
     refresh();
   </script>
 </body>

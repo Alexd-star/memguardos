@@ -53,7 +53,7 @@ def test_excellence_scorecard_is_generated_from_current_evidence(tmp_path: Path)
 
     text = output.read_text(encoding="utf-8")
     assert "MemGuardOS 超标准交付评分矩阵" in text
-    assert "318 passed, 1 skipped" in text
+    assert "337 passed, 1 skipped" in text
     assert "openKylin 自动化测试" in text
     assert "passed" in text
     assert "49.48x" in text

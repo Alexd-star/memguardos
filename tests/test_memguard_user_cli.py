@@ -51,3 +51,25 @@ def test_user_cli_forget_preview_does_not_delete_without_confirm(tmp_path, capsy
     assert "影响范围预览" in out
     assert "确认执行请追加 --yes" in out
     assert "已执行遗忘" not in out
+
+
+def test_user_cli_interactive_shell_handles_product_commands(monkeypatch, tmp_path, capsys):
+    commands = iter(["/help", "/status", "/preferences", "/workspace", "/model", "/exit"])
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(commands))
+
+    code = memguard.main(
+        [
+            "--store",
+            str(tmp_path / "memory.segment"),
+            "--db",
+            str(tmp_path / "memguard.sqlite3"),
+            "shell",
+        ]
+    )
+
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "/preferences" in out
+    assert "本机状态" in out
+    assert "当前工作区" in out
+    assert "当前模型" in out

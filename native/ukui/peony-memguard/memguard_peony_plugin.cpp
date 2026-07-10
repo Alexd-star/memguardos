@@ -368,12 +368,27 @@ void MemGuardPeonyPlugin::runApply(const QStringList &arguments)
                 QMessageBox::critical(nullptr, QStringLiteral("导入失败"), error);
             } else {
                 const QJsonObject summary = result.value(QStringLiteral("summary")).toObject();
+                const QJsonObject feedback = result.value(QStringLiteral("memory_change_summary")).toObject();
                 const QString message = QStringLiteral("已保存 %1 个安全文件；%2 个敏感或不适合保存的项目已被保护性跳过；%3 个未选择；%4 个未完成。\n操作记录：%5")
                     .arg(summary.value(QStringLiteral("stored")).toInt())
                     .arg(summary.value(QStringLiteral("blocked")).toInt())
                     .arg(summary.value(QStringLiteral("skipped")).toInt())
                     .arg(summary.value(QStringLiteral("failed")).toInt())
                     .arg(result.value(QStringLiteral("audit_chain")).toObject().value(QStringLiteral("ok")).toBool() ? QStringLiteral("完整") : QStringLiteral("需要检查"));
+                QString feedbackMessage = message;
+                const QJsonArray newMemories = feedback.value(QStringLiteral("new_memories")).toArray();
+                if (!newMemories.isEmpty()) {
+                    feedbackMessage += QStringLiteral("\n\n记忆变化：新增 %1 条，可在 Agent 工作台测试生效。 ").arg(newMemories.size());
+                    for (const QJsonValue &value : newMemories.mid(0, 2))
+                        feedbackMessage += QStringLiteral("\n• %1").arg(value.toObject().value(QStringLiteral("summary_for_user")).toString());
+                }
+                const QJsonArray scopes = feedback.value(QStringLiteral("effective_scopes")).toArray();
+                if (!scopes.isEmpty()) {
+                    QStringList scopeLabels;
+                    for (const QJsonValue &scope : scopes)
+                        scopeLabels << scope.toString();
+                    feedbackMessage += QStringLiteral("\n适用场景：%1").arg(scopeLabels.join(QStringLiteral("、")));
+                }
                 QStringList storedIds;
                 const QJsonArray results = result.value(QStringLiteral("results")).toArray();
                 for (const QJsonValue &value : results) {
@@ -383,14 +398,17 @@ void MemGuardPeonyPlugin::runApply(const QStringList &arguments)
                 }
                 QMessageBox box(result.value(QStringLiteral("ok")).toBool() ? QMessageBox::Information : QMessageBox::Warning,
                     result.value(QStringLiteral("ok")).toBool() ? QStringLiteral("导入完成") : QStringLiteral("部分内容未导入"),
-                    message);
+                    feedbackMessage);
                 auto *view = box.addButton(QStringLiteral("查看结果"), QMessageBox::ActionRole);
+                auto *test = box.addButton(QStringLiteral("测试生效"), QMessageBox::ActionRole);
                 auto *forget = box.addButton(QStringLiteral("撤销本次导入"), QMessageBox::ActionRole);
                 forget->setEnabled(!storedIds.isEmpty());
                 box.addButton(QStringLiteral("关闭"), QMessageBox::RejectRole);
                 box.exec();
                 if (box.clickedButton() == view)
-                    openLocalConsole(QStringLiteral("#audit"));
+                    openLocalConsole(QStringLiteral("#agent"));
+                else if (box.clickedButton() == test)
+                    openLocalConsole(QStringLiteral("#preferences"));
                 else if (box.clickedButton() == forget)
                     runForgetImport(storedIds);
             }
@@ -429,12 +447,20 @@ void MemGuardPeonyPlugin::runForgetImport(const QStringList &memoryIds)
             } else {
                 const QJsonObject summary = result.value(QStringLiteral("summary")).toObject();
                 const QJsonObject audit = result.value(QStringLiteral("audit_chain")).toObject();
+                const QJsonObject verification = result.value(QStringLiteral("forget_verification_report")).toObject();
                 const bool ok = result.value(QStringLiteral("ok")).toBool();
-                const QString message = QStringLiteral("已遗忘 %1 条本次导入记忆；%2 条未找到；%3 条此前已遗忘。\n操作记录：%4")
+                QString message = QStringLiteral("已遗忘 %1 条本次导入记忆；%2 条未找到；%3 条此前已遗忘。\n操作记录：%4")
                     .arg(summary.value(QStringLiteral("forgotten")).toInt())
                     .arg(summary.value(QStringLiteral("missing")).toInt())
                     .arg(summary.value(QStringLiteral("already_deleted")).toInt())
                     .arg(audit.value(QStringLiteral("ok")).toBool() ? QStringLiteral("完整") : QStringLiteral("需要检查"));
+                message += QStringLiteral("\n\n验证摘要：%1").arg(verification.value(QStringLiteral("user_summary")).toString(QStringLiteral("请查看详细验证结果。")));
+                const QJsonArray steps = verification.value(QStringLiteral("verification_steps")).toArray();
+                for (const QJsonValue &value : steps.mid(0, 5)) {
+                    const QJsonObject step = value.toObject();
+                    message += QStringLiteral("\n• %1：%2").arg(step.value(QStringLiteral("name")).toString(), step.value(QStringLiteral("status")).toString());
+                }
+                message += QStringLiteral("\n外部日志、shell history、快照和备份不在 MemGuardOS 受管范围内。 ");
                 QMessageBox box(ok ? QMessageBox::Information : QMessageBox::Warning,
                     ok ? QStringLiteral("遗忘完成") : QStringLiteral("遗忘结果需要确认"),
                     message);

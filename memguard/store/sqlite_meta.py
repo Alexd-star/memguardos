@@ -903,7 +903,7 @@ class SQLiteMetaStore:
             self.conn.execute("BEGIN IMMEDIATE")
             prev_hash = self._last_audit_hash()
             event_hash = stable_hash("|".join([prev_hash, event_type, memory_id or "", detail_json, created_at]))
-            self.conn.execute(
+            cursor = self.conn.execute(
                 """
                 INSERT INTO audit(event_type, memory_id, detail, created_at, prev_hash, event_hash)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -914,7 +914,12 @@ class SQLiteMetaStore:
         except sqlite3.Error:
             self.conn.rollback()
             raise
-        return {"prev_hash": prev_hash, "event_hash": event_hash, "created_at": created_at}
+        return {
+            "audit_id": int(cursor.lastrowid),
+            "prev_hash": prev_hash,
+            "event_hash": event_hash,
+            "created_at": created_at,
+        }
 
     def list_audit(self, limit: int = 50, event_type: Optional[str] = None) -> List[Dict[str, Any]]:
         if event_type:

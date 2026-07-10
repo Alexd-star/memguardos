@@ -29,6 +29,21 @@ def test_openkylin_status_cli_has_native_operational_schema(tmp_path, monkeypatc
     assert isinstance(payload["recommendations"], list)
 
 
+def test_memctl_feedback_home_exposes_recent_user_facing_memory_data(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
+    monkeypatch.delenv("MEMGUARD_NAMESPACE", raising=False)
+    service = MemGuardService()
+    try:
+        service.ingest_text("以后查代码优先使用 rg。", source_kind="agent", source_uri="feedback-test")
+    finally:
+        service.close()
+
+    assert memctl_main(["feedback-home", "--limit", "3"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == "memguardos-feedback-home-v1"
+    assert payload["recent_memories"]
+
+
 def test_openkylin_status_fast_uses_light_sdk_status(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
     monkeypatch.delenv("MEMGUARD_NAMESPACE", raising=False)
@@ -380,6 +395,14 @@ def test_desktop_scan_file_ingests_safe_text_and_records_audit(tmp_path, monkeyp
     assert payload["verification"]["audit_chain_ok"] is True
 
 
+def test_peony_batch_apply_records_user_visible_import_notification():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "memguard/desktop/scan_manifest.py").read_text(encoding="utf-8")
+    assert '"peony_import_partial"' in source
+    assert '"peony_import"' in source
+    assert "audit_event_id" in source
+
+
 def test_desktop_scan_file_reports_directory_as_os_event_only(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
     folder = tmp_path / "folder"
@@ -514,6 +537,8 @@ def test_apply_scan_manifest_rejects_tamper_expiry_and_replay(tmp_path, monkeypa
         second = apply_scan_manifest(created["manifest_path"], [str(safe.resolve())], service, now=3002.0)
         assert first["ok"] is True
         assert first["summary"]["stored"] == 1
+        assert first["memory_change_summary"]["schema"] == "memguardos-memory-change-summary-v1"
+        assert first["memory_change_summary"]["new_memories"]
         assert second["ok"] is False
         assert second["error_code"] == "manifest_already_used"
     finally:
@@ -777,6 +802,9 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "系统维护" in source
     assert "导出系统报告" in source
     assert "导出本机证据" in source
+    assert "打开 Agent 工作台" in source
+    assert "运行体验流程" in source
+    assert "runUserJourney" in source
     assert "验收证据" not in source[source.index("QWidget *MemGuardUkccPlugin::pluginUi") :]
     assert "collect-openkylin-evidence" in source
     assert "报告保存已取消，系统状态未改变" in source
@@ -987,6 +1015,13 @@ def test_ukui_tray_follows_system_theme_and_deduplicates_notifications():
     assert "QIcon::fromTheme" in source
     assert "lastState_" in source
     assert "showMessage" in source
+    assert "refreshNotifications" in source
+    assert "notificationProcess_" in source
+    assert "lastNotificationIds_" in source
+    assert "isUserNotification" in source
+    assert "sensitive_block" in source
+    assert "agent_activity" in source
+    assert "forget" in source
     assert "recommendations" in source
     assert "firstRecommendation" in source
     assert "下一步" in source

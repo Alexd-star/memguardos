@@ -15,6 +15,14 @@ from memguard.config import (
     normalize_namespace,
 )
 from memguard.extraction.entity import extract_entities, extract_relations
+from memguard.feedback import (
+    build_forget_verification_report,
+    build_memory_change_summary,
+    build_preference_effect_proof,
+    build_sensitive_block_notice,
+    merge_memory_change_summaries,
+    notifications_from_audit,
+)
 from memguard.extraction.semantic import HybridMemoryExtractor
 from memguard.forgetting.natural_intent import ErasureIntentCompiler
 from memguard.forgetting.planner import ForgetPlanner
@@ -77,8 +85,17 @@ class MemGuardService:
                 "quality": quality.to_dict(),
                 "reason": "input quality check rejected the memory",
             }
-            self._audit("quality_reject", None, detail)
-            return {"stored": False, "reason": "quality_reject", "quality": quality.to_dict()}
+            audit = self._audit("quality_reject", None, detail)
+            result = {"stored": False, "reason": "quality_reject", "quality": quality.to_dict()}
+            result["audit_event_id"] = _audit_event_id(audit)
+            result["feedback"] = build_memory_change_summary(
+                result,
+                namespace=self.namespace,
+                source=source_kind,
+                session_id=source_uri,
+                audit_event_ids=[result["audit_event_id"]],
+            ).to_dict()
+            return result
 
         sensitivity = self.detector.classify(clean_text, source_uri)
         if sensitivity.level == "high":
@@ -89,8 +106,22 @@ class MemGuardService:
                 "quality": quality.to_dict(),
                 "reason": "high risk sensitive content is not stored in long-term memory",
             }
-            self._audit("sensitive_block", None, detail)
-            return {"stored": False, "reason": "sensitive_block", "sensitivity": sensitivity, "quality": quality.to_dict()}
+            audit = self._audit("sensitive_block", None, detail)
+            result = {"stored": False, "reason": "sensitive_block", "sensitivity": sensitivity, "quality": quality.to_dict()}
+            result["audit_event_id"] = _audit_event_id(audit)
+            result["sensitive_notice"] = build_sensitive_block_notice(
+                result,
+                source=source_kind,
+                audit_event_id=result["audit_event_id"],
+            ).to_dict()
+            result["feedback"] = build_memory_change_summary(
+                result,
+                namespace=self.namespace,
+                source=source_kind,
+                session_id=source_uri,
+                audit_event_ids=[result["audit_event_id"]],
+            ).to_dict()
+            return result
 
         stored_text = clean_text
         if sensitivity.level in {"medium", "low"} and sensitivity.labels:
@@ -119,7 +150,7 @@ class MemGuardService:
         self._enrich_graph(record)
         self.store.append(record)
         self.meta.upsert_memory(record)
-        self._audit(
+        audit = self._audit(
             "ingest",
             record.memory_id,
             {
@@ -135,7 +166,7 @@ class MemGuardService:
                 "governance": governance.to_dict(),
             },
         )
-        return {
+        result = {
             "stored": True,
             "quarantined": governance.quarantined,
             "record": record,
@@ -143,6 +174,15 @@ class MemGuardService:
             "extraction": extraction.to_dict(),
             "governance": governance.to_dict(),
         }
+        result["audit_event_id"] = _audit_event_id(audit)
+        result["feedback"] = build_memory_change_summary(
+            result,
+            namespace=self.namespace,
+            source=source_kind,
+            session_id=source_uri,
+            audit_event_ids=[result["audit_event_id"]],
+        ).to_dict()
+        return result
 
     def ingest_tool_result(self, tool_result: ToolResult, source_uri: str = "tool_result") -> Dict[str, object]:
         return self.ingest_text(
@@ -186,7 +226,7 @@ class MemGuardService:
         )
         result = self.meta.insert_agent_event(safe_event)
         audit_type = "interaction_ingest" if result["stored"] else "interaction_duplicate"
-        self._audit(
+        audit = self._audit(
             audit_type,
             None,
             {
@@ -201,6 +241,8 @@ class MemGuardService:
                 "remember_allowed": extraction.remember_allowed,
                 "sensitivity_level": sensitivity.level,
                 "sensitivity_labels": sensitivity.labels,
+                "policy_decision": str((safe_event.tool_args or {}).get("decision") or ""),
+                "policy_category": str((safe_event.tool_args or {}).get("policy_category") or ""),
             },
         )
         memory_ids = []
@@ -215,6 +257,38 @@ class MemGuardService:
                         self.link_memory_event(memory.memory_id, event_id, relation)
                     self.meta.mark_preference_promoted(aggregate_row, memory.memory_id)
                     memory_ids.append(memory.memory_id)
+        feedback_parts = []
+        for memory_id in memory_ids:
+            row = self.meta.get_memory(memory_id)
+            if row:
+                feedback_parts.append(
+                    build_memory_change_summary(
+                        {"stored": True, "record": row},
+                        namespace=self.namespace,
+                        source="agent",
+                        session_id=safe_event.session_id,
+                        audit_event_ids=[_audit_event_id(audit)],
+                    ).to_dict()
+                )
+        if feedback_parts:
+            feedback = merge_memory_change_summaries(
+                feedback_parts,
+                namespace=self.namespace,
+                source="agent",
+                session_id=safe_event.session_id,
+            )
+        else:
+            feedback = build_memory_change_summary(
+                {
+                    "stored": False,
+                    "reason": "sensitive_block" if sensitivity.level == "high" else "interaction_not_promoted",
+                    "sensitivity": sensitivity,
+                },
+                namespace=self.namespace,
+                source="agent",
+                session_id=safe_event.session_id,
+                audit_event_ids=[_audit_event_id(audit)],
+            ).to_dict()
         return {
             **result,
             "agent_name": safe_event.agent_name,
@@ -226,6 +300,17 @@ class MemGuardService:
             "remember_reason": extraction.reason,
             "sensitivity": sensitivity.__dict__,
             "memory_ids": memory_ids,
+            "audit_event_id": _audit_event_id(audit),
+            "feedback": feedback,
+            "sensitive_notice": (
+                build_sensitive_block_notice(
+                    {"stored": False, "reason": "sensitive_block", "sensitivity": sensitivity},
+                    source="agent",
+                    audit_event_id=_audit_event_id(audit),
+                ).to_dict()
+                if sensitivity.level == "high"
+                else None
+            ),
         }
 
     def ingest_interactions(
@@ -252,6 +337,12 @@ class MemGuardService:
                 for result in results
                 for memory_id in result["memory_ids"]
             ],
+            "memory_change_summary": merge_memory_change_summaries(
+                [result.get("feedback", {}) for result in results],
+                namespace=self.namespace,
+                source="agent",
+                session_id=str(results[0].get("session_id") if results else ""),
+            ),
             "results": results,
         }
 
@@ -332,6 +423,39 @@ class MemGuardService:
             )
             for stage in ("planning", "tool_selection", "response_generation")
         }
+        effect_proofs = []
+        for stage, context in contexts.items():
+            for memory in context.get("memories", []):
+                if not memory.get("preference_topic"):
+                    continue
+                actual: Dict[str, object] = {}
+                if stage == "tool_selection":
+                    for event in timeline:
+                        if event["event_type"] != "tool_call":
+                            continue
+                        args = event.get("tool_args") if isinstance(event.get("tool_args"), dict) else {}
+                        actual = {
+                            "tool_name": event.get("tool_name", ""),
+                            "command": args.get("command", ""),
+                            "event_id": event.get("event_id", ""),
+                        }
+                        break
+                elif stage == "response_generation":
+                    for event in timeline:
+                        if event["event_type"] in {"assistant_message", "task_complete"}:
+                            actual = {"response": event.get("content", ""), "event_id": event.get("event_id", "")}
+                            break
+                proof = build_preference_effect_proof(
+                    task=clean_task,
+                    agent_name=agent_name,
+                    session_id=effective_session,
+                    stage=stage,
+                    preference=memory,
+                    actual_behavior=actual,
+                    source_event_ids=memory.get("source_event_ids", []),
+                    evidence_links=["/api/agent-evidence?memory_id=%s" % str(memory.get("memory_id") or "")],
+                )
+                effect_proofs.append(proof.to_dict())
         return {
             "summary": {
                 "event_count": len(timeline),
@@ -346,6 +470,7 @@ class MemGuardService:
             "timeline": timeline,
             "preference_aggregates": status["preference_aggregates"],
             "contexts": contexts,
+            "preference_effect_proofs": effect_proofs,
         }
 
     def _preference_aggregate(
@@ -544,6 +669,308 @@ class MemGuardService:
             },
         )
         return result
+
+    def memory_change_summary(self, result: Dict[str, object], source: str = "manual", session_id: str = "") -> Dict[str, object]:
+        return build_memory_change_summary(
+            result,
+            namespace=self.namespace,
+            source=source,
+            session_id=session_id,
+            audit_event_ids=[str(result.get("audit_event_id") or "")],
+        ).to_dict()
+
+    def preference_effect_proof(
+        self,
+        memory_id: str,
+        task: str = "验证当前偏好是否生效",
+        stage: str = "tool_selection",
+        agent_name: str = "openhands",
+        session_id: str = "",
+    ) -> Dict[str, object]:
+        memory = self.meta.get_memory(str(memory_id))
+        if memory is None:
+            return {"found": False, "memory_id": memory_id, "reason": "memory_not_found"}
+        evidence = self.preference_evidence(str(memory_id))
+        observed_events = list(evidence.get("events", []))
+        source_sessions = {str(item.get("session_id") or "") for item in observed_events if item.get("session_id")}
+        for source_session in source_sessions:
+            for event in self.meta.list_agent_events(session_id=source_session, limit=500):
+                if not any(str(item.get("event_id")) == str(event.get("event_id")) for item in observed_events):
+                    observed_events.append(event)
+        actual: Dict[str, object] = {}
+        for event in observed_events:
+            event_type = str(event.get("event_type") or "")
+            if stage == "tool_selection" and event_type == "tool_call":
+                tool_args = event.get("tool_args") if isinstance(event.get("tool_args"), dict) else {}
+                actual = {
+                    "tool_name": event.get("tool_name", ""),
+                    "command": tool_args.get("command", ""),
+                    "event_id": event.get("event_id", ""),
+                }
+                break
+            if stage == "response_generation" and event_type in {"assistant_message", "task_complete"}:
+                actual = {
+                    "response": event.get("content", ""),
+                    "event_id": event.get("event_id", ""),
+                }
+                break
+            if stage == "planning" and event_type in {"user_message", "assistant_message"}:
+                actual = {"response": event.get("content", ""), "event_id": event.get("event_id", "")}
+                break
+        proof = build_preference_effect_proof(
+            task=task,
+            agent_name=agent_name,
+            session_id=session_id,
+            stage=stage,
+            preference=memory,
+            actual_behavior=actual,
+            source_event_ids=[str(item.get("event_id") or "") for item in evidence.get("events", [])],
+            evidence_links=["/api/agent-evidence?memory_id=%s" % str(memory_id)],
+        ).to_dict()
+        return {"found": True, "memory": memory, "proof": proof}
+
+    def memory_detail(
+        self,
+        memory_id: str,
+        task: str = "验证这条记忆的适用范围",
+        agent_name: str = "openhands",
+        session_id: str = "detail-preview",
+    ) -> Dict[str, object]:
+        memory = self.meta.get_memory(str(memory_id))
+        if memory is None:
+            return {"found": False, "memory_id": memory_id, "reason": "memory_not_found"}
+        evidence = self.preference_evidence(str(memory_id))
+        observed_events = list(evidence.get("events", []))
+        source_sessions = {str(item.get("session_id") or "") for item in observed_events if item.get("session_id")}
+        for source_session in source_sessions:
+            for event in self.meta.list_agent_events(session_id=source_session, limit=500):
+                if not any(str(item.get("event_id")) == str(event.get("event_id")) for item in observed_events):
+                    observed_events.append(event)
+        detail = {
+            "found": True,
+            "memory": memory,
+            "source_events": evidence.get("events", []),
+            "versions": self.versions(str(memory_id)),
+            "graph": self.meta.memory_graph(str(memory_id)),
+            "related": self.meta.related_memories(str(memory_id), limit=8),
+            "agent_usage": {
+                "event_count": len(observed_events),
+                "last_stage": "tool_selection" if any(item.get("event_type") == "tool_call" for item in observed_events) else "暂无证据",
+            },
+        }
+        if memory.get("preference_topic"):
+            detail["preference_proof"] = self.preference_effect_proof(
+                str(memory_id), task=task, agent_name=agent_name, session_id=session_id
+            )
+        return detail
+
+    def forget_verification_report(
+        self,
+        result: Dict[str, object],
+        request: str = "",
+        dry_run: Optional[bool] = None,
+    ) -> Dict[str, object]:
+        return build_forget_verification_report(result, request=request, dry_run=dry_run).to_dict()
+
+    def recent_notifications(self, limit: int = 30) -> List[Dict[str, object]]:
+        return notifications_from_audit(self.audit(limit=max(1, min(int(limit), 200))))
+
+    def feedback_home_snapshot(self, limit: int = 8) -> Dict[str, object]:
+        recent = self.list_memories(include_deleted=False)[: max(1, min(int(limit), 30))]
+        recent_memory_changes = []
+        for row in recent:
+            recent_memory_changes.append(
+                {
+                    "memory_id": row.get("memory_id"),
+                    "type": row.get("type"),
+                    "summary_for_user": " ".join(str(row.get("summary") or row.get("content") or "").split())[:240],
+                    "scope": row.get("scope"),
+                    "tier": row.get("tier"),
+                    "actions": ["view", "test_effect", "forget"],
+                }
+            )
+        notifications = self.recent_notifications(limit=max(10, limit * 3))
+        interaction = self.interaction_status()
+        preferences = [
+            {
+                "topic": item.get("topic"),
+                "value": item.get("value"),
+                "scope": item.get("preference_scope"),
+                "stable": item.get("stable"),
+                "memory_id": item.get("promoted_memory_id"),
+            }
+            for item in interaction.get("preference_aggregates", [])
+            if item.get("stable")
+        ][: max(1, min(int(limit), 30))]
+        return {
+            "schema": "memguardos-feedback-home-v1",
+            "namespace": self.namespace,
+            "recent_memories": recent_memory_changes,
+            "current_preferences": preferences,
+            "recent_agent_tasks": [
+                item for item in notifications if item.get("kind") == "agent_activity"
+            ][:limit],
+            "recent_sensitive_blocks": [
+                item for item in notifications if item.get("kind") == "sensitive_block"
+            ][:limit],
+            "recent_forgetting": [
+                item for item in notifications if item.get("kind") == "forget"
+            ][:limit],
+            "notifications": notifications[:limit],
+            "audit": self.verify_audit(),
+        }
+
+    def run_feedback_replay(
+        self,
+        task: str,
+        *,
+        mode: str = "replay",
+        session_id: str = "",
+    ) -> Dict[str, object]:
+        """Run a deterministic local replay for UI verification.
+
+        This is intentionally separate from a real model-driven OpenHands run:
+        the response labels the mode so a replay is never presented as live model
+        evidence.  Real OpenHands runs continue to use OpenHandsMemoryRunner.
+        """
+        clean_task = str(task or "").strip()
+        if not clean_task:
+            raise ValueError("task is required")
+        clean_mode = str(mode or "replay").strip().lower()
+        if clean_mode not in {"replay", "dry-run", "openhands"}:
+            raise ValueError("mode must be replay, dry-run or openhands")
+        effective_session = str(session_id or "web-replay-%s" % new_id("session"))
+        if clean_mode == "openhands":
+            return {
+                "ok": False,
+                "execution_mode": "openhands",
+                "truthful_note": "真实 OpenHands 运行请使用 Agent 桥接入口，并提供可用模型和工作区；本地控制台不会把回放结果冒充真实模型结果。",
+                "next_action": "在终端运行真实 OpenHands 入口，或先选择本地回放验证记忆链。",
+            }
+        if clean_mode == "dry-run":
+            contexts = {
+                stage: self.build_agent_context(
+                    task=clean_task,
+                    stage=stage,
+                    agent_name="openhands",
+                    session_id=effective_session,
+                    task_type="code_assistance",
+                )
+                for stage in ("planning", "tool_selection", "response_generation")
+            }
+            return {
+                "ok": True,
+                "execution_mode": "dry-run",
+                "session_id": effective_session,
+                "context": contexts,
+                "event_summary": {"stored": 0, "blocked": 0, "tool_calls": 0},
+                "truthful_note": "这是只读预览，没有写入 Agent 事件，也没有声称模型已经执行任务。",
+            }
+        events = [
+            AgentInteractionEvent(
+                agent_name="openhands",
+                agent_version="replay",
+                session_id=effective_session,
+                turn_id="turn-1",
+                sequence=1,
+                event_type="user_message",
+                role="user",
+                content="以后查代码优先使用 rg。%s" % clean_task,
+                task_type="code_search",
+                source_uri="web_replay",
+            ),
+            AgentInteractionEvent(
+                agent_name="openhands",
+                agent_version="replay",
+                session_id=effective_session,
+                turn_id="turn-1",
+                sequence=2,
+                event_type="tool_call",
+                role="assistant",
+                tool_name="terminal",
+                tool_args={"command": 'rg -n "MemGuardService" memguard'},
+                state_before="需要查找记忆服务实现位置",
+                task_type="code_search",
+                source_uri="web_replay",
+            ),
+            AgentInteractionEvent(
+                agent_name="openhands",
+                agent_version="replay",
+                session_id=effective_session,
+                turn_id="turn-1",
+                sequence=3,
+                event_type="tool_result",
+                role="tool",
+                tool_name="terminal",
+                tool_result="memguard/service.py:48:class MemGuardService",
+                exit_code=0,
+                state_after="已找到目标实现",
+                task_type="code_search",
+                source_uri="web_replay",
+            ),
+            AgentInteractionEvent(
+                agent_name="openhands",
+                agent_version="replay",
+                session_id=effective_session,
+                turn_id="turn-1",
+                sequence=4,
+                event_type="assistant_message",
+                role="assistant",
+                content="rg -n \"MemGuardService\" memguard\n已找到记忆服务实现。",
+                task_type="code_search",
+                source_uri="web_replay",
+            ),
+        ]
+        ingestion = self.ingest_interactions([event.to_dict() for event in events])
+        snapshot = self.agent_dashboard_snapshot(session_id=effective_session, task=clean_task)
+        memory_changes = []
+        for memory_id in ingestion.get("memory_ids", []):
+            row = self.meta.get_memory(str(memory_id))
+            if row:
+                memory_changes.append(
+                    {
+                        "memory_id": memory_id,
+                        "summary_for_user": " ".join(str(row.get("summary") or row.get("content") or "").split())[:240],
+                        "type": row.get("type"),
+                        "scope": row.get("scope"),
+                        "tier": row.get("tier"),
+                        "actions": ["view", "test_effect", "forget"],
+                    }
+                )
+        if not memory_changes:
+            for preference in snapshot.get("preference_aggregates", []):
+                memory_id = str(preference.get("promoted_memory_id") or "")
+                row = self.meta.get_memory(memory_id) if memory_id else None
+                if not row:
+                    continue
+                memory_changes.append(
+                    {
+                        "memory_id": memory_id,
+                        "summary_for_user": "已复用偏好：%s = %s" % (
+                            preference.get("topic", ""),
+                            preference.get("value", ""),
+                        ),
+                        "type": row.get("type"),
+                        "scope": row.get("scope"),
+                        "tier": row.get("tier"),
+                        "reused": True,
+                        "actions": ["view", "test_effect", "forget"],
+                    }
+                )
+        return {
+            "ok": True,
+            "execution_mode": "replay",
+            "session_id": effective_session,
+            "task": clean_task,
+            "context": snapshot.get("contexts", {}),
+            "timeline": snapshot.get("timeline", []),
+            "preference_effect_proofs": snapshot.get("preference_effect_proofs", []),
+            "memory_changes": memory_changes,
+            "memory_change_summary": ingestion.get("memory_change_summary", {}),
+            "sensitive_blocks": [],
+            "event_summary": ingestion,
+            "truthful_note": "这是可复现的本地事件回放，用于核验记忆链，不代表外部模型已经独立完成任意任务。",
+        }
 
     def _sanitize_interaction_event(
         self,
@@ -1942,35 +2369,49 @@ class MemGuardService:
         external_residue = self._managed_forget_residue(confirm=confirm)
         if not confirm:
             self._audit("forget_dry_run", None, {"request": request, "candidate_count": len(candidates)})
-            return {
+            result = {
                 "confirmed": False,
                 "request": request,
                 "candidates": candidates,
                 "external_residue": external_residue,
             }
+            result["verification_report"] = self.forget_verification_report(result, request=request, dry_run=True)
+            return result
 
         forgotten = []
+        probes: Dict[str, str] = {}
         for candidate in candidates:
             memory_id = str(candidate["memory_id"])
             record = self.store.get_latest(memory_id)
             if record is None:
                 continue
+            probes[memory_id] = record.content
             tombstone = self.store.tombstone(record, request)
             self.meta.mark_deleted(memory_id, superseded_by=tombstone.version.version_id)
             forgotten.append(memory_id)
         if compact:
             self.store.compact()
-        self._audit(
+        verification = [
+            self.verify_forget_probe(memory_id, probe_text=probe)
+            for memory_id, probe in probes.items()
+        ]
+        audit = self._audit(
             "forget",
             None,
             {"request": request, "forgotten": forgotten, "compact": compact},
         )
-        return {
+        result = {
             "confirmed": True,
             "request": request,
             "forgotten": forgotten,
             "external_residue": external_residue,
+            "compact": compact,
+            "verification": verification,
+            "audit_chain_ok": bool(self.meta.verify_audit_chain().get("ok")),
         }
+        result["verification_report"] = self.forget_verification_report(result, request=request, dry_run=False)
+        result["audit_event_id"] = _audit_event_id(audit)
+        return result
 
     def compile_erasure_intent(self, request: str, context: Optional[Dict[str, object]] = None) -> Dict[str, object]:
         compiled = self.erasure_intent_compiler.compile(request, context=context or {})
@@ -2069,7 +2510,9 @@ class MemGuardService:
             "verification": verification,
             "external_residue": self._managed_forget_residue(confirm=True),
         }
-        self._audit("forget_memory_ids", None, result["summary"] | {"reason": reason, "memory_ids": forgotten})
+        audit = self._audit("forget_memory_ids", None, result["summary"] | {"reason": reason, "memory_ids": forgotten})
+        result["audit_event_id"] = _audit_event_id(audit)
+        result["audit_chain_ok"] = bool(self.meta.verify_audit_chain().get("ok"))
         return result
 
     def _managed_forget_residue(self, confirm: bool) -> Dict[str, object]:
@@ -2139,7 +2582,7 @@ class MemGuardService:
             "external_residue": residue,
         }
         if not confirm:
-            self._audit(
+            audit = self._audit(
                 "agent_forget_dry_run",
                 None,
                 {
@@ -2150,6 +2593,12 @@ class MemGuardService:
                     "context_usage_count": impact["context_usage_count"],
                     "external_persistence": external_persistence,
                 },
+            )
+            plan["audit_event_id"] = _audit_event_id(audit)
+            plan["verification_report"] = self.forget_verification_report(
+                plan,
+                request="按 Agent 交互范围遗忘",
+                dry_run=True,
             )
             return plan
 
@@ -2216,7 +2665,7 @@ class MemGuardService:
             "event_payload_scrubbed": event_payload_scrubbed,
             "segment_plaintext_absent": segment_plaintext_absent,
         }
-        self._audit(
+        audit = self._audit(
             "agent_forget",
             None,
             {
@@ -2229,7 +2678,7 @@ class MemGuardService:
                 "external_persistence": external_persistence,
             },
         )
-        return {
+        result = {
             **plan,
             "confirmed": True,
             "forgotten_memory_ids": forgotten_memory_ids,
@@ -2237,7 +2686,15 @@ class MemGuardService:
             "deleted_observation_count": deleted_observations,
             "compact": compact,
             "verification": verification,
+            "audit_chain_ok": bool(self.meta.verify_audit_chain().get("ok")),
         }
+        result["audit_event_id"] = _audit_event_id(audit)
+        result["verification_report"] = self.forget_verification_report(
+            result,
+            request="按 Agent 交互范围遗忘",
+            dry_run=False,
+        )
+        return result
 
     def verify_forget(self, memory_id: str) -> Dict[str, object]:
         return self.verify_forget_probe(memory_id)
@@ -2400,11 +2857,12 @@ class MemGuardService:
             self._audit("pattern_reject", None, {"name": name, "instruction": instruction, "reason": str(exc)})
             return {"ok": False, "reason": str(exc)}
 
-    def _audit(self, event_type: str, memory_id: Optional[str], detail: Dict[str, object]) -> None:
+    def _audit(self, event_type: str, memory_id: Optional[str], detail: Dict[str, object]) -> Dict[str, object]:
         detail = dict(detail)
         detail.setdefault("namespace", self.namespace)
-        self.meta.add_audit(event_type, memory_id, detail)
+        result = self.meta.add_audit(event_type, memory_id, detail)
         self.journald.log(event_type, memory_id, detail)
+        return result
 
     def _remember_search(self, cache_key: Tuple[str, int, str], results: List[Dict[str, object]]) -> None:
         self._search_cache[cache_key] = [dict(item) for item in results]
@@ -2536,3 +2994,9 @@ class MemGuardService:
         if not recommendations:
             recommendations.append("当前分层、存储和淘汰状态健康，可继续按默认策略运行。")
         return recommendations
+
+
+def _audit_event_id(audit: object) -> str:
+    if isinstance(audit, dict) and audit.get("audit_id") is not None:
+        return "audit-%s" % audit["audit_id"]
+    return ""

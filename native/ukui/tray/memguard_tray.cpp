@@ -1,6 +1,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QDesktopServices>
+#include <QDateTime>
 #include <QFile>
 #include <QIcon>
 #include <QJsonArray>
@@ -10,6 +11,7 @@
 #include <QMenu>
 #include <QProcess>
 #include <QStandardPaths>
+#include <QSet>
 #include <QStyle>
 #include <QSystemTrayIcon>
 #include <QTimer>
@@ -31,6 +33,16 @@ QJsonObject parseObject(const QByteArray &raw)
         return {};
     const QJsonDocument document = QJsonDocument::fromJson(raw.mid(first, last - first + 1));
     return document.isObject() ? document.object() : QJsonObject();
+}
+
+QJsonArray parseArray(const QByteArray &raw)
+{
+    const int first = raw.indexOf('[');
+    const int last = raw.lastIndexOf(']');
+    if (first < 0 || last < first)
+        return {};
+    const QJsonDocument document = QJsonDocument::fromJson(raw.mid(first, last - first + 1));
+    return document.isArray() ? document.array() : QJsonArray();
 }
 
 QString firstRecommendation(const QJsonObject &payload)
@@ -102,8 +114,15 @@ public:
         auto *openSdk = menu->addAction(themedIcon(QStringLiteral("system-search"), QStyle::SP_FileDialogContentsView), QStringLiteral("查看本机智能检索"));
         auto *openAudit = menu->addAction(themedIcon(QStringLiteral("security-high"), QStyle::SP_DialogApplyButton), QStringLiteral("查看操作记录"));
         auto *openSensitive = menu->addAction(themedIcon(QStringLiteral("dialog-warning"), QStyle::SP_MessageBoxWarning), QStringLiteral("查看已保护内容"));
+        auto *openRecentMemory = menu->addAction(themedIcon(QStringLiteral("document-save"), QStyle::SP_FileDialogInfoView), QStringLiteral("最近学到的记忆"));
+        auto *openRecentPreference = menu->addAction(themedIcon(QStringLiteral("preferences-desktop"), QStyle::SP_FileDialogInfoView), QStringLiteral("最近生效的偏好"));
+        auto *openRecentAgent = menu->addAction(themedIcon(QStringLiteral("system-run"), QStyle::SP_ComputerIcon), QStringLiteral("最近 Agent 任务"));
+        auto *openRecentForget = menu->addAction(themedIcon(QStringLiteral("edit-delete"), QStyle::SP_TrashIcon), QStringLiteral("最近遗忘验证"));
+        auto *openWorkspace = menu->addAction(themedIcon(QStringLiteral("applications-internet"), QStyle::SP_DesktopIcon), QStringLiteral("打开 Agent 工作台"));
         auto *openDashboardAction = menu->addAction(themedIcon(QStringLiteral("applications-internet"), QStyle::SP_DesktopIcon), QStringLiteral("打开本地控制台"));
         auto *refresh = menu->addAction(themedIcon(QStringLiteral("view-refresh"), QStyle::SP_BrowserReload), QStringLiteral("重新检查状态"));
+        auto *pauseNotifications = menu->addAction(themedIcon(QStringLiteral("notifications-disabled"), QStyle::SP_MessageBoxInformation), QStringLiteral("暂停通知 1 小时"));
+        pauseNotifications->setCheckable(true);
         menu->addSeparator();
         auto *quit = menu->addAction(themedIcon(QStringLiteral("application-exit"), QStyle::SP_DialogCloseButton), QStringLiteral("退出托盘"));
         tray_.setContextMenu(menu);
@@ -111,8 +130,22 @@ public:
         connect(openSdk, &QAction::triggered, this, [this]() { openControlCenter(QStringLiteral("sdk")); });
         connect(openAudit, &QAction::triggered, this, [this]() { openControlCenter(QStringLiteral("audit")); });
         connect(openSensitive, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#audit")); });
+        connect(openRecentMemory, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#overview")); });
+        connect(openRecentPreference, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#preferences")); });
+        connect(openRecentAgent, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#agent")); });
+        connect(openRecentForget, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#forget")); });
+        connect(openWorkspace, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#agent")); });
         connect(openDashboardAction, &QAction::triggered, this, [this]() { openDashboard(); });
         connect(refresh, &QAction::triggered, this, &TrayController::refresh);
+        connect(pauseNotifications, &QAction::toggled, this, [this, pauseNotifications](bool checked) {
+            notificationsPausedUntil_ = checked ? QDateTime::currentDateTime().addSecs(3600) : QDateTime();
+            if (checked) {
+                QTimer::singleShot(3600000, this, [this, pauseNotifications]() {
+                    notificationsPausedUntil_ = QDateTime();
+                    pauseNotifications->setChecked(false);
+                });
+            }
+        });
         connect(quit, &QAction::triggered, qApp, &QApplication::quit);
         connect(&tray_, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
             if (reason == QSystemTrayIcon::Trigger) {
@@ -131,14 +164,19 @@ public:
         tray_.show();
         timer_.start();
         refresh();
+        refreshNotifications();
     }
 
 private:
     QSystemTrayIcon tray_;
     QTimer timer_;
     QProcess *current_ = nullptr;
+    QProcess *notificationProcess_ = nullptr;
     QString lastState_;
     QString lastTarget_;
+    QDateTime notificationsPausedUntil_;
+    QSet<QString> lastNotificationIds_;
+    bool notificationSeeded_ = false;
 
     void refresh()
     {
@@ -173,8 +211,73 @@ private:
                         recommendation.isEmpty() ? body : QStringLiteral("%1\n下一步：%2").arg(body, recommendation));
                 }
                 finished->deleteLater();
+                refreshNotifications();
             });
         current_->start(program, arguments);
+    }
+
+    void refreshNotifications()
+    {
+        if (notificationProcess_)
+            return;
+        QStringList arguments{QStringLiteral("notifications"), QStringLiteral("--limit"), QStringLiteral("20")};
+        const QString program = memctlProgram(&arguments);
+        notificationProcess_ = new QProcess(this);
+        notificationProcess_->setProcessChannelMode(QProcess::MergedChannels);
+        connect(notificationProcess_, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
+            [this](int exitCode, QProcess::ExitStatus) {
+                QProcess *finished = notificationProcess_;
+                notificationProcess_ = nullptr;
+                const QJsonArray notifications = parseArray(finished->readAll());
+                if (exitCode == 0 && !notifications.isEmpty())
+                    consumeNotifications(notifications);
+                finished->deleteLater();
+            });
+        notificationProcess_->start(program, arguments);
+    }
+
+    bool isUserNotification(const QJsonObject &notification) const
+    {
+        const QString level = notification.value(QStringLiteral("level")).toString().toLower();
+        const QString kind = notification.value(QStringLiteral("kind")).toString().toLower();
+        if (level == QStringLiteral("critical"))
+            return true;
+        return kind == QStringLiteral("sensitive_block")
+            || kind == QStringLiteral("tool_block")
+            || kind == QStringLiteral("forget")
+            || kind == QStringLiteral("agent_activity")
+            || kind == QStringLiteral("audit_error")
+            || kind == QStringLiteral("service_error");
+    }
+
+    void consumeNotifications(const QJsonArray &notifications)
+    {
+        if (!notificationSeeded_) {
+            for (const QJsonValue &value : notifications) {
+                const QString id = value.toObject().value(QStringLiteral("notification_id")).toString();
+                if (!id.isEmpty())
+                    lastNotificationIds_.insert(id);
+            }
+            notificationSeeded_ = true;
+            return;
+        }
+
+        int shown = 0;
+        for (int index = notifications.size() - 1; index >= 0 && shown < 3; --index) {
+            const QJsonObject notification = notifications.at(index).toObject();
+            const QString id = notification.value(QStringLiteral("notification_id")).toString();
+            if (id.isEmpty() || lastNotificationIds_.contains(id))
+                continue;
+            lastNotificationIds_.insert(id);
+            if (!isUserNotification(notification) || !notificationsPausedUntil_.isNull())
+                continue;
+            const QString title = notification.value(QStringLiteral("title")).toString(QStringLiteral("MemGuardOS 有新的重要变化"));
+            const QString summary = notification.value(QStringLiteral("summary")).toString(QStringLiteral("请打开记忆安全中心查看详情。"));
+            tray_.showMessage(QStringLiteral("MemGuardOS：%1").arg(title), summary, tray_.icon(), 6000);
+            ++shown;
+        }
+        if (lastNotificationIds_.size() > 200)
+            lastNotificationIds_.clear();
     }
 
     void applyState(const QString &state, const QString &title, const QString &body)
@@ -186,7 +289,7 @@ private:
         else
             tray_.setIcon(themedIcon(QStringLiteral("dialog-error"), QStyle::SP_MessageBoxCritical));
         tray_.setToolTip(QStringLiteral("MemGuardOS：%1\n%2").arg(title, body));
-        if (!lastState_.isEmpty() && lastState_ != state)
+        if (!lastState_.isEmpty() && lastState_ != state && state == QStringLiteral("red") && notificationsPausedUntil_.isNull())
             tray_.showMessage(QStringLiteral("MemGuardOS：%1").arg(title), body, tray_.icon(), 6000);
         lastState_ = state;
     }

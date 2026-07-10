@@ -47,9 +47,11 @@ MemGuardOS 是面向 Linux/openKylin 的智能体记忆提取与精准遗忘系�
 | 文件 | 主要功能 | 输入 | 输出 | 关联模块 |
 |---|---|---|---|---|
 | `memguard/service.py` | 业务编排核心，连接抽取、存储、检索、遗忘、审计和上下文构建。 | 文本、文件、配置、行为、工具结果、OS 事件、查询请求。 | 记忆记录、检索结果、上下文包、审计记录。 | `models.py`、`store/`、`retrieval/`、`forgetting/` |
+| `memguard/feedback.py` | 统一生成记忆变化、偏好生效、遗忘验证、敏感保护和通知中心的用户可见反馈结构。 | service、Agent、Peony 和审计事件结果。 | 四类稳定反馈结构、通知分级和托盘提醒策略。 | Web、CLI、UKUI、托盘、Peony |
 | `memguard/models.py` | 定义 MemoryRecord、来源、敏感等级、版本、审计和时间有效性结构。 | 业务字段和文本。 | 标准化记忆对象。 | 全项目通用 |
 | `memguard/config.py` | 管理本地数据目录、namespace 路径和状态。 | namespace、环境变量。 | 数据库和段文件路径、namespace 状态。 | CLI、service、tests |
-| `memguard/cli/memctl.py` | 命令行入口。 | 子命令参数、文件路径、标准输入。 | JSON/文本结果、退出码。 | service、api、web |
+| `memguard/cli/memctl.py` | 管理员和桌面集成命令行入口。 | 子命令参数、文件路径、标准输入。 | JSON/文本结果、退出码。 | service、api、web、UKUI、Peony |
+| `memguard/cli/memguard.py` | 面向普通用户的交互式入口和一键体验流程。 | 任务、工作区、模型和内置斜杠命令。 | 人类可读的记忆注入、偏好生效、敏感保护和遗忘验证结果。 | service、OpenHands runner |
 | `memguard/api/server.py` | Unix socket JSON API。 | 本地 Agent 请求。 | JSON 响应。 | daemon、service |
 | `memguard/web/dashboard.py` | 本地 Web 控制台。 | 浏览器请求。 | HTML 页面和 JSON API 响应。 | service、doctor、api |
 | `memguard/store/mmap_store.py` | 追加式 mmap 段文件存储。 | 记忆 JSON 负载。 | 偏移量、长度、可复读段数据。 | `sqlite_meta.py` |
@@ -80,7 +82,7 @@ MemGuardOS 是面向 Linux/openKylin 的智能体记忆提取与精准遗忘系�
 
 正式中文文档集中在 `docs/` 根目录、`docs/交付文档/` 和 `项目全流程导师资料包/`。其中 `docs/项目介绍总览.md`、`docs/概要设计说明书.md`、`docs/详细设计说明书.md`、`docs/真实Agent接入使用说明.md`、`docs/真实Agent闭环测试报告.md`、`docs/真实Agent记忆价值评测报告.md`、`docs/测试报告.md`、`docs/赛题符合性说明.md` 面向正式评审；`docs/供应链与SBOM说明.md` 和 `docs/sbom.json` 用于说明依赖分组、核心文件哈希和供应链交付边界；`docs/evidence/latest/` 是通用 openKylin 证据，`docs/evidence/agent_latest/` 是真实 Agent 基础闭环证据，`docs/evidence/memory_value_latest/` 是 16+12 组记忆价值证据；`项目全流程导师资料包/` 面向参赛者本人从零理解、验收和答辩训练。
 
-编号文档 `docs/01_项目简介.md` 到 `docs/17_项目交付说明.md` 是本次补齐的维护型中文文档体系，用于把项目介绍、用户操作、部署运维、开发者说明、架构、代码结构、算法、接口、数据、配置、测试、FAQ、更新日志、历史文件和交付边界统一串起来。
+编号文档 `docs/01_项目简介.md` 到 `docs/17_项目交付说明.md` 是本次补齐的维护型中文文档体系，用于把项目介绍、用户操作、部署运维、开发者说明、架构、代码结构、算法、接口、数据、配置、测试、FAQ、更新日志、历史文件和交付边界统一串起来。`docs/用户使用指南.md`、`docs/Web控制台与Agent工作台说明.md`、`docs/UKUI与托盘反馈链说明.md`、`docs/验证链设计说明.md` 和 `docs/人工演示与录屏脚本.md` 专门说明“记忆产生—生效—风险—遗忘—验证”的产品反馈链。
 
 ## 8. 历史文件说明
 
@@ -122,6 +124,8 @@ python -m memguard.cli.memctl ingest --text "以后回答 Linux 问题时先给�
 python -m memguard.cli.memctl search "Linux 风险提示"
 python -m memguard.cli.memctl build-context "openKylin systemd cgroup"
 python -m memguard.cli.memctl web --host 127.0.0.1 --port 8765
+python -m memguard.cli.memguard demo
+python scripts/run_judge_journey.py --product-flow
 python -m memguard.daemon --once
 .venv-agent/bin/python scripts/run_openhands_memguard_demo.py --namespace realagent-demo --session-id demo --task "使用 rg 查找 build_agent_context" --max-iterations 8
 ```
@@ -147,6 +151,6 @@ openKylin 环境还应运行 `scripts/openkylin_verify.sh`、`scripts/collect_op
 
 ## 14. 后续维护建议
 
-后续维护应坚持三条原则。第一，所有正式指标都以最新证据包为准，文档不得写旧口径。第二，正式竞赛包和完整工程仓库包继续分离，过程脚本、CI、研究源材料和缓存不应混入正式评审包。第三，新功能进入主线前应补测试、补文档、补 evidence smoke，并更新 `CHANGELOG.md`、`PROJECT_INDEX.md` 和对应编号文档。
+后续维护应坚持三条原则。第一，所有正式指标都以最新证据包为准，文档不得写旧口径。第二，正式竞赛包和完整工程仓库包继续分离，过程脚本、CI、研究源材料和缓存不应混入正式评审包。第三，新功能进入主线前应补测试、补文档、补 evidence smoke，并更新 `CHANGELOG.md`、`PROJECT_INDEX.md` 和对应编号文档。桌面反馈新增或修改时，应同时验证普通用户文案、管理员详细信息、托盘提醒分级和 URL/hash 跳转，避免“入口存在但不能到达对应页面”。
 
 如果后续升级 OpenHands SDK、增加其他 Agent 适配器、更多 UKUI 插件能力、真实业务日志样例或新的 SDK 后端，应同步更新 `docs/真实Agent接入使用说明.md`、`docs/06_代码结构说明.md`、`docs/07_核心模块说明.md`、`docs/08_算法说明.md` 和 `docs/13_测试说明.md`。

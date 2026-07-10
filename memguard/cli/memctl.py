@@ -229,6 +229,10 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("namespace-status", help="Show current namespace storage isolation status")
     sub.add_parser("namespaces", help="List local memory namespaces")
     sub.add_parser("retrieval-status", help="Show hybrid retrieval backend status")
+    feedback_home = sub.add_parser("feedback-home", help="Show recent memory changes and user-facing Agent feedback")
+    feedback_home.add_argument("--limit", type=int, default=8)
+    notifications = sub.add_parser("notifications", help="Show recent user-facing memory and risk notifications")
+    notifications.add_argument("--limit", type=int, default=30)
     sdk_status = sub.add_parser("sdk-status", help="Detect openKylin Kylin AI embedding/vector SDK capabilities")
     sdk_status.add_argument("--probe-embedding", action="store_true", help="Run one real embedding call; may be slow if the model service is not ready")
     sdk_status.add_argument("--probe-timeout", type=float, default=45.0, help="Timeout in seconds for the protected embedding probe subprocess")
@@ -411,6 +415,12 @@ def main(argv: list[str] | None = None) -> int:
                 if result.get("sensitivity"):
                     payload["sensitivity"] = result["sensitivity"].__dict__
                 print(json.dumps(payload, ensure_ascii=False))
+            return 0
+        if args.command == "feedback-home":
+            print(json.dumps(service.feedback_home_snapshot(limit=args.limit), ensure_ascii=False, indent=2))
+            return 0
+        if args.command == "notifications":
+            print(json.dumps(service.recent_notifications(limit=args.limit), ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "explain-extraction":

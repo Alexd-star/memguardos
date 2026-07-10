@@ -134,10 +134,10 @@ Runner 会检查已选择偏好是否转化为成功工具调用和最终回答�
 8. 偏好版本平局时按 Agent 事件时间与 SQLite 插入顺序稳定选择新版本，确定性评测连续复跑不再随机回退；
 9. 证据采集支持无 Git 元数据的同步树，并能原子刷新 SHA256 与 manifest。
 
-最新同 HEAD openKylin 全量测试结果为：
+openKylin 目录中上一份全量测试结果为（旧 revision 快照，当前 HEAD 待重跑）：
 
 ```text
-318 passed
+313 passed
 ```
 
 隔离审计链验证为 `ok=true`。`docs/evidence/memory_value_latest/` 仍保留采集当时的 `223 passed` 历史快照；最新同 HEAD 复跑结果用于最终提交口径。证据目录经 SHA-256 清单校验，运行时 workspace、SQLite、段文件和 Python 缓存已从正式证据中清理，只保留结果、上下文快照、环境、日志、报告和前后文件清单。
@@ -182,7 +182,7 @@ bash scripts/collect_memory_value_evidence.sh \
 | `docs/evidence/memory_value_latest/real_agent/cases/` | 逐案例事件、上下文和判定 |
 | `docs/evidence/real_agent_extension_r13_r20_latest/metrics.json` | 新增 R13-R20 真实 Agent 扩展聚合指标，8/8 通过 |
 | `docs/evidence/real_agent_extension_r13_r20_latest/cases/` | 新增 R13-R20 逐案例事件、上下文和判定 |
-| `docs/evidence/memory_value_latest/pytest_openkylin.txt` | 采集时历史 pytest 快照；最新同 HEAD openKylin 口径见 `docs/evidence/openkylin_native_latest/pytest_openkylin.txt`，为 318 passed |
+| `docs/evidence/memory_value_latest/pytest_openkylin.txt` | 采集时历史 pytest 快照；当前 openKylin 原生目录为旧 revision 的 313 passed，最终提交前需在当前 HEAD 重跑 |
 | `docs/evidence/memory_value_latest/audit_verify.txt` | 隔离审计链验证 |
 | `docs/evidence/memory_value_latest/SHA256SUMS.txt` | 文件校验和 |
 

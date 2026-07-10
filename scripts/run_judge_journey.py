@@ -8,11 +8,15 @@ import platform
 import re
 import subprocess
 import sys
+import tempfile
 import time
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DEMO_DIR = ROOT / "demo" / "judge_journey"
+sys.path.insert(0, str(ROOT))
+
+from memguard.service import MemGuardService  # noqa: E402
 
 ALLOWED_STEPS = {
     "01_memory_capture_and_preference": [
@@ -156,11 +160,67 @@ def write_index(results: list[dict[str, object]], evidence_dir: Path) -> None:
     (evidence_dir / "README.md").write_text("\n".join(lines), encoding="utf-8")
 
 
+def run_product_feedback_flow(evidence_dir: Path) -> dict[str, object]:
+    """Run the user-visible memory feedback flow with isolated local storage."""
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="memguardos-journey-") as runtime:
+        root = Path(runtime)
+        service = MemGuardService(store_path=root / "memory.segment", db_path=root / "memguard.sqlite3")
+        try:
+            task = "查找 MemGuardService 的定义并说明如何验证精准遗忘"
+            replay = service.run_feedback_replay(task, mode="replay")
+            sensitive = service.ingest_text(
+                "password=journey-demo-secret，仅用于验证敏感内容阻断。",
+                source_kind="agent",
+                source_uri=str(replay.get("session_id") or "journey"),
+            )
+            filters = {
+                "agent_name": "openhands",
+                "session_id": str(replay.get("session_id") or ""),
+                "preference_topic": "code_search_tool",
+            }
+            forget_preview = service.forget_agent_interactions(filters, confirm=False)
+            forget_result = service.forget_agent_interactions(filters, confirm=True, compact=True)
+            result = {
+                "schema": "memguardos-user-feedback-flow-v1",
+                "ok": bool(replay.get("ok")) and not bool(sensitive.get("stored")) and bool(forget_result.get("confirmed")),
+                "execution_mode": "replay",
+                "task": task,
+                "memory_changes": replay.get("memory_changes", []),
+                "preference_effect_proofs": replay.get("preference_effect_proofs", []),
+                "sensitive_block_notice": sensitive.get("sensitive_notice"),
+                "forget_preview": forget_preview,
+                "forget_verification_report": forget_result.get("verification_report"),
+                "audit": service.verify_audit(),
+                "truthful_note": "本文件是隔离存储上的本地事件回放证据，不等同于外部模型独立完成任意任务；真实 OpenHands 需要单独采集。",
+            }
+        finally:
+            service.close()
+    (evidence_dir / "product_feedback_flow.json").write_text(
+        json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    lines = [
+        "# 用户反馈链一键复核",
+        "",
+        "- 执行方式：本地事件回放（replay）",
+        "- 记忆产生：已记录新增记忆和偏好生效证明",
+        "- 风险处理：已验证敏感内容未进入长期记忆",
+        "- 遗忘验证：已生成逐步骤验证报告和外部残留边界",
+        "- 真实性边界：不把回放结果包装成外部模型真实能力",
+        "",
+        "详细结构化结果见 `product_feedback_flow.json`。",
+    ]
+    (evidence_dir / "product_feedback_flow.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run MemGuardOS Judge Journey")
     parser.add_argument("--list", action="store_true", help="List available Judge Journey steps")
     parser.add_argument("--step", default="", help="Run one step id, for example 04_precise_erasure_and_verify")
     parser.add_argument("--all", action="store_true", help="Run all Judge Journey steps")
+    parser.add_argument("--product-flow", action="store_true", help="Run the user-visible memory feedback flow")
     parser.add_argument("--evidence-dir", default=str(ROOT / "docs" / "evidence" / "judge_journey_latest"))
     parser.add_argument("--timeout", type=int, default=90)
     args = parser.parse_args()
@@ -170,8 +230,10 @@ def main() -> int:
         print(json.dumps(summaries, ensure_ascii=False, indent=2))
         return 0
 
-    if not args.all and not args.step:
-        parser.error("use --list, --step or --all")
+    if args.product_flow or (not args.all and not args.step):
+        result = run_product_feedback_flow(Path(args.evidence_dir))
+        print(json.dumps({"ok": result["ok"], "evidence_dir": str(args.evidence_dir), "mode": "product_flow"}, ensure_ascii=False, indent=2))
+        return 0 if result["ok"] else 2
     selected = [item["id"] for item in summaries] if args.all else [args.step]
     evidence_dir = Path(args.evidence_dir)
     results = [run_step(step_id, evidence_dir, timeout=args.timeout) for step_id in selected]

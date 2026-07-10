@@ -12,6 +12,7 @@ import uuid
 
 from memguard.config import namespace_home
 from memguard.desktop.peony_scan import scan_peony_file
+from memguard.feedback import merge_memory_change_summaries
 from memguard.service import MemGuardService
 
 
@@ -112,11 +113,26 @@ def apply_scan_manifest(
         return _error("file_changed_after_scan", "文件在确认前发生变化，请重新扫描。", paths=changed)
 
     results = []
+    feedback_summaries = []
     stored = blocked = failed = 0
     for selected in requested:
         try:
             report = scan_peony_file(selected, service, ingest=True, notify=False)
             results.append(report)
+            if isinstance(report.get("ingest"), dict) and report["ingest"].get("feedback"):
+                feedback_summaries.append(report["ingest"]["feedback"])
+            elif report.get("recommended_action") == "block_sensitive":
+                feedback_summaries.append(
+                    {
+                        "blocked_items": [
+                            {
+                                "summary_for_user": "文件包含高风险敏感内容，未进入长期记忆。",
+                                "labels": (report.get("sensitivity") or {}).get("labels", []),
+                            }
+                        ],
+                        "suggested_next_actions": ["view_audit"],
+                    }
+                )
             if bool(report.get("ingest", {}).get("stored")):
                 stored += 1
             elif report.get("recommended_action") == "block_sensitive":
@@ -143,8 +159,32 @@ def apply_scan_manifest(
             "skipped": len(document.get("items", [])) - len(requested),
         },
         "results": results,
+        "memory_change_summary": merge_memory_change_summaries(
+            feedback_summaries,
+            namespace=service.namespace,
+            source="peony",
+            session_id=str(document["manifest_id"]),
+        ),
         "audit_chain": service.verify_audit(),
     }
+    notification_event = "peony_import" if failed == 0 else "peony_import_partial"
+    audit = service._audit(
+        notification_event,
+        None,
+        {
+            "manifest_id": document["manifest_id"],
+            "selected": len(requested),
+            "stored": stored,
+            "blocked": blocked,
+            "failed": failed,
+            "skipped": len(document.get("items", [])) - len(requested),
+        },
+    )
+    result["audit_event_id"] = str(audit.get("audit_id") or "")
+    result["memory_change_summary"]["audit_event_ids"] = list(
+        result["memory_change_summary"].get("audit_event_ids") or []
+    ) + [result["audit_event_id"]]
+    result["audit_chain"] = service.verify_audit()
     if notify:
         _notify_batch(result)
     return result
@@ -160,6 +200,7 @@ def forget_imported_memories(
 ) -> dict[str, object]:
     result = service.forget_memory_ids(list(memory_ids), reason=reason, compact=compact)
     result["schema"] = "memguardos-desktop-forget-import-v1"
+    result["forget_verification_report"] = service.forget_verification_report(result, request=reason, dry_run=False)
     result["audit_chain"] = service.verify_audit()
     if notify:
         _notify_forget(result)

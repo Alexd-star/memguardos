@@ -34,8 +34,8 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地功能分支单元测试 | 318 passed, 1 skipped |
-| openKylin 全量测试 | 318 passed |
+| 本地当前工作树全量测试 | 337 passed, 1 skipped |
+| openKylin 最近已归档证据 | 313 passed（证据对应旧 revision，最终提交前需在当前 HEAD 重跑） |
 | openKylin 真实 Agent | OpenHands 1.28.1；原 12 组真实会话 12/12，新增 R13-R20 扩展 8/8，新增 holdout 留出盲测 8/8；合计 28 组均有证据 |
 | 本地 1k 负载 P95 | 0.429 ms |
 | openKylin 1k 负载 P95 | 8.904 ms |
@@ -291,6 +291,7 @@ python -m memguard.eval.run_eval --latency-size 10000 --latency-queries 150 --ou
 | 遗忘保证边界与企业安全制品 | [docs/安全与遗忘保证边界.md](docs/安全与遗忘保证边界.md) |
 | 外部标准基准适配 | [docs/外部标准基准说明.md](docs/外部标准基准说明.md) |
 | 真实 OpenHands Agent 接入 | [docs/真实Agent接入使用说明.md](docs/真实Agent接入使用说明.md)、[docs/真实Agent闭环测试报告.md](docs/真实Agent闭环测试报告.md)、[docs/真实Agent记忆价值评测报告.md](docs/真实Agent记忆价值评测报告.md) |
+| 用户反馈链与可视化复核 | [docs/用户使用指南.md](docs/用户使用指南.md)、[docs/Web控制台与Agent工作台说明.md](docs/Web控制台与Agent工作台说明.md)、[docs/UKUI与托盘反馈链说明.md](docs/UKUI与托盘反馈链说明.md)、[docs/验证链设计说明.md](docs/验证链设计说明.md)、[docs/人工演示与录屏脚本.md](docs/人工演示与录屏脚本.md) |
 
 ## 项目结构
 

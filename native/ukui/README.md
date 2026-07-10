@@ -6,6 +6,12 @@
 - `ukcc-memguard`：UKUI 控制中心插件入口，提供运行环境检查、审计链校验、本机智能检索检查、诊断报告和本地控制台入口。页面初次打开时使用 `memctl openkylin-status` 读取默认轻量状态，只检查服务、插件、模型仓库、socket 和文件存在性；完整 Kylin SDK 推理探针只在用户点击【检查本机智能检索】或【预热本机智能检索】时执行，避免打开系统设置时因 SDK 冷启动造成卡顿。
 - `tray`：UKUI 托盘程序，低频轮询本机状态，只在状态变化时通知，并提供记忆安全中心、本机智能检索、审计状态、最近阻断记录、本地控制台和重新检查状态等定向入口。
 
+## 用户反馈链
+
+UKUI 日常页和托盘入口可以读取 `memctl feedback-home`，展示最近学到的记忆、当前生效偏好、敏感内容保护和最近遗忘结果。Web 控制台进一步提供 Agent 工作台、偏好生效证明、记忆详情、遗忘验证和通知中心。Peony 导入完成后返回统一的 `MemoryChangeSummary`，撤销导入返回 `ForgetVerificationReport`，因此桌面组件不会只显示“操作完成”而看不到实际影响。
+
+本地回放用于复核事件链，真实 OpenHands 运行必须带有真实模型和工作区证据；UKUI 和 Peony 不会把回放结果冒充为外部模型能力。
+
 这两个插件需要 `libpeony-dev`、`libukcc-dev`、Qt5 开发包和 openKylin 插件安装能力。当前默认主路径仍是 CLI、daemon、Unix socket API 和本地 Web 控制台；插件属于面向 openKylin 桌面生态的原生增强。
 
 Peony 会检查 Qt 插件元数据中的 `version` 字段。openKylin 2.0 SP2 当前 `pkg-config --modversion peony` 返回 `3.2.2`，因此 `common.json` 中显式写入 `version: 3.2.2`，避免插件能被 `QPluginLoader` 单独加载、但被 Peony 插件管理器过滤。

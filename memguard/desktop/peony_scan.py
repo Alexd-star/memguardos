@@ -143,6 +143,9 @@ def _ingest_summary(result: Dict[str, object], *, attempted: bool) -> Dict[str, 
         "attempted": attempted,
         "stored": bool(result.get("stored")),
         "reason": result.get("reason", ""),
+        "feedback": result.get("feedback"),
+        "sensitive_notice": result.get("sensitive_notice"),
+        "audit_event_id": result.get("audit_event_id", ""),
     }
     record = result.get("record")
     if record is not None:
