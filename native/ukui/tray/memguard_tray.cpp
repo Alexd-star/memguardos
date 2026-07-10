@@ -307,12 +307,15 @@ private:
 
     void consumeNotifications(const QJsonArray &notifications)
     {
+        QSet<QString> currentNotificationIds;
+        for (const QJsonValue &value : notifications) {
+            const QString id = value.toObject().value(QStringLiteral("notification_id")).toString();
+            if (!id.isEmpty())
+                currentNotificationIds.insert(id);
+        }
+
         if (!notificationSeeded_) {
-            for (const QJsonValue &value : notifications) {
-                const QString id = value.toObject().value(QStringLiteral("notification_id")).toString();
-                if (!id.isEmpty())
-                    lastNotificationIds_.insert(id);
-            }
+            lastNotificationIds_ = currentNotificationIds;
             notificationSeeded_ = true;
             return;
         }
@@ -331,8 +334,7 @@ private:
             tray_.showMessage(QStringLiteral("MemGuardOS：%1").arg(title), summary, tray_.icon(), 6000);
             ++shown;
         }
-        if (lastNotificationIds_.size() > 200)
-            lastNotificationIds_.clear();
+        lastNotificationIds_ = currentNotificationIds;
     }
 
     void applyState(const QString &state, const QString &title, const QString &body)
@@ -412,8 +414,6 @@ int main(int argc, char *argv[])
     QApplication application(argc, argv);
     application.setApplicationName(QStringLiteral("MemGuardOS"));
     application.setQuitOnLastWindowClosed(false);
-    if (!QSystemTrayIcon::isSystemTrayAvailable())
-        return 2;
     const QString runtime = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
     QLockFile lock(runtime + QStringLiteral("/memguardos-tray.lock"));
     lock.setStaleLockTime(0);

@@ -80,7 +80,7 @@ def test_dashboard_initial_load_is_lightweight_and_tab_data_is_lazy_loaded():
 
     assert "loadTabData" in page
     assert "loadedTabs" in page
-    assert "loadSessionCapabilities().then(() => refresh()).catch(handleInitialLoadFailure);" in page
+    assert "loadSessionCapabilities().then(payload => refreshForSession(payload)).catch(handleInitialLoadFailure);" in page
     assert "refresh(); audit(null)" not in page
     assert "audit(null); loadAgentOverview(null)" not in page
     assert "loadAgentOverview(null); loadAcceptancePlan(null)" not in page
@@ -251,7 +251,7 @@ def test_dashboard_request_failures_are_local_to_each_operation():
     assert "function requestError" in page
     assert "throw requestError(message);" in page
     assert "return {ok:false, error:String(err)};" not in page
-    assert "loadSessionCapabilities().then(() => refresh()).catch(handleInitialLoadFailure);" in page
+    assert "loadSessionCapabilities().then(payload => refreshForSession(payload)).catch(handleInitialLoadFailure);" in page
 
 
 def test_dashboard_labels_are_associated_with_form_controls():
@@ -308,6 +308,13 @@ def test_dashboard_operation_feedback_is_sequenced_and_supports_noop_results():
     assert page.index("if (!id) {") < page.index("await withBusy(event, async () => {", page.index("async function loadMemoryDetail"))
 
 
+def test_dashboard_error_feedback_uses_one_visible_status_surface():
+    page = _dashboard_html()
+
+    status_body = page[page.index("function setOperationStatus") : page.index("function buttonText")]
+    assert "if (state === 'bad') showError('');" in status_body
+
+
 def test_dashboard_uses_authenticated_blob_download_for_diagnostics():
     page = _dashboard_html()
 
@@ -332,15 +339,28 @@ def test_dashboard_applies_role_capabilities_before_exposing_privileged_actions(
     assert "当前访问权限不足" in page
     assert "loadSessionCapabilities().then" in page
     assert '<button data-tab="audit" data-min-role="admin">审计记录</button>' in page
-    assert '<button data-tab="diagnostics" data-min-role="admin">系统维护</button>' in page
+    assert '<button data-tab="diagnostics">系统维护</button>' in page
     assert '<section id="audit" data-min-role="admin">' in page
-    assert '<section id="diagnostics" data-min-role="admin">' in page
+    assert '<section id="diagnostics">' in page
     assert '<section id="acceptance" data-min-role="admin">' in page
     assert 'data-min-role="admin" onclick="openTab(\'diagnostics\')">系统维护</button>' in page
+    assert 'data-min-role="admin" onclick="verifyAudit(event)">校验操作记录</button>' in page
     assert "requestedButton && requestedButton.hidden" in page
     assert "当前访问权限不足，已返回个人工作台。" in page
     assert "function privilegedActionMarkup" in page
     assert "此操作需要管理员处理" in page
+
+
+def test_dashboard_routes_anonymous_users_to_the_credential_entry_without_protected_requests():
+    page = _dashboard_html()
+
+    session_body = page[page.index("async function refreshForSession") : page.index("function badge")]
+    assert "result.role === 'anonymous'" in session_body
+    assert "openTab('diagnostics')" in session_body
+    assert "请先填写本机访问凭证" in session_body
+    assert "setOperationStatus('', '');" in session_body
+    assert "return refresh();" in session_body
+    assert "loadSessionCapabilities().then(payload => refreshForSession(payload))" in page
 
 
 def test_dashboard_overview_uses_real_product_state_without_internal_paths_or_fixed_demo_metrics():
@@ -370,6 +390,9 @@ def test_dashboard_requires_a_current_forget_preview_before_confirmation():
     assert "preview_token:confirmForget ? agentForgetPreview.previewToken : ''" in page
     assert "候选数量" in page
     assert "请先重新预览影响范围" in page
+    assert "externalResidueMessage" in page
+    assert "residue.user_explanation" in page
+    assert "OpenHands 自身保存的会话副本" in page
 
 
 def test_dashboard_serializes_mutations_and_renders_a_search_empty_state():

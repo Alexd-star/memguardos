@@ -2,9 +2,9 @@
   "ok": true,
   "summary": {
     "total": 241,
-    "passed": 241,
+    "passed": 240,
     "failed": 0,
-    "warnings": 0
+    "warnings": 1
   },
   "checks": [
     {
@@ -242,7 +242,7 @@
       "category": "中文文档",
       "name": "docs/真实Agent接入使用说明.md",
       "ok": true,
-      "detail": "中文字符数 2072",
+      "detail": "中文字符数 2341",
       "severity": "P0"
     },
     {
@@ -760,14 +760,14 @@
       "category": "量化评测",
       "name": "精准遗忘候选精确率",
       "ok": true,
-      "detail": "当前 0.9655，要求 >= 0.9000",
+      "detail": "当前 1.0000，要求 >= 0.9000",
       "severity": "P0"
     },
     {
       "category": "量化评测",
       "name": "精准遗忘候选召回率",
       "ok": true,
-      "detail": "当前 0.9425，要求 >= 0.9000",
+      "detail": "当前 1.0000，要求 >= 0.9000",
       "severity": "P0"
     },
     {
@@ -781,7 +781,7 @@
       "category": "量化评测",
       "name": "负载 P95 延迟小于 500ms",
       "ok": true,
-      "detail": "当前 4.7740，要求 <= 500.0000",
+      "detail": "当前 0.4290，要求 <= 500.0000",
       "severity": "P0"
     },
     {
@@ -1340,8 +1340,8 @@
     {
       "category": "openKylin原生证据",
       "name": "证据对应当前 Git HEAD",
-      "ok": true,
-      "detail": "source=15523ae0919265170d26f0ddc69f0ff2b185cb28；当前 HEAD 仅追加/更新原生证据文件 23 个",
+      "ok": false,
+      "detail": "证据 15523ae09192 与当前 f1cf97bbc704 不一致",
       "severity": "P1"
     },
     {

@@ -297,11 +297,6 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                 }
             )
             return
-        if parsed.path.startswith("/api/") and not self._require_role("viewer"):
-            return
-        if parsed.path == "/api/status":
-            self._send_api({"command": "namespace_status"})
-            return
         if parsed.path == "/api/session":
             role = self._current_role()
             rank = _ROLE_RANK.get(role, 0)
@@ -323,6 +318,11 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                     },
                 }
             )
+            return
+        if parsed.path.startswith("/api/") and not self._require_role("viewer"):
+            return
+        if parsed.path == "/api/status":
+            self._send_api({"command": "namespace_status"})
             return
         if parsed.path == "/api/feedback-home":
             params = parse_qs(parsed.query)
@@ -1088,9 +1088,9 @@ def _dashboard_html() -> str:
       <button data-tab="memory-detail">记忆详情</button>
       <button data-tab="forget">遗忘验证</button>
       <button data-tab="notifications">通知中心</button>
+      <button data-tab="diagnostics">系统维护</button>
       <div class="nav-group" data-min-role="admin">管理员视图</div>
       <button data-tab="audit" data-min-role="admin">审计记录</button>
-      <button data-tab="diagnostics" data-min-role="admin">系统维护</button>
       <button data-tab="acceptance" data-min-role="admin">复核中心</button>
     </nav>
     <div>
@@ -1355,16 +1355,16 @@ def _dashboard_html() -> str:
         <div class="actions"><button class="primary" onclick="audit(event)">刷新</button></div>
         <details><summary>运行记录</summary><pre id="auditOut" class="advanced-output"></pre></details>
       </section>
-      <section id="diagnostics" data-min-role="admin">
+      <section id="diagnostics">
         <h2>系统维护</h2>
         <p class="lead">管理员视图用于本机运维和问题排查，聚合审计链、检索后端、记忆策略、端侧 SDK、cgroup 和本机检查信息，并支持一键导出。</p>
         <div class="panel">
           <div class="actions">
-            <button class="primary" onclick="verifyAudit(event)">校验操作记录</button>
-            <button class="secondary" onclick="retrievalStatus(event)">检查检索方式</button>
-            <button class="secondary" onclick="memoryPolicy(event)">查看记忆策略</button>
-            <button class="secondary" onclick="diagnostics(event)">聚合系统状态</button>
-            <button class="secondary" onclick="exportDiagnostics(event)">导出系统报告</button>
+            <button class="primary" data-min-role="admin" onclick="verifyAudit(event)">校验操作记录</button>
+            <button class="secondary" data-min-role="admin" onclick="retrievalStatus(event)">检查检索方式</button>
+            <button class="secondary" data-min-role="admin" onclick="memoryPolicy(event)">查看记忆策略</button>
+            <button class="secondary" data-min-role="admin" onclick="diagnostics(event)">聚合系统状态</button>
+            <button class="secondary" data-min-role="admin" onclick="exportDiagnostics(event)">导出系统报告</button>
           </div>
           <p class="muted">维护输出用于本机管理员定位审计、检索和冷热分层状态。敏感内容会按核心链路的脱敏规则处理。</p>
           <form id="dashboardAuthForm" onsubmit="event.preventDefault()">
@@ -1491,8 +1491,8 @@ def _dashboard_html() -> str:
       loadedTabs.clear();
       loadedTabs.add('overview');
       try {
-        await loadSessionCapabilities();
-        await refresh();
+        const capabilities = await loadSessionCapabilities();
+        await refreshForSession(capabilities);
       } catch (err) {
         handleInitialLoadFailure(err);
       }
@@ -1511,6 +1511,7 @@ def _dashboard_html() -> str:
     function setOperationStatus(message, state) {
       const box = document.getElementById('operationStatus');
       if (!box) return;
+      if (state === 'bad') showError('');
       box.style.display = message ? 'block' : 'none';
       box.className = 'operation-status ' + (state || '');
       box.textContent = message || '';
@@ -1688,6 +1689,16 @@ def _dashboard_html() -> str:
       const payload = await getJson('/api/session');
       applySessionCapabilities(payload);
       return payload;
+    }
+    async function refreshForSession(payload) {
+      const result = (payload || {}).result || {};
+      if (result.role === 'anonymous') {
+        openTab('diagnostics');
+        setOperationStatus('请先填写本机访问凭证。验证通过后，系统状态和可用操作会自动显示。', 'warn');
+        return null;
+      }
+      setOperationStatus('', '');
+      return refresh();
     }
     function badge(id, state, text) {
       const el = document.getElementById(id);
@@ -1910,6 +1921,13 @@ def _dashboard_html() -> str:
         preference_topic:agentForgetTopic.value,
         session_id:agentSession.value.trim()
       });
+    }
+    function externalResidueMessage(residue) {
+      if (residue && residue.user_explanation)
+        return String(residue.user_explanation);
+      if (residue && (residue.requires_separate_cleanup || residue.risk === 'external_agent_persistence'))
+        return 'OpenHands 自身保存的会话副本不在 MemGuardOS 管理范围内；如果已启用该功能，还需要在 OpenHands 中单独删除。';
+      return '当前没有需要单独清理的外部 Agent 会话副本。';
     }
     forgetRequest.addEventListener('input', invalidateForgetPreview);
     agentForgetName.addEventListener('input', invalidateAgentForgetPreview);
@@ -2240,7 +2258,8 @@ def _dashboard_html() -> str:
           '<div class="item"><div class="item-title">影响范围</div><div class="muted">事件 ' + esc((affected.event_ids || []).length)
           + ' · 记忆 ' + esc((affected.memory_ids || []).length) + ' · 观察 ' + esc(affected.observation_count || 0)
           + ' · 历史上下文使用 ' + esc(affected.context_usage_count || 0) + '</div></div>'
-          + '<div class="item"><div class="item-title">外部残留</div><div class="muted">' + esc(residue.explanation || '未报告') + '</div></div>';
+          + '<div class="item"><div class="item-title">外部残留</div><div class="muted">'
+          + esc(externalResidueMessage(residue)) + '</div></div>';
         agentOut.textContent = pretty(payload);
         if (confirmForget) {
           invalidateAgentForgetPreview();
@@ -2508,7 +2527,7 @@ def _dashboard_html() -> str:
       });
     }
     openHashTab();
-    loadSessionCapabilities().then(() => refresh()).catch(handleInitialLoadFailure);
+    loadSessionCapabilities().then(payload => refreshForSession(payload)).catch(handleInitialLoadFailure);
   </script>
 </body>
 </html>"""

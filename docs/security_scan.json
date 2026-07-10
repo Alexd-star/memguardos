@@ -1,7 +1,7 @@
 {
   "schema": "memguardos-security-scan-v1",
   "ok": true,
-  "elapsed_s": 6.718,
+  "elapsed_s": 2.427,
   "policy": {
     "bandit_high_severity_allowed": 0,
     "bandit_medium_severity_allowed": 0,
@@ -12,7 +12,7 @@
   "summary": {
     "bandit_high_count": 0,
     "bandit_medium_count": 0,
-    "bandit_low_count": 84,
+    "bandit_low_count": 88,
     "pip_audit_vulnerability_count": 0,
     "missing_tools": []
   },
@@ -20,7 +20,7 @@
     "bandit": {
       "status": "warnings",
       "command": [
-        "C:\\Program Files\\Python39\\python.exe",
+        "python",
         "-m",
         "bandit",
         "-q",
@@ -33,8 +33,8 @@
       "returncode": 1,
       "high_count": 0,
       "medium_count": 0,
-      "low_count": 84,
-      "issue_count": 84,
+      "low_count": 88,
+      "issue_count": 88,
       "issues": [
         {
           "filename": "memguard\\cli\\memctl.py",
@@ -422,7 +422,7 @@
         },
         {
           "filename": "scripts\\build_deb_packages.py",
-          "line_number": 122,
+          "line_number": 123,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B607",
@@ -430,14 +430,14 @@
         },
         {
           "filename": "scripts\\build_deb_packages.py",
-          "line_number": 122,
+          "line_number": 123,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
           "issue_text": "subprocess call - check for execution of untrusted input."
         }
       ],
-      "stderr_tail": "[tester]\tWARNING\tnosec encountered (B108), but no failed test on line 265\n"
+      "stderr_tail": "[tester]\tWARNING\tnosec encountered (B108), but no failed test on file memguard\\os_guard\\openkylin_native.py:265\n"
     },
     "pip_audit": {
       "status": "clean",

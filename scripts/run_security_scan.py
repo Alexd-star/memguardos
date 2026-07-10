@@ -33,6 +33,8 @@ def run_security_scan(
         python=python,
         dependency_scope=dependency_scope,
     )
+    bandit["command"] = _portable_command(bandit.get("command", []), python=python)
+    pip_audit["command"] = _portable_command(pip_audit.get("command", []), python=python)
     missing_tools = [
         name
         for name, result in (("bandit", bandit), ("pip_audit", pip_audit))
@@ -321,6 +323,15 @@ def _runtime_dependencies(pyproject: Path) -> list[str]:
 def _tail(text: str, limit: int = 2000) -> str:
     text = text or ""
     return text[-limit:]
+
+
+def _portable_command(command: list[str], *, python: str) -> list[str]:
+    if not command:
+        return []
+    portable = list(command)
+    if portable[0] == python:
+        portable[0] = "python"
+    return portable
 
 
 def _render_markdown(report: dict[str, Any]) -> str:

@@ -2584,6 +2584,12 @@ class MemGuardService:
         residue = {
             "risk": "external_agent_persistence" if external_persistence else "none_declared",
             "requires_separate_cleanup": bool(external_persistence),
+            "user_explanation": (
+                "OpenHands 自身保存的会话副本不在 MemGuardOS 管理范围内；"
+                "如果已启用该功能，还需要在 OpenHands 中单独删除。"
+                if external_persistence
+                else "当前调用方声明未保留外部 Agent 会话副本。"
+            ),
             "explanation": (
                 "OpenHands conversation persistence is outside the MemGuardOS managed store "
                 "and must be deleted separately when enabled."

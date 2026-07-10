@@ -77,6 +77,30 @@ def test_health_is_public_but_readiness_requires_configured_authentication(tmp_p
         service.close()
 
 
+def test_anonymous_session_exposes_only_empty_capabilities(tmp_path):
+    service, base = start_dashboard(tmp_path)
+    try:
+        status, body = request_json(base + "/api/session")
+
+        assert status == 200
+        assert body == {
+            "ok": True,
+            "result": {
+                "role": "anonymous",
+                "capabilities": {
+                    "read": False,
+                    "write_memory": False,
+                    "preview_forgetting": False,
+                    "confirm_forgetting": False,
+                    "run_acceptance": False,
+                    "administer": False,
+                },
+            },
+        }
+    finally:
+        service.close()
+
+
 def test_viewer_can_read_but_cannot_mutate(tmp_path):
     service, base = start_dashboard(tmp_path)
     try:

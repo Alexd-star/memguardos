@@ -11,8 +11,10 @@ import struct
 ROOT_USER_SOCKET_OPT_IN_ENV = "MEMGUARD_ALLOW_ROOT_KYLIN_USER_SOCKET"
 """Explicit opt-in for root to use Kylin user-runtime sockets after peer verification."""
 
-_OPENKYLIN_TMP_SYMLINK = Path("/tmp")
-_OPENKYLIN_TMP_TARGET = Path("/var/tmp")
+# These are platform-owned directories that are validated for root ownership,
+# sticky-bit protection, and an exact symlink target before they are trusted.
+_OPENKYLIN_TMP_SYMLINK = Path("/tmp")  # nosec B108
+_OPENKYLIN_TMP_TARGET = Path("/var/tmp")  # nosec B108
 
 
 def _current_uid() -> Optional[int]:

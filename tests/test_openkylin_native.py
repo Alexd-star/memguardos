@@ -1148,10 +1148,22 @@ def test_ukui_tray_follows_system_theme_and_deduplicates_notifications():
     assert "connect(openDashboardAction, &QAction::triggered, this, [this]() { openDashboard(); });" in source
     assert "查看已保护内容" in source
     assert "setStyleSheet" not in source
-    assert "QSystemTrayIcon::isSystemTrayAvailable" in source
+    assert "QSystemTrayIcon::isSystemTrayAvailable" not in source
+    assert "currentNotificationIds" in source
+    assert "lastNotificationIds_ = currentNotificationIds" in source
     assert "Exec=/usr/bin/memguardos-tray" in desktop
     assert "OnlyShowIn=UKUI;" in desktop
     assert "tray" in build
+
+
+def test_ukui_tray_stays_alive_while_the_desktop_panel_is_starting():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/tray/memguard_tray.cpp").read_text(encoding="utf-8")
+
+    main_body = source[source.index("int main(") :]
+    assert "QSystemTrayIcon::isSystemTrayAvailable" not in main_body
+    assert "controller.start();" in main_body
+    assert "application.exec();" in main_body
 
 
 def test_peony_apply_and_forget_processes_have_complete_user_control_and_failure_handling():
