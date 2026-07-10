@@ -4,7 +4,6 @@ import argparse
 import json
 import signal
 import threading
-import time
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -47,10 +46,10 @@ def run_daemon(
 ) -> int:
     logger = JournaldLogger()
     namespace = normalize_namespace(namespace)
-    stopping = {"value": False}
+    stopping = threading.Event()
 
     def _stop(signum, _frame):
-        stopping["value"] = True
+        stopping.set()
         logger.log("daemon_signal", None, {"signal": signum})
 
     signal.signal(signal.SIGTERM, _stop)
@@ -70,7 +69,7 @@ def run_daemon(
                 args=(
                     Path(socket_path),
                     service,
-                    lambda: stopping["value"],
+                    stopping.is_set,
                     lambda path: logger.log("api_socket_ready", None, {"path": path, "mode": oct(socket_mode), "auth_enabled": bool(auth_token)}),
                     socket_mode,
                     auth_token,
@@ -78,9 +77,9 @@ def run_daemon(
                 daemon=True,
             )
             socket_thread.start()
-        while not stopping["value"]:
+        while not stopping.is_set():
             logger.log("daemon_heartbeat", None, daemon_health_snapshot(probe_sdk=probe_sdk, namespace=namespace))
-            time.sleep(max(1.0, interval))
+            stopping.wait(timeout=max(1.0, interval))
         if socket_thread is not None:
             socket_thread.join(timeout=2.0)
         service._audit("daemon_stopped", None, {"reason": "signal"})
