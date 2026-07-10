@@ -879,6 +879,8 @@ def test_native_evidence_collector_refreshes_manifest_after_manifest_log_write()
     assert first in source
     assert second in source
     assert source.index(first) < source.index(second)
+    assert "print_command()" in source
+    assert 'echo "$ $*"' not in source
 
 
 def test_native_evidence_collector_uses_an_isolated_user_store():

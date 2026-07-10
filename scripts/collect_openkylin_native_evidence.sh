@@ -22,11 +22,17 @@ cleanup() {
 trap cleanup EXIT
 export MEMGUARD_HOME="${EVIDENCE_HOME}"
 
+print_command() {
+  printf '$'
+  printf ' %q' "$@"
+  printf '\n'
+}
+
 run_capture() {
   local name="$1"
   shift
   {
-    echo "$ $*"
+    print_command "$@"
     "$@"
   } >"${OUT_DIR}/${name}" 2>&1 || {
     local code="$?"
@@ -38,7 +44,7 @@ run_required_capture() {
   local name="$1"
   shift
   {
-    echo "$ $*"
+    print_command "$@"
     "$@"
   } >"${OUT_DIR}/${name}" 2>&1
 }
