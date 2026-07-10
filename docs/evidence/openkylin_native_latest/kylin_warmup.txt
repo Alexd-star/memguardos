@@ -8,5 +8,5 @@ $ bash scripts/warmup_kylin_sdk.sh
   "dim": 768,
   "fallback": "hash_embedding",
   "recommendation": "Kylin embedding SDK 已预热，可作为端侧检索增强。",
-  "completed_at": "2026-07-10T21:35:33+08:00"
+  "completed_at": "2026-07-10T21:51:08+08:00"
 }

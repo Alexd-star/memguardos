@@ -1,5 +1,6 @@
 {
   "schema": "memguardos-installed-product-e2e-v1",
+  "binary": "/usr/bin/memctl",
   "preview_files": 2,
   "all_preview_selectable": true,
   "stored": 2,
@@ -7,15 +8,8 @@
   "sensitive_selectable": false,
   "forgotten": 2,
   "verification_steps": [
-    "passed",
-    "skipped",
-    "passed",
-    "passed",
-    "passed",
-    "skipped",
-    "passed",
-    "skipped",
-    "passed"
+    true,
+    true
   ],
   "verification_ok": true,
   "audit_chain_ok": true

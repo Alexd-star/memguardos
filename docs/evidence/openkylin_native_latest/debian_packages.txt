@@ -36,16 +36,16 @@ dpkg-deb: 正在 '/home/luo/memguardos/dist/memguardos_0.1.0-2_all.deb' 中构�
       "version": "0.1.0-2",
       "architecture": "amd64",
       "path": "/home/luo/memguardos/dist/memguardos-core_0.1.0-2_amd64.deb",
-      "bytes": 182532,
-      "sha256": "1906ab5e19f9efc625e39e3341088e6eab10e8bc98627787391e45e6a586c2b6"
+      "bytes": 182496,
+      "sha256": "79aa8fc75c946165829b275b1c2add1b14861d7211716c9729ed564858f9be75"
     },
     {
       "package": "memguardos-ukui",
       "version": "0.1.0-2",
       "architecture": "amd64",
       "path": "/home/luo/memguardos/dist/memguardos-ukui_0.1.0-2_amd64.deb",
-      "bytes": 138700,
-      "sha256": "2a46778fc0d6111d6ef4875c11454c898015ae2acb255b37f4e62d1294e8ef16"
+      "bytes": 138568,
+      "sha256": "f5f3e01328dd63e68b20ccbe0d769360309d07dce77dbad41b7797784cc8bec0"
     },
     {
       "package": "memguardos-agent-bridge",
@@ -53,15 +53,15 @@ dpkg-deb: 正在 '/home/luo/memguardos/dist/memguardos_0.1.0-2_all.deb' 中构�
       "architecture": "amd64",
       "path": "/home/luo/memguardos/dist/memguardos-agent-bridge_0.1.0-2_amd64.deb",
       "bytes": 8080,
-      "sha256": "b36cb1637e0bbf006fd7cc1f55e82b7b7342d36501080b498ef9def9b2302611"
+      "sha256": "3d6ea616060557d3fe5a4c565d232bb3051246156dbe933440bcca4063b6e32c"
     },
     {
       "package": "memguardos-doc",
       "version": "0.1.0-2",
       "architecture": "all",
       "path": "/home/luo/memguardos/dist/memguardos-doc_0.1.0-2_all.deb",
-      "bytes": 196308,
-      "sha256": "c0a7bbed3289da092a50c9102ed1bf96bf03053365c23b6f0b66dddb8e6702cd"
+      "bytes": 196288,
+      "sha256": "46876f18c8e891a48b3621b1a05e7f90749514281d67454666764d30617655be"
     },
     {
       "package": "memguardos",
@@ -69,7 +69,7 @@ dpkg-deb: 正在 '/home/luo/memguardos/dist/memguardos_0.1.0-2_all.deb' 中构�
       "architecture": "all",
       "path": "/home/luo/memguardos/dist/memguardos_0.1.0-2_all.deb",
       "bytes": 888,
-      "sha256": "7720ab5455c0ed4bce924a23e791dc19bdb5a3093bf89d25d1085610aa2aab7a"
+      "sha256": "a35a39b3557456ecadbac30b669090cb3f11a437a9c9e3a947b308311478112a"
     }
   ]
 }

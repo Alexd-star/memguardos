@@ -1,5 +1,5 @@
 $ sudo apt install --reinstall -y five MemGuardOS packages
-legacy_unowned_before=true
+legacy_unowned_before=false
 
 WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
 
@@ -12,12 +12,12 @@ WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
   localechooser-data lvm2 user-setup
 使用'sudo apt autoremove'来卸载它(它们)。
 升级了 0 个软件包，新安装了 0 个软件包，重新安装了 5 个软件包，要卸载 0 个软件包，有 15 个软件包未被升级。
-需要下载 0 B/527 kB 的归档。
+需要下载 0 B/526 kB 的归档。
 解压缩后会消耗 0 B 的额外空间。
 获取:1 /home/luo/memguardos/dist/memguardos-agent-bridge_0.1.0-2_amd64.deb memguardos-agent-bridge amd64 0.1.0-2 [8,080 B]
 获取:2 /home/luo/memguardos/dist/memguardos-ukui_0.1.0-2_amd64.deb memguardos-ukui amd64 0.1.0-2 [139 kB]
 获取:3 /home/luo/memguardos/dist/memguardos-doc_0.1.0-2_all.deb memguardos-doc all 0.1.0-2 [196 kB]
-获取:4 /home/luo/memguardos/dist/memguardos-core_0.1.0-2_amd64.deb memguardos-core amd64 0.1.0-2 [183 kB]
+获取:4 /home/luo/memguardos/dist/memguardos-core_0.1.0-2_amd64.deb memguardos-core amd64 0.1.0-2 [182 kB]
 获取:5 /home/luo/memguardos/dist/memguardos_0.1.0-2_all.deb memguardos all 0.1.0-2 [888 B]
 debconf: 因为并未安装 apt-utils，所以软件包的设定过程将被推迟
 (正在读取数据库 ... (正在读取数据库 ... 5%(正在读取数据库 ... 10%(正在读取数据库 ... 15%(正在读取数据库 ... 20%(正在读取数据库 ... 25%(正在读取数据库 ... 30%(正在读取数据库 ... 35%(正在读取数据库 ... 40%(正在读取数据库 ... 45%(正在读取数据库 ... 50%(正在读取数据库 ... 55%(正在读取数据库 ... 60%(正在读取数据库 ... 65%(正在读取数据库 ... 70%(正在读取数据库 ... 75%(正在读取数据库 ... 80%(正在读取数据库 ... 85%(正在读取数据库 ... 90%(正在读取数据库 ... 95%(正在读取数据库 ... 100%(正在读取数据库 ... 系统当前共安装有 200153 个文件和目录。)
