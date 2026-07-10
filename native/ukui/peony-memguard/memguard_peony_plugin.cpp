@@ -379,8 +379,10 @@ void MemGuardPeonyPlugin::runApply(const QStringList &arguments)
                 const QJsonArray newMemories = feedback.value(QStringLiteral("new_memories")).toArray();
                 if (!newMemories.isEmpty()) {
                     feedbackMessage += QStringLiteral("\n\n记忆变化：新增 %1 条，可在 Agent 工作台测试生效。 ").arg(newMemories.size());
-                    for (const QJsonValue &value : newMemories.mid(0, 2))
-                        feedbackMessage += QStringLiteral("\n• %1").arg(value.toObject().value(QStringLiteral("summary_for_user")).toString());
+                    for (int index = 0; index < newMemories.size() && index < 2; ++index) {
+                        const QJsonObject item = newMemories.at(index).toObject();
+                        feedbackMessage += QStringLiteral("\n• %1").arg(item.value(QStringLiteral("summary_for_user")).toString());
+                    }
                 }
                 const QJsonArray scopes = feedback.value(QStringLiteral("effective_scopes")).toArray();
                 if (!scopes.isEmpty()) {
@@ -456,8 +458,8 @@ void MemGuardPeonyPlugin::runForgetImport(const QStringList &memoryIds)
                     .arg(audit.value(QStringLiteral("ok")).toBool() ? QStringLiteral("完整") : QStringLiteral("需要检查"));
                 message += QStringLiteral("\n\n验证摘要：%1").arg(verification.value(QStringLiteral("user_summary")).toString(QStringLiteral("请查看详细验证结果。")));
                 const QJsonArray steps = verification.value(QStringLiteral("verification_steps")).toArray();
-                for (const QJsonValue &value : steps.mid(0, 5)) {
-                    const QJsonObject step = value.toObject();
+                for (int index = 0; index < steps.size() && index < 5; ++index) {
+                    const QJsonObject step = steps.at(index).toObject();
                     message += QStringLiteral("\n• %1：%2").arg(step.value(QStringLiteral("name")).toString(), step.value(QStringLiteral("status")).toString());
                 }
                 message += QStringLiteral("\n外部日志、shell history、快照和备份不在 MemGuardOS 受管范围内。 ");

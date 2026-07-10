@@ -674,6 +674,8 @@ def test_peony_plugin_uses_preview_confirmation_contract():
     assert "只记录" in source
     assert "查看结果" in source
     assert "撤销本次导入" in source
+    assert "newMemories.mid" not in source
+    assert "steps.mid" not in source
     assert "forget-import" in source
     assert "--memory-id" in source
     assert "遗忘本次导入内容" in source
