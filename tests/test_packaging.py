@@ -101,6 +101,8 @@ def test_native_evidence_revision_allows_generated_readiness_reports(monkeypatch
         "_revision_delta_paths",
         lambda _source, _target: [
             "docs/evidence/openkylin_native_latest/openkylin_status.txt",
+            "README.md",
+            "docs/测试报告.md",
             "docs/competition_ready.json",
             "docs/竞赛就绪自检报告.md",
             "docs/超标准交付评分矩阵.md",
@@ -112,6 +114,18 @@ def test_native_evidence_revision_allows_generated_readiness_reports(monkeypatch
 
     assert result.ok is True
     assert "追加/更新原生证据" in result.detail
+
+
+def test_native_evidence_revision_rejects_runtime_changes_after_collection(monkeypatch, tmp_path):
+    expected = "b" * 40
+    revision = tmp_path / "source_revision.json"
+    revision.write_text(json.dumps({"source_revision": "a" * 40, "dirty": False}), encoding="utf-8")
+    monkeypatch.setattr(readiness, "_revision_delta_paths", lambda _source, _target: ["memguard/service.py"])
+
+    result = readiness.check_native_evidence_revision(tmp_path, expected)
+
+    assert result.ok is False
+    assert "不一致" in result.detail
 
 
 def test_native_evidence_revision_reads_unquoted_non_ascii_delta_paths():

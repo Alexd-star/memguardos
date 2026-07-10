@@ -25,10 +25,27 @@ IGNORED_HYGIENE_PARTS = {
 }
 
 POST_NATIVE_EVIDENCE_ALLOWED_PATHS = {
+    # These files only report the collected evidence. Runtime, test, packaging,
+    # and collector sources remain forbidden after evidence collection.
+    "README.md",
+    "docs/13_测试说明.md",
+    "docs/15_更新日志.md",
     "docs/competition_ready.json",
+    "docs/openKylin验证记录.md",
+    "docs/交付文档/MemGuardOS中文操作手册.md",
+    "docs/平台摘要.md",
+    "docs/最终提交说明.md",
+    "docs/测试报告.md",
+    "docs/真实Agent闭环测试报告.md",
     "docs/竞赛就绪自检报告.md",
+    "docs/答辩提纲.md",
+    "docs/答辩稿.md",
+    "docs/评委证据包索引.md",
+    "docs/赛题符合性说明.md",
+    "docs/赛题要求逐句符合性核查.md",
     "docs/超标准交付评分矩阵.md",
     "docs/真实Agent记忆价值评测报告.md",
+    "docs/项目介绍总览.md",
 }
 
 REQUIRED_DOCS = [
@@ -404,7 +421,7 @@ def check_formal_doc_consistency() -> List[Check]:
             "中文文档",
             "正式文档测试数字口径",
             not stale_test_hits,
-            "正式材料使用当前 338/340 测试口径" if not stale_test_hits else "过期数字：%s" % "、".join(stale_test_hits),
+            "正式材料使用当前 340/343 测试口径" if not stale_test_hits else "过期数字：%s" % "、".join(stale_test_hits),
         )
     )
     product_docs = [
