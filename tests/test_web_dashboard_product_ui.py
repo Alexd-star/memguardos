@@ -51,8 +51,8 @@ def test_dashboard_has_visual_product_affordances_not_only_text_blocks():
     assert "lifecycle" in page
     assert "status-dot" in page
     assert "memory-funnel" not in page
-    assert "服务健康" in page
-    assert "采集" in page and "抽取" in page and "上下文" in page and "遗忘" in page
+    assert "Agent 记忆服务可以正常使用" in page
+    assert "查看记忆" in page and "搜索记忆" in page and "精准遗忘" in page
     assert "acceptanceList" in page
     assert "acceptanceManualList" in page
     assert "acceptanceProgress" in page
@@ -136,9 +136,9 @@ def test_dashboard_declares_an_inline_favicon_to_avoid_console_noise():
 def test_dashboard_uses_product_language_and_collapses_technical_receipts():
     page = _dashboard_html()
 
-    assert "当前资料库：加载中" in page
+    assert "记忆空间：加载中" in page
     assert "命名空间：加载中" not in page
-    assert "验证记忆效果" in page
+    assert "运行任务" in page
     assert "一键体验流程" not in page
     assert '<option value="manual">手动输入</option>' in page
     assert '<option value="dashboard">本地控制台</option>' in page
@@ -182,9 +182,10 @@ def test_dashboard_adapts_status_grids_before_labels_wrap_vertically():
     assert ".grid.four, .health-matrix { grid-template-columns:repeat(2,minmax(0,1fr)); }" in page
     assert ".health-tile .health-title > span:not(.status-dot) { white-space:nowrap; }" in page
     assert "@media (max-width: 760px)" in page
-    assert "nav { display:flex; overflow-x:auto;" in page
-    assert "scroll-snap-type:x proximity;" in page
-    assert "requestedButton.scrollIntoView({block:'nearest', inline:'nearest'});" in page
+    assert "nav { display:grid; grid-template-columns:repeat(3,minmax(0,1fr));" in page
+    assert "@media (max-width: 480px)" in page
+    assert ".nav-group { display:block; grid-column:1 / -1;" in page
+    assert "nav button { width:100%; min-height:44px;" in page
 
 
 def test_dashboard_password_field_is_grouped_in_a_non_submitting_form():
@@ -341,7 +342,7 @@ def test_dashboard_applies_role_capabilities_before_exposing_privileged_actions(
     assert "当前访问权限不足" in page
     assert "loadSessionCapabilities().then" in page
     assert '<button data-tab="evidence" data-min-role="admin">审计与证据</button>' in page
-    assert '<button data-tab="diagnostics">系统维护</button>' in page
+    assert '<button data-tab="diagnostics" data-min-role="admin">系统维护</button>' in page
     assert '<section id="audit" data-min-role="admin">' in page
     assert '<section id="diagnostics">' in page
     assert '<section id="acceptance" data-min-role="admin">' in page
@@ -369,15 +370,15 @@ def test_dashboard_overview_uses_real_product_state_without_internal_paths_or_fi
     page = _dashboard_html()
 
     assert "当前记忆" in page
-    assert "当前资料库" in page
+    assert "记忆空间" in page
     assert "仅保存在本机" in page
     assert "<span>存储目录</span>" not in page
     assert "width:82%" not in page
     assert "width:64%" not in page
     assert "width:38%" not in page
     assert "条形图表示流程阶段" not in page
-    assert "等待输入" in page
-    assert "确认后执行" in page
+    assert "正在连接记忆服务" in page
+    assert "先预览影响，再确认执行" in page
 
 
 def test_dashboard_requires_a_current_forget_preview_before_confirmation():
@@ -448,11 +449,11 @@ def test_dashboard_uses_consolidated_memory_security_navigation():
         'data-tab="overview">总览</button>',
         'data-tab="agent">Agent 工作台</button>',
         'data-tab="memory">记忆中心</button>',
-        'data-tab="preferences">偏好与策略</button>',
-        'data-tab="sensitive">敏感保护</button>',
+        'data-tab="preferences">我的偏好</button>',
+        'data-tab="sensitive">内容保护</button>',
         'data-tab="forget">精准遗忘</button>',
         'data-tab="evidence" data-min-role="admin">审计与证据</button>',
-        'data-tab="diagnostics">系统维护</button>',
+        'data-tab="diagnostics" data-min-role="admin">系统维护</button>',
         'data-tab="acceptance" data-min-role="admin">本机验收</button>',
     ]
     for marker in expected:
@@ -468,10 +469,10 @@ def test_dashboard_product_hubs_reuse_existing_memory_and_evidence_flows():
     page = _dashboard_html()
 
     assert '<section id="memory">' in page
-    assert "写入记忆" in page
+    assert "添加记忆" in page
     assert "搜索记忆" in page
-    assert "生成 Agent 上下文" in page
-    assert "查看记忆详情" in page
+    assert "生成预览" in page
+    assert "查看详情" in page
     assert '<section id="sensitive">' in page
     assert "敏感文本测试" in page
     assert "最近敏感阻断" in page

@@ -625,22 +625,22 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     applyPageSpacing(layout);
     layout->addWidget(makeSectionHeader(
         QStringLiteral("user-home"),
-        QStringLiteral("日常使用概览"),
-        QStringLiteral("查看本机记忆安全状态，完成文件扫描、遗忘预览和常用入口操作。")));
+        QStringLiteral("我的记忆与安全"),
+        QStringLiteral("先确认记忆服务是否可用，再查看、搜索或遗忘本机记忆。")));
 
-    auto *healthBox = new QGroupBox(QStringLiteral("服务健康"));
+    auto *healthBox = new QGroupBox(QStringLiteral("当前保护状态"));
     auto *healthLayout = new QGridLayout(healthBox);
     applyPanelSpacing(healthLayout);
     applyGridRhythm(healthLayout);
     healthLayout->addWidget(makeStatusCard(
-                                QStringLiteral("服务运行"),
-                                QStringLiteral("记忆后台服务和本地接口是否可用。"),
+                                QStringLiteral("记忆服务"),
+                                QStringLiteral("Agent 是否可以读写本机记忆。"),
                                 &serviceStatusIcon_,
                                 &serviceStatusLabel_),
         0, 0);
     healthLayout->addWidget(makeStatusCard(
-                                QStringLiteral("操作记录完整性"),
-                                QStringLiteral("重要操作是否有完整记录。"),
+                                QStringLiteral("安全记录"),
+                                QStringLiteral("写入、保护和遗忘是否可追溯。"),
                                 &auditStatusIcon_,
                                 &auditStatusLabel_),
         0, 1);
@@ -651,8 +651,8 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
                                 &sdkStatusLabel_),
         1, 0);
     healthLayout->addWidget(makeStatusCard(
-                                QStringLiteral("桌面集成"),
-                                QStringLiteral("Peony 右键、控制中心和通知能力。"),
+                                QStringLiteral("桌面入口"),
+                                QStringLiteral("文件右键、通知和控制中心是否可用。"),
                                 &desktopStatusIcon_,
                                 &desktopStatusLabel_),
         1, 1);
@@ -695,71 +695,25 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     behaviorLayout->addWidget(refreshBehavior);
     layout->addWidget(behaviorBox);
 
-    auto *taskBox = new QGroupBox(QStringLiteral("常用操作"));
-    taskBox->setAccessibleName(QStringLiteral("普通用户常用入口"));
+    auto *taskBox = new QGroupBox(QStringLiteral("我的记忆"));
+    taskBox->setAccessibleName(QStringLiteral("普通用户记忆操作"));
     auto *taskLayout = new QGridLayout(taskBox);
     applyPanelSpacing(taskLayout);
     applyGridRhythm(taskLayout);
-    auto *openConsole = makeOperationButton(QStringLiteral("applications-internet"), QStringLiteral("打开本地控制台"), QStringLiteral("打开 MemGuardOS 本地控制台"));
-    auto *openAgent = makeOperationButton(QStringLiteral("system-run"), QStringLiteral("打开 Agent 工作台"), QStringLiteral("查看 Agent 交互、偏好生效和遗忘验证"));
-    auto *runJourney = makeOperationButton(QStringLiteral("media-playback-start"), QStringLiteral("运行体验流程"), QStringLiteral("运行一次本地可复现的记忆写入、使用、保护和遗忘流程"));
-    auto *openFiles = makeOperationButton(QStringLiteral("system-file-manager"), QStringLiteral("打开文件管理器"), QStringLiteral("打开文件管理器后可右键文件进行记忆扫描"));
-    auto *forgetEntry = makeOperationButton(QStringLiteral("edit-delete"), QStringLiteral("查看遗忘入口"), QStringLiteral("打开本地控制台查看记忆遗忘入口"));
-    auto *refreshNow = makeOperationButton(QStringLiteral("view-refresh"), QStringLiteral("重新检查状态"), QStringLiteral("重新检查 MemGuardOS 状态"));
-    taskLayout->addWidget(openConsole, 0, 0);
-    taskLayout->addWidget(openFiles, 0, 1);
-    taskLayout->addWidget(forgetEntry, 1, 0);
+    taskLayout->addWidget(makeMutedLabel(QStringLiteral("日常使用只保留最常用的记忆操作。查看、搜索和遗忘会打开对应页面；服务控制、日志和系统授权位于【管理员】。")), 0, 0, 1, 2);
+    auto *openConsole = makeOperationButton(QStringLiteral("view-list-details"), QStringLiteral("查看记忆"), QStringLiteral("打开记忆中心查看编号、来源和作用范围"));
+    auto *refreshNow = makeOperationButton(QStringLiteral("system-search"), QStringLiteral("搜索记忆"), QStringLiteral("打开记忆中心搜索相关记忆"));
+    auto *forgetEntry = makeOperationButton(QStringLiteral("edit-delete"), QStringLiteral("精准遗忘"), QStringLiteral("打开精准遗忘并先预览影响范围"));
+    auto *openFiles = makeOperationButton(QStringLiteral("system-file-manager"), QStringLiteral("从文件导入"), QStringLiteral("打开文件管理器后右键扫描文件"));
+    auto *openAgent = makeOperationButton(QStringLiteral("system-run"), QStringLiteral("Agent 工作台"), QStringLiteral("查看 Agent 交互和偏好生效"));
+    auto *runJourney = makeOperationButton(QStringLiteral("media-playback-start"), QStringLiteral("验证记忆效果"), QStringLiteral("运行一次可复现的记忆使用验证"));
+    taskLayout->addWidget(openConsole, 1, 0);
     taskLayout->addWidget(refreshNow, 1, 1);
-    taskLayout->addWidget(openAgent, 2, 0);
-    taskLayout->addWidget(runJourney, 2, 1);
-    taskLayout->addWidget(makeMutedLabel(QStringLiteral("日常操作只保留常用入口：查看服务状态、用文件管理器右键扫描文件、在本地控制台预览遗忘影响范围。日志、内核保护和系统授权放在【管理员】页。")), 3, 0, 1, 2);
+    taskLayout->addWidget(forgetEntry, 2, 0);
+    taskLayout->addWidget(openFiles, 2, 1);
+    taskLayout->addWidget(openAgent, 3, 0);
+    taskLayout->addWidget(runJourney, 3, 1);
     layout->addWidget(taskBox);
-
-    auto *flowBox = new QGroupBox(QStringLiteral("记忆治理流程"));
-    auto *flowLayout = new QVBoxLayout(flowBox);
-    applyPanelSpacing(flowLayout);
-    auto *flowTitle = new QLabel(QStringLiteral("保存 → 理解 → 使用 → 遗忘"));
-    QFont flowFont = flowTitle->font();
-    flowFont.setBold(true);
-    flowFont.setPointSizeF(flowFont.pointSizeF() * 1.1);
-    flowTitle->setFont(flowFont);
-    flowTitle->setAlignment(Qt::AlignCenter);
-    auto *flowHint = new QLabel(QStringLiteral("普通用户主要确认服务是否正常、查看文件是否安全、遗忘不再需要的记忆；管理员负责操作记录校验、系统授权、系统报告和高风险维护。"));
-    flowHint->setWordWrap(true);
-    flowLayout->addWidget(flowTitle);
-    flowLayout->addWidget(flowHint);
-    layout->addWidget(flowBox);
-
-    auto *userBox = new QGroupBox(QStringLiteral("普通用户关注项"));
-    auto *userLayout = new QGridLayout(userBox);
-    applyPanelSpacing(userLayout);
-    applyGridRhythm(userLayout);
-    userLayout->addWidget(makeStatusCard(
-                              QStringLiteral("记忆服务"),
-                              QStringLiteral("确认 Agent 是否可以读写本机记忆。"),
-                              nullptr,
-                              nullptr),
-        0, 0);
-    userLayout->addWidget(makeStatusCard(
-                              QStringLiteral("文件安全"),
-                              QStringLiteral("通过 Peony 右键检查文件是否适合导入。"),
-                              nullptr,
-                              nullptr),
-        0, 1);
-    userLayout->addWidget(makeStatusCard(
-                              QStringLiteral("已保护敏感内容"),
-                              QStringLiteral("发现高风险内容时会跳过保存，并留下操作记录。"),
-                              nullptr,
-                              nullptr),
-        1, 0);
-    userLayout->addWidget(makeStatusCard(
-                              QStringLiteral("遗忘指定记忆"),
-                              QStringLiteral("在本地控制台先预览影响范围，再确认遗忘。"),
-                              nullptr,
-                              nullptr),
-        1, 1);
-    layout->addWidget(userBox);
-
     auto *recommendationBox = new QGroupBox(QStringLiteral("处理建议"));
     auto *recommendationLayout = new QVBoxLayout(recommendationBox);
     applyPanelSpacing(recommendationLayout);
@@ -844,18 +798,15 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
         overviewDetailsToggle_->setArrowType(checked ? Qt::DownArrow : Qt::RightArrow);
         overviewDetailsPanel_->setVisible(checked);
     });
-    connect(openConsole, &QPushButton::clicked, this, &MemGuardUkccPlugin::openDashboard);
+    connect(openConsole, &QPushButton::clicked, this, [this]() { openDashboardTarget(QStringLiteral("#memory")); });
     connect(openAgent, &QPushButton::clicked, this, [this]() { openDashboardTarget(QStringLiteral("#agent")); });
     connect(runJourney, &QPushButton::clicked, this, &MemGuardUkccPlugin::runUserJourney);
     connect(openFiles, &QPushButton::clicked, this, [this]() {
         QDesktopServices::openUrl(QUrl::fromLocalFile(QDir::homePath()));
         appendHistory(QStringLiteral("打开文件管理器"), true, QStringLiteral("已打开文件管理器。选择文本文件后可通过 Peony 右键执行 MemGuardOS 记忆扫描。"));
     });
-    connect(forgetEntry, &QPushButton::clicked, this, [this]() {
-        appendHistory(QStringLiteral("查看遗忘入口"), true, QStringLiteral("已打开本地控制台。进入记忆列表后可先预览影响范围，再确认遗忘。"));
-        openDashboard();
-    });
-    connect(refreshNow, &QPushButton::clicked, this, &MemGuardUkccPlugin::refreshStatus);
+    connect(forgetEntry, &QPushButton::clicked, this, [this]() { openDashboardTarget(QStringLiteral("#forget")); });
+    connect(refreshNow, &QPushButton::clicked, this, [this]() { openDashboardTarget(QStringLiteral("#memory")); });
     connect(refreshBehavior, &QPushButton::clicked, this, [this]() {
         runMemctl({QStringLiteral("feedback-home"), QStringLiteral("--limit"), QStringLiteral("6")}, QStringLiteral("feedback"));
     });
@@ -1772,4 +1723,3 @@ void MemGuardUkccPlugin::showError(const QString &title, const QString &message)
 {
     QMessageBox::critical(page_, title, message.left(1600));
 }
-

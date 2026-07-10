@@ -111,15 +111,24 @@ def main() -> int:
             "page_ok": page_status == 200 and "MemGuardOS 记忆安全中心" in page,
             "diagnostics_tab_ok": "系统维护" in page and "管理员视图" in page,
             "diagnostics_export_button_ok": "导出系统报告" in page,
-            "enterprise_overview_ok": "能力概览" in page and "常用工作流" in page,
-            "delivery_readiness_ok": "系统健康度" in page and "推荐操作路径" in page and "风险处置建议" in page,
-            "product_workbench_ok": "治理闭环" in page and "今日工作流" in page and "系统报告内容清单" in page,
+            "enterprise_overview_ok": "overview-status-banner" in page
+            and "最近记忆" in page
+            and "最近动态" in page,
+            "delivery_readiness_ok": "overview-primary-actions" in page
+            and "查看记忆" in page
+            and "搜索记忆" in page
+            and "精准遗忘" in page,
+            "product_workbench_ok": "memory-workspace" in page
+            and "memory-result-row" in page
+            and "更多相关结果" in page,
             "consolidated_navigation_ok": "记忆中心" in page
-            and "偏好与策略" in page
-            and "敏感保护" in page
+            and "我的偏好" in page
+            and "内容保护" in page
             and "审计与证据" in page,
             "sensitive_protection_ok": "敏感文本测试" in page and "最近敏感阻断" in page,
-            "memory_value_visual_ok": "记忆价值指标" in page and "重复尝试" in page and "工具选择命中" in page,
+            "memory_value_visual_ok": "agentMetrics" in page
+            and "交互记录" in page
+            and "三阶段上下文对比" in page,
             "forget_confirmation_copy_ok": "遗忘二次确认" in page and "影响范围预览" in page,
             "competition_copy_absent": "benchmark 用例/种子" not in page and "能力证据总览" not in page and "演示" not in page,
             "acceptance_review_ok": "复核中心" in page
@@ -134,10 +143,11 @@ def main() -> int:
             and "处理建议" in page
             and "最后刷新" not in page
             and "toLocaleTimeString" not in page,
-            "traffic_light_status_ok": "红黄绿状态" in page,
-            "rag_visual_ok": "候选选择轨迹" in page,
-            "forget_candidate_visual_ok": "候选会以卡片形式列出" in page,
-            "agent_workspace_ok": "Agent 交互治理" in page and "三阶段上下文对比" in page,
+            "traffic_light_status_ok": "overview-status-banner.warn" in page
+            and "overview-status-banner.bad" in page,
+            "rag_visual_ok": "renderContextVisual" in page and "selectionReasonLabel" in page,
+            "forget_candidate_visual_ok": "候选编号、匹配依据和作用范围" in page,
+            "agent_workspace_ok": "Agent 工作台" in page and "三阶段上下文对比" in page,
             "role_split_ok": "普通用户" in page and "个人工作台" in page and "系统维护" in page and "详细记录" in page,
             "token_session_storage_ok": "sessionStorage" in page and "localStorage" not in page,
             "html_security_headers_ok": _security_headers_ok(page_headers, expect_csp=True),

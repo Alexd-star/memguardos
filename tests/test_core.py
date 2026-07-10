@@ -32,6 +32,7 @@ from memguard.eval.run_eval import run as run_eval
 from memguard.retrieval.hybrid import HybridRetriever
 from memguard.retrieval.kylin_sdk import KylinEmbeddingBackend, kylin_sdk_status
 from memguard.retrieval.conflict import preference_topic
+from memguard.models import MemorySource, make_memory
 from memguard.daemon import daemon_health_snapshot, run_daemon
 from memguard.store.sqlite_meta import SQLiteMetaStore
 from scripts.demo_smoke import main as demo_smoke_main
@@ -617,6 +618,156 @@ def test_search_cache_uses_store_revision_and_invalidates_after_write(tmp_path, 
         service.close()
 
 
+def test_ingest_exact_duplicate_reuses_existing_memory(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        first = service.ingest_text("以后搜索代码时优先使用 rg。", source_kind="manual")
+        second = service.ingest_text("  以后搜索代码时优先使用   rg。  ", source_kind="manual")
+
+        assert first["stored"] is True
+        assert second["stored"] is False
+        assert second["duplicate"] is True
+        assert second["record"].memory_id == first["record"].memory_id
+        assert len(service.list_memories()) == 1
+        skipped = second["feedback"]["skipped_items"]
+        assert skipped and "已存在" in skipped[0]["summary_for_user"]
+        assert service.audit(event_type="ingest_duplicate")[0]["memory_id"] == first["record"].memory_id
+    finally:
+        service.close()
+
+
+def test_search_collapses_existing_duplicate_records_and_explains_match(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        first = service.ingest_text("systemd MemoryMax 可以限制 openKylin 服务内存。", source_kind="manual")["record"]
+        duplicate = make_memory(
+            content=first.content,
+            memory_type=first.type,
+            source=MemorySource(kind="import", uri="legacy-duplicate"),
+            summary=first.summary,
+            subtype=first.subtype,
+            scope=first.scope,
+            tier=first.tier,
+            sensitivity=first.sensitivity,
+        )
+        service.store.append(duplicate)
+        service.meta.upsert_memory(duplicate)
+
+        hits = service.search("systemd MemoryMax 服务内存", limit=5, audit=False)
+
+        matching = [item for item in hits if item["memory_id"] in {first.memory_id, duplicate.memory_id}]
+        assert len(matching) == 1
+        assert matching[0]["rank"] == 1
+        assert matching[0]["duplicate_count"] == 2
+        assert set(matching[0]["duplicate_memory_ids"]) == {first.memory_id, duplicate.memory_id}
+        assert matching[0]["match_reason"]
+    finally:
+        service.close()
+
+
+def test_feedback_home_groups_same_user_facing_memory_summary(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        for source_uri, content in (
+            ("session-a", "Agent observation A: 以后查代码优先使用 rg。"),
+            ("session-b", "Agent observation B: 以后查代码优先使用 rg。"),
+        ):
+            record = make_memory(
+                content=content,
+                memory_type="preference",
+                source=MemorySource(kind="agent", uri=source_uri),
+                summary="用户偏好：以后查代码优先使用 rg。",
+                subtype="tool_preference",
+                scope="default",
+                tier="long_term",
+            )
+            service.store.append(record)
+            service.meta.upsert_memory(record)
+
+        recent = service.feedback_home_snapshot(limit=8)["recent_memories"]
+        hits = service.search("rg 代码搜索", limit=5, audit=False)
+
+        assert len(recent) == 1
+        assert recent[0]["duplicate_count"] == 2
+        assert len(recent[0]["duplicate_memory_ids"]) == 2
+        matching = [item for item in hits if item.get("preference_topic") == "code_search_tool" or "rg" in str(item.get("content", ""))]
+        assert len(matching) == 1
+        assert matching[0]["duplicate_count"] == 2
+    finally:
+        service.close()
+
+
+def test_feedback_home_groups_equivalent_structured_preferences(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        for source_uri, content, summary in (
+            ("session-a", "以后查代码优先使用 rg。", "用户偏好：以后查代码优先使用 rg。"),
+            ("session-b", "代码检索工具请选择 rg。", "用户偏好：代码搜索工具为 rg，适用于全部会话。"),
+        ):
+            record = make_memory(
+                content=content,
+                memory_type="preference",
+                source=MemorySource(kind="agent", uri=source_uri),
+                summary=summary,
+                subtype="tool_preference",
+                scope="default",
+                tier="long_term",
+                preference_topic="code_search_tool",
+                preference_value="rg",
+                preference_scope="global",
+            )
+            service.store.append(record)
+            service.meta.upsert_memory(record)
+
+        recent = service.feedback_home_snapshot(limit=8)["recent_memories"]
+
+        assert len(recent) == 1
+        assert recent[0]["duplicate_count"] == 2
+        assert len(recent[0]["duplicate_memory_ids"]) == 2
+    finally:
+        service.close()
+
+
+def test_legacy_and_structured_tool_preferences_share_one_visible_group(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        legacy = make_memory(
+            content="以后查代码优先使用 rg。",
+            memory_type="preference",
+            source=MemorySource(kind="agent", uri="legacy-session"),
+            summary="用户偏好：以后查代码优先使用 rg。",
+            subtype="tool_preference",
+            scope="default",
+            tier="long_term",
+        )
+        structured = make_memory(
+            content="用户与 Agent 的显式偏好：topic=code_search_tool value=rg preference_scope=global",
+            memory_type="preference",
+            source=MemorySource(kind="agent_interaction", uri="current-session"),
+            summary="用户交互偏好：code_search_tool=rg（global）",
+            subtype="tool_preference",
+            scope="default",
+            tier="long_term",
+            preference_topic="code_search_tool",
+            preference_value="rg",
+            preference_scope="global",
+        )
+        for record in (legacy, structured):
+            service.store.append(record)
+            service.meta.upsert_memory(record)
+
+        recent = service.feedback_home_snapshot(limit=8)["recent_memories"]
+        hits = service.search("rg 代码搜索", limit=5, audit=False)
+
+        assert len(recent) == 1
+        assert recent[0]["duplicate_count"] == 2
+        matching = [item for item in hits if item["memory_id"] in {legacy.memory_id, structured.memory_id}]
+        assert len(matching) == 1
+        assert matching[0]["duplicate_count"] == 2
+    finally:
+        service.close()
+
+
 def test_search_candidates_skip_fallback_when_fts_fills_budget(tmp_path, monkeypatch):
     service = make_service(tmp_path)
     try:
@@ -819,6 +970,33 @@ def test_auto_retrieval_can_use_successful_kylin_embedding_probe(monkeypatch):
     assert ranked[0][1]["memory_id"] == "m1"
     assert all(record["_vector_backend"] == "kylin_sdk" for _, record in ranked)
     assert retriever.status()["last_backend_used"] == "kylin_sdk"
+
+
+def test_auto_retrieval_passes_remaining_latency_budget_to_kylin(monkeypatch):
+    observed_timeouts = []
+
+    def fake_embed(text, timeout_seconds, include_vector=True):
+        observed_timeouts.append(timeout_seconds)
+        vector = [1.0, 0.0, 0.0] if "systemd" in text.lower() else [0.0, 1.0, 0.0]
+        return {"ok": True, "dim": 3, "vector": vector}
+
+    monkeypatch.setattr(KylinEmbeddingBackend, "embed_in_subprocess", staticmethod(fake_embed))
+    retriever = HybridRetriever(embedding_backend="auto")
+    retriever.kylin_rerank_budget_ms = 160.0
+    records = [
+        {
+            "memory_id": "m1",
+            "type": "knowledge",
+            "summary": "systemd MemoryMax",
+            "content": "限制 openKylin 服务内存",
+        }
+    ]
+
+    ranked = retriever.rank("systemd MemoryMax", records, limit=1)
+
+    assert ranked
+    assert observed_timeouts
+    assert all(0.01 <= timeout <= 0.16 for timeout in observed_timeouts)
 
 
 def test_platform_default_backend_prefers_auto_only_on_openkylin(monkeypatch):
@@ -1613,4 +1791,3 @@ def test_local_api_internal_errors_are_auditable_without_leaking_details(tmp_pat
         assert "secret" not in json.dumps(detail, ensure_ascii=False)
     finally:
         service.close()
-
