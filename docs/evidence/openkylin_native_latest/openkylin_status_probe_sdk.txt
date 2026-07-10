@@ -1,5 +1,5 @@
 $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
-[1783593171289] [32minfo [0m Proxy init engine sessionId:1660073003.
+Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock: Could not connect: Connection refused
 {
   "schema": "memguardos-openkylin-native-status-v1",
   "system": {
@@ -221,32 +221,22 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
       },
       "session": {
         "created": true,
-        "init_code": 0,
-        "init_ok": true,
-        "init_code_hint": "success",
-        "model_info_ok": true
+        "init_code": 3,
+        "init_ok": false,
+        "init_code_hint": "runtime connection error; recreate session after checking kylin-ai-runtime"
       },
-      "model_info": {
-        "dim": 768,
-        "name": "ensemble-embd_gte-base_uint8-text",
-        "ondevice": true
-      },
+      "model_info": null,
       "embedding_probe": {
-        "ok": true,
-        "dim": 768,
-        "sample": [
-          -0.086721,
-          -0.023629,
-          -0.007548,
-          0.027401,
-          0.011692
-        ],
+        "ok": false,
+        "error": "failed to initialize text embedding session",
+        "init_code": 3,
+        "init_code_hint": "runtime connection error; recreate session after checking kylin-ai-runtime",
         "subprocess_returncode": 0,
-        "stderr_tail": "[1783593171386] \u001b[32minfo \u001b[0m Proxy init engine sessionId:624007070."
+        "stderr_tail": "Error connecting to D-Bus address unix:path=/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock: Could not connect: Connection refused"
       },
-      "available": true,
-      "inference_ready": true,
-      "ready_for_default_retrieval": true,
+      "available": false,
+      "inference_ready": false,
+      "ready_for_default_retrieval": false,
       "fallback": "hash_embedding",
       "diagnosis": {
         "success_condition": "library_loadable and model_info and embedding_probe.ok",
@@ -254,21 +244,21 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
         "probe_meaning": "embedding_probe is null when sdk-status runs without --probe-embedding; use --probe-embedding to verify real inference readiness.",
         "timeout_hint": "If model_info is present but embedding_probe returns 'Timeout was reached', inspect kylin-ai-runtime sockets, kytensor.service, Triton repository index, ondevice plugin logs, and model repository links."
       },
-      "capability_state": "inference_ready",
-      "component_ready": true,
-      "user_message": "推理就绪，可作为端侧检索增强",
-      "next_action": "可继续使用，也可定期导出诊断报告",
+      "capability_state": "probe_failed",
+      "component_ready": false,
+      "user_message": "已安装，但端侧增强检查未通过",
+      "next_action": "默认检索不受影响；需要端侧增强时请点击“预热 Kylin SDK”后重试",
       "product_state": {
-        "installed": true,
-        "last_probe_success": true,
-        "last_success_at": "2026-07-09T18:26:53+08:00",
-        "last_success_dim": 768,
-        "last_success_model": "ensemble-embd_gte-base_uint8-text",
+        "installed": false,
+        "last_probe_success": false,
+        "last_success_at": "",
+        "last_success_dim": null,
+        "last_success_model": "",
         "last_failure_at": "",
         "last_failure_reason": "",
-        "warmup_state": "ready",
+        "warmup_state": "unavailable",
         "fallback": "hash_embedding",
-        "user_message": "已安装，最近一次端侧向量预热成功"
+        "user_message": "未检测到端侧向量组件"
       }
     },
     "vector_store": {
@@ -335,21 +325,21 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
     "diagnosis_code": "ready",
     "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": "17657856",
+      "cgroup_memory_current": "15654912",
       "cgroup_memory_max": "536870912"
     },
     "cpu": {
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 5530860,
-        "user_usec": 3027782,
-        "system_usec": 2503078,
+        "usage_usec": 270806,
+        "user_usec": 171336,
+        "system_usec": 99469,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 3002,
-        "nr_throttled": 5,
-        "throttled_usec": 200007,
+        "nr_periods": 87,
+        "nr_throttled": 2,
+        "throttled_usec": 84007,
         "nr_bursts": 0,
         "burst_usec": 0
       }
@@ -359,28 +349,28 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
   "namespace": {
     "namespace": "default",
     "is_default": true,
-    "home": "/home/luo/.memguardos",
+    "home": "/var/tmp/memguardos-native-home.aulsQd",
     "home_exists": true,
-    "namespace_home": "/home/luo/.memguardos",
+    "namespace_home": "/var/tmp/memguardos-native-home.aulsQd",
     "namespace_home_exists": true,
-    "store_path": "/home/luo/.memguardos/memory.segment",
-    "db_path": "/home/luo/.memguardos/memguard.sqlite3",
-    "custom_patterns_path": "/home/luo/.memguardos/sensitive_patterns.json",
-    "store_exists": true,
-    "db_exists": true,
+    "store_path": "/var/tmp/memguardos-native-home.aulsQd/memory.segment",
+    "db_path": "/var/tmp/memguardos-native-home.aulsQd/memguard.sqlite3",
+    "custom_patterns_path": "/var/tmp/memguardos-native-home.aulsQd/sensitive_patterns.json",
+    "store_exists": false,
+    "db_exists": false,
     "custom_patterns_exists": false,
-    "store_bytes": 432503,
-    "db_bytes": 1363968,
-    "record_count": 193,
-    "live_record_count": 155,
-    "audit_event_count": 1439
+    "store_bytes": 0,
+    "db_bytes": 0,
+    "record_count": 0,
+    "live_record_count": 0,
+    "audit_event_count": 0
   },
   "summary": {
-    "overall": "green",
-    "readiness_score": 1.0,
-    "green": 7,
+    "overall": "yellow",
+    "readiness_score": 0.8571,
+    "green": 6,
     "yellow": 0,
-    "red": 0
+    "red": 1
   },
   "components": [
     {
@@ -400,12 +390,12 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
     {
       "name": "kylin_embedding",
       "label": "Kylin embedding SDK",
-      "available": true,
-      "ready": true,
-      "level": "green",
-      "user_message": "推理就绪，可作为端侧检索增强",
-      "next_action": "可继续使用，也可定期导出诊断报告",
-      "capability_state": "inference_ready"
+      "available": false,
+      "ready": false,
+      "level": "red",
+      "user_message": "已安装，但端侧增强检查未通过",
+      "next_action": "默认检索不受影响；需要端侧增强时请点击“预热 Kylin SDK”后重试",
+      "capability_state": "probe_failed"
     },
     {
       "name": "kylin_vector",
@@ -439,5 +429,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
       "level": "green"
     }
   ],
-  "recommendations": []
+  "recommendations": [
+    "Kylin embedding SDK 端侧增强暂未就绪，默认检索不受影响；需要端侧增强时请点击“预热 Kylin SDK”后重试。"
+  ]
 }

@@ -1,16 +1,16 @@
 {
   "schema_version": "1.0",
-  "file_count": 19,
+  "file_count": 20,
   "files": [
     {
       "path": "deb_lifecycle.txt",
-      "bytes": 224,
-      "sha256": "4f78d1652ba8034130ac9871de0b9a57b13362b0b449146cacd9dd6e95d48714"
+      "bytes": 294,
+      "sha256": "3eea316f04f3cb84752401e7d218858a2db9438f6da4caaf7dc73685620862aa"
     },
     {
       "path": "debian_packages.txt",
       "bytes": 9707,
-      "sha256": "54f435a6c8d9bf396e44f687f210071984184dbce11b48f4d61922f46e920d79"
+      "sha256": "4214203e8ed02f5d5570ab7fed306cbac1f3d012f0a2f591df00e461d3f26644"
     },
     {
       "path": "desktop_build.txt",
@@ -20,7 +20,7 @@
     {
       "path": "desktop_plugins.txt",
       "bytes": 5975,
-      "sha256": "1c540c1197349624159efccee495cbc391670e87251490e9a00893088444776e"
+      "sha256": "bde69d4848b6a8040f0aeddbd8de719a4baf9111eb88820452baf07bddd3945c"
     },
     {
       "path": "environment.txt",
@@ -39,63 +39,68 @@
     },
     {
       "path": "kylin_warmup.txt",
-      "bytes": 373,
-      "sha256": "9c163925862ff63e65e0c8c0f8940996dde2a1f0e1860e765334b470d21ee31f"
+      "bytes": 363,
+      "sha256": "85af9e7ffe3c3e8bb5f2579f2a611adb81bcd257512bb8b41752ebfbd8688b6a"
     },
     {
       "path": "manifest_refresh.txt",
       "bytes": 122,
-      "sha256": "75fb651d62d9d0e4021504cf7db81a1971dcb098f6cd71d87f2956e310568463"
+      "sha256": "e1a83606a20eefd595e014ef87a948a0508f14a35f811b2a787ed2285a894414"
     },
     {
       "path": "openkylin_status.txt",
-      "bytes": 8823,
-      "sha256": "2d0f937dbda732b66d9169ef56354b9bd3fca782bb731d1a817daffd37da713e"
+      "bytes": 8757,
+      "sha256": "289643235db55da18a8b7f4812e784d0c0b265bacea04b8606e1124e4cd2bf90"
     },
     {
       "path": "openkylin_status_probe_sdk.txt",
-      "bytes": 14370,
-      "sha256": "38541c6a305c884960b3e885efdd545a52f9666a629452ff232f0986d534dc52"
+      "bytes": 14698,
+      "sha256": "27de0520d2682877bbfa9163ff69ebf95dcdadd0b22e34734061256885a12449"
     },
     {
       "path": "peony_batch_apply.json",
-      "bytes": 2172,
-      "sha256": "53b371859d8dd595f3450b8344a8b853ce475061fad04178313ae9746fde14c5"
+      "bytes": 6923,
+      "sha256": "4a610349bddb1ffae7e6cc6ca024bd376d561b3bc311056f9e9b0239df0575d0"
     },
     {
       "path": "peony_batch_preview.json",
-      "bytes": 2469,
-      "sha256": "e4a020ac359c083620c544482174d489b46789919c9d587d92ed92599d49a889"
+      "bytes": 2844,
+      "sha256": "d86c03418bc1ea8cc11db194874a62be49a3f49013c10050eed03c6322906aed"
     },
     {
       "path": "peony_sensitive_preview.json",
-      "bytes": 1697,
-      "sha256": "60323ea0099bc4c2a5a8cc1ba6511614e27ba88f99b1d32787d44205dda4f5d0"
+      "bytes": 1992,
+      "sha256": "06d620b75a497de45eebbda773dbb10647e909c99117978d985a789a230e6e10"
     },
     {
       "path": "polkit_assets.txt",
       "bytes": 3099,
-      "sha256": "3ebc9b53103429561a5d514c1dee12794f78b2e2d5512feb855dd21658b9a123"
+      "sha256": "a4eaee82bad605e89945141906d457f281f57c2bc69b32fe0095f14afb8b559b"
     },
     {
       "path": "pytest_openkylin.txt",
       "bytes": 484,
-      "sha256": "a45b0cabfaab3347f7c848df1fd258b87ce152c688f7f18e56f26a3b4f5b3c88"
+      "sha256": "5b1b33f3426055f1adc78576430869e7b43da091b8eec09db905189f69d7232a"
     },
     {
       "path": "source_revision.json",
       "bytes": 163,
-      "sha256": "417c0deb4bcabb60d6a9e63d5843b8a0f03cccd07b2ca1209b7bf57f70e1dde6"
+      "sha256": "bf668ccfdcb9db01351f11f4d2baeab51e2b6c32befd32daf89b3dbedf115d8e"
     },
     {
       "path": "systemd_cgroup.txt",
-      "bytes": 788,
-      "sha256": "9fa63506cedf1ddf749191f107992d1cace1bedf3bd85f53c85ff13c0d896bc1"
+      "bytes": 781,
+      "sha256": "609e88419083a47027bc965cdee2f762ec358a6849c74fe46f5c4d0522bb9be5"
     },
     {
       "path": "tray_assets.txt",
       "bytes": 3148,
-      "sha256": "3ba49fca22686a4f9cb0b5f8d4be4c852098aa3ec7b9c46b6cd49910a593352b"
+      "sha256": "3d643f6fbdeee15a94d5db80bc849d5812e96747289e0e67a2460efcfe84b153"
+    },
+    {
+      "path": "user_cli.txt",
+      "bytes": 1269,
+      "sha256": "e89cbea2fab655013b734625d33ad63fb55d54d95b17489c7cdefd1f8ea1aee9"
     }
   ]
 }

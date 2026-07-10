@@ -1,11 +1,11 @@
 {
   "schema": "memguardos-desktop-scan-manifest-v1",
   "ok": true,
-  "manifest_id": "3868cccf-5602-4db1-85b2-443c7b7fc602",
-  "nonce": "i0Xj3-hZ7xRCxx04Du54T-D2CeMu_xPt",
+  "manifest_id": "e47250fe-25ef-4441-aa60-967dbfb39395",
+  "nonce": "qupGuMxxgT-s_hJgojVDNeaGC2Vo9jmy",
   "namespace": "default",
-  "created_at": 1783593172.1337864,
-  "expires_at": 1783593472.1337864,
+  "created_at": 1783648042.3542168,
+  "expires_at": 1783648342.3542168,
   "used": false,
   "limits": {
     "max_files": 100,
@@ -16,7 +16,7 @@
   "items": [
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.nfiPbuCsHL/peony_preference.md",
+      "path": "/var/tmp/tmp.Qow9z3Djkr/peony_preference.md",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 57,
@@ -25,7 +25,13 @@
       "sensitivity": {
         "level": "none",
         "labels": [],
-        "redacted": false
+        "redacted": false,
+        "decision_reason": {
+          "matched_pattern": [],
+          "allowlist_hit": [],
+          "source_uri_sensitive": false,
+          "final_action": "allow"
+        }
       },
       "preview": "以后回答 openKylin 问题时先给可复制命令。",
       "warnings": [],
@@ -44,15 +50,15 @@
       "fingerprint": {
         "exists": true,
         "device": 2053,
-        "inode": 1861833,
+        "inode": 1861698,
         "size": 57,
-        "mtime_ns": 1783593172012727432,
+        "mtime_ns": 1783648042227303598,
         "mode": 33204
       }
     },
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.nfiPbuCsHL/peony_knowledge.txt",
+      "path": "/var/tmp/tmp.Qow9z3Djkr/peony_knowledge.txt",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 61,
@@ -61,7 +67,13 @@
       "sensitivity": {
         "level": "none",
         "labels": [],
-        "redacted": false
+        "redacted": false,
+        "decision_reason": {
+          "matched_pattern": [],
+          "allowlist_hit": [],
+          "source_uri_sensitive": false,
+          "final_action": "allow"
+        }
       },
       "preview": "systemd MemoryMax 可以限制后台记忆服务的内存。",
       "warnings": [],
@@ -80,13 +92,13 @@
       "fingerprint": {
         "exists": true,
         "device": 2053,
-        "inode": 1861835,
+        "inode": 1861699,
         "size": 61,
-        "mtime_ns": 1783593172012727432,
+        "mtime_ns": 1783648042227303598,
         "mode": 33204
       }
     }
   ],
-  "signature": "2df76d51513b47712df75d455a08ece3103792267e4ef1ac95620a937221ba27",
-  "manifest_path": "/home/luo/.memguardos/desktop-scans/3868cccf-5602-4db1-85b2-443c7b7fc602.json"
+  "signature": "2b6d2c512711bd99aa189fe15975f86f6bddeed55c240b3ea2ccaa7bc2095404",
+  "manifest_path": "/var/tmp/memguardos-native-home.aulsQd/desktop-scans/e47250fe-25ef-4441-aa60-967dbfb39395.json"
 }

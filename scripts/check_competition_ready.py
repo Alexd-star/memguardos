@@ -404,7 +404,7 @@ def check_formal_doc_consistency() -> List[Check]:
             "中文文档",
             "正式文档测试数字口径",
             not stale_test_hits,
-            "正式材料使用当前 318/318 测试口径" if not stale_test_hits else "过期数字：%s" % "、".join(stale_test_hits),
+            "正式材料使用当前 338/340 测试口径" if not stale_test_hits else "过期数字：%s" % "、".join(stale_test_hits),
         )
     )
     product_docs = [
