@@ -34,8 +34,9 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地当前工作树全量测试 | 338 passed, 2 skipped |
-| openKylin 最近已归档证据 | 340 passed（当前 Git HEAD e6a9b9b58b463b0ba8d2433f3e9b41355ad35ba0，openKylin 实机复验） |
+| 本地当前工作树全量测试 | 341 passed, 3 skipped |
+| openKylin 最近已归档证据 | 344 passed（证据源代码版本见 `source_revision.json`，openKylin 实机复验） |
+| openKylin systemd 服务重启 | 873 ms（服务恢复后为 active/running） |
 | openKylin 真实 Agent | OpenHands 1.28.1；原 12 组真实会话 12/12，新增 R13-R20 扩展 8/8，新增 holdout 留出盲测 8/8；合计 28 组均有证据 |
 | 本地 1k 负载 P95 | 0.429 ms |
 | openKylin 1k 负载 P95 | 8.904 ms |

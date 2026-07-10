@@ -46,7 +46,7 @@ bash scripts/collect_agent_evidence.sh
 
 最新结果：
 
-- 当前 Git HEAD `e6a9b9b58b463b0ba8d2433f3e9b41355ad35ba0` 的 openKylin 单元测试：`340 passed`，由 `docs/evidence/openkylin_native_latest/pytest_openkylin.txt` 记录。
+- 对应可执行代码基线的 openKylin 单元测试：`344 passed`，由 `docs/evidence/openkylin_native_latest/pytest_openkylin.txt` 记录，准确源代码版本见同目录 `source_revision.json`。
 - 真实 Agent：OpenHands 实际执行 `rg -n build_agent_context memguard` 并返回真实文件与行号
 - Agent 专项 benchmark：200 条，提取/遗忘/跨会话指标 1.0000，污染率/泄漏率 0，P95 113.97 ms
 - 负载评测：1000 条记忆，120 次检索请求
