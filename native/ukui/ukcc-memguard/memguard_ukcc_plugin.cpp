@@ -256,6 +256,17 @@ QPushButton *makeOperationButton(const QString &iconName, const QString &text, c
     return button;
 }
 
+void emphasizePrimaryAction(QPushButton *button)
+{
+    QPalette palette = button->palette();
+    palette.setColor(QPalette::Button, palette.color(QPalette::Highlight));
+    palette.setColor(QPalette::ButtonText, palette.color(QPalette::HighlightedText));
+    button->setPalette(palette);
+    button->setAutoFillBackground(true);
+    button->setDefault(true);
+    button->setIconSize(QSize(26, 26));
+}
+
 bool containsAny(const QString &text, const QStringList &keywords)
 {
     for (const QString &keyword : keywords) {
@@ -718,14 +729,17 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     auto *taskLayout = new QGridLayout(taskBox);
     applyPanelSpacing(taskLayout);
     applyGridRhythm(taskLayout);
-    taskLayout->addWidget(makeMutedLabel(QStringLiteral("日常使用只保留最常用的记忆操作。查看、搜索和遗忘会打开对应页面；服务控制、日志和系统授权位于【管理员】。")), 0, 0, 1, 2);
+    auto *taskHint = makeMutedLabel(QStringLiteral("查看、搜索、遗忘或导入本机记忆；管理功能位于【管理员】。"));
+    taskHint->setToolTip(QStringLiteral("日常使用只保留最常用的记忆操作。查看、搜索和遗忘会打开对应页面；服务控制、日志和系统授权位于【管理员】。"));
+    taskLayout->addWidget(taskHint, 0, 0, 1, 2);
     auto *openConsole = makeOperationButton(QStringLiteral("view-list-details"), QStringLiteral("查看记忆"), QStringLiteral("打开记忆中心查看编号、来源和作用范围"));
     auto *refreshNow = makeOperationButton(QStringLiteral("system-search"), QStringLiteral("搜索记忆"), QStringLiteral("打开记忆中心搜索相关记忆"));
     auto *forgetEntry = makeOperationButton(QStringLiteral("edit-delete"), QStringLiteral("精准遗忘"), QStringLiteral("打开精准遗忘并先预览影响范围"));
     auto *openFiles = makeOperationButton(QStringLiteral("system-file-manager"), QStringLiteral("从文件导入"), QStringLiteral("打开文件管理器后右键扫描文件"));
     auto *openAgent = makeOperationButton(QStringLiteral("system-run"), QStringLiteral("Agent 工作台"), QStringLiteral("查看 Agent 交互和偏好生效"));
     auto *runJourney = makeOperationButton(QStringLiteral("media-playback-start"), QStringLiteral("验证记忆效果"), QStringLiteral("运行一次可复现的记忆使用验证"));
-    openConsole->setDefault(true);
+    emphasizePrimaryAction(openConsole);
+    emphasizePrimaryAction(refreshNow);
     taskLayout->addWidget(openConsole, 1, 0);
     taskLayout->addWidget(refreshNow, 1, 1);
     taskLayout->addWidget(forgetEntry, 2, 0);
