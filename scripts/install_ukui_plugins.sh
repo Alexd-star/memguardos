@@ -44,4 +44,11 @@ install_plugin() {
 install_plugin "${PEONY_PLUGIN}" "${PEONY_DEST_DIR}" "libpeony-menu-plugin-memguardos.so" "peony-extensions"
 install_plugin "${UKCC_PLUGIN}" "${UKCC_DEST_DIR}" "libmemguardos-ukcc-plugin.so" "ukui-control-center"
 sudo ldconfig || true
-echo "Restart peony or ukui-control-center before UI verification."
+
+# comm truncates process names to 15 bytes, so pkill -x cannot match
+# ukui-control-center. Match the absolute executable path instead.
+if pgrep -f '^/usr/bin/ukui-control-center( |$)' >/dev/null 2>&1; then
+  pkill -f '^/usr/bin/ukui-control-center( |$)' || true
+  echo "closed running ukui-control-center; reopen Settings to load the updated plugin"
+fi
+echo "Restart Peony before verifying its context-menu plugin."

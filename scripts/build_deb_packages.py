@@ -288,7 +288,7 @@ class DebianPackageBuilder:
                     "command -v xdg-desktop-menu >/dev/null 2>&1 && xdg-desktop-menu forceupdate >/dev/null 2>&1 || true",
                     "command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -q /usr/share/icons/hicolor >/dev/null 2>&1 || true",
                     "command -v peony >/dev/null 2>&1 && peony -q >/dev/null 2>&1 || true",
-                    "command -v pkill >/dev/null 2>&1 && pkill -x ukui-control-center >/dev/null 2>&1 || true",
+                    "command -v pkill >/dev/null 2>&1 && pkill -f '^/usr/bin/ukui-control-center( |$)' >/dev/null 2>&1 || true",
                 ]
             )
             self._write_maintainer_script(stage / "DEBIAN/postinst", desktop_refresh)

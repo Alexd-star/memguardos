@@ -53,6 +53,14 @@ QIcon themedIcon(
     return icon.isNull() ? QApplication::style()->standardIcon(standardPixmap) : icon;
 }
 
+void applyNativePanelTone(QWidget *widget, QPalette::ColorRole sourceRole = QPalette::AlternateBase)
+{
+    QPalette palette = widget->palette();
+    palette.setColor(QPalette::Window, palette.color(sourceRole));
+    widget->setPalette(palette);
+    widget->setAutoFillBackground(true);
+}
+
 QString cleanedOutput(const QByteArray &raw)
 {
     QString text = QString::fromLocal8Bit(raw);
@@ -115,6 +123,7 @@ QString purposeText(const QString &purpose)
 QGroupBox *makeStatusCard(const QString &title, const QString &description, QLabel **iconOut, QLabel **statusOut)
 {
     auto *box = new QGroupBox(title);
+    box->setObjectName(QStringLiteral("statusCard"));
     auto *layout = new QHBoxLayout(box);
     layout->setContentsMargins(14, 12, 14, 12);
     layout->setSpacing(12);
@@ -125,6 +134,7 @@ QGroupBox *makeStatusCard(const QString &title, const QString &description, QLab
 
     auto *texts = new QVBoxLayout;
     auto *status = new QLabel(QStringLiteral("等待检查"));
+    status->setObjectName(QStringLiteral("statusValue"));
     QFont statusFont = status->font();
     statusFont.setBold(true);
     status->setFont(statusFont);
@@ -174,6 +184,7 @@ QLabel *makeMutedLabel(const QString &text);
 QWidget *makeSectionHeader(const QString &iconName, const QString &title, const QString &description)
 {
     auto *widget = new QWidget;
+    widget->setObjectName(QStringLiteral("sectionHeader"));
     auto *layout = new QHBoxLayout(widget);
     layout->setContentsMargins(0, 0, 0, 2);
     layout->setSpacing(12);
@@ -187,11 +198,13 @@ QWidget *makeSectionHeader(const QString &iconName, const QString &title, const 
     texts->setContentsMargins(0, 0, 0, 0);
     texts->setSpacing(2);
     auto *titleLabel = new QLabel(title);
+    titleLabel->setObjectName(QStringLiteral("sectionTitle"));
     QFont titleFont = titleLabel->font();
     titleFont.setBold(true);
     titleFont.setPointSizeF(titleFont.pointSizeF() * 1.08);
     titleLabel->setFont(titleFont);
     auto *body = makeMutedLabel(description);
+    body->setObjectName(QStringLiteral("sectionDescription"));
     texts->addWidget(titleLabel);
     texts->addWidget(body);
 
@@ -233,6 +246,7 @@ QToolButton *makeDisclosureButton(const QString &text, const QString &accessible
 QPushButton *makeOperationButton(const QString &iconName, const QString &text, const QString &accessibleName)
 {
     auto *button = new QPushButton(themedIcon(iconName, QStyle::SP_FileDialogDetailedView), text);
+    button->setObjectName(QStringLiteral("operationButton"));
     button->setMinimumHeight(44);
     button->setMaximumHeight(52);
     button->setMaximumWidth(220);
@@ -533,8 +547,7 @@ QWidget *MemGuardUkccPlugin::pluginUi()
         return page_;
 
     page_ = new QWidget;
-    const QPalette palette = page_->palette();
-    Q_UNUSED(palette);
+    page_->setObjectName(QStringLiteral("memguardRoot"));
     auto *layout = new QVBoxLayout(page_);
     applyPageSpacing(layout);
     layout->addWidget(makeSectionHeader(
@@ -543,6 +556,8 @@ QWidget *MemGuardUkccPlugin::pluginUi()
         QStringLiteral("管理本机 Agent 记忆、操作记录完整性、本机智能检索和桌面入口。")));
 
     auto *summaryBox = new QGroupBox(QStringLiteral("当前状态"));
+    summaryBox->setObjectName(QStringLiteral("statusBanner"));
+    applyNativePanelTone(summaryBox);
     auto *summaryLayout = new QHBoxLayout(summaryBox);
     applyPanelSpacing(summaryLayout);
     summaryIcon_ = new QLabel;
@@ -573,6 +588,15 @@ QWidget *MemGuardUkccPlugin::pluginUi()
     summaryText->addWidget(summaryTitle_);
     summaryText->addWidget(summaryDescription_);
     summaryText->addLayout(readinessRow);
+    resultSummary_ = new QLabel(QStringLiteral("最近操作：等待状态检查。"));
+    resultSummary_->setObjectName(QStringLiteral("feedbackBar"));
+    resultSummary_->setWordWrap(true);
+    resultSummary_->setAccessibleName(QStringLiteral("最近一次操作结果摘要"));
+    summaryText->addWidget(resultSummary_);
+    operationGuide_ = makeMutedLabel(QStringLiteral("没有正在处理的后台操作。"));
+    operationGuide_->setAccessibleName(QStringLiteral("操作进度和结果位置说明"));
+    operationGuide_->setToolTip(QStringLiteral("处理进度：显示当前后台任务。结果位置：详细输出位于【系统维护】>【维护结果】。"));
+    summaryText->addWidget(operationGuide_);
     auto *refresh = makeOperationButton(QStringLiteral("view-refresh"), QStringLiteral("重新检查状态"), QStringLiteral("重新检查 MemGuardOS 状态"));
     refresh->setAccessibleName(QStringLiteral("重新检查 MemGuardOS 状态"));
     cancelOperationButton_ = makeOperationButton(QStringLiteral("process-stop"), QStringLiteral("停止当前操作"), QStringLiteral("停止当前正在执行的 MemGuardOS 操作"));
@@ -584,16 +608,8 @@ QWidget *MemGuardUkccPlugin::pluginUi()
     summaryLayout->addWidget(cancelOperationButton_);
     layout->addWidget(summaryBox);
 
-    resultSummary_ = new QLabel(QStringLiteral("操作结果：等待状态检查。"));
-    resultSummary_->setWordWrap(true);
-    resultSummary_->setAccessibleName(QStringLiteral("最近一次操作结果摘要"));
-    layout->addWidget(resultSummary_);
-
-    operationGuide_ = makeMutedLabel(QStringLiteral("暂无后台操作。状态会显示在本页；日志、操作记录、本机智能检索和报告结果会显示在【系统维护】>【维护结果】或保存为文件。"));
-    operationGuide_->setAccessibleName(QStringLiteral("操作进度和结果位置说明"));
-    layout->addWidget(operationGuide_);
-
     tabs_ = new QTabWidget;
+    tabs_->setObjectName(QStringLiteral("productTabs"));
     tabs_->setAccessibleName(QStringLiteral("MemGuardOS 设置分类"));
     overviewTabIndex_ = tabs_->addTab(buildOverviewTab(), themedIcon(QStringLiteral("user-home"), QStyle::SP_DirHomeIcon), QStringLiteral("日常使用"));
     serviceTabIndex_ = tabs_->addTab(buildServiceTab(), themedIcon(QStringLiteral("preferences-system"), QStyle::SP_ComputerIcon), QStringLiteral("管理员"));
@@ -696,6 +712,8 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     layout->addWidget(behaviorBox);
 
     auto *taskBox = new QGroupBox(QStringLiteral("我的记忆"));
+    taskBox->setObjectName(QStringLiteral("primaryActions"));
+    applyNativePanelTone(taskBox);
     taskBox->setAccessibleName(QStringLiteral("普通用户记忆操作"));
     auto *taskLayout = new QGridLayout(taskBox);
     applyPanelSpacing(taskLayout);
@@ -707,13 +725,14 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     auto *openFiles = makeOperationButton(QStringLiteral("system-file-manager"), QStringLiteral("从文件导入"), QStringLiteral("打开文件管理器后右键扫描文件"));
     auto *openAgent = makeOperationButton(QStringLiteral("system-run"), QStringLiteral("Agent 工作台"), QStringLiteral("查看 Agent 交互和偏好生效"));
     auto *runJourney = makeOperationButton(QStringLiteral("media-playback-start"), QStringLiteral("验证记忆效果"), QStringLiteral("运行一次可复现的记忆使用验证"));
+    openConsole->setDefault(true);
     taskLayout->addWidget(openConsole, 1, 0);
     taskLayout->addWidget(refreshNow, 1, 1);
     taskLayout->addWidget(forgetEntry, 2, 0);
     taskLayout->addWidget(openFiles, 2, 1);
     taskLayout->addWidget(openAgent, 3, 0);
     taskLayout->addWidget(runJourney, 3, 1);
-    layout->addWidget(taskBox);
+    layout->insertWidget(1, taskBox);
     auto *recommendationBox = new QGroupBox(QStringLiteral("处理建议"));
     auto *recommendationLayout = new QVBoxLayout(recommendationBox);
     applyPanelSpacing(recommendationLayout);
@@ -1300,15 +1319,14 @@ void MemGuardUkccPlugin::updateOperationGuide(const QString &message, bool busy)
     if (!operationGuide_)
         return;
     if (busy) {
-        operationGuide_->setText(QStringLiteral("处理进度：%1\n结果位置：状态会更新在本页；日志、操作记录、本机智能检索和报告结果会进入【系统维护】>【维护结果】。可点击【停止当前操作】取消。")
-            .arg(message));
+        operationGuide_->setText(QStringLiteral("正在处理：%1。需要时可点击【停止当前操作】。").arg(message));
         return;
     }
     if (message.isEmpty()) {
-        operationGuide_->setText(QStringLiteral("处理进度：暂无后台操作。\n结果位置：状态显示在本页；日志、操作记录、本机智能检索和报告结果会显示在【系统维护】>【维护结果】或保存为文件。"));
+        operationGuide_->setText(QStringLiteral("没有正在处理的后台操作。"));
         return;
     }
-    operationGuide_->setText(QStringLiteral("处理进度：暂无后台操作。\n结果位置：%1").arg(message));
+    operationGuide_->setText(message);
 }
 
 void MemGuardUkccPlugin::renderStatus(const QJsonObject &payload)
