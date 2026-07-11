@@ -2,10 +2,15 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 import json
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from memguard.models import MemoryRecord, stable_hash, utc_now
-from memguard.retrieval.vector_cache import PersistedVector, decode_vector, encode_vector
+from memguard.retrieval.vector_cache import (
+    PersistedVector,
+    decode_vector,
+    encode_vector,
+    vector_content_hash,
+)
 
 
 _ALLOWED_COLUMN_MIGRATIONS = {
@@ -37,6 +42,8 @@ _ALLOWED_COLUMN_MIGRATIONS = {
     ("preference_observations", "task_type", "TEXT NOT NULL DEFAULT ''"),
     ("preference_observations", "scope_agent_name", "TEXT NOT NULL DEFAULT ''"),
     ("preference_observations", "scope_session_id", "TEXT NOT NULL DEFAULT ''"),
+    ("memory_embedding", "attempt_count", "INTEGER NOT NULL DEFAULT 0"),
+    ("memory_embedding", "next_attempt_at", "TEXT NOT NULL DEFAULT ''"),
 }
 
 
@@ -243,6 +250,8 @@ class SQLiteMetaStore:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 last_used_at TEXT,
+                attempt_count INTEGER NOT NULL DEFAULT 0,
+                next_attempt_at TEXT NOT NULL DEFAULT '',
                 CHECK(
                     status != 'ready'
                     OR (
@@ -254,6 +263,12 @@ class SQLiteMetaStore:
                 PRIMARY KEY(memory_id, backend, model_revision, content_hash)
             )
             """
+        )
+        self._ensure_column(
+            "memory_embedding", "attempt_count", "INTEGER NOT NULL DEFAULT 0"
+        )
+        self._ensure_column(
+            "memory_embedding", "next_attempt_at", "TEXT NOT NULL DEFAULT ''"
         )
         try:
             self.conn.execute(
@@ -293,7 +308,7 @@ class SQLiteMetaStore:
     def close(self) -> None:
         self.conn.close()
 
-    def upsert_memory(self, record: MemoryRecord) -> None:
+    def _upsert_memory_no_commit(self, record: MemoryRecord) -> None:
         self.conn.execute(
             """
             INSERT INTO memory (
@@ -381,7 +396,51 @@ class SQLiteMetaStore:
         else:
             self.conn.execute("DELETE FROM memory_entity WHERE memory_id = ?", (record.memory_id,))
             self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (record.memory_id,))
-        self.conn.commit()
+
+    def upsert_memory(self, record: MemoryRecord) -> None:
+        with self.conn:
+            self._upsert_memory_no_commit(record)
+
+    def upsert_memory_with_embedding_job(
+        self,
+        record: MemoryRecord,
+        backend: str,
+        model_revision: str,
+        content_hash: str,
+    ) -> None:
+        with self.conn:
+            self._upsert_memory_no_commit(record)
+            if (
+                not record.deleted
+                and record.governance_state == "active"
+                and record.trust_level in {"trusted", "verified", "reviewed"}
+            ):
+                self.conn.execute(
+                    """
+                    DELETE FROM memory_embedding
+                    WHERE memory_id = ?
+                      AND NOT (
+                          content_hash = ? AND backend = ? AND model_revision = ?
+                      )
+                    """,
+                    (record.memory_id, content_hash, backend, model_revision),
+                )
+                now = utc_now()
+                self.conn.execute(
+                    """
+                    INSERT OR IGNORE INTO memory_embedding (
+                        memory_id, content_hash, backend, model_revision, dimension,
+                        vector_blob, status, failure_reason, created_at, updated_at,
+                        attempt_count, next_attempt_at
+                    ) VALUES (?, ?, ?, ?, 0, NULL, 'pending', '', ?, ?, 0, '')
+                    """,
+                    (record.memory_id, content_hash, backend, model_revision, now, now),
+                )
+            else:
+                self.conn.execute(
+                    "DELETE FROM memory_embedding WHERE memory_id = ?",
+                    (record.memory_id,),
+                )
 
     def update_tier(self, memory_id: str, tier: str) -> None:
         self.conn.execute(
@@ -399,20 +458,21 @@ class SQLiteMetaStore:
 
     def mark_deleted(self, memory_id: str, superseded_by: Optional[str] = None) -> None:
         now = utc_now()
-        self.conn.execute(
-            """
-            UPDATE memory
-            SET deleted = 1, content = '', summary = 'FORGOTTEN',
-                valid_to = ?, superseded_by = ?, updated_at = ?
-            WHERE memory_id = ?
-            """,
-            (now, superseded_by, now, memory_id),
-        )
-        if self._fts_enabled:
-            self.conn.execute("DELETE FROM memory_fts WHERE memory_id = ?", (memory_id,))
-        self.conn.execute("DELETE FROM memory_entity WHERE memory_id = ?", (memory_id,))
-        self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (memory_id,))
-        self.conn.commit()
+        with self.conn:
+            self.conn.execute(
+                """
+                UPDATE memory
+                SET deleted = 1, content = '', summary = 'FORGOTTEN',
+                    valid_to = ?, superseded_by = ?, updated_at = ?
+                WHERE memory_id = ?
+                """,
+                (now, superseded_by, now, memory_id),
+            )
+            if self._fts_enabled:
+                self.conn.execute("DELETE FROM memory_fts WHERE memory_id = ?", (memory_id,))
+            self.conn.execute("DELETE FROM memory_entity WHERE memory_id = ?", (memory_id,))
+            self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (memory_id,))
+            self.conn.execute("DELETE FROM memory_embedding WHERE memory_id = ?", (memory_id,))
 
     def list_memories(self, include_deleted: bool = False, tier: Optional[str] = None, limit: Optional[int] = None, governance_state: Optional[str] = "active") -> List[Dict[str, Any]]:
         sql = "SELECT * FROM memory"
@@ -476,6 +536,8 @@ class SQLiteMetaStore:
                 vector_blob=NULL,
                 status='pending',
                 failure_reason='',
+                attempt_count=0,
+                next_attempt_at='',
                 updated_at=excluded.updated_at
             """,
             (memory_id, content_hash, backend, model_revision, now, now),
@@ -488,27 +550,59 @@ class SQLiteMetaStore:
         model_revision: str,
         limit: int,
     ) -> List[Dict[str, Any]]:
+        effective_limit = int(limit)
+        if effective_limit <= 0:
+            return []
         rows = self.conn.execute(
             """
             SELECT embedding.memory_id, embedding.content_hash,
                    embedding.backend, embedding.model_revision,
                    embedding.status, embedding.failure_reason,
                    embedding.created_at, embedding.updated_at,
+                   embedding.attempt_count, embedding.next_attempt_at,
                    memory.summary, memory.content
             FROM memory_embedding AS embedding
             JOIN memory ON memory.memory_id = embedding.memory_id
             WHERE embedding.backend = ? AND embedding.model_revision = ?
               AND embedding.status IN ('pending', 'failed')
+              AND (
+                  embedding.status = 'pending'
+                  OR embedding.next_attempt_at = ''
+                  OR embedding.next_attempt_at <= ?
+              )
               AND memory.deleted = 0
               AND memory.governance_state = 'active'
               AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
-            ORDER BY CASE embedding.status WHEN 'pending' THEN 0 ELSE 1 END,
-                     embedding.updated_at
-            LIMIT ?
             """,
-            (backend, model_revision, max(1, int(limit))),
+            (backend, model_revision, utc_now()),
         ).fetchall()
-        return [dict(row) for row in rows]
+        candidates = [dict(row) for row in rows]
+
+        def oldest_key(row: Dict[str, Any]) -> tuple:
+            return (
+                row["updated_at"],
+                row["memory_id"],
+                row["content_hash"],
+            )
+
+        if effective_limit == 1:
+            return sorted(candidates, key=oldest_key)[:1]
+
+        pending = sorted(
+            (row for row in candidates if row["status"] == "pending"),
+            key=oldest_key,
+        )
+        failed = sorted(
+            (row for row in candidates if row["status"] == "failed"),
+            key=oldest_key,
+        )
+        if not failed:
+            return pending[:effective_limit]
+
+        selected_pending = pending[: effective_limit - 1]
+        failed_capacity = effective_limit - len(selected_pending)
+        selected_failed = failed[:failed_capacity]
+        return selected_pending + selected_failed
 
     def mark_embedding_failed(
         self,
@@ -517,25 +611,81 @@ class SQLiteMetaStore:
         backend: str,
         model_revision: str,
         reason: str,
-    ) -> None:
-        self.conn.execute(
-            """
-            UPDATE memory_embedding
-            SET status = 'failed', vector_blob = NULL, dimension = 0,
-                failure_reason = ?, updated_at = ?
-            WHERE memory_id = ? AND content_hash = ?
-              AND backend = ? AND model_revision = ?
-            """,
-            (
-                str(reason)[:500],
-                utc_now(),
-                memory_id,
-                content_hash,
-                backend,
-                model_revision,
-            ),
-        )
-        self.conn.commit()
+    ) -> bool:
+        with self.conn:
+            row = self.conn.execute(
+                """
+                SELECT attempt_count
+                FROM memory_embedding
+                WHERE memory_id = ? AND content_hash = ?
+                  AND backend = ? AND model_revision = ?
+                  AND status IN ('pending', 'failed')
+                """,
+                (memory_id, content_hash, backend, model_revision),
+            ).fetchone()
+            if row is None:
+                return False
+            previous_attempts = int(row["attempt_count"])
+            attempt_count = previous_attempts + 1
+            delay_seconds = min(300, 2 ** previous_attempts)
+            now = utc_now()
+            parsed_now = datetime.fromisoformat(now.replace("Z", "+00:00"))
+            next_attempt_at = (parsed_now + timedelta(seconds=delay_seconds)).isoformat()
+            cursor = self.conn.execute(
+                """
+                UPDATE memory_embedding
+                SET status = 'failed', vector_blob = NULL, dimension = 0,
+                    failure_reason = ?, attempt_count = ?, next_attempt_at = ?,
+                    updated_at = ?
+                WHERE memory_id = ? AND content_hash = ?
+                  AND backend = ? AND model_revision = ?
+                  AND status IN ('pending', 'failed')
+                  AND attempt_count = ?
+                """,
+                (
+                    str(reason)[:500],
+                    attempt_count,
+                    next_attempt_at,
+                    now,
+                    memory_id,
+                    content_hash,
+                    backend,
+                    model_revision,
+                    previous_attempts,
+                ),
+            )
+            return cursor.rowcount == 1
+
+    def complete_memory_embedding(
+        self,
+        memory_id: str,
+        content_hash: str,
+        backend: str,
+        model_revision: str,
+        vector: List[float],
+    ) -> bool:
+        vector_blob = encode_vector(vector)
+        with self.conn:
+            cursor = self.conn.execute(
+                """
+                UPDATE memory_embedding
+                SET dimension = ?, vector_blob = ?, status = 'ready',
+                    failure_reason = '', next_attempt_at = '', updated_at = ?
+                WHERE memory_id = ? AND content_hash = ?
+                  AND backend = ? AND model_revision = ?
+                  AND status IN ('pending', 'failed')
+                """,
+                (
+                    len(vector),
+                    sqlite3.Binary(vector_blob),
+                    utc_now(),
+                    memory_id,
+                    content_hash,
+                    backend,
+                    model_revision,
+                ),
+            )
+            return cursor.rowcount == 1
 
     def upsert_memory_embedding(
         self,
@@ -545,6 +695,8 @@ class SQLiteMetaStore:
         model_revision: str,
         vector: List[float],
     ) -> None:
+        # Explicit import/test API. Workers must use complete_memory_embedding so stale
+        # results cannot recreate deleted or superseded jobs.
         vector_blob = encode_vector(vector)
         now = utc_now()
         self.conn.execute(
@@ -572,6 +724,42 @@ class SQLiteMetaStore:
             ),
         )
         self.conn.commit()
+
+    def list_memories_missing_embeddings(
+        self,
+        backend: str,
+        model_revision: str,
+        limit: int,
+    ) -> List[Dict[str, Any]]:
+        effective_limit = int(limit)
+        if effective_limit <= 0:
+            return []
+        rows = self.conn.execute(
+            """
+            SELECT * FROM memory
+            WHERE deleted = 0 AND governance_state = 'active'
+              AND trust_level IN ('trusted', 'verified', 'reviewed')
+            ORDER BY updated_at, memory_id
+            """
+        ).fetchall()
+        missing = []
+        for row in rows:
+            item = dict(row)
+            content_hash = vector_content_hash(item["summary"], item["content"])
+            exists = self.conn.execute(
+                """
+                SELECT 1 FROM memory_embedding
+                WHERE memory_id = ? AND content_hash = ?
+                  AND backend = ? AND model_revision = ?
+                """,
+                (item["memory_id"], content_hash, backend, model_revision),
+            ).fetchone()
+            if exists is None:
+                item["content_hash"] = content_hash
+                missing.append(item)
+                if len(missing) >= effective_limit:
+                    break
+        return missing
 
     def get_memory_embedding(
         self,

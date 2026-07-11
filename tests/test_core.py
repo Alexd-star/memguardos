@@ -31,7 +31,7 @@ from memguard.extraction.semantic import HybridMemoryExtractor
 from memguard.eval.run_eval import run as run_eval
 from memguard.retrieval.hybrid import HybridRetriever
 from memguard.retrieval.kylin_sdk import KylinEmbeddingBackend, kylin_sdk_status
-from memguard.retrieval.vector_cache import vector_content_hash
+from memguard.retrieval.vector_cache import encode_vector, vector_content_hash
 from memguard.retrieval.conflict import preference_topic
 from memguard.integrations.events import AgentInteractionEvent
 from memguard.models import MemorySource, make_memory
@@ -297,7 +297,7 @@ def test_versions_update_and_rollback(tmp_path):
         assert updated["updated"] is True
         updated_record = updated["record"]
         updated_hash = vector_content_hash(updated_record.summary, updated_record.content)
-        service.meta.upsert_memory_embedding(
+        assert service.meta.complete_memory_embedding(
             created.memory_id,
             updated_hash,
             "kylin_sdk",
@@ -1267,16 +1267,10 @@ def test_memory_tier_promote_and_evict(tmp_path):
         working = service.ingest_text("临时工作记忆：只在当前任务中使用。", tier="working")["record"]
         assert working.tier == "working"
         assert service.list_memories(tier="working")[0]["memory_id"] == working.memory_id
-        old_hash = vector_content_hash(working.summary, working.content)
-        current = service.update_memory(
+        current_hash = vector_content_hash(working.summary, working.content)
+        assert service.meta.complete_memory_embedding(
             working.memory_id,
-            "临时工作记忆：仅在当前更新后的任务中使用。",
-        )["record"]
-        assert current.tier == "working"
-        assert vector_content_hash(current.summary, current.content) != old_hash
-        service.meta.upsert_memory_embedding(
-            working.memory_id,
-            old_hash,
+            current_hash,
             "kylin_sdk",
             "kylin-sdk-v1",
             [1.0, 2.0],
@@ -1289,6 +1283,7 @@ def test_memory_tier_promote_and_evict(tmp_path):
         assert service.list_memories(tier="working") == []
         assert service.list_memories(tier="long_term")
         promoted_hash = vector_content_hash(promoted_record.summary, promoted_record.content)
+        assert promoted_hash == current_hash
         embedding_rows = service.meta.conn.execute(
             """
             SELECT content_hash, status, vector_blob
@@ -1298,9 +1293,12 @@ def test_memory_tier_promote_and_evict(tmp_path):
             (working.memory_id,),
         ).fetchall()
         assert [dict(row) for row in embedding_rows] == [
-            {"content_hash": promoted_hash, "status": "pending", "vector_blob": None}
+            {
+                "content_hash": promoted_hash,
+                "status": "ready",
+                "vector_blob": encode_vector([1.0, 2.0]),
+            }
         ]
-        assert all(row["content_hash"] != old_hash for row in embedding_rows)
 
         session = service.ingest_text("会话记忆：本轮调试使用。", tier="session")["record"]
         dry = service.evict_tier("session", confirm=False)
