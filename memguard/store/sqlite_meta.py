@@ -236,9 +236,9 @@ class SQLiteMetaStore:
                 backend TEXT NOT NULL,
                 model_revision TEXT NOT NULL,
                 dimension INTEGER NOT NULL,
-                vector_blob BLOB NOT NULL,
+                vector_blob BLOB,
                 status TEXT NOT NULL CHECK(status IN ('pending', 'ready', 'failed')),
-                failure_reason TEXT,
+                failure_reason TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 last_used_at TEXT,
@@ -455,8 +455,6 @@ class SQLiteMetaStore:
         backend: str,
         model_revision: str,
         vector: List[float],
-        status: str = "ready",
-        failure_reason: Optional[str] = None,
     ) -> None:
         vector_blob = encode_vector(vector)
         now = utc_now()
@@ -465,12 +463,12 @@ class SQLiteMetaStore:
             INSERT INTO memory_embedding (
                 memory_id, content_hash, backend, model_revision, dimension,
                 vector_blob, status, failure_reason, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, 'ready', '', ?, ?)
             ON CONFLICT(memory_id, backend, model_revision, content_hash) DO UPDATE SET
                 dimension=excluded.dimension,
                 vector_blob=excluded.vector_blob,
-                status=excluded.status,
-                failure_reason=excluded.failure_reason,
+                status='ready',
+                failure_reason='',
                 updated_at=excluded.updated_at
             """,
             (
@@ -480,8 +478,6 @@ class SQLiteMetaStore:
                 model_revision,
                 len(vector),
                 sqlite3.Binary(vector_blob),
-                status,
-                failure_reason,
                 now,
                 now,
             ),
@@ -501,11 +497,11 @@ class SQLiteMetaStore:
                    dimension, vector_blob, status
             FROM memory_embedding
             WHERE memory_id = ? AND content_hash = ?
-              AND backend = ? AND model_revision = ?
+              AND backend = ? AND model_revision = ? AND status = 'ready'
             """,
             (memory_id, content_hash, backend, model_revision),
         ).fetchone()
-        if row is None:
+        if row is None or row["vector_blob"] is None:
             return None
 
         persisted = PersistedVector(
@@ -522,6 +518,7 @@ class SQLiteMetaStore:
             UPDATE memory_embedding SET last_used_at = ?
             WHERE memory_id = ? AND content_hash = ?
               AND backend = ? AND model_revision = ?
+              AND status = 'ready' AND vector_blob IS NOT NULL
             """,
             (utc_now(), memory_id, content_hash, backend, model_revision),
         )

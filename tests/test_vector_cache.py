@@ -68,6 +68,9 @@ def test_embedding_schema_has_versioned_primary_key_status_check_and_index(tmp_p
                 (row["pk"], row["name"]) for row in columns.values() if row["pk"]
             )
         ] == ["memory_id", "backend", "model_revision", "content_hash"]
+        assert columns["vector_blob"]["notnull"] == 0
+        assert columns["failure_reason"]["notnull"] == 1
+        assert columns["failure_reason"]["dflt_value"] == "''"
         indexes = {
             row["name"]
             for row in store.conn.execute("PRAGMA index_list(memory_embedding)")
@@ -144,6 +147,100 @@ def test_embedding_upsert_replaces_only_the_matching_versioned_key(tmp_path):
         store.close()
 
 
+@pytest.mark.parametrize("status", ["pending", "failed"])
+def test_unready_embedding_without_vector_is_not_returned_or_touched(tmp_path, status):
+    store = SQLiteMetaStore(tmp_path / "meta.sqlite3")
+    try:
+        store.conn.execute(
+            """
+            INSERT INTO memory_embedding (
+                memory_id, content_hash, backend, model_revision, dimension,
+                vector_blob, status, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            ("m1", "hash-a", "kylin", "v1", 2, None, status, "created", "updated"),
+        )
+        store.conn.commit()
+
+        row = store.conn.execute(
+            "SELECT vector_blob, failure_reason, last_used_at FROM memory_embedding"
+        ).fetchone()
+        assert row["vector_blob"] is None
+        assert row["failure_reason"] == ""
+        assert store.get_memory_embedding("m1", "hash-a", "kylin", "v1") is None
+        assert row["last_used_at"] is None
+        untouched = store.conn.execute(
+            "SELECT last_used_at FROM memory_embedding"
+        ).fetchone()
+        assert untouched["last_used_at"] is None
+    finally:
+        store.close()
+
+
+def test_ready_embedding_with_null_blob_is_not_returned_or_touched(tmp_path):
+    store = SQLiteMetaStore(tmp_path / "meta.sqlite3")
+    try:
+        store.conn.execute(
+            """
+            INSERT INTO memory_embedding (
+                memory_id, content_hash, backend, model_revision, dimension,
+                vector_blob, status, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            ("m1", "hash-a", "kylin", "v1", 2, None, "ready", "created", "updated"),
+        )
+        store.conn.commit()
+
+        assert store.get_memory_embedding("m1", "hash-a", "kylin", "v1") is None
+        row = store.conn.execute(
+            "SELECT last_used_at FROM memory_embedding"
+        ).fetchone()
+        assert row["last_used_at"] is None
+    finally:
+        store.close()
+
+
+def test_embedding_upsert_promotes_pending_row_to_ready(tmp_path):
+    store = SQLiteMetaStore(tmp_path / "meta.sqlite3")
+    try:
+        store.conn.execute(
+            """
+            INSERT INTO memory_embedding (
+                memory_id, content_hash, backend, model_revision, dimension,
+                vector_blob, status, failure_reason, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "m1",
+                "hash-a",
+                "kylin",
+                "v1",
+                2,
+                None,
+                "pending",
+                "waiting",
+                "created",
+                "updated",
+            ),
+        )
+        store.conn.commit()
+
+        store.upsert_memory_embedding("m1", "hash-a", "kylin", "v1", [1.0, 2.0])
+
+        row = store.conn.execute(
+            "SELECT status, failure_reason, vector_blob FROM memory_embedding"
+        ).fetchone()
+        assert row["status"] == "ready"
+        assert row["failure_reason"] == ""
+        assert row["vector_blob"] == encode_vector([1.0, 2.0])
+        with pytest.raises(TypeError):
+            store.upsert_memory_embedding(
+                "m2", "hash-b", "kylin", "v1", [3.0], status="pending"
+            )
+    finally:
+        store.close()
+
+
 def test_embedding_status_counts_and_delete_lifecycle(tmp_path):
     store = SQLiteMetaStore(tmp_path / "meta.sqlite3")
     try:
@@ -153,18 +250,19 @@ def test_embedding_status_counts_and_delete_lifecycle(tmp_path):
             "failed": 0,
         }
         store.upsert_memory_embedding("m1", "h1", "kylin", "v1", [1.0])
-        store.upsert_memory_embedding(
-            "m1", "h2", "kylin", "v1", [2.0], status="pending"
+        store.conn.executemany(
+            """
+            INSERT INTO memory_embedding (
+                memory_id, content_hash, backend, model_revision, dimension,
+                vector_blob, status, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                ("m1", "h2", "kylin", "v1", 1, None, "pending", "now", "now"),
+                ("m2", "h3", "kylin", "v1", 1, None, "failed", "now", "now"),
+            ],
         )
-        store.upsert_memory_embedding(
-            "m2",
-            "h3",
-            "kylin",
-            "v1",
-            [3.0],
-            status="failed",
-            failure_reason="backend unavailable",
-        )
+        store.conn.commit()
         store.upsert_memory_embedding("m3", "h4", "other", "v1", [4.0])
 
         assert store.embedding_cache_status("kylin", "v1") == {
