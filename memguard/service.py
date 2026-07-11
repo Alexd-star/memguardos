@@ -82,14 +82,6 @@ class MemGuardService:
     def close(self) -> None:
         self.meta.close()
 
-    def _sync_embedding_job(self, record: MemoryRecord) -> None:
-        self.meta.upsert_memory_with_embedding_job(
-            record,
-            self.EMBEDDING_BACKEND,
-            self.EMBEDDING_MODEL_REVISION,
-            vector_content_hash(record.summary, record.content),
-        )
-
     def ingest_text(self, text: str, source_kind: str = "manual", source_uri: str = "", tier: Optional[str] = None) -> Dict[str, object]:
         clean_text, quality = assess_text_quality(text, source_kind=source_kind)
         if not quality.accepted:

@@ -303,6 +303,7 @@ def test_versions_update_and_rollback(tmp_path):
             "kylin_sdk",
             "kylin-sdk-v1",
             [1.0, 2.0],
+            expected_attempt_count=0,
         )
 
         versions = service.versions(created.memory_id)
@@ -1274,6 +1275,7 @@ def test_memory_tier_promote_and_evict(tmp_path):
             "kylin_sdk",
             "kylin-sdk-v1",
             [1.0, 2.0],
+            expected_attempt_count=0,
         )
 
         promoted = service.promote_memory(working.memory_id, "long_term")

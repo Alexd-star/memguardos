@@ -433,6 +433,7 @@ def test_pending_embedding_queue_filters_governance_and_retries_failures(
             "kylin",
             "v1",
             "temporary failure" * 100,
+            expected_attempt_count=0,
         )
         store.enqueue_memory_embedding(
             records[2].memory_id,
@@ -446,6 +447,7 @@ def test_pending_embedding_queue_filters_governance_and_retries_failures(
             "kylin",
             "v1",
             "retry verified memory",
+            expected_attempt_count=0,
         )
         monkeypatch.setattr(
             sqlite_meta, "utc_now", lambda: "2026-07-11T12:00:02+00:00"
@@ -564,7 +566,12 @@ def test_atomic_memory_job_preserves_exact_ready_and_replaces_stale_rows(tmp_pat
     try:
         store.upsert_memory_with_embedding_job(record, "kylin", "v1", current_hash)
         assert store.complete_memory_embedding(
-            record.memory_id, current_hash, "kylin", "v1", [1.0, 2.0]
+            record.memory_id,
+            current_hash,
+            "kylin",
+            "v1",
+            [1.0, 2.0],
+            expected_attempt_count=0,
         )
         ready_blob = encode_vector([1.0, 2.0])
         store.upsert_memory_embedding(record.memory_id, "stale", "other", "old", [3.0])
@@ -598,7 +605,12 @@ def test_atomic_memory_job_preserves_exact_ready_and_replaces_stale_rows(tmp_pat
         }
 
         assert store.mark_embedding_failed(
-            record.memory_id, current_hash, "kylin", "v1", "preserve retry state"
+            record.memory_id,
+            current_hash,
+            "kylin",
+            "v1",
+            "preserve retry state",
+            expected_attempt_count=0,
         )
         failed_before = dict(
             store.conn.execute(
@@ -676,10 +688,20 @@ def test_embedding_completion_and_failure_use_compare_and_swap(tmp_path):
         store.upsert_memory_with_embedding_job(record, "kylin", "v1", old_hash)
 
         assert store.complete_memory_embedding(
-            record.memory_id, old_hash, "kylin", "v1", [1.0, 2.0]
+            record.memory_id,
+            old_hash,
+            "kylin",
+            "v1",
+            [1.0, 2.0],
+            expected_attempt_count=0,
         )
         assert not store.mark_embedding_failed(
-            record.memory_id, old_hash, "kylin", "v1", "late worker failure"
+            record.memory_id,
+            old_hash,
+            "kylin",
+            "v1",
+            "late worker failure",
+            expected_attempt_count=0,
         )
         ready = store.get_memory_embedding(record.memory_id, old_hash, "kylin", "v1")
         assert ready is not None
@@ -690,7 +712,12 @@ def test_embedding_completion_and_failure_use_compare_and_swap(tmp_path):
         new_hash = vector_content_hash(record.summary, record.content)
         store.upsert_memory_with_embedding_job(record, "kylin", "v1", new_hash)
         assert not store.complete_memory_embedding(
-            record.memory_id, old_hash, "kylin", "v1", [9.0]
+            record.memory_id,
+            old_hash,
+            "kylin",
+            "v1",
+            [9.0],
+            expected_attempt_count=0,
         )
         assert store.conn.execute(
             "SELECT COUNT(*) FROM memory_embedding WHERE content_hash = ?", (old_hash,)
@@ -698,7 +725,12 @@ def test_embedding_completion_and_failure_use_compare_and_swap(tmp_path):
 
         store.mark_deleted(record.memory_id)
         assert not store.complete_memory_embedding(
-            record.memory_id, new_hash, "kylin", "v1", [9.0]
+            record.memory_id,
+            new_hash,
+            "kylin",
+            "v1",
+            [9.0],
+            expected_attempt_count=0,
         )
         assert store.conn.execute(
             "SELECT COUNT(*) FROM memory_embedding WHERE memory_id = ?", (record.memory_id,)
@@ -724,7 +756,12 @@ def test_failed_embedding_backoff_due_filter_fairness_and_stable_order(tmp_path,
             records.append(record)
 
         assert store.mark_embedding_failed(
-            records[0].memory_id, "hash-0", "kylin", "v1", "temporary"
+            records[0].memory_id,
+            "hash-0",
+            "kylin",
+            "v1",
+            "temporary",
+            expected_attempt_count=0,
         )
         failed = store.conn.execute(
             "SELECT attempt_count, next_attempt_at FROM memory_embedding WHERE memory_id = ?",
@@ -738,9 +775,14 @@ def test_failed_embedding_backoff_due_filter_fairness_and_stable_order(tmp_path,
             row["memory_id"] for row in store.list_pending_embeddings("kylin", "v1", 10)
         }
 
-        for _ in range(9):
+        for expected_attempt_count in range(1, 10):
             assert store.mark_embedding_failed(
-                records[0].memory_id, "hash-0", "kylin", "v1", "temporary"
+                records[0].memory_id,
+                "hash-0",
+                "kylin",
+                "v1",
+                "temporary",
+                expected_attempt_count=expected_attempt_count,
             )
         capped = store.conn.execute(
             "SELECT attempt_count, next_attempt_at FROM memory_embedding WHERE memory_id = ?",
@@ -799,7 +841,14 @@ def test_missing_embedding_scan_is_read_only_and_requires_exact_current_hash(tmp
         ]
         store.enqueue_memory_embedding(records[1].memory_id, current_hashes[1], "kylin", "v1")
         store.enqueue_memory_embedding(records[2].memory_id, current_hashes[2], "kylin", "v1")
-        store.mark_embedding_failed(records[2].memory_id, current_hashes[2], "kylin", "v1", "x")
+        store.mark_embedding_failed(
+            records[2].memory_id,
+            current_hashes[2],
+            "kylin",
+            "v1",
+            "x",
+            expected_attempt_count=0,
+        )
         store.upsert_memory_embedding(
             records[3].memory_id, current_hashes[3], "kylin", "v1", [1.0]
         )
@@ -812,5 +861,156 @@ def test_missing_embedding_scan_is_read_only_and_requires_exact_current_hash(tmp
             (records[0].memory_id, current_hashes[0])
         ]
         assert store.conn.total_changes == before
+    finally:
+        store.close()
+
+
+def test_embedding_workers_require_the_attempt_token_they_observed(tmp_path):
+    store = SQLiteMetaStore(tmp_path / "meta.sqlite3")
+    record = make_memory(
+        content="attempt token race",
+        memory_type="knowledge",
+        source=MemorySource(kind="manual", uri="test"),
+        summary="attempt token race",
+    )
+    content_hash = vector_content_hash(record.summary, record.content)
+    try:
+        store.upsert_memory_with_embedding_job(record, "kylin", "v1", content_hash)
+        observed = store.list_pending_embeddings("kylin", "v1", 1)[0]
+        assert observed["attempt_count"] == 0
+
+        assert store.mark_embedding_failed(
+            record.memory_id,
+            content_hash,
+            "kylin",
+            "v1",
+            "worker A failed",
+            expected_attempt_count=observed["attempt_count"],
+        )
+        assert not store.mark_embedding_failed(
+            record.memory_id,
+            content_hash,
+            "kylin",
+            "v1",
+            "worker B arrived late",
+            expected_attempt_count=observed["attempt_count"],
+        )
+        row = store.conn.execute(
+            "SELECT attempt_count, failure_reason FROM memory_embedding"
+        ).fetchone()
+        assert dict(row) == {"attempt_count": 1, "failure_reason": "worker A failed"}
+
+        assert not store.complete_memory_embedding(
+            record.memory_id,
+            content_hash,
+            "kylin",
+            "v1",
+            [1.0],
+            expected_attempt_count=observed["attempt_count"],
+        )
+        assert store.complete_memory_embedding(
+            record.memory_id,
+            content_hash,
+            "kylin",
+            "v1",
+            [1.0],
+            expected_attempt_count=1,
+        )
+
+        record.content = "attempt token replacement"
+        record.summary = "attempt token replacement"
+        replacement_hash = vector_content_hash(record.summary, record.content)
+        store.upsert_memory_with_embedding_job(record, "kylin", "v1", replacement_hash)
+        assert not store.complete_memory_embedding(
+            record.memory_id,
+            content_hash,
+            "kylin",
+            "v1",
+            [2.0],
+            expected_attempt_count=1,
+        )
+
+        store.mark_deleted(record.memory_id)
+        assert not store.mark_embedding_failed(
+            record.memory_id,
+            replacement_hash,
+            "kylin",
+            "v1",
+            "late after deletion",
+            expected_attempt_count=0,
+        )
+    finally:
+        store.close()
+
+
+def test_pending_embedding_queue_uses_bounded_sql(tmp_path):
+    store = SQLiteMetaStore(tmp_path / "meta.sqlite3")
+    try:
+        for index in range(8):
+            record = make_memory(
+                content="pending-bound-%d" % index,
+                memory_type="knowledge",
+                source=MemorySource(kind="manual", uri="test"),
+                summary="pending-bound-%d" % index,
+            )
+            store.upsert_memory(record)
+            store.enqueue_memory_embedding(record.memory_id, "hash-%d" % index, "kylin", "v1")
+
+        statements = []
+        store.conn.set_trace_callback(statements.append)
+        rows = store.list_pending_embeddings("kylin", "v1", 3)
+        store.conn.set_trace_callback(None)
+
+        selects = [statement for statement in statements if statement.lstrip().upper().startswith("SELECT")]
+        assert len(rows) == 3
+        assert selects
+        assert all("LIMIT" in statement.upper() for statement in selects)
+    finally:
+        store.close()
+
+
+def test_missing_embedding_scan_uses_one_bounded_query(tmp_path):
+    store = SQLiteMetaStore(tmp_path / "meta.sqlite3")
+    records = []
+    try:
+        for index in range(7):
+            record = make_memory(
+                content="scan-bound-%d" % index,
+                memory_type="knowledge",
+                source=MemorySource(kind="manual", uri="test"),
+                summary="scan-bound-%d" % index,
+            )
+            store.upsert_memory(record)
+            records.append(record)
+
+        store.conn.execute("UPDATE memory SET updated_at = ?", ("2026-07-12T00:00:00+00:00",))
+        store.conn.commit()
+
+        current_hashes = {
+            record.memory_id: vector_content_hash(record.summary, record.content)
+            for record in records
+        }
+        ordered = sorted(records, key=lambda record: record.memory_id)
+        store.enqueue_memory_embedding(
+            ordered[1].memory_id, current_hashes[ordered[1].memory_id], "kylin", "v1"
+        )
+        store.enqueue_memory_embedding(ordered[2].memory_id, "stale", "kylin", "v1")
+        expected = [
+            (record.memory_id, current_hashes[record.memory_id])
+            for record in ordered
+            if record is not ordered[1]
+        ][:2]
+
+        statements = []
+        store.conn.set_trace_callback(statements.append)
+        before = store.conn.total_changes
+        missing = store.list_memories_missing_embeddings("kylin", "v1", 2)
+        store.conn.set_trace_callback(None)
+
+        selects = [statement for statement in statements if statement.lstrip().upper().startswith("SELECT")]
+        assert [(row["memory_id"], row["content_hash"]) for row in missing] == expected
+        assert store.conn.total_changes == before
+        assert len(selects) == 1
+        assert "LIMIT 2" in selects[0].upper()
     finally:
         store.close()
