@@ -99,7 +99,9 @@ def test_debian_packages_apply_openkylin_native_install_lifecycle():
     assert "xdg-desktop-menu forceupdate" in builder
     assert "gtk-update-icon-cache" in builder
     assert "peony -q" in builder
-    assert "pkill -x ukui-control-center" in builder
+    assert "pkill -f '^/usr/bin/ukui-control-center" in builder
+    installer = (ROOT / "scripts/install_ukui_plugins.sh").read_text(encoding="utf-8")
+    assert "pkill -f '^/usr/bin/ukui-control-center" in installer
     assert "hashlib.md5(path.read_bytes(), usedforsecurity=False)" in builder
     assert "rm -rf /var/lib/memguardos" not in builder
     assert "rm -rf /opt/memguardos/data" not in builder
@@ -959,4 +961,3 @@ def test_competition_ready_accepts_real_agent_holdout_evidence(tmp_path):
     assert by_name["8 组留出真实 OpenHands 案例"].ok is True
     assert by_name["manifest.json"].ok is True
     assert by_name["SHA256SUMS.txt"].ok is True
-
