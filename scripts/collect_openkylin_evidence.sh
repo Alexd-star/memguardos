@@ -126,6 +126,7 @@ EOF
 | `sdk_embedding_probe.txt` | Kylin embedding 推理探测 |
 | `embedding_cpp_probe.txt` | Kylin embedding SDK 官方 C API 风格 C++ 探针 |
 | `kylin_retrieval.txt` | Kylin embedding 作为实际检索重排后端的证据 |
+| `kylin_retrieval_budget_fallback.txt` | Kylin 重排超过交互延迟预算后受控降级到稳定检索的证据 |
 | `kylin_embedding_diag/` | Kylin embedding runtime、socket、插件、包版本和日志诊断 |
 | `vector_probe.txt` | Kylin 向量数据库 SDK 探针 |
 | `quality_report.txt` | 输入清洗、格式标准化与质量校验证据 |
@@ -196,7 +197,7 @@ else
   echo "g++ or embedding probe source unavailable; skipped" >"${OUT_DIR}/embedding_cpp_probe.txt"
 fi
 
-run_shell_capture "kylin_retrieval" "KYLIN_RETRIEVAL_HOME='${OUT_DIR}/kylin_retrieval_home'; rm -rf \"\${KYLIN_RETRIEVAL_HOME}\"; mkdir -p \"\${KYLIN_RETRIEVAL_HOME}\"; MEMGUARD_HOME=\"\${KYLIN_RETRIEVAL_HOME}\" MEMGUARD_EMBEDDING_BACKEND=auto MEMGUARD_KYLIN_EMBEDDING_TIMEOUT=90 \"${PYTHON_BIN}\" - <<'PY'
+run_shell_capture "kylin_retrieval" "KYLIN_RETRIEVAL_HOME='${OUT_DIR}/kylin_retrieval_home'; rm -rf \"\${KYLIN_RETRIEVAL_HOME}\"; mkdir -p \"\${KYLIN_RETRIEVAL_HOME}\"; MEMGUARD_HOME=\"\${KYLIN_RETRIEVAL_HOME}\" MEMGUARD_EMBEDDING_BACKEND=auto MEMGUARD_KYLIN_EMBEDDING_TIMEOUT=90 MEMGUARD_KYLIN_RERANK_BUDGET_MS=5000 \"${PYTHON_BIN}\" - <<'PY'
 import json
 
 from memguard.service import MemGuardService
@@ -207,6 +208,22 @@ service.ingest_text('auditd 会审计 /etc/shadow 等敏感路径访问，并阻
 hits = service.search('openKylin 服务内存限制', limit=2)
 print(json.dumps({'hits': hits, 'retrieval_status': service.retrieval_status()}, ensure_ascii=False, indent=2))
 raise SystemExit(0 if hits and hits[0].get('vector_backend') == 'kylin_sdk' else 2)
+PY"
+
+run_shell_capture "kylin_retrieval_budget_fallback" "KYLIN_FALLBACK_HOME='${OUT_DIR}/kylin_fallback_home'; rm -rf \"\${KYLIN_FALLBACK_HOME}\"; mkdir -p \"\${KYLIN_FALLBACK_HOME}\"; MEMGUARD_HOME=\"\${KYLIN_FALLBACK_HOME}\" MEMGUARD_EMBEDDING_BACKEND=auto MEMGUARD_KYLIN_EMBEDDING_TIMEOUT=90 MEMGUARD_KYLIN_RERANK_BUDGET_MS=1 \"${PYTHON_BIN}\" - <<'PY'
+import json
+
+from memguard.service import MemGuardService
+
+service = MemGuardService()
+service.ingest_text('openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。')
+hits = service.search('openKylin 服务内存限制', limit=1)
+status = service.retrieval_status()
+payload = {'hits': hits, 'retrieval_status': status}
+print(json.dumps(payload, ensure_ascii=False, indent=2))
+reason = status.get('kylin', {}).get('disabled_reason', '')
+controlled_fallback = bool(hits) and hits[0].get('vector_backend') == 'hash' and 'exceeded latency budget' in reason
+raise SystemExit(0 if controlled_fallback else 2)
 PY"
 
 if [ -f scripts/kylin_vector_probe.cpp ] && command -v g++ >/dev/null 2>&1; then
@@ -302,7 +319,7 @@ run_self_logging_capture "ukui_deep_plugins" bash scripts/probe_ukui_deep_plugin
 run_capture "ukui_plugin_build" bash scripts/build_ukui_plugins.sh
 run_capture "ukui_plugin_install" bash scripts/install_ukui_plugins.sh --no-build
 run_capture "ukui_plugin_visible" bash scripts/verify_ukui_plugins.sh
-run_shell_capture "deb_package" "bash scripts/build_deb.sh; DEB_VERSION=\$(sed -n 's/^version = \"\\([^\"]*\\)\"/\\1/p' pyproject.toml | head -n1); DEB_PATH=\"dist/memguardos_\${DEB_VERSION}_\$(dpkg --print-architecture).deb\"; echo \"DEB_PATH=\${DEB_PATH}\"; sha256sum \"\${DEB_PATH}\"; dpkg-deb --info \"\${DEB_PATH}\"; echo '--- required contents ---'; dpkg-deb --contents \"\${DEB_PATH}\" | egrep 'usr/bin/memctl|memguardd.service|peony-extensions|ukui-control-center|opt/memguardos/memguard/service.py'; rm -rf /tmp/memguardos-deb-root; mkdir -p /tmp/memguardos-deb-root; dpkg-deb -x \"\${DEB_PATH}\" /tmp/memguardos-deb-root; PYTHONPATH=/tmp/memguardos-deb-root/opt/memguardos python3 -m memguard.cli.memctl doctor >/tmp/memguardos-deb-doctor.txt; echo 'offline_extract_doctor=ok'; ldd /tmp/memguardos-deb-root/usr/lib/\$(dpkg-architecture -qDEB_HOST_MULTIARCH)/peony-extensions/libpeony-menu-plugin-memguardos.so | grep 'not found' && exit 2 || true; ldd /tmp/memguardos-deb-root/usr/lib/\$(dpkg-architecture -qDEB_HOST_MULTIARCH)/ukui-control-center/libmemguardos-ukcc-plugin.so | grep 'not found' && exit 2 || true; echo 'plugin_ldd_missing=0'; dpkg -s memguardos >/dev/null 2>&1 && echo 'apt_install_state=installed' || echo 'apt_install_state=not_installed_or_blocked_by_current_ostree_mode'"
+run_capture "deb_package" bash scripts/verify_deb_package_set.sh
 run_capture "bpf_lsm_policy" "${PYTHON_BIN}" scripts/generate_bpf_lsm_policy.py --policy data/demo/bpf_lsm_policy.json --output "${OUT_DIR}/memguard_lsm_policy.generated.h"
 run_self_logging_capture "bpf_lsm_enforcer" bash scripts/run_bpf_lsm_enforcer.sh "${OUT_DIR}"
 
@@ -325,6 +342,7 @@ run_capture "verify_audit" "${PYTHON_BIN}" -m memguard.cli.memctl verify-audit
 
 rm -rf "${OUT_DIR}/namespace_home"
 rm -rf "${OUT_DIR}/kylin_retrieval_home"
+rm -rf "${OUT_DIR}/kylin_fallback_home"
 preserve_latest_evidence
 write_summary
 "${PYTHON_BIN}" scripts/write_evidence_manifest.py "$OUT_DIR" >"${OUT_DIR}/evidence_manifest.txt" 2>&1 || true
