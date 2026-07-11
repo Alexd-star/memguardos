@@ -2,4 +2,5 @@ $ bash scripts/install_ukui_plugins.sh --no-build
 
 installed plugin: /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
 installed plugin: /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
-Restart peony or ukui-control-center before UI verification.
+closed running ukui-control-center; reopen Settings to load the updated plugin
+Restart Peony before verifying its context-menu plugin.

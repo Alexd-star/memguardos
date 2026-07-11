@@ -1,301 +1,302 @@
 $ test -f ~/.log/kylin-ai-runtime/kylin-ai-runtime.log && tail -n 300 ~/.log/kylin-ai-runtime/kylin-ai-runtime.log || true
 
-[2026-06-07 00:14:58.618] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:31.587] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:14:58.627] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 1295169667
+[2026-07-11 12:52:31.587] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 251216826
 
-[2026-06-07 00:14:58.627] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:31.587] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:14:58.636] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:31.589] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:14:59.599] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:31.673] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:14:59.603] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 1698498335
+[2026-07-11 12:52:31.674] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 738357617
 
-[2026-06-07 00:14:59.603] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:31.674] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:14:59.622] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:31.675] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:15:00.024] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:36.221] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:15:00.027] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 298216178
+[2026-07-11 12:52:36.221] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 1515970752
 
-[2026-06-07 00:15:00.027] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:36.221] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:15:00.037] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:36.223] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:15:38.187] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:36.424] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:15:38.189] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 1054362043
+[2026-07-11 12:52:36.424] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 719711664
 
-[2026-06-07 00:15:38.189] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:36.424] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:15:38.287] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:36.426] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:15:38.469] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:37.604] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:15:38.471] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 464272484
+[2026-07-11 12:52:37.605] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 916985100
 
-[2026-06-07 00:15:38.471] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:37.605] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:15:38.481] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:37.609] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:15:54.075] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:37.698] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:15:54.078] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 1755284731
+[2026-07-11 12:52:37.698] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 318272823
 
-[2026-06-07 00:15:54.078] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:37.698] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:15:54.085] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:37.700] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:15:54.852] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:38.293] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:15:54.854] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 2040991216
+[2026-07-11 12:52:38.294] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 812763521
 
-[2026-06-07 00:15:54.854] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:38.294] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:15:54.912] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:38.295] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:15:55.768] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:38.371] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:15:55.770] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 36851935
+[2026-07-11 12:52:38.372] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 1070764404
 
-[2026-06-07 00:15:55.770] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:38.372] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:15:55.785] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:38.375] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:15:55.988] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:40.187] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:15:55.993] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 1361882147
+[2026-07-11 12:52:40.189] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 73907374
 
-[2026-06-07 00:15:55.993] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:40.189] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:15:55.998] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:40.191] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:16:00.925] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:40.284] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:16:00.929] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 24816595
+[2026-07-11 12:52:40.285] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 199263863
 
-[2026-06-07 00:16:00.929] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:40.285] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:16:00.947] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:40.287] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:16:02.632] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:40.392] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:16:02.634] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 22200332
+[2026-07-11 12:52:40.394] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 1343247629
 
-[2026-06-07 00:16:02.634] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:40.394] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:16:02.678] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:40.398] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:16:03.248] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:40.482] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:16:03.249] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 1718335960
+[2026-07-11 12:52:40.483] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 1517850316
 
-[2026-06-07 00:16:03.249] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:40.483] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:16:03.257] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:40.485] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:16:03.599] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:40.586] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:16:03.601] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 2051857881
+[2026-07-11 12:52:40.586] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 787710671
 
-[2026-06-07 00:16:03.601] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:40.586] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:16:03.605] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:40.588] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:16:04.098] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:40.679] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:16:04.100] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 915078848
+[2026-07-11 12:52:40.679] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 1587210518
 
-[2026-06-07 00:16:04.100] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:40.679] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:16:04.108] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:40.680] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:16:11.459] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:40.823] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:16:11.460] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 294449843
+[2026-07-11 12:52:40.824] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 941974388
 
-[2026-06-07 00:16:11.460] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:40.824] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:16:11.465] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:40.825] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:16:13.466] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:40.899] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:16:13.468] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 1873155803
+[2026-07-11 12:52:40.900] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 1472285883
 
-[2026-06-07 00:16:13.468] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:40.900] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:16:13.481] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:40.901] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:16:13.856] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:40.999] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:16:13.858] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 1570511043
+[2026-07-11 12:52:41.000] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 382951918
 
-[2026-06-07 00:16:13.858] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:41.000] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:16:13.879] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:41.003] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:16:14.710] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:41.080] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:16:14.711] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 946943891
+[2026-07-11 12:52:41.080] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 2081836333
 
-[2026-06-07 00:16:14.711] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:41.080] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:16:14.747] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:41.082] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:16:15.149] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:41.178] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:16:15.150] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 1404268870
+[2026-07-11 12:52:41.178] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 682963607
 
-[2026-06-07 00:16:15.150] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:41.178] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:16:15.163] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:41.180] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 00:18:33.382] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:52:41.255] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 00:18:33.384] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 1414425875
+[2026-07-11 12:52:41.256] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 1567837324
 
-[2026-06-07 00:18:33.384] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:52:41.256] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 00:18:33.393] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:52:41.257] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 12:33:37.241] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:53:03.798] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 12:33:37.282] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 640686000
+[2026-07-11 12:53:03.798] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 1010699161
 
-[2026-06-07 12:33:37.282] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:53:03.798] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 12:33:37.406] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:53:03.800] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 12:33:37.964] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:53:04.106] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 12:33:37.964] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 812028133
+[2026-07-11 12:53:04.106] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 1974654106
 
-[2026-06-07 12:33:37.964] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:53:04.106] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 12:33:38.023] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:53:04.108] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 12:33:38.397] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:53:04.435] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 12:33:38.398] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 1900418029
+[2026-07-11 12:53:04.436] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 330524791
 
-[2026-06-07 12:33:38.398] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:53:04.436] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 12:33:38.406] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:53:04.440] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 12:33:38.516] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:53:04.500] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 12:33:38.517] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 1042484617
+[2026-07-11 12:53:04.500] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 1262648441
 
-[2026-06-07 12:33:38.517] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:53:04.500] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 12:33:38.525] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:53:04.504] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
 
-[2026-06-07 12:33:41.959] info [coretextembeddingserver.cpp:33] [tid 4635]
+[2026-07-11 12:53:05.447] info [coretextembeddingserver.cpp:33] [tid 400045]
 Text Embedding new connection
 
-[2026-06-07 12:33:41.959] info [coretextembeddingservice.cpp:138] [tid 4635]
-[onHandleInitEngine] service: The sessionId of the engine is 1159537475
+[2026-07-11 12:53:05.447] info [coretextembeddingservice.cpp:138] [tid 400045]
+[onHandleInitEngine] service: The sessionId of the engine is 112173666
 
-[2026-06-07 12:33:41.959] info [coretextembeddingservice.cpp:139] [tid 4635]
+[2026-07-11 12:53:05.447] info [coretextembeddingservice.cpp:139] [tid 400045]
 [onHandleInitEngine] start load text embedding model.
 
-[2026-06-07 12:33:41.970] info [coretextembeddingservice.cpp:147] [tid 4635]
+[2026-07-11 12:53:05.449] info [coretextembeddingservice.cpp:147] [tid 400045]
 [onHandleInitEngine] load text embedding model success.
+

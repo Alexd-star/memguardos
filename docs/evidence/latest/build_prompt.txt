@@ -5,7 +5,7 @@ $ .venv/bin/python -m memguard.cli.memctl build-prompt openKylin 服务内存限
 仅使用已返回且已脱敏的记忆作为 OS Agent 生成上下文；不得输出被精准遗忘或被敏感策略阻断的明文。
 
 可用记忆上下文如下。只允许使用这些已脱敏、未遗忘的记忆；不要猜测或复原被脱敏内容。
-[1] type=knowledge subtype=fact tier=long_term score=0.6948 source=manual
+[1] type=knowledge subtype=fact tier=long_term score=1.2148 source=manual
 summary: 知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。
 evidence: 普通知识: systemd 可用 MemoryMax 限制服务内存。
 

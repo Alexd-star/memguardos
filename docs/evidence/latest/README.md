@@ -1,6 +1,6 @@
 # openKylin 证据采集包
 
-采集时间：20260607_123336；10k 性能文件已替换为优化后口径，旧并发 P95 超 500 ms 的证据已归档到 `docs/evidence/historical/performance_before_optimized_20260607/`，正式验收以本目录当前 `eval_result_openkylin_10k.json`、`eval_report_openkylin_10k.md` 和 `eval_10k.txt` 为准。
+采集时间：20260711_125303
 
 ## 文件说明
 
@@ -16,6 +16,7 @@
 | `sdk_embedding_probe.txt` | Kylin embedding 推理探测 |
 | `embedding_cpp_probe.txt` | Kylin embedding SDK 官方 C API 风格 C++ 探针 |
 | `kylin_retrieval.txt` | Kylin embedding 作为实际检索重排后端的证据 |
+| `kylin_retrieval_budget_fallback.txt` | Kylin 重排超过交互延迟预算后受控降级到稳定检索的证据 |
 | `kylin_embedding_diag/` | Kylin embedding runtime、socket、插件、包版本和日志诊断 |
 | `vector_probe.txt` | Kylin 向量数据库 SDK 探针 |
 | `quality_report.txt` | 输入清洗、格式标准化与质量校验证据 |
@@ -44,9 +45,6 @@
 | `ukui_control_center_visible_manual_confirmation.txt` | 保留自上次人工复核的 UKUI 控制中心入口可见性确认 |
 | `ukui_enterprise_panel.txt` | 保留自上次人工复核的控制中心企业化面板证据 |
 | `deb_package.txt` | MemGuardOS Debian 安装包构建、包内容和离线解包 smoke 证据 |
-| `deb_apt_install_maintenance.txt` | openKylin 维护模式下通过 `sudo apt install ./dist/memguardos_0.1.0_amd64.deb` 完整安装证据 |
-| `deb_apt_install_verify.txt` | `.deb` 安装后 dpkg、命令入口、systemd/cgroup、Peony/UKUI 插件依赖和审计链验证证据 |
-| `deb_apt_install_sdk_after_fix.txt` | `.deb` 安装后 Kylin runtime 修复、Python/C++ embedding 真实推理和 SDK 状态证据 |
 | `bpf_lsm_policy.txt` | BPF LSM JSON denylist 策略生成证据 |
 | `bpf_lsm_enforcer.txt` | BPF LSM 强制拦截增强环境、构建和 attach 探针 |
 | `systemd_cgroup.txt` | systemd/cgroup 服务限制证据 |
@@ -57,6 +55,3 @@
 | `memory_policy.txt` | 记忆冷热分层、存储占用、cgroup 状态和淘汰候选证据 |
 | `manifest.json` | 证据包文件大小与 SHA256 摘要清单 |
 | `SHA256SUMS.txt` | 可由 `sha256sum -c SHA256SUMS.txt` 复核的证据包哈希 |
-| `eval_10k.txt` | 10k 规模评测命令输出 |
-| `eval_result_openkylin_10k.json` | 10k 规模评测 JSON |
-| `eval_report_openkylin_10k.md` | 10k 规模评测 Markdown |

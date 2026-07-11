@@ -1,6 +1,6 @@
 $ .venv/bin/python -m memguard.cli.memctl sdk-status --probe-embedding --probe-timeout 90
 
-[1780806818406] [32minfo [0m Proxy init engine sessionId:1900418029.
+[1783745584440] [32minfo [0m Proxy init engine sessionId:330524791.
 {
   "embedding": {
     "backend": "kylin_coreai_embedding",
@@ -15,8 +15,8 @@ $ .venv/bin/python -m memguard.cli.memctl sdk-status --probe-embedding --probe-t
       "binary": "/usr/bin/kylin-ai-runtime",
       "user_service": {
         "available": true,
-        "active": false,
-        "state": "inactive"
+        "active": true,
+        "state": "active"
       },
       "base_dir": "/tmp/.kylin-ai-runtime-unix/1000",
       "base_dir_exists": true,
@@ -28,6 +28,111 @@ $ .venv/bin/python -m memguard.cli.memctl sdk-status --probe-embedding --probe-t
         "core-textembedding.sock": true,
         "config.sock": true
       },
+      "socket_ready": {
+        "core-textembedding.sock": true,
+        "config.sock": true
+      },
+      "socket_trust": {
+        "core-textembedding.sock": {
+          "path": "/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock",
+          "exists": true,
+          "trusted": true,
+          "socket_ready": true,
+          "reason": "Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit",
+          "socket": {
+            "owner": 1000,
+            "mode": "0o775",
+            "world_writable": false,
+            "sticky": false,
+            "is_symlink": false,
+            "is_socket": true,
+            "device": 2053,
+            "inode": 569
+          },
+          "parent_directory": {
+            "owner": 1000,
+            "mode": "0o777",
+            "world_writable": true,
+            "sticky": false,
+            "is_symlink": false,
+            "is_socket": false,
+            "device": 2053,
+            "inode": 49,
+            "path": "/tmp/.kylin-ai-runtime-unix/1000"
+          },
+          "parent_directory_warning": true,
+          "connection": {
+            "attempted": true,
+            "connected": true,
+            "closed": true,
+            "timeout_seconds": 0.2
+          },
+          "peer_credentials": {
+            "supported": true,
+            "verified": true,
+            "pid": 399441,
+            "uid": 1000,
+            "gid": 1000
+          },
+          "root_policy": {
+            "applies": false,
+            "allowed": true,
+            "environment_variable": "MEMGUARD_ALLOW_ROOT_KYLIN_USER_SOCKET",
+            "explicit_opt_in": false
+          }
+        },
+        "config.sock": {
+          "path": "/tmp/.kylin-ai-runtime-unix/1000/config.sock",
+          "exists": true,
+          "trusted": true,
+          "socket_ready": true,
+          "reason": "Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit",
+          "socket": {
+            "owner": 1000,
+            "mode": "0o775",
+            "world_writable": false,
+            "sticky": false,
+            "is_symlink": false,
+            "is_socket": true,
+            "device": 2053,
+            "inode": 565
+          },
+          "parent_directory": {
+            "owner": 1000,
+            "mode": "0o777",
+            "world_writable": true,
+            "sticky": false,
+            "is_symlink": false,
+            "is_socket": false,
+            "device": 2053,
+            "inode": 49,
+            "path": "/tmp/.kylin-ai-runtime-unix/1000"
+          },
+          "parent_directory_warning": true,
+          "connection": {
+            "attempted": true,
+            "connected": true,
+            "closed": true,
+            "timeout_seconds": 0.2
+          },
+          "peer_credentials": {
+            "supported": true,
+            "verified": true,
+            "pid": 399441,
+            "uid": 1000,
+            "gid": 1000
+          },
+          "root_policy": {
+            "applies": false,
+            "allowed": true,
+            "environment_variable": "MEMGUARD_ALLOW_ROOT_KYLIN_USER_SOCKET",
+            "explicit_opt_in": false
+          }
+        }
+      },
+      "trusted": true,
+      "reason": "core-textembedding.sock: Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit; config.sock: Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit",
+      "parent_directory_warning": true,
       "session_bus": true,
       "xdg_runtime_dir": "/run/user/1000"
     },
@@ -207,7 +312,7 @@ $ .venv/bin/python -m memguard.cli.memctl sdk-status --probe-embedding --probe-t
         0.011692
       ],
       "subprocess_returncode": 0,
-      "stderr_tail": "[1780806818525] \u001b[32minfo \u001b[0m Proxy init engine sessionId:1042484617."
+      "stderr_tail": "[1783745584504] \u001b[32minfo \u001b[0m Proxy init engine sessionId:1262648441."
     },
     "available": true,
     "inference_ready": true,
@@ -236,6 +341,58 @@ $ .venv/bin/python -m memguard.cli.memctl sdk-status --probe-embedding --probe-t
     },
     "socket": "/tmp/kylin-ai-vector-engine-1000.sock",
     "socket_exists": true,
+    "socket_ready": true,
+    "trusted": true,
+    "reason": "Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit",
+    "socket_trust": {
+      "path": "/tmp/kylin-ai-vector-engine-1000.sock",
+      "exists": true,
+      "trusted": true,
+      "socket_ready": true,
+      "reason": "Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit",
+      "socket": {
+        "owner": 1000,
+        "mode": "0o775",
+        "world_writable": false,
+        "sticky": false,
+        "is_symlink": false,
+        "is_socket": true,
+        "device": 2053,
+        "inode": 1861880
+      },
+      "parent_directory": {
+        "owner": 0,
+        "mode": "0o777",
+        "world_writable": true,
+        "sticky": false,
+        "is_symlink": true,
+        "is_socket": false,
+        "device": 2053,
+        "inode": 1653155,
+        "path": "/tmp"
+      },
+      "parent_directory_warning": true,
+      "connection": {
+        "attempted": true,
+        "connected": true,
+        "closed": true,
+        "timeout_seconds": 0.2
+      },
+      "peer_credentials": {
+        "supported": true,
+        "verified": true,
+        "pid": 397717,
+        "uid": 1000,
+        "gid": 1000
+      },
+      "root_policy": {
+        "applies": false,
+        "allowed": true,
+        "environment_variable": "MEMGUARD_ALLOW_ROOT_KYLIN_USER_SOCKET",
+        "explicit_opt_in": false
+      }
+    },
+    "parent_directory_warning": true,
     "available": true,
     "fallback": "sqlite_fts_hash_vector"
   }

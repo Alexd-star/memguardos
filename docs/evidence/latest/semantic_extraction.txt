@@ -18,7 +18,13 @@ $ ".venv/bin/python" -m memguard.cli.memctl explain-extraction --text '真实案
   "sensitivity": {
     "level": "none",
     "labels": [],
-    "redacted": false
+    "redacted": false,
+    "decision_reason": {
+      "matched_pattern": [],
+      "allowlist_hit": [],
+      "source_uri_sensitive": false,
+      "final_action": "allow"
+    }
   },
   "redacted_for_extraction": false,
   "extraction": {
@@ -38,24 +44,24 @@ $ ".venv/bin/python" -m memguard.cli.memctl explain-extraction --text '真实案
     "enhancer_error": ""
   }
 }
-{"stored": true, "memory_id": "mem_bfde055683734b73", "type": "knowledge", "subtype": "workflow", "tier": "long_term", "confidence": 0.8500000000000001, "quality": {"accepted": true, "score": 0.95, "issues": [], "warnings": ["normalized_whitespace_or_control_chars"], "original_chars": 103, "normalized_chars": 103, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "knowledge", "subtype": "workflow", "summary": "知识记忆：语义抽取增强流程:默认 deterministic semantic rules;设置 MEMGUARD_EXTRACTOR_COMMAND 后可调用本地 NER 或 LLM 返回 JSON schema。", "confidence": 0.85, "method": "deterministic_semantic_rules", "signals": ["source_manual", "workflow_signal"], "enhancer_used": false, "enhancer_error": ""}}
+{"stored": true, "memory_id": "mem_130d8daa7de0409a", "type": "knowledge", "subtype": "workflow", "tier": "long_term", "confidence": 0.8500000000000001, "quality": {"accepted": true, "score": 0.95, "issues": [], "warnings": ["normalized_whitespace_or_control_chars"], "original_chars": 103, "normalized_chars": 103, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "knowledge", "subtype": "workflow", "summary": "知识记忆：语义抽取增强流程:默认 deterministic semantic rules;设置 MEMGUARD_EXTRACTOR_COMMAND 后可调用本地 NER 或 LLM 返回 JSON schema。", "confidence": 0.85, "method": "deterministic_semantic_rules", "signals": ["source_manual", "workflow_signal"], "enhancer_used": false, "enhancer_error": ""}}
 [
   {
-    "audit_id": 8,
+    "audit_id": 7,
     "event_type": "ingest",
-    "memory_id": "mem_bfde055683734b73",
-    "detail": "{\"extraction\": {\"confidence\": 0.85, \"enhancer_error\": \"\", \"enhancer_used\": false, \"memory_type\": \"knowledge\", \"method\": \"deterministic_semantic_rules\", \"signals\": [\"source_manual\", \"workflow_signal\"], \"subtype\": \"workflow\", \"summary\": \"知识记忆：语义抽取增强流程:默认 deterministic semantic rules;设置 MEMGUARD_EXTRACTOR_COMMAND 后可调用本地 NER 或 LLM 返回 JSON schema。\"}, \"labels\": [], \"namespace\": \"default\", \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 103, \"original_chars\": 103, \"score\": 0.95, \"source_kind\": \"manual\", \"warnings\": [\"normalized_whitespace_or_control_chars\"]}, \"sensitivity\": \"none\", \"source_kind\": \"manual\", \"source_uri\": \"inline\", \"subtype\": \"workflow\", \"tier\": \"long_term\", \"type\": \"knowledge\"}",
-    "created_at": "2026-06-07T04:34:36.389030+00:00",
-    "prev_hash": "1d8a343bdcf132a327041607a4703e1f5b9bfb9b92915809a07c11b2b1152b51",
-    "event_hash": "bbae41f73657fc285780d8e1af4dbf8b0d6b5c16cb41ae22d3d16bd1da4248c5"
+    "memory_id": "mem_130d8daa7de0409a",
+    "detail": "{\"extraction\": {\"confidence\": 0.85, \"enhancer_error\": \"\", \"enhancer_used\": false, \"memory_type\": \"knowledge\", \"method\": \"deterministic_semantic_rules\", \"signals\": [\"source_manual\", \"workflow_signal\"], \"subtype\": \"workflow\", \"summary\": \"知识记忆：语义抽取增强流程:默认 deterministic semantic rules;设置 MEMGUARD_EXTRACTOR_COMMAND 后可调用本地 NER 或 LLM 返回 JSON schema。\"}, \"governance\": {\"governance_state\": \"active\", \"reason\": \"direct user or verified local source\", \"signals\": [], \"trust_level\": \"trusted\", \"trust_score\": 0.95}, \"labels\": [], \"namespace\": \"default\", \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 103, \"original_chars\": 103, \"score\": 0.95, \"source_kind\": \"manual\", \"warnings\": [\"normalized_whitespace_or_control_chars\"]}, \"sensitivity\": \"none\", \"source_kind\": \"manual\", \"source_uri\": \"inline\", \"subtype\": \"workflow\", \"tier\": \"long_term\", \"type\": \"knowledge\"}",
+    "created_at": "2026-07-11T04:55:55.476452+00:00",
+    "prev_hash": "a987fe98df78f1043d1ea788605610682b1f85349d42306f5fafe81852af7136",
+    "event_hash": "abdc6bfb35cc931c489a3943d2f0d844e650c7ef24dcd2cbbe41e9f1221ea677"
   },
   {
-    "audit_id": 6,
+    "audit_id": 5,
     "event_type": "ingest",
-    "memory_id": "mem_56d79dc9df504511",
-    "detail": "{\"extraction\": {\"confidence\": 0.85, \"enhancer_error\": \"\", \"enhancer_used\": false, \"memory_type\": \"sensitive_policy\", \"method\": \"deterministic_semantic_rules\", \"signals\": [\"source_manual\", \"security_policy_intent\"], \"subtype\": \"security_policy\", \"summary\": \"安全策略：员工工号 [REDACTED:employee_id] 需要脱敏保存。\"}, \"labels\": [\"employee_id\"], \"namespace\": \"default\", \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 22, \"original_chars\": 22, \"score\": 1.0, \"source_kind\": \"manual\", \"warnings\": []}, \"sensitivity\": \"low\", \"source_kind\": \"manual\", \"source_uri\": \"inline\", \"subtype\": \"security_policy\", \"tier\": \"long_term\", \"type\": \"sensitive_policy\"}",
-    "created_at": "2026-06-07T04:34:35.720918+00:00",
-    "prev_hash": "e4730996d4adbbdcf0a08993ae42fdb652d9a684ddb858d89d6609ffacd0ed53",
-    "event_hash": "76e77e309653a575fbe26b737639ca44826dcc5c00e3c811b9ecd328a4a1f550"
+    "memory_id": "mem_cd9e73582c1d4be4",
+    "detail": "{\"extraction\": {\"confidence\": 0.85, \"enhancer_error\": \"\", \"enhancer_used\": false, \"memory_type\": \"sensitive_policy\", \"method\": \"deterministic_semantic_rules\", \"signals\": [\"source_manual\", \"security_policy_intent\"], \"subtype\": \"security_policy\", \"summary\": \"安全策略：员工工号 [REDACTED:employee_id] 需要脱敏保存。\"}, \"governance\": {\"governance_state\": \"active\", \"reason\": \"direct user or verified local source\", \"signals\": [], \"trust_level\": \"trusted\", \"trust_score\": 0.95}, \"labels\": [\"employee_id\"], \"namespace\": \"default\", \"quality\": {\"accepted\": true, \"issues\": [], \"line_count\": 1, \"normalized_chars\": 22, \"original_chars\": 22, \"score\": 1.0, \"source_kind\": \"manual\", \"warnings\": []}, \"sensitivity\": \"low\", \"source_kind\": \"manual\", \"source_uri\": \"inline\", \"subtype\": \"security_policy\", \"tier\": \"long_term\", \"type\": \"sensitive_policy\"}",
+    "created_at": "2026-07-11T04:55:54.838202+00:00",
+    "prev_hash": "feb1805b55de61df204fe0e1d1e4a7e803731f64d7cec2927f4139a5dc0f8260",
+    "event_hash": "cb6312e6d580e9cf1ab84bd7700c26c969e896796af6129d244e2b5a89a56a20"
   }
 ]

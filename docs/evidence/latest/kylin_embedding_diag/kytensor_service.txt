@@ -13,23 +13,23 @@ RestartSec=5
 WantedBy=default.target
 ● kytensor.service - Kylin triton inference server
      Loaded: loaded (/usr/lib/systemd/system/kytensor.service; enabled; preset: enabled)
-     Active: active (running) since Sat 2026-06-06 17:04:00 CST; 19h ago
-   Main PID: 1099 (kytensor)
-      Tasks: 124 (limit: 6991)
-     Memory: 1.4G (peak: 1.9G swap: 331.5M swap peak: 331.5M)
-        CPU: 1min 26.276s
+     Active: active (running) since Sat 2026-07-11 07:47:19 CST; 5h 5min ago
+   Main PID: 1066 (kytensor)
+      Tasks: 124 (limit: 9411)
+     Memory: 1.4G (peak: 1.9G swap: 414.7M swap peak: 416.8M)
+        CPU: 12min 44.925s
      CGroup: /system.slice/kytensor.service
-             ├─ 1099 /usr/bin/kytensor --model-repository=/opt/appdata/kylin-ai/model-repository --model-control-mode=explicit --http-address=127.0.0.1 --grpc-address=127.0.0.1
-             └─10071 /opt/tritonserver/backends/python/triton_python_backend_stub /opt/appdata/kylin-ai/model-repository/tokenizer_gte-base_uint8-text/1/model.py triton_python_backend_shm_region_0293b539-f131-4697-b2f0-11e9830238ce 1048576 1048576 1099 /opt/tritonserver/backends/python 336 tokenizer_gte-base_uint8-text_0 DEFAULT
+             ├─  1066 /usr/bin/kytensor --model-repository=/opt/appdata/kylin-ai/model-repository --model-control-mode=explicit --http-address=127.0.0.1 --grpc-address=127.0.0.1
+             └─161067 /opt/tritonserver/backends/python/triton_python_backend_stub /opt/appdata/kylin-ai/model-repository/tokenizer_gte-base_uint8-text/1/model.py triton_python_backend_shm_region_9d53cead-02d7-4541-84af-9e735710c886 1048576 1048576 1066 /opt/tritonserver/backends/python 336 tokenizer_gte-base_uint8-text_0 DEFAULT
 
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  openKylin agent memory
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
-6月 06 17:55:45 luo-pc bash[10071]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
-6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1]
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  openKylin 服务内存限制
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 6, 3367, 3182, 11189, 28353, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
-6月 06 17:55:45 luo-pc bash[10071]: input_ids  [    0  9803   605    53  2397     6  3367  3182 11189 28353     2]
-6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1]
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  knowledge 知识记忆：openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。 openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 59636, 605, 53, 2397, 6, 3367, 1173, 5426, 71, 172681, 71346, 6, 264, 86039, 2737, 45688, 6, 2213, 12752, 71835, 14641, 28353, 30, 9803, 605, 53, 2397, 6, 3367, 1173, 5426, 71, 172681, 71346, 6, 264, 86039, 2737, 45688, 6, 2213, 12752, 71835, 14641, 28353, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:40 luo-pc bash[161067]:   55257 137578 145407    185    177    454   4432   1369   1819  99929
+7月 11 12:52:40 luo-pc bash[161067]:      74  10566     20     19  44200   7199  32116  33079  36272     74
+7月 11 12:52:40 luo-pc bash[161067]:   10566     20     19   4516   7199  32116  33079  36272      2]
+7月 11 12:52:40 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:40 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:40 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:40 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:40 luo-pc bash[161067]:  1]
+7月 11 12:52:40 luo-pc bash[161067]: tokenize string  忘掉回答语言偏好 掉回 回答 答语 语言 言偏 偏好 回答语言偏好 preference
+7月 11 12:52:40 luo-pc bash[161067]: tokens  {'input_ids': [0, 6, 44541, 14224, 27739, 38046, 21919, 1322, 6, 14224, 2490, 6, 27739, 6, 24450, 11871, 6, 38046, 6, 6062, 21919, 6, 21919, 1322, 6, 27739, 38046, 21919, 1322, 205537, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
 [{"name":"embd_cn-clip_512-uint8-image"},{"name":"embd_cn-clip_512-uint8-text"},{"name":"embd_gte-base_uint8-text","version":"1","state":"READY"},{"name":"ensemble-embd_cn-clip_512-uint8-text"},{"name":"ensemble-embd_gte-base_uint8-text","version":"1","state":"READY"},{"name":"matting_portrait","version":"1","state":"READY"},{"name":"model_bank","version":"1","state":"READY"},{"name":"ocr_ppocr","version":"1","state":"READY"},{"name":"tokenizer_cn-clip_512-uint8-text"},{"name":"tokenizer_gte-base_uint8-text","version":"1","state":"READY"}]

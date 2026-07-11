@@ -25,18 +25,18 @@ $ .venv/bin/python -m memguard.cli.memctl memory-policy --eviction-limit 10
       "newest_updated_at": ""
     },
     "session": {
-      "count": 4,
-      "content_chars": 560,
-      "summary_chars": 536,
-      "approx_payload_bytes": 1136,
+      "count": 1,
+      "content_chars": 188,
+      "summary_chars": 145,
+      "approx_payload_bytes": 343,
       "sensitivity": {
-        "none": 4
+        "none": 1
       },
       "sources": {
-        "user_behavior": 4
+        "user_behavior": 1
       },
-      "oldest_updated_at": "2026-06-07T04:34:36.730700+00:00",
-      "newest_updated_at": "2026-06-07T04:34:36.759476+00:00"
+      "oldest_updated_at": "2026-07-11T04:55:55.723888+00:00",
+      "newest_updated_at": "2026-07-11T04:55:55.723888+00:00"
     },
     "long_term": {
       "count": 6,
@@ -50,61 +50,34 @@ $ .venv/bin/python -m memguard.cli.memctl memory-policy --eviction-limit 10
       "sources": {
         "manual": 6
       },
-      "oldest_updated_at": "2026-06-07T04:34:34.930827+00:00",
-      "newest_updated_at": "2026-06-07T04:34:38.961527+00:00"
+      "oldest_updated_at": "2026-07-11T04:55:53.633208+00:00",
+      "newest_updated_at": "2026-07-11T04:55:59.789138+00:00"
     }
   },
   "counts": {
-    "live": 10,
-    "metadata_records": 11,
-    "segment_records": 15,
+    "live": 7,
+    "metadata_records": 8,
+    "segment_records": 12,
     "stale_or_deleted": 5,
-    "eviction_candidates": 4
+    "eviction_candidates": 1
   },
   "storage": {
-    "segment_path": "/var/tmp/memguardos_evidence_20260607_123336/memory.segment",
-    "segment_bytes": 27861,
-    "sqlite_path": "/var/tmp/memguardos_evidence_20260607_123336/memguard.sqlite3",
-    "sqlite_total_bytes": 147456,
-    "approx_total_bytes": 175317,
-    "bytes_per_live_memory": 17531.7
+    "segment_path": "/var/tmp/memguardos_evidence_20260711_125303/memory.segment",
+    "segment_bytes": 24021,
+    "sqlite_path": "/var/tmp/memguardos_evidence_20260711_125303/memguard.sqlite3",
+    "sqlite_total_bytes": 192512,
+    "approx_total_bytes": 216533,
+    "bytes_per_live_memory": 30933.286
   },
   "eviction_candidates": [
     {
-      "memory_id": "mem_d01fc12c84f64241",
+      "memory_id": "mem_4042ed5afb2f4174",
       "tier": "session",
       "type": "knowledge",
-      "subtype": "behavior_risk",
+      "subtype": "behavior_trace",
       "source_kind": "user_behavior",
-      "updated_at": "2026-06-07T04:34:36.730700+00:00",
-      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=1 command=sudo apt updata"
-    },
-    {
-      "memory_id": "mem_9f4bc10874df4a9a",
-      "tier": "session",
-      "type": "knowledge",
-      "subtype": "behavior_risk",
-      "source_kind": "user_behavior",
-      "updated_at": "2026-06-07T04:34:36.741348+00:00",
-      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=2 command=sudo apt update"
-    },
-    {
-      "memory_id": "mem_2a94466dae2a47d9",
-      "tier": "session",
-      "type": "knowledge",
-      "subtype": "behavior_risk",
-      "source_kind": "user_behavior",
-      "updated_at": "2026-06-07T04:34:36.750478+00:00",
-      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=3 command=sudo apt install -y openssh-server "
-    },
-    {
-      "memory_id": "mem_236eddd521f14846",
-      "tier": "session",
-      "type": "knowledge",
-      "subtype": "behavior_risk",
-      "source_kind": "user_behavior",
-      "updated_at": "2026-06-07T04:34:36.759476+00:00",
-      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=4 command=sudo systemctl enable --now ssh"
+      "updated_at": "2026-07-11T04:55:55.723888+00:00",
+      "summary": "知识记忆：User behavior: shell_command tool=\\\"py_interpreter_path\\\": category=routine source=/home/luo/.bash_history index=14 command=\\\"py_interpreter"
     }
   ],
   "recommendations": [
@@ -115,10 +88,10 @@ $ .venv/bin/python -m memguard.cli.memctl memory-policy --eviction-limit 10
     "platform": "Linux",
     "is_linux": true,
     "cgroup_v2_mounted": true,
-    "proc_cgroup": "0::/user.slice/user-1000.slice/session-117.scope",
+    "proc_cgroup": "0::/user.slice/user-1000.slice/session-184.scope",
     "memory_current": null,
     "memory_max": null,
     "cpu_max": null,
-    "pid": 352790
+    "pid": 536208
   }
 }

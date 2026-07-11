@@ -5,14 +5,14 @@ $ .venv/bin/python -m memguard.cli.memctl build-context openKylin 服务内存�
   "memory_count": 1,
   "max_chars": 2000,
   "effective_max_chars": 1846,
-  "context": "[1] type=knowledge subtype=fact tier=long_term score=0.6948 source=manual\nsummary: 知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。\nevidence: 普通知识: systemd 可用 MemoryMax 限制服务内存。",
+  "context": "[1] type=knowledge subtype=fact tier=long_term score=1.2148 source=manual\nsummary: 知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。\nevidence: 普通知识: systemd 可用 MemoryMax 限制服务内存。",
   "memories": [
     {
-      "memory_id": "mem_c889f91bfe34444d",
+      "memory_id": "mem_d7981da17e284292",
       "type": "knowledge",
       "subtype": "fact",
       "tier": "long_term",
-      "score": 0.6948,
+      "score": 1.2148,
       "source_kind": "manual",
       "summary": "知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。",
       "sensitivity": {
@@ -37,12 +37,12 @@ $ .venv/bin/python -m memguard.cli.memctl build-context openKylin 服务内存�
     },
     "selection_trace": [
       {
-        "memory_id": "mem_c889f91bfe34444d",
+        "memory_id": "mem_d7981da17e284292",
         "rank": 1,
         "included": true,
         "reason": "selected_by_hybrid_graph_or_text_search",
         "truncated": false,
-        "score": 0.6948,
+        "score": 1.2148,
         "match_source": "hybrid",
         "type": "knowledge",
         "subtype": "fact",
