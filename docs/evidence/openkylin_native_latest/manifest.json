@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-07-11T04:58:56.188727+00:00",
+  "generated_at": "2026-07-11T05:07:59.229745+00:00",
   "root": "docs/evidence/openkylin_native_latest",
   "file_count": 23,
-  "total_bytes": 86126,
+  "total_bytes": 86113,
   "files": [
     {
       "path": "deb_lifecycle.txt",
       "bytes": 225,
-      "sha256": "a275304d949dbea101fdd0600dde161bcb59a7f737296f27d0c192b65658c26d"
+      "sha256": "99e0309fbd89b60774c1561c19898d2c47034029f09486b5355b8d40aa619170"
     },
     {
       "path": "debian_packages.txt",
       "bytes": 9918,
-      "sha256": "7a6c4c0e81f02908059a652d782ef7134f3e759b94e93c04c9b448af4ac6370f"
+      "sha256": "4683a6cf8c39d8764960c11c082acca9975302982c8fee594f79a6badc518256"
     },
     {
       "path": "desktop_build.txt",
@@ -22,7 +22,7 @@
     {
       "path": "desktop_plugins.txt",
       "bytes": 7288,
-      "sha256": "4eb2156ad0e0c5d4965a3d790461cd12014ddf56c7d1871bb643d9741d0ae288"
+      "sha256": "de97a221cf88b017cbad88537702055144ca20ecf05a09b28ae82ae89316693b"
     },
     {
       "path": "environment.txt",
@@ -47,7 +47,7 @@
     {
       "path": "kylin_warmup.txt",
       "bytes": 373,
-      "sha256": "47ecad5f24bf7170555ece0b16224ede63c9d9c9f2a47a9e84c53df5ff69c6a3"
+      "sha256": "15a3fba1671af01aa0b0d2b5517f033f5d942e94b9a5fe1017a7cddf24868816"
     },
     {
       "path": "live_ui_sync.txt",
@@ -61,58 +61,58 @@
     },
     {
       "path": "openkylin_status.txt",
-      "bytes": 14342,
-      "sha256": "29f7efd9c32e6181307ddb0d74e170c83cfa5eabdcff38c8ec038bb18f9de2ae"
+      "bytes": 14339,
+      "sha256": "494843f1cd62c94e386159d30879847c60916ac0561c18abeaf06a4de3166174"
     },
     {
       "path": "openkylin_status_probe_sdk.txt",
-      "bytes": 19887,
-      "sha256": "d590883c14c615efb34b531f44ebf1d84b8e8531ec88fd3a719aa7a3d0cd4c0b"
+      "bytes": 19883,
+      "sha256": "7a461f2c20da2a0622453780417c78ba7eb7415121535149576282a0e61cfed0"
     },
     {
       "path": "peony_batch_apply.json",
       "bytes": 7203,
-      "sha256": "7035bd7c7fea6a3d6d31e21ef5356324b1eed6687fd6e669f5dfa98cd828e0f6"
+      "sha256": "1223b78368a287e05fd5081dabf0670f243890167ac26f08cf935255a079345a"
     },
     {
       "path": "peony_batch_preview.json",
       "bytes": 2842,
-      "sha256": "082a88432dd14699fd11a0c4a34ec1efacf1a00fec6e0e3d0b8c4509439cc262"
+      "sha256": "c315a6c3b246e4b31e32e0641aa220513038bfd7989493a4411d96327f02d2e4"
     },
     {
       "path": "peony_sensitive_preview.json",
-      "bytes": 1992,
-      "sha256": "77a2e3ad6658d4450f712e52319fd3f968436112fbd62c697a0814dffcb82a22"
+      "bytes": 1990,
+      "sha256": "659564f4edf6a46fe5e03ccce84745f02288fbdcb717a40f611d145875713f9d"
     },
     {
       "path": "polkit_assets.txt",
       "bytes": 3180,
-      "sha256": "769fe91beb1fd8c0eb501f7198bdca2379368ea0646aceb909fc997aaabbde9e"
+      "sha256": "f48ed30d33b786273541e5230e201fa5891f1a2325ac6db2908c4a8450e16345"
     },
     {
       "path": "pytest_openkylin.txt",
       "bytes": 715,
-      "sha256": "effdb6c732d098e14b80feaef5231be1eef902c5f94f11be65b0c860be77504c"
+      "sha256": "3701a4de73a8cda814c69b0cc41c01de77b18486b63874f72c4f1a8562300ed6"
     },
     {
       "path": "service_restart.txt",
-      "bytes": 548,
-      "sha256": "650913e159d1043210f332a8a1f493bf6b95e07c7c647b4929f3ebf3afa990dc"
+      "bytes": 547,
+      "sha256": "a30f5352be10ac14ceebb0a2bca50a200e4229d840cfe74f856130b430dd8f77"
     },
     {
       "path": "source_revision.json",
       "bytes": 163,
-      "sha256": "d347bc634c4c267ea2b2db5580b46d9d28ea67c11c18cbd9d9ad712fe047d8c5"
+      "sha256": "56bb450e64c9565771a4e1613ceca2a876ea67dc9516d5a1a8914fe96e9943f2"
     },
     {
       "path": "systemd_cgroup.txt",
-      "bytes": 855,
-      "sha256": "81d8a5456f44f3bcd28fd31d278ebef3397fc90a5aaaa95bde3f750df32dfce1"
+      "bytes": 852,
+      "sha256": "0f0d2c5e99233f083bbcfd15abe3901b7c89388b274470a131e223c3042943d8"
     },
     {
       "path": "tray_assets.txt",
       "bytes": 3817,
-      "sha256": "52e2c16cd4656217a7686317418b26ad6b05474d2e937373a5c63d8b1ebb17f8"
+      "sha256": "6ec5e746d6a4bb45f48c7083f6ef18e85a33dd6bec04671a2dd9beaf7ccf21e0"
     },
     {
       "path": "user_cli.txt",
