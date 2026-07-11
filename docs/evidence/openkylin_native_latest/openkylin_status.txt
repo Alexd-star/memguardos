@@ -78,7 +78,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
               "is_symlink": false,
               "is_socket": true,
               "device": 2053,
-              "inode": 52
+              "inode": 569
             },
             "parent_directory": {
               "owner": 1000,
@@ -101,7 +101,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
             "peer_credentials": {
               "supported": true,
               "verified": true,
-              "pid": 3951,
+              "pid": 399441,
               "uid": 1000,
               "gid": 1000
             },
@@ -126,7 +126,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
               "is_symlink": false,
               "is_socket": true,
               "device": 2053,
-              "inode": 50
+              "inode": 565
             },
             "parent_directory": {
               "owner": 1000,
@@ -149,7 +149,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
             "peer_credentials": {
               "supported": true,
               "verified": true,
-              "pid": 3951,
+              "pid": 399441,
               "uid": 1000,
               "gid": 1000
             },
@@ -200,22 +200,22 @@ $ python3 -m memguard.cli.memctl openkylin-status
       "available": true,
       "inference_ready": null,
       "ready_for_default_retrieval": false,
-      "capability_state": "installed_unwarmed",
+      "capability_state": "recently_ready",
       "component_ready": true,
       "product_state": {
         "installed": true,
-        "last_probe_success": false,
-        "last_success_at": "",
-        "last_success_dim": null,
-        "last_success_model": "",
+        "last_probe_success": true,
+        "last_success_at": "2026-07-11T09:15:23+08:00",
+        "last_success_dim": 768,
+        "last_success_model": "ensemble-embd_gte-base_uint8-text",
         "last_failure_at": "",
         "last_failure_reason": "",
-        "warmup_state": "not_warmed",
+        "warmup_state": "ready",
         "fallback": "hash_embedding",
-        "user_message": "已安装，当前未预热"
+        "user_message": "已安装，最近一次端侧向量预热成功"
       },
-      "user_message": "已安装，当前未预热",
-      "next_action": "首次使用可能稍慢，可点击“预热 Kylin SDK”",
+      "user_message": "已安装，最近一次端侧向量预热成功",
+      "next_action": "可继续使用；需要复核时点击“检查端侧向量能力”",
       "fallback": "hash_embedding",
       "diagnosis": {
         "availability_meaning": "fast mode checks files, sockets and services only; run sdk-status --probe-embedding for real inference.",
@@ -257,7 +257,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
           "is_symlink": false,
           "is_socket": true,
           "device": 2053,
-          "inode": 1859272
+          "inode": 1861880
         },
         "parent_directory": {
           "owner": 0,
@@ -280,7 +280,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
         "peer_credentials": {
           "supported": true,
           "verified": true,
-          "pid": 2303,
+          "pid": 397717,
           "uid": 1000,
           "gid": 1000
         },
@@ -301,8 +301,8 @@ $ python3 -m memguard.cli.memctl openkylin-status
     }
   },
   "desktop": {
-    "session_desktop": "",
-    "desktop_session": "",
+    "session_desktop": "UKUI",
+    "desktop_session": "kylin-wlcom",
     "peony": {
       "available": true,
       "plugin_path": "/usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so",
@@ -340,21 +340,21 @@ $ python3 -m memguard.cli.memctl openkylin-status
     "diagnosis_code": "ready",
     "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": "17907712",
+      "cgroup_memory_current": "15618048",
       "cgroup_memory_max": "536870912"
     },
     "cpu": {
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 896292,
-        "user_usec": 534270,
-        "system_usec": 362021,
+        "usage_usec": 355280,
+        "user_usec": 229688,
+        "system_usec": 125591,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 430,
+        "nr_periods": 156,
         "nr_throttled": 1,
-        "throttled_usec": 11602,
+        "throttled_usec": 44623,
         "nr_bursts": 0,
         "burst_usec": 0
       }
@@ -364,13 +364,13 @@ $ python3 -m memguard.cli.memctl openkylin-status
   "namespace": {
     "namespace": "default",
     "is_default": true,
-    "home": "/var/tmp/memguardos-native-home.RG4JWW",
+    "home": "/var/tmp/memguardos-native-home.ngNkO6",
     "home_exists": true,
-    "namespace_home": "/var/tmp/memguardos-native-home.RG4JWW",
+    "namespace_home": "/var/tmp/memguardos-native-home.ngNkO6",
     "namespace_home_exists": true,
-    "store_path": "/var/tmp/memguardos-native-home.RG4JWW/memory.segment",
-    "db_path": "/var/tmp/memguardos-native-home.RG4JWW/memguard.sqlite3",
-    "custom_patterns_path": "/var/tmp/memguardos-native-home.RG4JWW/sensitive_patterns.json",
+    "store_path": "/var/tmp/memguardos-native-home.ngNkO6/memory.segment",
+    "db_path": "/var/tmp/memguardos-native-home.ngNkO6/memguard.sqlite3",
+    "custom_patterns_path": "/var/tmp/memguardos-native-home.ngNkO6/sensitive_patterns.json",
     "store_exists": false,
     "db_exists": false,
     "custom_patterns_exists": false,
@@ -408,9 +408,9 @@ $ python3 -m memguard.cli.memctl openkylin-status
       "available": true,
       "ready": true,
       "level": "green",
-      "user_message": "已安装，当前未预热",
-      "next_action": "首次使用可能稍慢，可点击“预热 Kylin SDK”",
-      "capability_state": "installed_unwarmed"
+      "user_message": "已安装，最近一次端侧向量预热成功",
+      "next_action": "可继续使用；需要复核时点击“检查端侧向量能力”",
+      "capability_state": "recently_ready"
     },
     {
       "name": "kylin_vector",
