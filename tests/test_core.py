@@ -295,6 +295,15 @@ def test_versions_update_and_rollback(tmp_path):
         first_version = created.version.version_id
         updated = service.update_memory(created.memory_id, "以后回答命令时使用英文。")
         assert updated["updated"] is True
+        updated_record = updated["record"]
+        updated_hash = vector_content_hash(updated_record.summary, updated_record.content)
+        service.meta.upsert_memory_embedding(
+            created.memory_id,
+            updated_hash,
+            "kylin_sdk",
+            "kylin-sdk-v1",
+            [1.0, 2.0],
+        )
 
         versions = service.versions(created.memory_id)
         assert len(versions) == 2
@@ -302,10 +311,25 @@ def test_versions_update_and_rollback(tmp_path):
 
         rolled = service.rollback(created.memory_id, first_version)
         assert rolled["rolled_back"] is True
+        rolled_record = rolled["record"]
         latest = service.store.get_latest(created.memory_id)
         assert latest is not None
         assert "中文" in latest.content
         assert latest.version.op == "rollback"
+        rolled_hash = vector_content_hash(rolled_record.summary, rolled_record.content)
+        assert rolled_hash != updated_hash
+        embedding_rows = service.meta.conn.execute(
+            """
+            SELECT content_hash, status, vector_blob
+            FROM memory_embedding
+            WHERE memory_id = ?
+            """,
+            (created.memory_id,),
+        ).fetchall()
+        assert [dict(row) for row in embedding_rows] == [
+            {"content_hash": rolled_hash, "status": "pending", "vector_blob": None}
+        ]
+        assert all(row["content_hash"] != updated_hash for row in embedding_rows)
     finally:
         service.close()
 
@@ -1243,12 +1267,40 @@ def test_memory_tier_promote_and_evict(tmp_path):
         working = service.ingest_text("临时工作记忆：只在当前任务中使用。", tier="working")["record"]
         assert working.tier == "working"
         assert service.list_memories(tier="working")[0]["memory_id"] == working.memory_id
+        old_hash = vector_content_hash(working.summary, working.content)
+        current = service.update_memory(
+            working.memory_id,
+            "临时工作记忆：仅在当前更新后的任务中使用。",
+        )["record"]
+        assert current.tier == "working"
+        assert vector_content_hash(current.summary, current.content) != old_hash
+        service.meta.upsert_memory_embedding(
+            working.memory_id,
+            old_hash,
+            "kylin_sdk",
+            "kylin-sdk-v1",
+            [1.0, 2.0],
+        )
 
         promoted = service.promote_memory(working.memory_id, "long_term")
         assert promoted["promoted"] is True
-        assert promoted["record"].tier == "long_term"
+        promoted_record = promoted["record"]
+        assert promoted_record.tier == "long_term"
         assert service.list_memories(tier="working") == []
         assert service.list_memories(tier="long_term")
+        promoted_hash = vector_content_hash(promoted_record.summary, promoted_record.content)
+        embedding_rows = service.meta.conn.execute(
+            """
+            SELECT content_hash, status, vector_blob
+            FROM memory_embedding
+            WHERE memory_id = ?
+            """,
+            (working.memory_id,),
+        ).fetchall()
+        assert [dict(row) for row in embedding_rows] == [
+            {"content_hash": promoted_hash, "status": "pending", "vector_blob": None}
+        ]
+        assert all(row["content_hash"] != old_hash for row in embedding_rows)
 
         session = service.ingest_text("会话记忆：本轮调试使用。", tier="session")["record"]
         dry = service.evict_tier("session", confirm=False)

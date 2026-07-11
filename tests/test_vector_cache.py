@@ -397,6 +397,7 @@ def test_pending_embedding_queue_filters_governance_and_retries_failures(tmp_pat
         states = [
             ("trusted", "active", False),
             ("reviewed", "active", False),
+            ("verified", "active", False),
             ("untrusted", "quarantined", False),
             ("rejected", "rejected", False),
             ("trusted", "active", True),
@@ -424,15 +425,29 @@ def test_pending_embedding_queue_filters_governance_and_retries_failures(tmp_pat
             "v1",
             "temporary failure" * 100,
         )
+        store.enqueue_memory_embedding(
+            records[2].memory_id,
+            "hash-verified-failed",
+            "kylin",
+            "v1",
+        )
+        store.mark_embedding_failed(
+            records[2].memory_id,
+            "hash-verified-failed",
+            "kylin",
+            "v1",
+            "retry verified memory",
+        )
 
         pending = store.list_pending_embeddings("kylin", "v1", limit=10)
 
-        assert [row["memory_id"] for row in pending] == [
-            records[0].memory_id,
-            records[1].memory_id,
+        assert [(row["memory_id"], row["status"]) for row in pending] == [
+            (records[0].memory_id, "pending"),
+            (records[2].memory_id, "pending"),
+            (records[1].memory_id, "failed"),
+            (records[2].memory_id, "failed"),
         ]
         assert pending[0]["status"] == "pending"
-        assert pending[1]["status"] == "failed"
         assert pending[0]["summary"] == "summary-0"
         assert pending[0]["content"] == "content-0"
         assert len(store.list_pending_embeddings("kylin", "v1", limit=0)) == 1
@@ -445,9 +460,9 @@ def test_pending_embedding_queue_filters_governance_and_retries_failures(tmp_pat
         assert failed["vector_blob"] is None
         assert len(failed["failure_reason"]) == 500
         assert store.embedding_cache_status("kylin", "v1") == {
-            "pending": 5,
+            "pending": 6,
             "ready": 0,
-            "failed": 1,
+            "failed": 2,
         }
 
         store.enqueue_memory_embedding(records[1].memory_id, "hash-1", "kylin", "v1")
