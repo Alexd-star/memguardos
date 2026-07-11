@@ -247,6 +247,7 @@ QPushButton *makeOperationButton(const QString &iconName, const QString &text, c
 {
     auto *button = new QPushButton(themedIcon(iconName, QStyle::SP_FileDialogDetailedView), text);
     button->setObjectName(QStringLiteral("operationButton"));
+    button->setFlat(true);
     button->setMinimumHeight(44);
     button->setMaximumHeight(52);
     button->setMaximumWidth(220);
@@ -263,8 +264,16 @@ void emphasizePrimaryAction(QPushButton *button)
     palette.setColor(QPalette::ButtonText, palette.color(QPalette::HighlightedText));
     button->setPalette(palette);
     button->setAutoFillBackground(true);
+    button->setFlat(false);
     button->setDefault(true);
     button->setIconSize(QSize(26, 26));
+}
+
+void softenSecondaryAction(QPushButton *button)
+{
+    button->setFlat(true);
+    button->setIconSize(QSize(26, 26));
+    button->setCursor(Qt::PointingHandCursor);
 }
 
 bool containsAny(const QString &text, const QStringList &keywords)
@@ -584,6 +593,7 @@ QWidget *MemGuardUkccPlugin::pluginUi()
     readinessBar_ = new QProgressBar;
     readinessBar_->setRange(0, 100);
     readinessBar_->setValue(0);
+    readinessBar_->setMaximumWidth(420);
     readinessBar_->setTextVisible(false);
     readinessBar_->setAccessibleName(QStringLiteral("MemGuardOS 本机健康度"));
     readinessValueLabel_ = new QLabel(QStringLiteral("0%"));
@@ -712,6 +722,7 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     behaviorTimeline_->setAlternatingRowColors(true);
     behaviorTimeline_->setSelectionMode(QAbstractItemView::SingleSelection);
     behaviorTimeline_->setMinimumHeight(128);
+    behaviorTimeline_->setVisible(false);
     behaviorTimeline_->setAccessibleName(QStringLiteral("最近记忆行为事件列表"));
     behaviorTimeline_->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     behaviorTimeline_->header()->setSectionResizeMode(1, QHeaderView::Stretch);
@@ -739,7 +750,11 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     auto *openAgent = makeOperationButton(QStringLiteral("system-run"), QStringLiteral("Agent 工作台"), QStringLiteral("查看 Agent 交互和偏好生效"));
     auto *runJourney = makeOperationButton(QStringLiteral("media-playback-start"), QStringLiteral("验证记忆效果"), QStringLiteral("运行一次可复现的记忆使用验证"));
     emphasizePrimaryAction(openConsole);
-    emphasizePrimaryAction(refreshNow);
+    softenSecondaryAction(refreshNow);
+    softenSecondaryAction(forgetEntry);
+    softenSecondaryAction(openFiles);
+    softenSecondaryAction(openAgent);
+    softenSecondaryAction(runJourney);
     taskLayout->addWidget(openConsole, 1, 0);
     taskLayout->addWidget(refreshNow, 1, 1);
     taskLayout->addWidget(forgetEntry, 2, 0);
@@ -1307,6 +1322,7 @@ void MemGuardUkccPlugin::renderFeedbackSummary(const QString &text)
         return;
     behaviorTimeline_->clear();
     const QJsonArray notifications = payload.value(QStringLiteral("notifications")).toArray();
+    behaviorTimeline_->setVisible(!notifications.isEmpty());
     for (int index = 0; index < notifications.size() && index < 6; ++index) {
         const QJsonObject item = notifications.at(index).toObject();
         const QString level = item.value(QStringLiteral("level")).toString();
@@ -1318,13 +1334,6 @@ void MemGuardUkccPlugin::renderFeedbackSummary(const QString &text)
         row->setText(1, item.value(QStringLiteral("summary")).toString(QStringLiteral("状态已经更新。")));
         row->setText(2, status);
         row->setIcon(2, levelIcon(level == QStringLiteral("critical") ? QStringLiteral("red") : (level == QStringLiteral("warning") ? QStringLiteral("yellow") : QStringLiteral("green"))));
-    }
-    if (behaviorTimeline_->topLevelItemCount() == 0) {
-        auto *empty = new QTreeWidgetItem(behaviorTimeline_);
-        empty->setText(0, QStringLiteral("暂无事件"));
-        empty->setText(1, QStringLiteral("完成一次记忆写入、Agent 任务或遗忘后，这里会显示结果。"));
-        empty->setText(2, QStringLiteral("正常"));
-        empty->setIcon(2, levelIcon(QStringLiteral("green")));
     }
 }
 

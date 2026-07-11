@@ -1166,6 +1166,11 @@ def test_ukui_daily_page_uses_task_first_memory_actions():
     assert "搜索记忆" in source
     assert "精准遗忘" in source
     assert "日常使用只保留最常用的记忆操作" in source
+    assert "softenSecondaryAction" in source
+    assert "readinessBar_->setMaximumWidth(420)" in source
+    assert source.count("emphasizePrimaryAction(") == 2
+    assert "button->setFlat(true)" in source
+    assert "behaviorTimeline_->setVisible(false)" in source
 
 
 def test_ukui_tray_stays_alive_while_the_desktop_panel_is_starting():
