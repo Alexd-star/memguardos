@@ -49,6 +49,7 @@ from memguard.os_guard.cgroup import cgroup_status
 from memguard.os_guard.journald import JournaldLogger
 from memguard.retrieval.conflict import ConflictResolver, preference_topic as inferred_preference_topic
 from memguard.retrieval.hybrid import HybridRetriever, expand_query_aliases, tokenize_literal
+from memguard.retrieval.vector_cache import vector_content_hash
 from memguard.sensitivity.custom_patterns import PatternValidationError, load_patterns, save_pattern, save_pattern_from_instruction, suggest_pattern_from_instruction
 from memguard.sensitivity.detector import SensitiveDetector
 from memguard.store.mmap_store import AppendOnlyMemoryStore
@@ -56,6 +57,9 @@ from memguard.store.sqlite_meta import SQLiteMetaStore
 
 
 class MemGuardService:
+    EMBEDDING_BACKEND = "kylin_sdk"
+    EMBEDDING_MODEL_REVISION = "kylin-sdk-v1"
+
     def __init__(self, store_path: Optional[Path] = None, db_path: Optional[Path] = None, namespace: Optional[str] = None):
         self.namespace = normalize_namespace(namespace)
         self.store = AppendOnlyMemoryStore(store_path or default_store_path(self.namespace))
@@ -77,6 +81,20 @@ class MemGuardService:
 
     def close(self) -> None:
         self.meta.close()
+
+    def _sync_embedding_job(self, record: MemoryRecord) -> None:
+        self.meta.delete_memory_embeddings(record.memory_id)
+        if (
+            not record.deleted
+            and record.governance_state == "active"
+            and record.trust_level in {"trusted", "verified", "reviewed"}
+        ):
+            self.meta.enqueue_memory_embedding(
+                record.memory_id,
+                vector_content_hash(record.summary, record.content),
+                self.EMBEDDING_BACKEND,
+                self.EMBEDDING_MODEL_REVISION,
+            )
 
     def ingest_text(self, text: str, source_kind: str = "manual", source_uri: str = "", tier: Optional[str] = None) -> Dict[str, object]:
         clean_text, quality = assess_text_quality(text, source_kind=source_kind)
@@ -185,6 +203,7 @@ class MemGuardService:
         self._enrich_graph(record)
         self.store.append(record)
         self.meta.upsert_memory(record)
+        self._sync_embedding_job(record)
         audit = self._audit(
             "ingest",
             record.memory_id,
@@ -1127,6 +1146,7 @@ class MemGuardService:
         self._enrich_graph(record)
         self.store.append(record)
         self.meta.upsert_memory(record)
+        self._sync_embedding_job(record)
         self._audit(
             "interaction_preference_extract",
             record.memory_id,
@@ -1326,6 +1346,7 @@ class MemGuardService:
         self._enrich_graph(record)
         self.store.append(record)
         self.meta.upsert_memory(record)
+        self._sync_embedding_job(record)
         self._audit(
             "update",
             memory_id,
@@ -1401,6 +1422,7 @@ class MemGuardService:
             previous.trust_score = 0.0
             tombstone = self.store.tombstone(previous, "governance rejection: " + reason)
             self.meta.mark_deleted(memory_id, superseded_by=tombstone.version.version_id)
+            self.meta.delete_memory_embeddings(memory_id)
             self.meta.set_governance_state(memory_id, "rejected", "rejected", 0.0, reason)
             self._audit(
                 "governance_reject",
@@ -1430,6 +1452,7 @@ class MemGuardService:
         approved = MemoryRecord.from_dict(payload).finalize_hash()
         self.store.append(approved)
         self.meta.upsert_memory(approved)
+        self._sync_embedding_job(approved)
         self._audit(
             "governance_approve",
             memory_id,
@@ -1491,6 +1514,7 @@ class MemGuardService:
         ).finalize_hash()
         self.store.append(promoted)
         self.meta.upsert_memory(promoted)
+        self._sync_embedding_job(promoted)
         self._audit(
             "promote",
             memory_id,
@@ -1516,6 +1540,7 @@ class MemGuardService:
                 continue
             tombstone = self.store.tombstone(record, "tier eviction: " + tier)
             self.meta.mark_deleted(record.memory_id, superseded_by=tombstone.version.version_id)
+            self.meta.delete_memory_embeddings(record.memory_id)
             evicted.append(record.memory_id)
         self._audit("tier_evict", None, {"tier": tier, "evicted": evicted})
         return {"evicted": True, "tier": tier, "memory_ids": evicted}
@@ -1763,6 +1788,7 @@ class MemGuardService:
         )
         self.store.append(record)
         self.meta.upsert_memory(record)
+        self._sync_embedding_job(record)
         self._audit(
             "rollback",
             memory_id,
@@ -2478,6 +2504,7 @@ class MemGuardService:
             probes[memory_id] = record.content
             tombstone = self.store.tombstone(record, request)
             self.meta.mark_deleted(memory_id, superseded_by=tombstone.version.version_id)
+            self.meta.delete_memory_embeddings(memory_id)
             forgotten.append(memory_id)
         if compact:
             self.store.compact()
@@ -2574,6 +2601,7 @@ class MemGuardService:
                 continue
             tombstone = self.store.tombstone(record, reason)
             self.meta.mark_deleted(memory_id, superseded_by=tombstone.version.version_id)
+            self.meta.delete_memory_embeddings(memory_id)
             forgotten.append(memory_id)
 
         if compact and forgotten:
@@ -2710,6 +2738,7 @@ class MemGuardService:
                 "agent interaction forget: %s" % json.dumps(clean_filters, ensure_ascii=False),
             )
             self.meta.mark_deleted(memory_id, superseded_by=tombstone.version.version_id)
+            self.meta.delete_memory_embeddings(memory_id)
             forgotten_memory_ids.append(memory_id)
         deleted_observations = self.meta.delete_preference_observations(
             impact["event_ids"],

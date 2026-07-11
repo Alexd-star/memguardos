@@ -5,6 +5,7 @@ import struct
 import pytest
 
 from memguard.retrieval.vector_cache import decode_vector, encode_vector, vector_content_hash
+from memguard.models import MemorySource, make_memory
 import memguard.store.sqlite_meta as sqlite_meta
 from memguard.store.sqlite_meta import SQLiteMetaStore
 
@@ -385,6 +386,95 @@ def test_embedding_status_counts_and_delete_lifecycle(tmp_path):
             "pending": 0,
             "ready": 0,
             "failed": 1,
+        }
+    finally:
+        store.close()
+
+
+def test_pending_embedding_queue_filters_governance_and_retries_failures(tmp_path):
+    store = SQLiteMetaStore(tmp_path / "meta.sqlite3")
+    try:
+        states = [
+            ("trusted", "active", False),
+            ("reviewed", "active", False),
+            ("untrusted", "quarantined", False),
+            ("rejected", "rejected", False),
+            ("trusted", "active", True),
+            ("untrusted", "active", False),
+        ]
+        records = []
+        for index, (trust_level, governance_state, deleted) in enumerate(states):
+            record = make_memory(
+                content="content-%d" % index,
+                memory_type="knowledge",
+                source=MemorySource(kind="manual", uri="test"),
+                summary="summary-%d" % index,
+                trust_level=trust_level,
+                governance_state=governance_state,
+            )
+            record.deleted = deleted
+            store.upsert_memory(record)
+            store.enqueue_memory_embedding(record.memory_id, "hash-%d" % index, "kylin", "v1")
+            records.append(record)
+
+        store.mark_embedding_failed(
+            records[1].memory_id,
+            "hash-1",
+            "kylin",
+            "v1",
+            "temporary failure" * 100,
+        )
+
+        pending = store.list_pending_embeddings("kylin", "v1", limit=10)
+
+        assert [row["memory_id"] for row in pending] == [
+            records[0].memory_id,
+            records[1].memory_id,
+        ]
+        assert pending[0]["status"] == "pending"
+        assert pending[1]["status"] == "failed"
+        assert pending[0]["summary"] == "summary-0"
+        assert pending[0]["content"] == "content-0"
+        assert len(store.list_pending_embeddings("kylin", "v1", limit=0)) == 1
+        failed = store.conn.execute(
+            "SELECT dimension, vector_blob, failure_reason FROM memory_embedding "
+            "WHERE memory_id = ?",
+            (records[1].memory_id,),
+        ).fetchone()
+        assert failed["dimension"] == 0
+        assert failed["vector_blob"] is None
+        assert len(failed["failure_reason"]) == 500
+        assert store.embedding_cache_status("kylin", "v1") == {
+            "pending": 5,
+            "ready": 0,
+            "failed": 1,
+        }
+
+        store.enqueue_memory_embedding(records[1].memory_id, "hash-1", "kylin", "v1")
+        retried = store.conn.execute(
+            "SELECT status, failure_reason FROM memory_embedding WHERE memory_id = ?",
+            (records[1].memory_id,),
+        ).fetchone()
+        assert dict(retried) == {"status": "pending", "failure_reason": ""}
+    finally:
+        store.close()
+
+
+def test_enqueue_embedding_conflict_clears_ready_vector(tmp_path):
+    store = SQLiteMetaStore(tmp_path / "meta.sqlite3")
+    try:
+        store.upsert_memory_embedding("m1", "hash-a", "kylin", "v1", [1.0, 2.0])
+
+        store.enqueue_memory_embedding("m1", "hash-a", "kylin", "v1")
+
+        row = store.conn.execute(
+            "SELECT dimension, vector_blob, status, failure_reason FROM memory_embedding"
+        ).fetchone()
+        assert dict(row) == {
+            "dimension": 0,
+            "vector_blob": None,
+            "status": "pending",
+            "failure_reason": "",
         }
     finally:
         store.close()

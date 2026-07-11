@@ -457,6 +457,86 @@ class SQLiteMetaStore:
         row = self.conn.execute("SELECT * FROM memory WHERE memory_id = ?", (memory_id,)).fetchone()
         return dict(row) if row else None
 
+    def enqueue_memory_embedding(
+        self,
+        memory_id: str,
+        content_hash: str,
+        backend: str,
+        model_revision: str,
+    ) -> None:
+        now = utc_now()
+        self.conn.execute(
+            """
+            INSERT INTO memory_embedding (
+                memory_id, content_hash, backend, model_revision, dimension,
+                vector_blob, status, failure_reason, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, 0, NULL, 'pending', '', ?, ?)
+            ON CONFLICT(memory_id, backend, model_revision, content_hash) DO UPDATE SET
+                dimension=0,
+                vector_blob=NULL,
+                status='pending',
+                failure_reason='',
+                updated_at=excluded.updated_at
+            """,
+            (memory_id, content_hash, backend, model_revision, now, now),
+        )
+        self.conn.commit()
+
+    def list_pending_embeddings(
+        self,
+        backend: str,
+        model_revision: str,
+        limit: int,
+    ) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT embedding.memory_id, embedding.content_hash,
+                   embedding.backend, embedding.model_revision,
+                   embedding.status, embedding.failure_reason,
+                   embedding.created_at, embedding.updated_at,
+                   memory.summary, memory.content
+            FROM memory_embedding AS embedding
+            JOIN memory ON memory.memory_id = embedding.memory_id
+            WHERE embedding.backend = ? AND embedding.model_revision = ?
+              AND embedding.status IN ('pending', 'failed')
+              AND memory.deleted = 0
+              AND memory.governance_state = 'active'
+              AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
+            ORDER BY CASE embedding.status WHEN 'pending' THEN 0 ELSE 1 END,
+                     embedding.updated_at
+            LIMIT ?
+            """,
+            (backend, model_revision, max(1, int(limit))),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def mark_embedding_failed(
+        self,
+        memory_id: str,
+        content_hash: str,
+        backend: str,
+        model_revision: str,
+        reason: str,
+    ) -> None:
+        self.conn.execute(
+            """
+            UPDATE memory_embedding
+            SET status = 'failed', vector_blob = NULL, dimension = 0,
+                failure_reason = ?, updated_at = ?
+            WHERE memory_id = ? AND content_hash = ?
+              AND backend = ? AND model_revision = ?
+            """,
+            (
+                str(reason)[:500],
+                utc_now(),
+                memory_id,
+                content_hash,
+                backend,
+                model_revision,
+            ),
+        )
+        self.conn.commit()
+
     def upsert_memory_embedding(
         self,
         memory_id: str,
