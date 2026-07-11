@@ -1,5 +1,5 @@
 $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
-[1783698700105] [32minfo [0m Proxy init engine sessionId:1137035700.
+[1783732522751] [32minfo [0m Proxy init engine sessionId:225847119.
 {
   "schema": "memguardos-openkylin-native-status-v1",
   "system": {
@@ -50,8 +50,8 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
         "binary": "/usr/bin/kylin-ai-runtime",
         "user_service": {
           "available": true,
-          "active": false,
-          "state": "inactive"
+          "active": true,
+          "state": "active"
         },
         "base_dir": "/tmp/.kylin-ai-runtime-unix/1000",
         "base_dir_exists": true,
@@ -82,7 +82,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
               "is_symlink": false,
               "is_socket": true,
               "device": 2053,
-              "inode": 52
+              "inode": 569
             },
             "parent_directory": {
               "owner": 1000,
@@ -105,7 +105,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
             "peer_credentials": {
               "supported": true,
               "verified": true,
-              "pid": 3951,
+              "pid": 399441,
               "uid": 1000,
               "gid": 1000
             },
@@ -130,7 +130,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
               "is_symlink": false,
               "is_socket": true,
               "device": 2053,
-              "inode": 50
+              "inode": 565
             },
             "parent_directory": {
               "owner": 1000,
@@ -153,7 +153,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
             "peer_credentials": {
               "supported": true,
               "verified": true,
-              "pid": 3951,
+              "pid": 399441,
               "uid": 1000,
               "gid": 1000
             },
@@ -347,7 +347,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
           0.011692
         ],
         "subprocess_returncode": 0,
-        "stderr_tail": "[1783698700168] \u001b[32minfo \u001b[0m Proxy init engine sessionId:506362652."
+        "stderr_tail": "[1783732522815] \u001b[32minfo \u001b[0m Proxy init engine sessionId:1344620423."
       },
       "available": true,
       "inference_ready": true,
@@ -366,9 +366,9 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
       "product_state": {
         "installed": true,
         "last_probe_success": true,
-        "last_success_at": "2026-07-10T23:00:25+08:00",
+        "last_success_at": "2026-07-11T08:39:01+08:00",
         "last_success_dim": 768,
-        "last_success_model": "",
+        "last_success_model": "ensemble-embd_gte-base_uint8-text",
         "last_failure_at": "",
         "last_failure_reason": "",
         "warmup_state": "ready",
@@ -409,7 +409,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
           "is_symlink": false,
           "is_socket": true,
           "device": 2053,
-          "inode": 1859272
+          "inode": 1861880
         },
         "parent_directory": {
           "owner": 0,
@@ -432,7 +432,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
         "peer_credentials": {
           "supported": true,
           "verified": true,
-          "pid": 2303,
+          "pid": 397717,
           "uid": 1000,
           "gid": 1000
         },
@@ -492,21 +492,21 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
     "diagnosis_code": "ready",
     "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": "17907712",
+      "cgroup_memory_current": "16076800",
       "cgroup_memory_max": "536870912"
     },
     "cpu": {
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 896324,
-        "user_usec": 534289,
-        "system_usec": 362034,
+        "usage_usec": 958274,
+        "user_usec": 571572,
+        "system_usec": 386701,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 430,
-        "nr_throttled": 1,
-        "throttled_usec": 11602,
+        "nr_periods": 500,
+        "nr_throttled": 2,
+        "throttled_usec": 60816,
         "nr_bursts": 0,
         "burst_usec": 0
       }
@@ -516,13 +516,13 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
   "namespace": {
     "namespace": "default",
     "is_default": true,
-    "home": "/var/tmp/memguardos-native-home.RG4JWW",
+    "home": "/var/tmp/memguardos-native-home.2lVQJj",
     "home_exists": true,
-    "namespace_home": "/var/tmp/memguardos-native-home.RG4JWW",
+    "namespace_home": "/var/tmp/memguardos-native-home.2lVQJj",
     "namespace_home_exists": true,
-    "store_path": "/var/tmp/memguardos-native-home.RG4JWW/memory.segment",
-    "db_path": "/var/tmp/memguardos-native-home.RG4JWW/memguard.sqlite3",
-    "custom_patterns_path": "/var/tmp/memguardos-native-home.RG4JWW/sensitive_patterns.json",
+    "store_path": "/var/tmp/memguardos-native-home.2lVQJj/memory.segment",
+    "db_path": "/var/tmp/memguardos-native-home.2lVQJj/memguard.sqlite3",
+    "custom_patterns_path": "/var/tmp/memguardos-native-home.2lVQJj/sensitive_patterns.json",
     "store_exists": false,
     "db_exists": false,
     "custom_patterns_exists": false,
