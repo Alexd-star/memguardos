@@ -1,33 +1,8 @@
 $ sudo cat /etc/shadow >/dev/null 2>/dev/null || true; bash scripts/auditd_to_memguard.sh "/home/luo/memguardos" memguard_sensitive 200 --summary || true
 
 {
-  "parsed": 28,
-  "ingested_count": 28,
-  "blocked_count": 3,
-  "blocked_samples": [
-    {
-      "audit_id": "40654",
-      "path": "/etc/shadow",
-      "process": "/usr/bin/sudo",
-      "action": "open",
-      "stored": false,
-      "reason": "sensitive_block"
-    },
-    {
-      "audit_id": "40671",
-      "path": "/etc/shadow",
-      "process": "/usr/bin/sudo",
-      "action": "open",
-      "stored": false,
-      "reason": "sensitive_block"
-    },
-    {
-      "audit_id": "40682",
-      "path": "/etc/shadow",
-      "process": "/usr/bin/cat",
-      "action": "open",
-      "stored": false,
-      "reason": "sensitive_block"
-    }
-  ]
+  "parsed": 5,
+  "ingested_count": 5,
+  "blocked_count": 0,
+  "blocked_samples": []
 }

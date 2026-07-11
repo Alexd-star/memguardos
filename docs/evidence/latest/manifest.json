@@ -1,28 +1,28 @@
 {
-  "generated_at": "2026-07-09T10:20:41.054198+00:00",
+  "generated_at": "2026-07-11T05:01:05.345350+00:00",
   "root": "docs/evidence/latest",
-  "file_count": 71,
-  "total_bytes": 434126,
+  "file_count": 73,
+  "total_bytes": 578026,
   "files": [
     {
       "path": "agent_batch_search.txt",
-      "bytes": 11788,
-      "sha256": "b5fb5602a9cdd7231207e8b3116e49cafd9402745820cd396494ef71fcb991be"
+      "bytes": 15482,
+      "sha256": "b693c2ec00487065f6af8c6923a7bb7ca68b5492145264a81292143a1e1c52f0"
     },
     {
       "path": "api_auth.txt",
       "bytes": 602,
-      "sha256": "03f9b171c6724d76b616f5d11167f8f041738c1762b0e9453dd29292978c1924"
+      "sha256": "a14d5ed7f56340909cd699de6b13ce4692ca0427030d14e05d2111978824268a"
     },
     {
       "path": "audit_concurrency.txt",
       "bytes": 1608,
-      "sha256": "0c9cd1f29fc3417454da0ce5d4fc918fa8a0e816c858b959221007dcc829b44e"
+      "sha256": "c56f2ba3f0229b0bb91b6e076c03b1b1bec3837f692f903178cc8f25b88b6368"
     },
     {
       "path": "auditd_ingest.txt",
-      "bytes": 798,
-      "sha256": "77b3e09d438526afc37e9a6daa9603caf1d36499ffbeb953b46fa205df859c40"
+      "bytes": 243,
+      "sha256": "ff1fd260cee03c164cc75ed95a004b902a934edb12d8bbe4e8b5cd15942bd229"
     },
     {
       "path": "auditd_rules.txt",
@@ -31,28 +31,28 @@
     },
     {
       "path": "behavior_history.txt",
-      "bytes": 1028,
-      "sha256": "8a869472dbead1de27f26ee560b9e4c45a110956d4733b3f62c93ef961aef870"
+      "bytes": 481,
+      "sha256": "45fc3a6f2bd8b52f20e40e19a46ee6b7f3ec70a10475ff5b2386f1af1a55e3c3"
     },
     {
       "path": "bpf_lsm_enforcer.txt",
       "bytes": 897,
-      "sha256": "dfeaff9a10fd7212db9251a61f43587f830358f667b219bfdc8f564b6eafee47"
+      "sha256": "e7b4324b34675f5b7229473a658f0b92e76faacfd6fed34645411bd1801f5de6"
     },
     {
       "path": "bpf_lsm_policy.txt",
       "bytes": 458,
-      "sha256": "ba4badd2d9979c1ef4737f17c0dc50bf4297ec0ca6dd30bb336a631f4590cc4a"
+      "sha256": "740e1eb48cbe7d8473f8816cbbf020b33c717316d9ae8a5b9d20ef376fc80afe"
     },
     {
       "path": "build_context_explainability.txt",
       "bytes": 2334,
-      "sha256": "00fa83cbb829c277301fcf0a9991eb82ddb4cd24927909043df6a9d63111bbf3"
+      "sha256": "1b427951f68c0b9dbc3d626c1fda216e1d44128e49ad7c68c4e41f89b9a6a778"
     },
     {
       "path": "build_prompt.txt",
       "bytes": 919,
-      "sha256": "522962141d1b2bf6ecfcfe5655c105d758adfc9730685d18b2e8b641c7b1e471"
+      "sha256": "0369961a39a05f92cda8207ea473d22decffd2f13762472ed325189a7ef9d135"
     },
     {
       "path": "deb_apt_install_maintenance.txt",
@@ -71,8 +71,8 @@
     },
     {
       "path": "deb_package.txt",
-      "bytes": 8368,
-      "sha256": "9ede54bd2d01163288e4d6c1195e34ec6a1ef638743ac71144e1ba7dede6055d"
+      "bytes": 15342,
+      "sha256": "8d1e7bd79d86cd891518f9febc063d897a648f9b63ade56fd428bb1370ed1448"
     },
     {
       "path": "default_audit_after_reset.txt",
@@ -86,18 +86,18 @@
     },
     {
       "path": "doctor.txt",
-      "bytes": 9915,
-      "sha256": "fc64871a7b7283c8858ef742638548bb31cab1ab67290f7556040f33ef8bcaaf"
+      "bytes": 15364,
+      "sha256": "e5426a34059448f7404a3345de2749a4ceea48da871b0412f4c3c7a08589fbfd"
     },
     {
       "path": "embedding_cpp_probe.txt",
-      "bytes": 635,
-      "sha256": "9c699243d9fb2088aa271653a37578ba85f1f3b546d1f1aca909138bbc01d9f5"
+      "bytes": 637,
+      "sha256": "35139fc04ebabd5ab625f568836b01be6b3cfaa2f1a2f3c2517fa00335a1cade"
     },
     {
       "path": "environment.txt",
       "bytes": 813,
-      "sha256": "9db01a254de94ee3180bd9744ddd5d47aa3ba8863cf8e1322f4e1b40fbdcee03"
+      "sha256": "fda3ae8d39c044443528005f364794a140e72ed786ceb60a917620190d332b28"
     },
     {
       "path": "eval_10k.txt",
@@ -106,13 +106,13 @@
     },
     {
       "path": "eval_1k.txt",
-      "bytes": 3838,
-      "sha256": "d2009c130580604151a0a518a24b76a3b13c0e9a99d78425f492ccdb4ca8245d"
+      "bytes": 3850,
+      "sha256": "3cf3affae1643b9342c20463024d0ff1fcc6a3e691b774af147a898817ea8aa5"
     },
     {
       "path": "eval_report_openkylin.md",
-      "bytes": 2848,
-      "sha256": "354762942626cce5fe28b30b91a779906da320c65ff4fadf85f0d2db9e1727c4"
+      "bytes": 2849,
+      "sha256": "baff6bc1dd3c5b22264a23118daba3ee5a4a102e24de1124075f262b72523097"
     },
     {
       "path": "eval_report_openkylin_10k.md",
@@ -121,8 +121,8 @@
     },
     {
       "path": "eval_result_openkylin.json",
-      "bytes": 3598,
-      "sha256": "3e532648eca5012e1cd11e76de4be74c4379fed9d3c5eb3dc55918236aee53cf"
+      "bytes": 3610,
+      "sha256": "9f9b5db82bb665f29dc0646f51c7ec1a4f97b484913dfcd1430c46870996795f"
     },
     {
       "path": "eval_result_openkylin_10k.json",
@@ -131,23 +131,23 @@
     },
     {
       "path": "generate_answer.txt",
-      "bytes": 1084,
-      "sha256": "7bb894f5fb73a5233575ae338751390a3f320ece002c7c612671eb17753e5327"
+      "bytes": 1567,
+      "sha256": "02c25b0353308db7466523170cf52c0e3e51e1e18a55a504dd7b7bd30bbd7638"
     },
     {
       "path": "hierarchical_graph_search.txt",
-      "bytes": 6027,
-      "sha256": "711d62128ad1ee62a688c2b8c057502dd7bbddc3e3c6bba96206fc0628583a07"
+      "bytes": 3166,
+      "sha256": "79ad53d93fb9cb36be5bc0dc9aeb6c7b532c0d764623ae01911711fa53ce4230"
     },
     {
       "path": "journald.txt",
-      "bytes": 98208,
-      "sha256": "dc33e06e387218393254d9a699544b09b6ab238c8403a1db01f5c3bbb12a1500"
+      "bytes": 43184,
+      "sha256": "701ce5a03d922998e3b1a31a1ae13c9db895d991c8df68c4feef61ec0bff0b61"
     },
     {
       "path": "kylin_embedding_diag/environment.txt",
       "bytes": 1383,
-      "sha256": "ec7f1ebf362a5150458716861efa9b597bad44d7db35a100278240ebe2633536"
+      "sha256": "717f2da01ab5b0da502bf5d8a1f00fb5a1f62f7fcad7b33d666c9dd4197f40dd"
     },
     {
       "path": "kylin_embedding_diag/headers_and_symbols.txt",
@@ -156,13 +156,13 @@
     },
     {
       "path": "kylin_embedding_diag/kytensor_journal.txt",
-      "bytes": 42901,
-      "sha256": "6bc658960e53dd447ece5512e150ea365fa7c8376a9013b464bd36706ff9c2ab"
+      "bytes": 34208,
+      "sha256": "bffec5f466c835745de562b2303ac71135b242a7be8400779ab51ae2e7b9bfbc"
     },
     {
       "path": "kylin_embedding_diag/kytensor_service.txt",
-      "bytes": 3710,
-      "sha256": "88b9ddb491994e0a0751da90d823bd70a7b52f7b5d246338f3c637bfa535a09b"
+      "bytes": 3444,
+      "sha256": "d4e49f4b952dc589117a3a3fb15264a566589e9ca1484e79359cb9331e75e238"
     },
     {
       "path": "kylin_embedding_diag/model_repositories.txt",
@@ -177,7 +177,7 @@
     {
       "path": "kylin_embedding_diag/plugin_dependencies.txt",
       "bytes": 2462,
-      "sha256": "e93fc14e19046d8a1440edbb732860bb709c176123051396b8a800a577cbaf5b"
+      "sha256": "773ee894a5a5fa8c6bf438ff8a0b8655b49c76bfefb081c0b03413670cc292c8"
     },
     {
       "path": "kylin_embedding_diag/plugin_dirs.txt",
@@ -187,42 +187,47 @@
     {
       "path": "kylin_embedding_diag/README.md",
       "bytes": 1825,
-      "sha256": "37572943a2f07ab3211500673f2896b91787f19752bcfbd308d094171c1501b2"
+      "sha256": "8b1dccd2a48a5cd88d81e543a6a1833b8457416e9a5a92fa5ebcc1a4ac0b98d8"
     },
     {
       "path": "kylin_embedding_diag/runtime_file_log.txt",
-      "bytes": 13160,
-      "sha256": "8d1ad031d02229f05c4247faf318bc2601191fc6380b5cc39cdef5f38d16c966"
+      "bytes": 13359,
+      "sha256": "137cdbb74ea9a0a0ccf581b7487438185307dfec4e055783acef818c7679fa5b"
     },
     {
       "path": "kylin_embedding_diag/runtime_journal.txt",
-      "bytes": 92,
-      "sha256": "462089a2ceeac5ac33cfd4376d226fee58a093485a4a3f3c3b4e7ae82167b96d"
+      "bytes": 91670,
+      "sha256": "a9d650a4ab3f49ff5bf724ae5bcb022ad9eb6df21d2ba9ee2e41573b4d6c36d4"
     },
     {
       "path": "kylin_embedding_diag/runtime_service.txt",
-      "bytes": 562,
-      "sha256": "0e1c07b49d80b2171db2ba7648bff9848f6659c8afec542a531b72d4a15c974d"
+      "bytes": 70644,
+      "sha256": "6a619afa992b284fc62b0759fad669498c78471d414d06e99956fcd69de95053"
     },
     {
       "path": "kylin_embedding_diag/runtime_sockets.txt",
       "bytes": 845,
-      "sha256": "e56e286c2453defa9a80093d4c90ac9e730b9551eb0925f005c35c3211bf8f01"
+      "sha256": "d489fa909fa4b4edbab68156ec48d3575b77e29080b882abe1d5c4d7c52502f7"
     },
     {
       "path": "kylin_embedding_diag/sdk_status.txt",
-      "bytes": 7819,
-      "sha256": "71cf931f745c9092bfe67ba9726150cd9c2ce8ab18f9de613743eef3a3621085"
+      "bytes": 12952,
+      "sha256": "90238640e4730347bb3b07b4b1246cce1f9dfc17d8041beeedececb07ee49862"
     },
     {
       "path": "kylin_embedding_diag.txt",
       "bytes": 222,
-      "sha256": "e54d5eff439d6d3047f9ab5c8935e2a011165960762f5602526425cc42b0b12f"
+      "sha256": "51988151a0070646d49fd7c8fbe3f6ec2380f48521b9750abfa4cbd60bfa367a"
     },
     {
       "path": "kylin_retrieval.txt",
-      "bytes": 3521,
-      "sha256": "ddc834e7619a9dd0d9be2583c12d90884776d06d6d5ace5cdb4a4735bfed9419"
+      "bytes": 6210,
+      "sha256": "be1b95a638116b72958a6d0f7e16d348c3d15bb7415b30c68a27f588547dd242"
+    },
+    {
+      "path": "kylin_retrieval_budget_fallback.txt",
+      "bytes": 4242,
+      "sha256": "930ced2895d9b0f10d755739dbe4c95b2ab1736b92d62d943f0bb3fefe66e43a"
     },
     {
       "path": "memguard_lsm_policy.generated.h",
@@ -231,68 +236,73 @@
     },
     {
       "path": "memory_policy.txt",
-      "bytes": 4257,
-      "sha256": "f7a615e491eebfacca0a22c1a005b1d3234ab40dc4206147b0bd0326f39b71ff"
+      "bytes": 3074,
+      "sha256": "2c64360a8e8f1239812b11a11216b8fe741b3101a0c59573dca3ac9454248b42"
     },
     {
       "path": "namespace_isolation.txt",
-      "bytes": 8913,
-      "sha256": "350074b5e095cbe2187552fd866741ce60ec08014e1274fbfd705d09ba40d4c2"
+      "bytes": 11735,
+      "sha256": "085fcc79f4db8e9ca3c55df147c5979a2daa3d37e20638144dc1493a0ac78167"
     },
     {
       "path": "natural_patterns.txt",
-      "bytes": 3783,
-      "sha256": "15836f763286bb005541f15577bf447dabfe6dedd5ae8db7c8176cd462d20689"
+      "bytes": 4087,
+      "sha256": "c2fe383df1c1a00fd8a802229fed007159d7be2a3cd718a186dc03b9d4b75731"
     },
     {
       "path": "peony_file_scan_smoke.txt",
       "bytes": 223,
-      "sha256": "68d8c84c27cb9761c2cde24ed8a2b2ba03420f412204f45b233aa210af02ef2d"
+      "sha256": "76b4e9e67af4915e78fac29a31e5e2d1aa1312045f0381f740d44e35f7c93673"
     },
     {
       "path": "pytest.txt",
-      "bytes": 151,
-      "sha256": "296df1369453fcd6cc6e759dc8befce425e05bc40b0b19afd469906bc7b3f112"
+      "bytes": 716,
+      "sha256": "8063b079c53061ab43bf7f9ff00c4bd7427a07ba2d13467c35490d1282eca272"
     },
     {
       "path": "quality_report.txt",
-      "bytes": 3073,
-      "sha256": "d73851bbf0bc72a8b613178ddc0074773344f984b216515dc1ee8b323f3c9f98"
+      "bytes": 3185,
+      "sha256": "499618c792ca3644c49b3a91ba406858207e6a506caf1609feb1756c10297034"
     },
     {
       "path": "README.md",
-      "bytes": 4704,
-      "sha256": "afe093798c577a8d9e640af3637bca6a23ca113c0ed12cf84708f07d121a2997"
+      "bytes": 3942,
+      "sha256": "cd6a2c15016d1f8a37afcd5ae58c1f2e81b72e4ee281d6325b9ae37d64ef0164"
     },
     {
       "path": "sdk_embedding_probe.txt",
-      "bytes": 8161,
-      "sha256": "c819ec8088bfa8e28b17e4962d0d7845b7504a8a7c0c01394aeaf70a00b2349e"
+      "bytes": 13294,
+      "sha256": "eba07437b1180b562a0f9feadae807e93d8b1c226af78f6e80783b5850c0d966"
     },
     {
       "path": "sdk_status.txt",
-      "bytes": 7827,
-      "sha256": "e240b789c071100a312bdf7dcc62f0651ac2b848231404fff09ef30316549554"
+      "bytes": 12962,
+      "sha256": "141e3b920ad98ac874e12d549bd742b48b3122cf73c4e5ef0b6fd7fa7fa49ba2"
     },
     {
       "path": "semantic_extraction.txt",
-      "bytes": 4418,
-      "sha256": "f3e42c04e6f9849612b8b668f6d2f6bc8b801b576bd978fb3937f37be9e94fbe"
+      "bytes": 4925,
+      "sha256": "717f6f065be927b90dd3c8ce7fa90922c2ea3f2dbf6c34b4bfb39821912729eb"
+    },
+    {
+      "path": "source_revision.json",
+      "bytes": 673,
+      "sha256": "a0baa3a416da4a8bb7e23f71a220d3142882ec75260d6dcbc8ce9ca4e84bd4b8"
     },
     {
       "path": "systemd_cgroup.txt",
-      "bytes": 782,
-      "sha256": "d64b92f2c84196952b016c2dbc016a9a065cba3bab1bd10b6d0e848565e03f66"
+      "bytes": 3651,
+      "sha256": "9b713957f4fecab2c781e175b9605440293f368d8cc1913648793cb71c671cfc"
     },
     {
       "path": "systemd_namespace.txt",
-      "bytes": 11447,
-      "sha256": "4ffbfdeef698440be97d43f16f365d66aff372dd3ad40ca9f0b4249e6df2685f"
+      "bytes": 11525,
+      "sha256": "1efbed2d5ab9cdff5880cb73c8561bb0154c8c0bec3c569f864113a01ede9184"
     },
     {
       "path": "temporal_status.txt",
-      "bytes": 10468,
-      "sha256": "7077133fe7944c0bdc11655710e7371aed968d5053e727848a19b72466a4ffbc"
+      "bytes": 12531,
+      "sha256": "caf1d44d8d386855fe3fb46d42d5597daa7b963320e12e4731842f6cc91efb43"
     },
     {
       "path": "ukui_control_center_visible_manual_confirmation.txt",
@@ -301,8 +311,8 @@
     },
     {
       "path": "ukui_deep_plugins.txt",
-      "bytes": 9764,
-      "sha256": "c849d447ff9f46acc3a9a99a3ba5d7d304c7a586e387843d0366936610de0d4a"
+      "bytes": 9925,
+      "sha256": "b1a6794842004b82deae4d38f9c4c92f9c63dad4aa47611e4c86f665b0b6c2c9"
     },
     {
       "path": "ukui_enterprise_panel.txt",
@@ -321,18 +331,18 @@
     },
     {
       "path": "ukui_plugin_build.txt",
-      "bytes": 6579,
-      "sha256": "cc4d018765938c57299e150b0fdaf6d30bc3064e2d24703d20aba1212433c4e0"
+      "bytes": 7730,
+      "sha256": "0ef4342ff1478f9c383d50ae1d2d71364675b34b68cf3d0d304a9c2e93b5eea1"
     },
     {
       "path": "ukui_plugin_install.txt",
-      "bytes": 301,
-      "sha256": "9713624513db5c4ec2f94eddde3718aa25bebc23f51684424fa8d6f8eba18fbc"
+      "bytes": 375,
+      "sha256": "6174ee7430ec271a975df0a5e4e174e3c38f9af5319d9cab0b891f34c58cc4cc"
     },
     {
       "path": "ukui_plugin_visible.txt",
-      "bytes": 4464,
-      "sha256": "8b6e414baa4ec06554df1d165107a4a6216c12852d296539c2bef173f1b2a5c5"
+      "bytes": 5144,
+      "sha256": "22cbb356b1296d4132bffbdd44db480c9894ae2268cb65c067fc77cd46af5753"
     },
     {
       "path": "ukui_plugin_visible_after_version_metadata.txt",
@@ -352,12 +362,12 @@
     {
       "path": "verify_audit.txt",
       "bytes": 173,
-      "sha256": "8bf9c10988c6674f4c4f5d00314f3ca0f28846c8a7e1124df42546976a8a99e9"
+      "sha256": "da510acd9bae52223a489ff193473e13c63903830f7f2553e23c49646c8383ab"
     },
     {
       "path": "web_dashboard.txt",
-      "bytes": 650,
-      "sha256": "6602a34804907a433a754a851737a185a2281fa6d182410f46584014ff14c83c"
+      "bytes": 1564,
+      "sha256": "59bf05ee28424a3fc16bd75584dc6ee19781103ae50b7681a30881d0f024963d"
     }
   ]
 }

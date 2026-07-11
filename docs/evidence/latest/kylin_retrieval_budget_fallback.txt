@@ -1,0 +1,125 @@
+$ KYLIN_FALLBACK_HOME='docs/evidence/openkylin_20260711_125303/kylin_fallback_home'; rm -rf "${KYLIN_FALLBACK_HOME}"; mkdir -p "${KYLIN_FALLBACK_HOME}"; MEMGUARD_HOME="${KYLIN_FALLBACK_HOME}" MEMGUARD_EMBEDDING_BACKEND=auto MEMGUARD_KYLIN_EMBEDDING_TIMEOUT=90 MEMGUARD_KYLIN_RERANK_BUDGET_MS=1 ".venv/bin/python" - <<'PY'
+import json
+
+from memguard.service import MemGuardService
+
+service = MemGuardService()
+service.ingest_text('openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。')
+hits = service.search('openKylin 服务内存限制', limit=1)
+status = service.retrieval_status()
+payload = {'hits': hits, 'retrieval_status': status}
+print(json.dumps(payload, ensure_ascii=False, indent=2))
+reason = status.get('kylin', {}).get('disabled_reason', '')
+controlled_fallback = bool(hits) and hits[0].get('vector_backend') == 'hash' and 'exceeded latency budget' in reason
+raise SystemExit(0 if controlled_fallback else 2)
+PY
+
+{
+  "hits": [
+    {
+      "memory_id": "mem_d6580cf3c3fa4efe",
+      "type": "knowledge",
+      "subtype": "fact",
+      "scope": "default",
+      "tier": "long_term",
+      "summary": "知识记忆：openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。",
+      "content": "openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。",
+      "source_kind": "manual",
+      "source_uri": "",
+      "sensitivity_level": "none",
+      "sensitivity_labels": "[]",
+      "sensitivity_redacted": 0,
+      "version_id": "ver_940fec36abbc458d",
+      "valid_from": "2026-07-11T04:53:07.059174+00:00",
+      "valid_to": null,
+      "superseded_by": null,
+      "preference_topic": "",
+      "preference_value": "",
+      "preference_scope": "global",
+      "preference_explicit": 1,
+      "agent_name": "",
+      "preference_session_id": "",
+      "project_root": "",
+      "task_type": "",
+      "trust_level": "trusted",
+      "trust_score": 0.95,
+      "governance_state": "active",
+      "governance_reason": "direct user or verified local source",
+      "deleted": 0,
+      "updated_at": "2026-07-11T04:53:07.059531+00:00",
+      "rank": 1,
+      "score": 1.1722,
+      "match_source": "hybrid",
+      "vector_backend": "hash",
+      "score_breakdown": {
+        "summary_score": 0.28,
+        "content_score": 0.24,
+        "query_token_count": 14,
+        "lexical_hit_count": 8,
+        "distinctive_latin_token_count": 1,
+        "entity_score": 0.1,
+        "topic_score": 0.0,
+        "subtype_score": 0.0,
+        "exact_phrase_score": 0.0,
+        "hard_negative_penalty": 0.0,
+        "scope_penalty": 0.0,
+        "alias_expansion": {
+          "query": "openKylin 服务内存限制",
+          "expanded_query": "openKylin 服务内存限制",
+          "aliases": [],
+          "expansion_trace": []
+        },
+        "total": 0.62
+      },
+      "expansion_trace": [],
+      "duplicate_count": 1,
+      "duplicate_memory_ids": [
+        "mem_d6580cf3c3fa4efe"
+      ],
+      "match_reason": "命中查询中的关键实体"
+    }
+  ],
+  "retrieval_status": {
+    "requested_backend": "auto",
+    "last_backend_used": "hash",
+    "hash": {
+      "name": "hash",
+      "available": true,
+      "dim": 128,
+      "fallback": false,
+      "token_cache": {
+        "hits": 0,
+        "misses": 0,
+        "maxsize": 8192,
+        "currsize": 0
+      },
+      "vector_cache": {
+        "hits": 0,
+        "misses": 2,
+        "maxsize": 16384,
+        "currsize": 2
+      }
+    },
+    "kylin": {
+      "name": "kylin_sdk",
+      "available": false,
+      "timeout_seconds": 90.0,
+      "failures": 0,
+      "disabled_reason": "Kylin rerank exceeded latency budget; using stable fallback",
+      "degraded": true,
+      "disabled_until": 18419.891157715,
+      "last_error_at": null,
+      "last_success_at": 18359.813096662,
+      "cache_entries": 1,
+      "cache_capacity": 1024,
+      "cooldown_seconds": 60.0,
+      "fallback": "hash"
+    },
+    "kylin_rerank_budget_ms": 1.0,
+    "policy": {
+      "default_backend": "auto",
+      "kylin_sdk_role": "openkylin_auto_rerank_with_hash_fallback",
+      "fallback_behavior": "If Kylin embedding inference fails or times out, retrieval keeps using stable SQLite FTS + hash-vector ranking."
+    }
+  }
+}

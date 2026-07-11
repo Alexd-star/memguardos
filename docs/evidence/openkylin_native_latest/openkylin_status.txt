@@ -205,7 +205,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
       "product_state": {
         "installed": true,
         "last_probe_success": true,
-        "last_success_at": "2026-07-11T09:15:23+08:00",
+        "last_success_at": "2026-07-11T09:33:49+08:00",
         "last_success_dim": 768,
         "last_success_model": "ensemble-embd_gte-base_uint8-text",
         "last_failure_at": "",
@@ -301,8 +301,8 @@ $ python3 -m memguard.cli.memctl openkylin-status
     }
   },
   "desktop": {
-    "session_desktop": "UKUI",
-    "desktop_session": "kylin-wlcom",
+    "session_desktop": "",
+    "desktop_session": "",
     "peony": {
       "available": true,
       "plugin_path": "/usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so",
@@ -340,21 +340,21 @@ $ python3 -m memguard.cli.memctl openkylin-status
     "diagnosis_code": "ready",
     "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": "15618048",
+      "cgroup_memory_current": "15568896",
       "cgroup_memory_max": "536870912"
     },
     "cpu": {
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 355280,
-        "user_usec": 229688,
-        "system_usec": 125591,
+        "usage_usec": 2757835,
+        "user_usec": 1623918,
+        "system_usec": 1133916,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 156,
+        "nr_periods": 1997,
         "nr_throttled": 1,
-        "throttled_usec": 44623,
+        "throttled_usec": 32583,
         "nr_bursts": 0,
         "burst_usec": 0
       }
@@ -364,13 +364,13 @@ $ python3 -m memguard.cli.memctl openkylin-status
   "namespace": {
     "namespace": "default",
     "is_default": true,
-    "home": "/var/tmp/memguardos-native-home.ngNkO6",
+    "home": "/var/tmp/memguardos-native-home.e3XI58",
     "home_exists": true,
-    "namespace_home": "/var/tmp/memguardos-native-home.ngNkO6",
+    "namespace_home": "/var/tmp/memguardos-native-home.e3XI58",
     "namespace_home_exists": true,
-    "store_path": "/var/tmp/memguardos-native-home.ngNkO6/memory.segment",
-    "db_path": "/var/tmp/memguardos-native-home.ngNkO6/memguard.sqlite3",
-    "custom_patterns_path": "/var/tmp/memguardos-native-home.ngNkO6/sensitive_patterns.json",
+    "store_path": "/var/tmp/memguardos-native-home.e3XI58/memory.segment",
+    "db_path": "/var/tmp/memguardos-native-home.e3XI58/memguard.sqlite3",
+    "custom_patterns_path": "/var/tmp/memguardos-native-home.e3XI58/sensitive_patterns.json",
     "store_exists": false,
     "db_exists": false,
     "custom_patterns_exists": false,

@@ -1,5 +1,5 @@
 $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
-[1783733629220] [32minfo [0m Proxy init engine sessionId:870040523.
+[1783745409680] [32minfo [0m Proxy init engine sessionId:1595155201.
 {
   "schema": "memguardos-openkylin-native-status-v1",
   "system": {
@@ -347,7 +347,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
           0.011692
         ],
         "subprocess_returncode": 0,
-        "stderr_tail": "[1783733629279] \u001b[32minfo \u001b[0m Proxy init engine sessionId:1476650679."
+        "stderr_tail": "[1783745409789] \u001b[32minfo \u001b[0m Proxy init engine sessionId:1532471137."
       },
       "available": true,
       "inference_ready": true,
@@ -366,7 +366,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
       "product_state": {
         "installed": true,
         "last_probe_success": true,
-        "last_success_at": "2026-07-11T09:15:23+08:00",
+        "last_success_at": "2026-07-11T09:33:49+08:00",
         "last_success_dim": 768,
         "last_success_model": "ensemble-embd_gte-base_uint8-text",
         "last_failure_at": "",
@@ -453,8 +453,8 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
     }
   },
   "desktop": {
-    "session_desktop": "UKUI",
-    "desktop_session": "kylin-wlcom",
+    "session_desktop": "",
+    "desktop_session": "",
     "peony": {
       "available": true,
       "plugin_path": "/usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so",
@@ -492,21 +492,21 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
     "diagnosis_code": "ready",
     "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": "15618048",
+      "cgroup_memory_current": "15568896",
       "cgroup_memory_max": "536870912"
     },
     "cpu": {
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 355311,
-        "user_usec": 229708,
-        "system_usec": 125602,
+        "usage_usec": 2757883,
+        "user_usec": 1623947,
+        "system_usec": 1133936,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 156,
+        "nr_periods": 1997,
         "nr_throttled": 1,
-        "throttled_usec": 44623,
+        "throttled_usec": 32583,
         "nr_bursts": 0,
         "burst_usec": 0
       }
@@ -516,13 +516,13 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
   "namespace": {
     "namespace": "default",
     "is_default": true,
-    "home": "/var/tmp/memguardos-native-home.ngNkO6",
+    "home": "/var/tmp/memguardos-native-home.e3XI58",
     "home_exists": true,
-    "namespace_home": "/var/tmp/memguardos-native-home.ngNkO6",
+    "namespace_home": "/var/tmp/memguardos-native-home.e3XI58",
     "namespace_home_exists": true,
-    "store_path": "/var/tmp/memguardos-native-home.ngNkO6/memory.segment",
-    "db_path": "/var/tmp/memguardos-native-home.ngNkO6/memguard.sqlite3",
-    "custom_patterns_path": "/var/tmp/memguardos-native-home.ngNkO6/sensitive_patterns.json",
+    "store_path": "/var/tmp/memguardos-native-home.e3XI58/memory.segment",
+    "db_path": "/var/tmp/memguardos-native-home.e3XI58/memguard.sqlite3",
+    "custom_patterns_path": "/var/tmp/memguardos-native-home.e3XI58/sensitive_patterns.json",
     "store_exists": false,
     "db_exists": false,
     "custom_patterns_exists": false,

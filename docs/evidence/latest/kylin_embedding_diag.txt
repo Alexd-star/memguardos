@@ -1,3 +1,3 @@
-$ bash scripts/diagnose_kylin_embedding.sh --no-probe --out-dir docs/evidence/openkylin_20260607_123336/kylin_embedding_diag
+$ bash scripts/diagnose_kylin_embedding.sh --no-probe --out-dir docs/evidence/openkylin_20260711_125303/kylin_embedding_diag
 
-Kylin embedding SDK 诊断完成：docs/evidence/openkylin_20260607_123336/kylin_embedding_diag
+Kylin embedding SDK 诊断完成：docs/evidence/openkylin_20260711_125303/kylin_embedding_diag

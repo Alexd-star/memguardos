@@ -1,7 +1,7 @@
-$ .venv/bin/python scripts/generate_bpf_lsm_policy.py --policy data/demo/bpf_lsm_policy.json --output docs/evidence/openkylin_20260607_123336/memguard_lsm_policy.generated.h
+$ .venv/bin/python scripts/generate_bpf_lsm_policy.py --policy data/demo/bpf_lsm_policy.json --output docs/evidence/openkylin_20260711_125303/memguard_lsm_policy.generated.h
 
 {
-  "output": "docs/evidence/openkylin_20260607_123336/memguard_lsm_policy.generated.h",
+  "output": "docs/evidence/openkylin_20260711_125303/memguard_lsm_policy.generated.h",
   "deny_substrings": [
     "/tmp/memguardos_lsm_secret",
     "/home/demo/.aws/credentials",

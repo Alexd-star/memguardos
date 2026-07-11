@@ -1,11 +1,11 @@
 $ ".venv/bin/python" -m memguard.cli.memctl ingest --text '以后回答 Linux 命令时使用中文。'; MEMORY_ID=$(".venv/bin/python" -m memguard.cli.memctl list | ".venv/bin/python" -c 'import json,sys; print(json.load(sys.stdin)[0]["memory_id"])'); ".venv/bin/python" -m memguard.cli.memctl update "${MEMORY_ID}" --text '以后回答 Linux 命令时使用英文。' --reason 'temporal validity smoke'; echo '--- versions after update ---'; ".venv/bin/python" -m memguard.cli.memctl versions "${MEMORY_ID}"; echo '--- temporal status ---'; ".venv/bin/python" -m memguard.cli.memctl temporal-status --limit 10; echo '--- versions after forget ---'; ".venv/bin/python" -m memguard.cli.memctl forget '忘掉 Linux 命令语言偏好' --yes; ".venv/bin/python" -m memguard.cli.memctl versions "${MEMORY_ID}"; ".venv/bin/python" -m memguard.cli.memctl verify-audit
 
-{"stored": true, "memory_id": "mem_b27ffa82fc034545", "type": "preference", "subtype": "tool_preference", "tier": "long_term", "confidence": 0.9, "quality": {"accepted": true, "score": 1.0, "issues": [], "warnings": [], "original_chars": 19, "normalized_chars": 19, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "preference", "subtype": "tool_preference", "summary": "用户偏好：以后回答 Linux 命令时使用中文。", "confidence": 0.9, "method": "deterministic_semantic_rules", "signals": ["source_manual", "preference_intent", "tool_preference_intent", "style_intent"], "enhancer_used": false, "enhancer_error": ""}}
+{"stored": true, "memory_id": "mem_a0860dcc6b7d4d77", "type": "preference", "subtype": "tool_preference", "tier": "long_term", "confidence": 0.9, "quality": {"accepted": true, "score": 1.0, "issues": [], "warnings": [], "original_chars": 19, "normalized_chars": 19, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "preference", "subtype": "tool_preference", "summary": "用户偏好：以后回答 Linux 命令时使用中文。", "confidence": 0.9, "method": "deterministic_semantic_rules", "signals": ["source_manual", "preference_intent", "tool_preference_intent", "style_intent"], "enhancer_used": false, "enhancer_error": ""}}
 {
   "updated": true,
   "record": {
-    "memory_id": "mem_b27ffa82fc034545",
-    "version_id": "ver_e24761346e084837",
+    "memory_id": "mem_a0860dcc6b7d4d77",
+    "version_id": "ver_5e6512c4c2a04208",
     "type": "preference",
     "subtype": "tool_preference"
   },
@@ -38,157 +38,135 @@ $ ".venv/bin/python" -m memguard.cli.memctl ingest --text '以后回答 Linux �
 --- versions after update ---
 [
   {
-    "memory_id": "mem_b27ffa82fc034545",
-    "version_id": "ver_6f0c064da4e041bb",
+    "memory_id": "mem_a0860dcc6b7d4d77",
+    "version_id": "ver_c165e25034e2492b",
     "parent_version_id": null,
     "op": "create",
     "summary": "用户偏好：以后回答 Linux 命令时使用中文。",
     "deleted": false,
-    "created_at": "2026-06-07T04:34:39.643760+00:00",
-    "valid_from": "2026-06-07T04:34:39.643764+00:00",
-    "valid_to": "2026-06-07T04:34:39.979312+00:00",
-    "superseded_by": "ver_e24761346e084837",
+    "created_at": "2026-07-11T04:56:00.649080+00:00",
+    "valid_from": "2026-07-11T04:56:00.649084+00:00",
+    "valid_to": "2026-07-11T04:56:00.870031+00:00",
+    "superseded_by": "ver_5e6512c4c2a04208",
     "active": false,
-    "hash": "52c80962c1f57c9eb2f8c639decbcd32e31cd5ad426682f5e2187f593cd75337"
+    "hash": "7c259b4b09dde321666ed241245182fd033f9c352131784341c94f5d9b1125f7"
   },
   {
-    "memory_id": "mem_b27ffa82fc034545",
-    "version_id": "ver_e24761346e084837",
-    "parent_version_id": "ver_6f0c064da4e041bb",
+    "memory_id": "mem_a0860dcc6b7d4d77",
+    "version_id": "ver_5e6512c4c2a04208",
+    "parent_version_id": "ver_c165e25034e2492b",
     "op": "update",
     "summary": "用户偏好：以后回答 Linux 命令时使用英文。",
     "deleted": false,
-    "created_at": "2026-06-07T04:34:39.982600+00:00",
-    "valid_from": "2026-06-07T04:34:39.982607+00:00",
+    "created_at": "2026-07-11T04:56:00.871016+00:00",
+    "valid_from": "2026-07-11T04:56:00.871022+00:00",
     "valid_to": null,
     "superseded_by": null,
     "active": true,
-    "hash": "63ff7d78eacb3e61afd94b2c0c470ea5b442de7d15d7b9c7d52dbd0786e095a7"
+    "hash": "8673be1f002f805a339076228d28ab9c972728a5853e0b0dbbf5272f985f4d3e"
   }
 ]
 --- temporal status ---
 {
-  "active_count": 11,
+  "active_count": 8,
   "sample_active": [
     {
-      "memory_id": "mem_b27ffa82fc034545",
+      "memory_id": "mem_a0860dcc6b7d4d77",
       "type": "preference",
       "subtype": "tool_preference",
       "tier": "long_term",
-      "version_id": "ver_e24761346e084837",
-      "valid_from": "2026-06-07T04:34:39.982607+00:00",
+      "version_id": "ver_5e6512c4c2a04208",
+      "valid_from": "2026-07-11T04:56:00.871022+00:00",
       "valid_to": null,
       "superseded_by": null,
       "summary": "用户偏好：以后回答 Linux 命令时使用英文。"
     },
     {
-      "memory_id": "mem_d62ba9b7120d40e7",
+      "memory_id": "mem_08a3e83b13944232",
       "type": "knowledge",
       "subtype": "fact",
       "tier": "long_term",
-      "version_id": "ver_f2c0f94069f6458b",
-      "valid_from": "2026-06-07T04:34:38.961292+00:00",
+      "version_id": "ver_949309cb335647d8",
+      "valid_from": "2026-07-11T04:55:59.788815+00:00",
       "valid_to": null,
       "superseded_by": null,
       "summary": "知识记忆：结果生成记忆:运维报告先给结论,再给指标证据和边界。"
     },
     {
-      "memory_id": "mem_d1d63da5e6bf49cb",
+      "memory_id": "mem_eb4033dfece5451f",
       "type": "knowledge",
       "subtype": "workflow",
       "tier": "long_term",
-      "version_id": "ver_a81de6b5c522493e",
-      "valid_from": "2026-06-07T04:34:38.781619+00:00",
+      "version_id": "ver_2b670bbb58524a49",
+      "valid_from": "2026-07-11T04:55:59.665613+00:00",
       "valid_to": null,
       "superseded_by": null,
       "summary": "知识记忆：工具调用记忆:Linux 验证优先使用 rg、pytest、journalctl。"
     },
     {
-      "memory_id": "mem_aeb97577021645b2",
+      "memory_id": "mem_8d244040489e4a75",
       "type": "knowledge",
       "subtype": "fact",
       "tier": "long_term",
-      "version_id": "ver_97aeb1457b074fda",
-      "valid_from": "2026-06-07T04:34:38.598632+00:00",
+      "version_id": "ver_1a258cf2ec7046aa",
+      "valid_from": "2026-07-11T04:55:59.540425+00:00",
       "valid_to": null,
       "superseded_by": null,
       "summary": "知识记忆：任务规划记忆:openKylin systemd cgroup MemoryMax 约束。"
     },
     {
-      "memory_id": "mem_236eddd521f14846",
+      "memory_id": "mem_4042ed5afb2f4174",
       "type": "knowledge",
-      "subtype": "behavior_risk",
+      "subtype": "behavior_trace",
       "tier": "session",
-      "version_id": "ver_6a9fba5da91c4f17",
-      "valid_from": "2026-06-07T04:34:36.759187+00:00",
+      "version_id": "ver_83c38a1421dd4121",
+      "valid_from": "2026-07-11T04:55:55.723475+00:00",
       "valid_to": null,
       "superseded_by": null,
-      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=4 command=sudo systemctl enable --now ssh"
+      "summary": "知识记忆：User behavior: shell_command tool=\\\"py_interpreter_path\\\": category=routine source=/home/luo/.bash_history index=14 command=\\\"py_interpreter"
     },
     {
-      "memory_id": "mem_2a94466dae2a47d9",
-      "type": "knowledge",
-      "subtype": "behavior_risk",
-      "tier": "session",
-      "version_id": "ver_3a5b0ebc50a0400e",
-      "valid_from": "2026-06-07T04:34:36.750216+00:00",
-      "valid_to": null,
-      "superseded_by": null,
-      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=3 command=sudo apt install -y openssh-server "
-    },
-    {
-      "memory_id": "mem_9f4bc10874df4a9a",
-      "type": "knowledge",
-      "subtype": "behavior_risk",
-      "tier": "session",
-      "version_id": "ver_183a4d187ade4611",
-      "valid_from": "2026-06-07T04:34:36.741111+00:00",
-      "valid_to": null,
-      "superseded_by": null,
-      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=2 command=sudo apt update"
-    },
-    {
-      "memory_id": "mem_d01fc12c84f64241",
-      "type": "knowledge",
-      "subtype": "behavior_risk",
-      "tier": "session",
-      "version_id": "ver_28cbcc2d544244a1",
-      "valid_from": "2026-06-07T04:34:36.730357+00:00",
-      "valid_to": null,
-      "superseded_by": null,
-      "summary": "知识记忆：User behavior: shell_command tool=sudo category=high_risk source=/home/luo/.bash_history index=1 command=sudo apt updata"
-    },
-    {
-      "memory_id": "mem_bfde055683734b73",
+      "memory_id": "mem_130d8daa7de0409a",
       "type": "knowledge",
       "subtype": "workflow",
       "tier": "long_term",
-      "version_id": "ver_3c085a625556497a",
-      "valid_from": "2026-06-07T04:34:36.383508+00:00",
+      "version_id": "ver_7f1be0a70ab840b0",
+      "valid_from": "2026-07-11T04:55:55.474563+00:00",
       "valid_to": null,
       "superseded_by": null,
       "summary": "知识记忆：语义抽取增强流程:默认 deterministic semantic rules;设置 MEMGUARD_EXTRACTOR_COMMAND 后可调用本地 NER 或 LLM 返回 JSON schema。"
     },
     {
-      "memory_id": "mem_56d79dc9df504511",
+      "memory_id": "mem_cd9e73582c1d4be4",
       "type": "sensitive_policy",
       "subtype": "security_policy",
       "tier": "long_term",
-      "version_id": "ver_2026a387be9642de",
-      "valid_from": "2026-06-07T04:34:35.718100+00:00",
+      "version_id": "ver_01de4419cb66437a",
+      "valid_from": "2026-07-11T04:55:54.836785+00:00",
       "valid_to": null,
       "superseded_by": null,
       "summary": "安全策略：员工工号 [REDACTED:employee_id] 需要脱敏保存。"
+    },
+    {
+      "memory_id": "mem_d7981da17e284292",
+      "type": "knowledge",
+      "subtype": "fact",
+      "tier": "long_term",
+      "version_id": "ver_b793e80b1ad34ad2",
+      "valid_from": "2026-07-11T04:55:53.632861+00:00",
+      "valid_to": null,
+      "superseded_by": null,
+      "summary": "知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。"
     }
   ],
   "inactive_sample": [
     {
-      "memory_id": "mem_b27ffa82fc034545",
-      "version_id": "ver_6f0c064da4e041bb",
+      "memory_id": "mem_a0860dcc6b7d4d77",
+      "version_id": "ver_c165e25034e2492b",
       "op": "create",
-      "valid_from": "2026-06-07T04:34:39.643764+00:00",
-      "valid_to": "2026-06-07T04:34:39.979312+00:00",
-      "superseded_by": "ver_e24761346e084837",
+      "valid_from": "2026-07-11T04:56:00.649084+00:00",
+      "valid_to": "2026-07-11T04:56:00.870031+00:00",
+      "superseded_by": "ver_5e6512c4c2a04208",
       "deleted": false,
       "summary": "用户偏好：以后回答 Linux 命令时使用中文。"
     }
@@ -204,55 +182,152 @@ $ ".venv/bin/python" -m memguard.cli.memctl ingest --text '以后回答 Linux �
   "confirmed": true,
   "request": "忘掉 Linux 命令语言偏好",
   "forgotten": [
-    "mem_b27ffa82fc034545"
-  ]
+    "mem_a0860dcc6b7d4d77"
+  ],
+  "external_residue": {
+    "scope": "confirmed_boundary_notice",
+    "managed_store_boundary": true,
+    "covered": [
+      "memguardos_sqlite_metadata",
+      "memguardos_fts_index",
+      "memguardos_graph_index",
+      "memguardos_mmap_segment_after_compact",
+      "memguardos_search_cache"
+    ],
+    "not_covered": [
+      "external_agent_logs",
+      "llm_provider_logs",
+      "terminal_history",
+      "vm_snapshots",
+      "filesystem_backups",
+      "block_device_forensic_recovery"
+    ],
+    "requires_separate_cleanup": true,
+    "explanation": "MemGuardOS forget removes governed records from MemGuardOS-managed metadata, indexes, graph and compacted segment storage. External Agent persistence, provider logs, VM snapshots, backups and media-level sanitization are outside this logical forgetting boundary."
+  },
+  "compact": false,
+  "verification": [
+    {
+      "memory_id": "mem_a0860dcc6b7d4d77",
+      "deleted": true,
+      "metadata_plaintext_leak": false,
+      "segment_plaintext_leak": true,
+      "irreversible_ok": false
+    }
+  ],
+  "audit_chain_ok": true,
+  "verification_report": {
+    "schema": "memguardos-forget-verification-report-v1",
+    "request": "忘掉 Linux 命令语言偏好",
+    "dry_run": false,
+    "confirmed": true,
+    "candidate_count": 0,
+    "forgotten_memory_ids": [
+      "mem_a0860dcc6b7d4d77"
+    ],
+    "verification_steps": [
+      {
+        "name": "main_record",
+        "status": "passed",
+        "detail": "受管主记录已写入遗忘结果。"
+      },
+      {
+        "name": "agent_event_payload",
+        "status": "skipped",
+        "detail": "当前结果未提供该项独立证明。"
+      },
+      {
+        "name": "sqlite_fts",
+        "status": "skipped",
+        "detail": "未执行整理，保留后续复核。"
+      },
+      {
+        "name": "graph_relations",
+        "status": "skipped",
+        "detail": "未执行整理，保留后续复核。"
+      },
+      {
+        "name": "search_cache",
+        "status": "skipped",
+        "detail": "未执行整理，保留后续复核。"
+      },
+      {
+        "name": "mmap_segment_compact",
+        "status": "skipped",
+        "detail": "未要求整理段文件。"
+      },
+      {
+        "name": "plaintext_probe",
+        "status": "skipped",
+        "detail": "当前结果未提供该项独立证明。"
+      },
+      {
+        "name": "agent_context_absence",
+        "status": "skipped",
+        "detail": "当前结果未提供该项独立证明。"
+      },
+      {
+        "name": "audit_chain",
+        "status": "passed",
+        "detail": "操作记录完整性校验通过。"
+      }
+    ],
+    "external_residue": {
+      "openhands_raw_logs": "not_managed",
+      "shell_history": "not_managed",
+      "model_provider_logs": "not_managed",
+      "filesystem_backups": "not_managed"
+    },
+    "user_summary": "遗忘已完成，受管记录和可验证的检索路径均已复核；外部日志和备份不在本系统管理范围内。"
+  },
+  "audit_event_id": "audit-25"
 }
 [
   {
-    "memory_id": "mem_b27ffa82fc034545",
-    "version_id": "ver_6f0c064da4e041bb",
+    "memory_id": "mem_a0860dcc6b7d4d77",
+    "version_id": "ver_c165e25034e2492b",
     "parent_version_id": null,
     "op": "create",
     "summary": "用户偏好：以后回答 Linux 命令时使用中文。",
     "deleted": false,
-    "created_at": "2026-06-07T04:34:39.643760+00:00",
-    "valid_from": "2026-06-07T04:34:39.643764+00:00",
-    "valid_to": "2026-06-07T04:34:39.979312+00:00",
-    "superseded_by": "ver_e24761346e084837",
+    "created_at": "2026-07-11T04:56:00.649080+00:00",
+    "valid_from": "2026-07-11T04:56:00.649084+00:00",
+    "valid_to": "2026-07-11T04:56:00.870031+00:00",
+    "superseded_by": "ver_5e6512c4c2a04208",
     "active": false,
-    "hash": "52c80962c1f57c9eb2f8c639decbcd32e31cd5ad426682f5e2187f593cd75337"
+    "hash": "7c259b4b09dde321666ed241245182fd033f9c352131784341c94f5d9b1125f7"
   },
   {
-    "memory_id": "mem_b27ffa82fc034545",
-    "version_id": "ver_e24761346e084837",
-    "parent_version_id": "ver_6f0c064da4e041bb",
+    "memory_id": "mem_a0860dcc6b7d4d77",
+    "version_id": "ver_5e6512c4c2a04208",
+    "parent_version_id": "ver_c165e25034e2492b",
     "op": "update",
     "summary": "用户偏好：以后回答 Linux 命令时使用英文。",
     "deleted": false,
-    "created_at": "2026-06-07T04:34:39.982600+00:00",
-    "valid_from": "2026-06-07T04:34:39.982607+00:00",
-    "valid_to": "2026-06-07T04:34:40.454047+00:00",
-    "superseded_by": "ver_87dd53e03b144634",
+    "created_at": "2026-07-11T04:56:00.871016+00:00",
+    "valid_from": "2026-07-11T04:56:00.871022+00:00",
+    "valid_to": "2026-07-11T04:56:01.455282+00:00",
+    "superseded_by": "ver_059661001efb414c",
     "active": false,
-    "hash": "63ff7d78eacb3e61afd94b2c0c470ea5b442de7d15d7b9c7d52dbd0786e095a7"
+    "hash": "8673be1f002f805a339076228d28ab9c972728a5853e0b0dbbf5272f985f4d3e"
   },
   {
-    "memory_id": "mem_b27ffa82fc034545",
-    "version_id": "ver_87dd53e03b144634",
-    "parent_version_id": "ver_e24761346e084837",
+    "memory_id": "mem_a0860dcc6b7d4d77",
+    "version_id": "ver_059661001efb414c",
+    "parent_version_id": "ver_5e6512c4c2a04208",
     "op": "forget",
     "summary": "FORGOTTEN: 忘掉 Linux 命令语言偏好",
     "deleted": true,
-    "created_at": "2026-06-07T04:34:40.454034+00:00",
-    "valid_from": "2026-06-07T04:34:40.454047+00:00",
+    "created_at": "2026-07-11T04:56:01.455256+00:00",
+    "valid_from": "2026-07-11T04:56:01.455282+00:00",
     "valid_to": null,
     "superseded_by": null,
     "active": false,
-    "hash": "bb7888c2da01952bbe99cfde762d2a7f04305d2a4ca69b78dde46d88d8b3e005"
+    "hash": "aa9e02a3858c9f5696105fdbe24ef3313f0fa0ea3b5610b797a2cca2b68cd40e"
   }
 ]
 {
   "ok": true,
-  "checked": 30,
-  "head_hash": "fc6d79d1b104f615c5d56103f5f657a780ff94dde7b18b7abaf27c1c452f1190"
+  "checked": 26,
+  "head_hash": "5771f63c4cf35bc04c886a3a57ead37c8303b9f38b87df9145e6f88979854b65"
 }

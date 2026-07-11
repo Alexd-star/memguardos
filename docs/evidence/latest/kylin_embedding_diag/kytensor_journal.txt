@@ -1,222 +1,222 @@
 $ journalctl -u kytensor.service -n 220 --no-pager || true
 
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name PRelu (domain:  version: 16) from file ./onnx/defs/math/defs.cc line 786, but it is already registered from file ./onnx/defs/math/defs.cc line 786
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name LayerNormalization (domain:  version: 17) from file ./onnx/defs/nn/defs.cc line 2629, but it is already registered from file ./onnx/defs/nn/defs.cc line 2629
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name SequenceMap (domain:  version: 17) from file ./onnx/defs/sequence/defs.cc line 761, but it is already registered from file ./onnx/defs/sequence/defs.cc line 761
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name DFT (domain:  version: 17) from file ./onnx/defs/math/old.cc line 2966, but it is already registered from file ./onnx/defs/math/old.cc line 2966
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name HannWindow (domain:  version: 17) from file ./onnx/defs/math/defs.cc line 3160, but it is already registered from file ./onnx/defs/math/defs.cc line 3160
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name HammingWindow (domain:  version: 17) from file ./onnx/defs/math/defs.cc line 3198, but it is already registered from file ./onnx/defs/math/defs.cc line 3198
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name BlackmanWindow (domain:  version: 17) from file ./onnx/defs/math/defs.cc line 3236, but it is already registered from file ./onnx/defs/math/defs.cc line 3236
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name MelWeightMatrix (domain:  version: 17) from file ./onnx/defs/math/defs.cc line 3285, but it is already registered from file ./onnx/defs/math/defs.cc line 3285
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name STFT (domain:  version: 17) from file ./onnx/defs/math/defs.cc line 3395, but it is already registered from file ./onnx/defs/math/defs.cc line 3395
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Pad (domain:  version: 18) from file ./onnx/defs/tensor/old.cc line 5838, but it is already registered from file ./onnx/defs/tensor/old.cc line 5838
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name CenterCropPad (domain:  version: 18) from file ./onnx/defs/tensor/defs.cc line 3755, but it is already registered from file ./onnx/defs/tensor/defs.cc line 3755
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Resize (domain:  version: 18) from file ./onnx/defs/tensor/old.cc line 3103, but it is already registered from file ./onnx/defs/tensor/old.cc line 3103
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Mish (domain:  version: 18) from file ./onnx/defs/math/defs.cc line 475, but it is already registered from file ./onnx/defs/math/defs.cc line 475
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name OptionalGetElement (domain:  version: 18) from file ./onnx/defs/optional/defs.cc line 115, but it is already registered from file ./onnx/defs/optional/defs.cc line 115
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Split (domain:  version: 18) from file ./onnx/defs/tensor/defs.cc line 625, but it is already registered from file ./onnx/defs/tensor/defs.cc line 625
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name OptionalHasElement (domain:  version: 18) from file ./onnx/defs/optional/defs.cc line 79, but it is already registered from file ./onnx/defs/optional/defs.cc line 79
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Col2Im (domain:  version: 18) from file ./onnx/defs/nn/defs.cc line 2401, but it is already registered from file ./onnx/defs/nn/defs.cc line 2401
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ScatterND (domain:  version: 18) from file ./onnx/defs/tensor/defs.cc line 1331, but it is already registered from file ./onnx/defs/tensor/defs.cc line 1331
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ScatterElements (domain:  version: 18) from file ./onnx/defs/tensor/defs.cc line 1439, but it is already registered from file ./onnx/defs/tensor/defs.cc line 1439
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ReduceSumSquare (domain:  version: 18) from file ./onnx/defs/reduction/defs.cc line 34, but it is already registered from file ./onnx/defs/reduction/defs.cc line 34
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ReduceLogSum (domain:  version: 18) from file ./onnx/defs/reduction/defs.cc line 50, but it is already registered from file ./onnx/defs/reduction/defs.cc line 50
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ReduceLogSumExp (domain:  version: 18) from file ./onnx/defs/reduction/defs.cc line 65, but it is already registered from file ./onnx/defs/reduction/defs.cc line 65
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ReduceL1 (domain:  version: 18) from file ./onnx/defs/reduction/defs.cc line 77, but it is already registered from file ./onnx/defs/reduction/defs.cc line 77
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ReduceL2 (domain:  version: 18) from file ./onnx/defs/reduction/defs.cc line 92, but it is already registered from file ./onnx/defs/reduction/defs.cc line 92
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ReduceMax (domain:  version: 18) from file ./onnx/defs/reduction/old.cc line 444, but it is already registered from file ./onnx/defs/reduction/old.cc line 444
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ReduceMin (domain:  version: 18) from file ./onnx/defs/reduction/old.cc line 445, but it is already registered from file ./onnx/defs/reduction/old.cc line 445
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ReduceMean (domain:  version: 18) from file ./onnx/defs/reduction/defs.cc line 39, but it is already registered from file ./onnx/defs/reduction/defs.cc line 39
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ReduceProd (domain:  version: 18) from file ./onnx/defs/reduction/defs.cc line 41, but it is already registered from file ./onnx/defs/reduction/defs.cc line 41
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name BitwiseAnd (domain:  version: 18) from file ./onnx/defs/logical/defs.cc line 291, but it is already registered from file ./onnx/defs/logical/defs.cc line 291
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name BitwiseOr (domain:  version: 18) from file ./onnx/defs/logical/defs.cc line 308, but it is already registered from file ./onnx/defs/logical/defs.cc line 308
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name BitwiseXor (domain:  version: 18) from file ./onnx/defs/logical/defs.cc line 325, but it is already registered from file ./onnx/defs/logical/defs.cc line 325
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name BitwiseNot (domain:  version: 18) from file ./onnx/defs/logical/defs.cc line 227, but it is already registered from file ./onnx/defs/logical/defs.cc line 227
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name GroupNormalization (domain:  version: 18) from file ./onnx/defs/nn/old.cc line 2436, but it is already registered from file ./onnx/defs/nn/old.cc line 2436
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name LpPool (domain:  version: 18) from file ./onnx/defs/nn/defs.cc line 638, but it is already registered from file ./onnx/defs/nn/defs.cc line 638
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Equal (domain:  version: 19) from file ./onnx/defs/logical/defs.cc line 103, but it is already registered from file ./onnx/defs/logical/defs.cc line 103
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name AveragePool (domain:  version: 19) from file ./onnx/defs/nn/defs.cc line 314, but it is already registered from file ./onnx/defs/nn/defs.cc line 314
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Cast (domain:  version: 19) from file ./onnx/defs/tensor/old.cc line 82, but it is already registered from file ./onnx/defs/tensor/old.cc line 82
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name CastLike (domain:  version: 19) from file ./onnx/defs/tensor/old.cc line 272, but it is already registered from file ./onnx/defs/tensor/old.cc line 272
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Constant (domain:  version: 19) from file ./onnx/defs/generator/old.cc line 18, but it is already registered from file ./onnx/defs/generator/old.cc line 18
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name DeformConv (domain:  version: 19) from file ./onnx/defs/nn/defs.cc line 1383, but it is already registered from file ./onnx/defs/nn/defs.cc line 1383
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name DequantizeLinear (domain:  version: 19) from file ./onnx/defs/quantization/old.cc line 92, but it is already registered from file ./onnx/defs/quantization/old.cc line 92
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Identity (domain:  version: 19) from file ./onnx/defs/tensor/old.cc line 3415, but it is already registered from file ./onnx/defs/tensor/old.cc line 3415
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name If (domain:  version: 19) from file ./onnx/defs/controlflow/old.cc line 32, but it is already registered from file ./onnx/defs/controlflow/old.cc line 32
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Loop (domain:  version: 19) from file ./onnx/defs/controlflow/old.cc line 264, but it is already registered from file ./onnx/defs/controlflow/old.cc line 264
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Pad (domain:  version: 19) from file ./onnx/defs/tensor/old.cc line 3813, but it is already registered from file ./onnx/defs/tensor/old.cc line 3813
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name QuantizeLinear (domain:  version: 19) from file ./onnx/defs/quantization/old.cc line 22, but it is already registered from file ./onnx/defs/quantization/old.cc line 22
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Reshape (domain:  version: 19) from file ./onnx/defs/tensor/old.cc line 633, but it is already registered from file ./onnx/defs/tensor/old.cc line 633
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Resize (domain:  version: 19) from file ./onnx/defs/tensor/defs.cc line 2221, but it is already registered from file ./onnx/defs/tensor/defs.cc line 2221
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Scan (domain:  version: 19) from file ./onnx/defs/controlflow/old.cc line 494, but it is already registered from file ./onnx/defs/controlflow/old.cc line 494
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Shape (domain:  version: 19) from file ./onnx/defs/tensor/old.cc line 6068, but it is already registered from file ./onnx/defs/tensor/old.cc line 6068
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Size (domain:  version: 19) from file ./onnx/defs/tensor/old.cc line 6196, but it is already registered from file ./onnx/defs/tensor/old.cc line 6196
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name AffineGrid (domain:  version: 20) from file ./onnx/defs/tensor/defs.cc line 2454, but it is already registered from file ./onnx/defs/tensor/defs.cc line 2454
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ConstantOfShape (domain:  version: 20) from file ./onnx/defs/generator/old.cc line 260, but it is already registered from file ./onnx/defs/generator/old.cc line 260
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name DFT (domain:  version: 20) from file ./onnx/defs/math/defs.cc line 2903, but it is already registered from file ./onnx/defs/math/defs.cc line 2903
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Gelu (domain:  version: 20) from file ./onnx/defs/math/defs.cc line 626, but it is already registered from file ./onnx/defs/math/defs.cc line 626
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name GridSample (domain:  version: 20) from file ./onnx/defs/tensor/defs.cc line 2347, but it is already registered from file ./onnx/defs/tensor/defs.cc line 2347
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ImageDecoder (domain:  version: 20) from file ./onnx/defs/image/defs.cc line 39, but it is already registered from file ./onnx/defs/image/defs.cc line 39
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name IsInf (domain:  version: 20) from file ./onnx/defs/tensor/defs.cc line 2971, but it is already registered from file ./onnx/defs/tensor/defs.cc line 2971
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name IsNaN (domain:  version: 20) from file ./onnx/defs/tensor/defs.cc line 2955, but it is already registered from file ./onnx/defs/tensor/defs.cc line 2955
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ReduceMax (domain:  version: 20) from file ./onnx/defs/reduction/defs.cc line 15, but it is already registered from file ./onnx/defs/reduction/defs.cc line 15
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ReduceMin (domain:  version: 20) from file ./onnx/defs/reduction/defs.cc line 20, but it is already registered from file ./onnx/defs/reduction/defs.cc line 20
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name RegexFullMatch (domain:  version: 20) from file ./onnx/defs/text/defs.cc line 38, but it is already registered from file ./onnx/defs/text/defs.cc line 38
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name StringConcat (domain:  version: 20) from file ./onnx/defs/text/defs.cc line 10, but it is already registered from file ./onnx/defs/text/defs.cc line 10
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name StringSplit (domain:  version: 20) from file ./onnx/defs/text/defs.cc line 71, but it is already registered from file ./onnx/defs/text/defs.cc line 71
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Cast (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 83, but it is already registered from file ./onnx/defs/tensor/defs.cc line 83
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name CastLike (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 144, but it is already registered from file ./onnx/defs/tensor/defs.cc line 144
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Constant (domain:  version: 21) from file ./onnx/defs/generator/defs.cc line 18, but it is already registered from file ./onnx/defs/generator/defs.cc line 18
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ConstantOfShape (domain:  version: 21) from file ./onnx/defs/generator/defs.cc line 67, but it is already registered from file ./onnx/defs/generator/defs.cc line 67
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name DequantizeLinear (domain:  version: 21) from file ./onnx/defs/quantization/defs.cc line 147, but it is already registered from file ./onnx/defs/quantization/defs.cc line 147
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Flatten (domain:  version: 21) from file ./onnx/defs/nn/defs.cc line 2004, but it is already registered from file ./onnx/defs/nn/defs.cc line 2004
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name GroupNormalization (domain:  version: 21) from file ./onnx/defs/nn/defs.cc line 2737, but it is already registered from file ./onnx/defs/nn/defs.cc line 2737
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Identity (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 2706, but it is already registered from file ./onnx/defs/tensor/defs.cc line 2706
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name If (domain:  version: 21) from file ./onnx/defs/controlflow/defs.cc line 24, but it is already registered from file ./onnx/defs/controlflow/defs.cc line 24
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Loop (domain:  version: 21) from file ./onnx/defs/controlflow/defs.cc line 209, but it is already registered from file ./onnx/defs/controlflow/defs.cc line 209
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Pad (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 3667, but it is already registered from file ./onnx/defs/tensor/defs.cc line 3667
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name QLinearMatMul (domain:  version: 21) from file ./onnx/defs/math/defs.cc line 1935, but it is already registered from file ./onnx/defs/math/defs.cc line 1935
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name QuantizeLinear (domain:  version: 21) from file ./onnx/defs/quantization/defs.cc line 38, but it is already registered from file ./onnx/defs/quantization/defs.cc line 38
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Reshape (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 230, but it is already registered from file ./onnx/defs/tensor/defs.cc line 230
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Scan (domain:  version: 21) from file ./onnx/defs/controlflow/defs.cc line 386, but it is already registered from file ./onnx/defs/controlflow/defs.cc line 386
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Shape (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 419, but it is already registered from file ./onnx/defs/tensor/defs.cc line 419
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Size (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 485, but it is already registered from file ./onnx/defs/tensor/defs.cc line 485
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Squeeze (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 1710, but it is already registered from file ./onnx/defs/tensor/defs.cc line 1710
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Transpose (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 1082, but it is already registered from file ./onnx/defs/tensor/defs.cc line 1082
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Unsqueeze (domain:  version: 21) from file ./onnx/defs/tensor/defs.cc line 1819, but it is already registered from file ./onnx/defs/tensor/defs.cc line 1819
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ArrayFeatureExtractor (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 15, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 15
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Binarizer (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 79, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 79
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name CastMap (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 99, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 99
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name CategoryMapper (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 159, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 159
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name DictVectorizer (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 224, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 224
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name FeatureVectorizer (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 269, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 269
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Imputer (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 293, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 293
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name LabelEncoder (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/old.cc line 22, but it is already registered from file ./onnx/defs/traditionalml/old.cc line 22
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name LinearClassifier (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 429, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 429
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name LinearRegressor (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 531, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 531
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Normalizer (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 569, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 569
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name OneHotEncoder (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 593, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 593
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name SVMClassifier (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 669, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 669
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name SVMRegressor (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 746, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 746
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name Scaler (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 641, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 641
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name TreeEnsembleClassifier (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/old.cc line 72, but it is already registered from file ./onnx/defs/traditionalml/old.cc line 72
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name TreeEnsembleRegressor (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/old.cc line 341, but it is already registered from file ./onnx/defs/traditionalml/old.cc line 341
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name ZipMap (domain: ai.onnx.ml version: 1) from file ./onnx/defs/traditionalml/defs.cc line 1209, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 1209
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name LabelEncoder (domain: ai.onnx.ml version: 2) from file ./onnx/defs/traditionalml/old.cc line 561, but it is already registered from file ./onnx/defs/traditionalml/old.cc line 561
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name TreeEnsembleClassifier (domain: ai.onnx.ml version: 3) from file ./onnx/defs/traditionalml/old.cc line 175, but it is already registered from file ./onnx/defs/traditionalml/old.cc line 175
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name TreeEnsembleRegressor (domain: ai.onnx.ml version: 3) from file ./onnx/defs/traditionalml/old.cc line 422, but it is already registered from file ./onnx/defs/traditionalml/old.cc line 422
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name LabelEncoder (domain: ai.onnx.ml version: 4) from file ./onnx/defs/traditionalml/defs.cc line 332, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 332
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name TreeEnsemble (domain: ai.onnx.ml version: 5) from file ./onnx/defs/traditionalml/defs.cc line 1017, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 1017
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name TreeEnsembleRegressor (domain: ai.onnx.ml version: 5) from file ./onnx/defs/traditionalml/defs.cc line 917, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 917
-6月 06 17:04:24 luo-pc bash[1099]: Schema error: Trying to register schema with name TreeEnsembleClassifier (domain: ai.onnx.ml version: 5) from file ./onnx/defs/traditionalml/defs.cc line 800, but it is already registered from file ./onnx/defs/traditionalml/defs.cc line 800
-6月 06 17:04:25 luo-pc bash[1099]: I0606 09:04:25.787620 1099 model_lifecycle.cc:839] "successfully loaded 'ocr_ppocr'"
-6月 06 17:04:28 luo-pc bash[1099]: I0606 09:04:28.291855 1099 modelbank.cpp:455] "model model_bank: requests in batch 1"
-6月 06 17:04:28 luo-pc bash[1099]: config_file:/opt/appdata/kylin-ai/model-repository/model_bank/1/default_model.yaml
-6月 06 17:04:28 luo-pc bash[1099]: I0606 09:04:28.327560 1099 modelbank.cpp:455] "model model_bank: requests in batch 1"
-6月 06 17:04:30 luo-pc bash[1099]: model_repository_dir: /opt/appdata/kylin-ai/model-repository
-6月 06 17:04:30 luo-pc bash[1099]: model_repository_dir: /usr/share/kylin-ai/model-repository
-6月 06 17:04:30 luo-pc bash[1099]: result_json-------:{"models":[],"vendor":""}
-6月 06 17:04:30 luo-pc bash[1099]: I0606 09:04:30.395504 1099 modelbank.cpp:455] "model model_bank: requests in batch 1"
-6月 06 17:04:30 luo-pc bash[1099]: config_file:/opt/appdata/kylin-ai/model-repository/model_bank/1/default_model.yaml
-6月 06 17:04:30 luo-pc bash[1099]: I0606 09:04:30.470908 1099 model_lifecycle.cc:472] "loading: matting_portrait:1"
-6月 06 17:04:30 luo-pc bash[1099]: I0606 09:04:30.835425 1099 onnxruntime.cc:2875] "TRITONBACKEND_Initialize: onnxruntime"
-6月 06 17:04:30 luo-pc bash[1099]: I0606 09:04:30.839277 1099 onnxruntime.cc:2885] "Triton TRITONBACKEND API version: 1.19"
-6月 06 17:04:30 luo-pc bash[1099]: I0606 09:04:30.839383 1099 onnxruntime.cc:2891] "'onnxruntime' TRITONBACKEND API version: 1.19"
-6月 06 17:04:30 luo-pc bash[1099]: I0606 09:04:30.839545 1099 onnxruntime.cc:2921] "backend configuration:\n{\"cmdline\":{\"auto-complete-config\":\"true\",\"backend-directory\":\"/opt/tritonserver/backends\",\"min-compute-capability\":\"0.000000\",\"default-max-batch-size\":\"4\"}}"
-6月 06 17:04:30 luo-pc bash[1099]: I0606 09:04:30.845088 1099 onnxruntime.cc:2986] "TRITONBACKEND_ModelInitialize: matting_portrait (version 1)"
-6月 06 17:04:30 luo-pc bash[1099]: I0606 09:04:30.854264 1099 onnxruntime.cc:984] "skipping model configuration auto-complete for 'matting_portrait': inputs and outputs already specified"
-6月 06 17:04:30 luo-pc bash[1099]: I0606 09:04:30.876204 1099 onnxruntime.cc:3051] "TRITONBACKEND_ModelInstanceInitialize: matting_portrait_1 (CPU device 0)"
-6月 06 17:04:30 luo-pc bash[1099]: I0606 09:04:30.905009 1099 onnxruntime.cc:3051] "TRITONBACKEND_ModelInstanceInitialize: matting_portrait_0 (CPU device 0)"
-6月 06 17:04:36 luo-pc bash[1099]: I0606 09:04:36.189153 1099 model_lifecycle.cc:839] "successfully loaded 'matting_portrait'"
-6月 06 17:21:52 luo-pc bash[1099]: I0606 09:21:52.224014 1099 model_lifecycle.cc:472] "loading: embd_gte-base_uint8-text:1"
-6月 06 17:21:52 luo-pc bash[1099]: I0606 09:21:52.225163 1099 model_lifecycle.cc:472] "loading: tokenizer_gte-base_uint8-text:1"
-6月 06 17:21:52 luo-pc bash[1099]: I0606 09:21:52.230188 1099 onnxruntime.cc:2986] "TRITONBACKEND_ModelInitialize: embd_gte-base_uint8-text (version 1)"
-6月 06 17:21:52 luo-pc bash[1099]: I0606 09:21:52.241699 1099 onnxruntime.cc:984] "skipping model configuration auto-complete for 'embd_gte-base_uint8-text': inputs and outputs already specified"
-6月 06 17:21:52 luo-pc bash[1099]: I0606 09:21:52.248591 1099 onnxruntime.cc:3051] "TRITONBACKEND_ModelInstanceInitialize: embd_gte-base_uint8-text_1 (CPU device 0)"
-6月 06 17:21:52 luo-pc bash[1099]: I0606 09:21:52.249276 1099 onnxruntime.cc:3051] "TRITONBACKEND_ModelInstanceInitialize: embd_gte-base_uint8-text_0 (CPU device 0)"
-6月 06 17:21:55 luo-pc bash[10044]: None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
-6月 06 17:21:57 luo-pc bash[1099]: I0606 09:21:57.328705 1099 python_be.cc:2249] "TRITONBACKEND_ModelInstanceInitialize: tokenizer_gte-base_uint8-text_0 (CPU device 0)"
-6月 06 17:21:58 luo-pc bash[10071]: None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
-6月 06 17:22:00 luo-pc bash[1099]: I0606 09:22:00.021826 1099 model_lifecycle.cc:839] "successfully loaded 'embd_gte-base_uint8-text'"
-6月 06 17:22:02 luo-pc bash[1099]: I0606 09:22:02.106631 1099 model_lifecycle.cc:839] "successfully loaded 'tokenizer_gte-base_uint8-text'"
-6月 06 17:22:02 luo-pc bash[1099]: I0606 09:22:02.109015 1099 model_lifecycle.cc:472] "loading: ensemble-embd_gte-base_uint8-text:1"
-6月 06 17:22:02 luo-pc bash[1099]: I0606 09:22:02.122436 1099 model_lifecycle.cc:839] "successfully loaded 'ensemble-embd_gte-base_uint8-text'"
-6月 06 17:22:56 luo-pc bash[1099]: W0606 09:22:56.176931 1099 pinned_memory_manager.cc:170] "failed to allocate pinned system memory: no pinned memory pool, falling back to non-pinned system memory"
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  openKylin agent memory
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
-6月 06 17:55:45 luo-pc bash[10071]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
-6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1]
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  openKylin agent memory
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
-6月 06 17:55:45 luo-pc bash[10071]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
-6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1]
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  openKylin 服务内存限制
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 6, 3367, 3182, 11189, 28353, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
-6月 06 17:55:45 luo-pc bash[10071]: input_ids  [    0  9803   605    53  2397     6  3367  3182 11189 28353     2]
-6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1]
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  knowledge 知识记忆：openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。 openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 59636, 605, 53, 2397, 6, 3367, 1173, 5426, 71, 172681, 71346, 6, 264, 86039, 2737, 45688, 6, 2213, 12752, 71835, 14641, 28353, 30, 9803, 605, 53, 2397, 6, 3367, 1173, 5426, 71, 172681, 71346, 6, 264, 86039, 2737, 45688, 6, 2213, 12752, 71835, 14641, 28353, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
-6月 06 17:55:45 luo-pc bash[10071]: input_ids  [     0  51359      6  21001  84460     12  59636    605     53   2397
-6月 06 17:55:45 luo-pc bash[10071]:       6   3367   1173   5426     71 172681  71346      6    264  86039
-6月 06 17:55:45 luo-pc bash[10071]:    2737  45688      6   2213  12752  71835  14641  28353     30   9803
-6月 06 17:55:45 luo-pc bash[10071]:     605     53   2397      6   3367   1173   5426     71 172681  71346
-6月 06 17:55:45 luo-pc bash[10071]:       6    264  86039   2737  45688      6   2213  12752  71835  14641
-6月 06 17:55:45 luo-pc bash[10071]:   28353     30      2]
-6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-6月 06 17:55:45 luo-pc bash[10071]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  knowledge 知识记忆：auditd 会审计 /etc/shadow 等敏感路径访问,并阻断高风险记忆写入。 auditd 会审计 /etc/shadow 等敏感路径访问,并阻断高风险记忆写入。
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 41004, 18, 71, 6, 1147, 114020, 248, 111879, 64, 2420, 24293, 6, 844, 63554, 201922, 56280, 4, 2672, 46968, 19563, 1395, 23400, 84460, 9449, 2283, 30, 44200, 71, 6, 1147, 114020, 248, 111879, 64, 2420, 24293, 6, 844, 63554, 201922, 56280, 4, 2672, 46968, 19563, 1395, 23400, 84460, 9449, 2283, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
-6月 06 17:55:45 luo-pc bash[10071]: input_ids  [     0  51359      6  21001  84460     12  41004     18     71      6
-6月 06 17:55:45 luo-pc bash[10071]:    1147 114020    248 111879     64   2420  24293      6    844  63554
-6月 06 17:55:45 luo-pc bash[10071]:  201922  56280      4   2672  46968  19563   1395  23400  84460   9449
-6月 06 17:55:45 luo-pc bash[10071]:    2283     30  44200     71      6   1147 114020    248 111879     64
-6月 06 17:55:45 luo-pc bash[10071]:    2420  24293      6    844  63554 201922  56280      4   2672  46968
-6月 06 17:55:45 luo-pc bash[10071]:   19563   1395  23400  84460   9449   2283     30      2]
-6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-6月 06 17:55:45 luo-pc bash[10071]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  openKylin agent memory
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
-6月 06 17:55:45 luo-pc bash[10071]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
-6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1]
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  openKylin agent memory
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
-6月 06 17:55:45 luo-pc bash[10071]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
-6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1]
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  openKylin 服务内存限制
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 6, 3367, 3182, 11189, 28353, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
-6月 06 17:55:45 luo-pc bash[10071]: input_ids  [    0  9803   605    53  2397     6  3367  3182 11189 28353     2]
-6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1]
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  knowledge 知识记忆：openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。 openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 59636, 605, 53, 2397, 6, 3367, 1173, 5426, 71, 172681, 71346, 6, 264, 86039, 2737, 45688, 6, 2213, 12752, 71835, 14641, 28353, 30, 9803, 605, 53, 2397, 6, 3367, 1173, 5426, 71, 172681, 71346, 6, 264, 86039, 2737, 45688, 6, 2213, 12752, 71835, 14641, 28353, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
-6月 06 17:55:45 luo-pc bash[10071]: input_ids  [     0  51359      6  21001  84460     12  59636    605     53   2397
-6月 06 17:55:45 luo-pc bash[10071]:       6   3367   1173   5426     71 172681  71346      6    264  86039
-6月 06 17:55:45 luo-pc bash[10071]:    2737  45688      6   2213  12752  71835  14641  28353     30   9803
-6月 06 17:55:45 luo-pc bash[10071]:     605     53   2397      6   3367   1173   5426     71 172681  71346
-6月 06 17:55:45 luo-pc bash[10071]:       6    264  86039   2737  45688      6   2213  12752  71835  14641
-6月 06 17:55:45 luo-pc bash[10071]:   28353     30      2]
-6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-6月 06 17:55:45 luo-pc bash[10071]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  knowledge 知识记忆：auditd 会审计 /etc/shadow 等敏感路径访问,并阻断高风险记忆写入。 auditd 会审计 /etc/shadow 等敏感路径访问,并阻断高风险记忆写入。
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 41004, 18, 71, 6, 1147, 114020, 248, 111879, 64, 2420, 24293, 6, 844, 63554, 201922, 56280, 4, 2672, 46968, 19563, 1395, 23400, 84460, 9449, 2283, 30, 44200, 71, 6, 1147, 114020, 248, 111879, 64, 2420, 24293, 6, 844, 63554, 201922, 56280, 4, 2672, 46968, 19563, 1395, 23400, 84460, 9449, 2283, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
-6月 06 17:55:45 luo-pc bash[10071]: input_ids  [     0  51359      6  21001  84460     12  41004     18     71      6
-6月 06 17:55:45 luo-pc bash[10071]:    1147 114020    248 111879     64   2420  24293      6    844  63554
-6月 06 17:55:45 luo-pc bash[10071]:  201922  56280      4   2672  46968  19563   1395  23400  84460   9449
-6月 06 17:55:45 luo-pc bash[10071]:    2283     30  44200     71      6   1147 114020    248 111879     64
-6月 06 17:55:45 luo-pc bash[10071]:    2420  24293      6    844  63554 201922  56280      4   2672  46968
-6月 06 17:55:45 luo-pc bash[10071]:   19563   1395  23400  84460   9449   2283     30      2]
-6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-6月 06 17:55:45 luo-pc bash[10071]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  openKylin agent memory
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
-6月 06 17:55:45 luo-pc bash[10071]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
-6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1]
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  openKylin agent memory
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 23882, 98323, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1]}
-6月 06 17:55:45 luo-pc bash[10071]: input_ids  [    0  9803   605    53  2397 23882 98323     2]
-6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1]
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  openKylin 服务内存限制
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 9803, 605, 53, 2397, 6, 3367, 3182, 11189, 28353, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
-6月 06 17:55:45 luo-pc bash[10071]: input_ids  [    0  9803   605    53  2397     6  3367  3182 11189 28353     2]
-6月 06 17:55:45 luo-pc bash[10071]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1]
-6月 06 17:55:45 luo-pc bash[10071]: tokenize string  knowledge 知识记忆：openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。 openKylin 服务用 systemd MemoryMax 和 CPUQuota 做端侧资源限制。
-6月 06 17:55:45 luo-pc bash[10071]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 59636, 605, 53, 2397, 6, 3367, 1173, 5426, 71, 172681, 71346, 6, 264, 86039, 2737, 45688, 6, 2213, 12752, 71835, 14641, 28353, 30, 9803, 605, 53, 2397, 6, 3367, 1173, 5426, 71, 172681, 71346, 6, 264, 86039, 2737, 45688, 6, 2213, 12752, 71835, 14641, 28353, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:24 luo-pc bash[161067]:    1879  46209     12 114020   1189 195222  94763  23906  15635  68828
+7月 11 12:52:24 luo-pc bash[161067]:   15390    141      6   1898      4   2996  52684  47805      4   2058
+7月 11 12:52:24 luo-pc bash[161067]:  149309  19015     30      2]
+7月 11 12:52:24 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:24 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:24 luo-pc bash[161067]: tokenize string  工作流程：审计与拦截任务处理 BPF LSM 时，先收集状态，再验证结果。 kernel enforcement enforcement layer path enforcement
+7月 11 12:52:24 luo-pc bash[161067]: tokens  {'input_ids': [0, 6, 1879, 46209, 12, 114020, 1189, 195222, 94763, 23906, 15635, 335, 41265, 339, 18148, 6, 1898, 4, 2996, 52684, 47805, 4, 2058, 149309, 19015, 30, 77924, 583, 232725, 232725, 135355, 60875, 232725, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:24 luo-pc bash[161067]: input_ids  [     0      6   1879  46209     12 114020   1189 195222  94763  23906
+7月 11 12:52:24 luo-pc bash[161067]:   15635    335  41265    339  18148      6   1898      4   2996  52684
+7月 11 12:52:24 luo-pc bash[161067]:   47805      4   2058 149309  19015     30  77924    583 232725 232725
+7月 11 12:52:24 luo-pc bash[161067]:  135355  60875 232725      2]
+7月 11 12:52:24 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:24 luo-pc bash[161067]: tokenize string  knowledge 知识记忆：工作流程:审计与拦截任务处理 BPF LSM 时,先收集状态,再验证结果。 工作流程:审计与拦截任务处理 BPF LSM 时,先收集状态,再验证结果。
+7月 11 12:52:28 luo-pc bash[161067]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 1879, 46209, 12, 114020, 1189, 195222, 94763, 23906, 15635, 335, 41265, 339, 18148, 6, 1898, 4, 2996, 52684, 47805, 4, 2058, 149309, 19015, 30, 6, 1879, 46209, 12, 114020, 1189, 195222, 94763, 23906, 15635, 335, 41265, 339, 18148, 6, 1898, 4, 2996, 52684, 47805, 4, 2058, 149309, 19015, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:28 luo-pc bash[161067]: input_ids  [     0  51359      6  21001  84460     12   1879  46209     12 114020
+7月 11 12:52:28 luo-pc bash[161067]:    1189 195222  94763  23906  15635    335  41265    339  18148      6
+7月 11 12:52:28 luo-pc bash[161067]:    1898      4   2996  52684  47805      4   2058 149309  19015     30
+7月 11 12:52:28 luo-pc bash[161067]:       6   1879  46209     12 114020   1189 195222  94763  23906  15635
+7月 11 12:52:28 luo-pc bash[161067]:     335  41265    339  18148      6   1898      4   2996  52684  47805
+7月 11 12:52:28 luo-pc bash[161067]:       4   2058 149309  19015     30      2]
+7月 11 12:52:28 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:28 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:28 luo-pc bash[161067]: tokenize string  high_risk_confirmation high risk command dangerous confirmation double 忘记高风险命令需要二次确认 记高 高风 风险 险命 dangerous command 危险操作 double confirmation 确认后执行
+7月 11 12:52:28 luo-pc bash[161067]: tokens  {'input_ids': [0, 11192, 454, 57786, 454, 2271, 23044, 1363, 11192, 10512, 75101, 169907, 169935, 41929, 6, 133605, 1395, 23400, 98168, 2745, 114857, 88468, 6, 26709, 1395, 6, 1395, 7149, 6, 23400, 6, 71831, 12525, 169907, 75101, 6, 61135, 13160, 41929, 169935, 6, 88468, 1826, 25621, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:28 luo-pc bash[161067]: input_ids  [     0  11192    454  57786    454   2271  23044   1363  11192  10512
+7月 11 12:52:28 luo-pc bash[161067]:   75101 169907 169935  41929      6 133605   1395  23400  98168   2745
+7月 11 12:52:28 luo-pc bash[161067]:  114857  88468      6  26709   1395      6   1395   7149      6  23400
+7月 11 12:52:28 luo-pc bash[161067]:       6  71831  12525 169907  75101      6  61135  13160  41929 169935
+7月 11 12:52:28 luo-pc bash[161067]:       6  88468   1826  25621      2]
+7月 11 12:52:28 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:28 luo-pc bash[161067]:  1 1 1 1 1 1 1 1]
+7月 11 12:52:28 luo-pc bash[161067]: tokenize string  sensitive_policy 安全策略：高风险命令需要二次确认,不因效率偏好绕过安全策略。 高风险命令需要二次确认,不因效率偏好绕过安全策略。
+7月 11 12:52:28 luo-pc bash[161067]: tokens  {'input_ids': [0, 191125, 454, 130474, 6, 4788, 42643, 12, 1395, 23400, 98168, 2745, 114857, 88468, 4, 562, 4578, 28245, 21919, 1322, 161864, 3074, 4788, 42643, 30, 6, 1395, 23400, 98168, 2745, 114857, 88468, 4, 562, 4578, 28245, 21919, 1322, 161864, 3074, 4788, 42643, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:28 luo-pc bash[161067]: input_ids  [     0 191125    454 130474      6   4788  42643     12   1395  23400
+7月 11 12:52:28 luo-pc bash[161067]:   98168   2745 114857  88468      4    562   4578  28245  21919   1322
+7月 11 12:52:28 luo-pc bash[161067]:  161864   3074   4788  42643     30      6   1395  23400  98168   2745
+7月 11 12:52:28 luo-pc bash[161067]:  114857  88468      4    562   4578  28245  21919   1322 161864   3074
+7月 11 12:52:28 luo-pc bash[161067]:    4788  42643     30      2]
+7月 11 12:52:28 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:28 luo-pc bash[161067]:  1 1 1 1 1 1 1]
+7月 11 12:52:28 luo-pc bash[161067]: tokenize string  high_risk_confirmation high risk command dangerous confirmation double 忘记自然语言请求中关于二次确认的两条记忆 记自 自然 然语 语言 高风险命令 dangerous command 危险操作 double confirmation 确认后执行
+7月 11 12:52:28 luo-pc bash[161067]: tokens  {'input_ids': [0, 11192, 454, 57786, 454, 2271, 23044, 1363, 11192, 10512, 75101, 169907, 169935, 41929, 6, 133605, 7200, 38046, 154007, 514, 12022, 114857, 88468, 43, 6442, 7781, 84460, 6, 26709, 2122, 6, 7200, 6, 13797, 11871, 6, 38046, 6, 1395, 23400, 98168, 169907, 75101, 6, 61135, 13160, 41929, 169935, 6, 88468, 1826, 25621, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:28 luo-pc bash[161067]: input_ids  [     0  11192    454  57786    454   2271  23044   1363  11192  10512
+7月 11 12:52:28 luo-pc bash[161067]:   75101 169907 169935  41929      6 133605   7200  38046 154007    514
+7月 11 12:52:28 luo-pc bash[161067]:   12022 114857  88468     43   6442   7781  84460      6  26709   2122
+7月 11 12:52:28 luo-pc bash[161067]:       6   7200      6  13797  11871      6  38046      6   1395  23400
+7月 11 12:52:28 luo-pc bash[161067]:   98168 169907  75101      6  61135  13160  41929 169935      6  88468
+7月 11 12:52:28 luo-pc bash[161067]:    1826  25621      2]
+7月 11 12:52:28 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:28 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:28 luo-pc bash[161067]: tokenize string  sensitive_policy 安全策略：自然语言请求:高风险命令需要二次确认,不因效率偏好绕过安全策略。 自然语言请求:高风险命令需要二次确认,不因效率偏好绕过安全策略。
+7月 11 12:52:28 luo-pc bash[161067]: tokens  {'input_ids': [0, 191125, 454, 130474, 6, 4788, 42643, 12, 7200, 38046, 154007, 12, 1395, 23400, 98168, 2745, 114857, 88468, 4, 562, 4578, 28245, 21919, 1322, 161864, 3074, 4788, 42643, 30, 6, 7200, 38046, 154007, 12, 1395, 23400, 98168, 2745, 114857, 88468, 4, 562, 4578, 28245, 21919, 1322, 161864, 3074, 4788, 42643, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:28 luo-pc bash[161067]: input_ids  [     0 191125    454 130474      6   4788  42643     12   7200  38046
+7月 11 12:52:28 luo-pc bash[161067]:  154007     12   1395  23400  98168   2745 114857  88468      4    562
+7月 11 12:52:28 luo-pc bash[161067]:    4578  28245  21919   1322 161864   3074   4788  42643     30      6
+7月 11 12:52:28 luo-pc bash[161067]:    7200  38046 154007     12   1395  23400  98168   2745 114857  88468
+7月 11 12:52:28 luo-pc bash[161067]:       4    562   4578  28245  21919   1322 161864   3074   4788  42643
+7月 11 12:52:28 luo-pc bash[161067]:      30      2]
+7月 11 12:52:28 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:28 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:28 luo-pc bash[161067]: tokenize string  journalctl service logs system before restarting 忘记上周记录中关于 记上 上周 周记 记录 录中 system logs logs before restarting
+7月 11 12:52:28 luo-pc bash[161067]: tokens  {'input_ids': [0, 68828, 15390, 141, 4516, 12684, 7, 5426, 8108, 456, 17137, 214, 6, 133605, 143865, 42750, 514, 12022, 6, 26709, 575, 6, 143865, 6, 6271, 26709, 6, 42750, 6, 49028, 514, 5426, 12684, 7, 12684, 7, 8108, 456, 17137, 214, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:28 luo-pc bash[161067]: input_ids  [     0  68828  15390    141   4516  12684      7   5426   8108    456
+7月 11 12:52:28 luo-pc bash[161067]:   17137    214      6 133605 143865  42750    514  12022      6  26709
+7月 11 12:52:28 luo-pc bash[161067]:     575      6 143865      6   6271  26709      6  42750      6  49028
+7月 11 12:52:28 luo-pc bash[161067]:     514   5426  12684      7  12684      7   8108    456  17137    214
+7月 11 12:52:28 luo-pc bash[161067]:       2]
+7月 11 12:52:28 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:28 luo-pc bash[161067]:  1 1 1 1]
+7月 11 12:52:28 luo-pc bash[161067]: tokenize string  knowledge 知识记忆：上周记录:服务重启前先查看 journalctl 和 cgroup 限制。 上周记录:服务重启前先查看 journalctl 和 cgroup 限制。
+7月 11 12:52:28 luo-pc bash[161067]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 143865, 42750, 12, 3367, 2830, 65085, 1590, 2996, 35182, 68828, 15390, 141, 6, 264, 501, 51588, 6, 28353, 30, 6, 143865, 42750, 12, 3367, 2830, 65085, 1590, 2996, 35182, 68828, 15390, 141, 6, 264, 501, 51588, 6, 28353, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:28 luo-pc bash[161067]: input_ids  [     0  51359      6  21001  84460     12 143865  42750     12   3367
+7月 11 12:52:28 luo-pc bash[161067]:    2830  65085   1590   2996  35182  68828  15390    141      6    264
+7月 11 12:52:28 luo-pc bash[161067]:     501  51588      6  28353     30      6 143865  42750     12   3367
+7月 11 12:52:28 luo-pc bash[161067]:    2830  65085   1590   2996  35182  68828  15390    141      6    264
+7月 11 12:52:28 luo-pc bash[161067]:     501  51588      6  28353     30      2]
+7月 11 12:52:28 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:28 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1]
+7月 11 12:52:28 luo-pc bash[161067]: tokenize string  linux 命令回答偏好 命令 令回 回答 答偏 偏好 preference
+7月 11 12:52:28 luo-pc bash[161067]: tokens  {'input_ids': [0, 11508, 6077, 6, 98168, 27739, 21919, 1322, 6, 98168, 6, 12668, 2490, 6, 27739, 6, 24450, 21919, 6, 21919, 1322, 205537, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:31 luo-pc bash[161067]: input_ids  [     0  11508   6077      6  98168  27739  21919   1322      6  98168
+7月 11 12:52:31 luo-pc bash[161067]:       6  12668   2490      6  27739      6  24450  21919      6  21919
+7月 11 12:52:31 luo-pc bash[161067]:    1322 205537      2]
+7月 11 12:52:31 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:31 luo-pc bash[161067]: tokenize string  preference 用户偏好：以后回答 Linux 命令时直接给命令和风险提示,不要写太长背景。 以后回答 Linux 命令时直接给命令和风险提示,不要写太长背景。
+7月 11 12:52:31 luo-pc bash[161067]: tokens  {'input_ids': [0, 205537, 6, 10501, 21919, 1322, 12, 21953, 27739, 29908, 6, 98168, 1898, 6618, 4766, 98168, 264, 23400, 51827, 4, 7402, 9449, 4150, 3846, 35073, 30, 6, 21953, 27739, 29908, 6, 98168, 1898, 6618, 4766, 98168, 264, 23400, 51827, 4, 7402, 9449, 4150, 3846, 35073, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:31 luo-pc bash[161067]: input_ids  [     0 205537      6  10501  21919   1322     12  21953  27739  29908
+7月 11 12:52:31 luo-pc bash[161067]:       6  98168   1898   6618   4766  98168    264  23400  51827      4
+7月 11 12:52:31 luo-pc bash[161067]:    7402   9449   4150   3846  35073     30      6  21953  27739  29908
+7月 11 12:52:31 luo-pc bash[161067]:       6  98168   1898   6618   4766  98168    264  23400  51827      4
+7月 11 12:52:31 luo-pc bash[161067]:    7402   9449   4150   3846  35073     30      2]
+7月 11 12:52:31 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:31 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:31 luo-pc bash[161067]: tokenize string  Which Incident filter options are available?
+7月 11 12:52:31 luo-pc bash[161067]: tokens  {'input_ids': [0, 130078, 360, 36079, 46312, 50717, 621, 19882, 32, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:31 luo-pc bash[161067]: input_ids  [     0 130078    360  36079  46312  50717    621  19882     32      2]
+7月 11 12:52:31 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:31 luo-pc bash[161067]: tokenize string  knowledge 知识记忆：LongMemEval-V2 trajectory=trajectory-001 domain=enterprise environment=workarena outcome=success Goal: Assign an incident and close the task LongMemEval-V2 trajectory=trajectory-001 domain=enterprise environment=workarena outcome=success
+7月 11 12:52:31 luo-pc bash[161067]: Goal: Assign an incident and close the task.
+7月 11 12:52:31 luo-pc bash[161067]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 866, 4021, 594, 195, 647, 1405, 9, 856, 304, 182418, 30675, 1369, 1517, 75161, 30675, 9, 34479, 77758, 1369, 36126, 93781, 65998, 1369, 18244, 120391, 184345, 1369, 226534, 7, 2016, 289, 12, 1301, 31304, 142, 45559, 136, 20903, 70, 66211, 14407, 594, 195, 647, 1405, 9, 856, 304, 182418, 30675, 1369, 1517, 75161, 30675, 9, 34479, 77758, 1369, 36126, 93781, 65998, 1369, 18244, 120391, 184345, 1369, 226534, 7, 2016, 289, 12, 1301, 31304, 142, 45559, 136, 20903, 70, 66211, 5, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:31 luo-pc bash[161067]: input_ids  [     0  51359      6  21001  84460     12    866   4021    594    195
+7月 11 12:52:31 luo-pc bash[161067]:     647   1405      9    856    304 182418  30675   1369   1517  75161
+7月 11 12:52:31 luo-pc bash[161067]:   30675      9  34479  77758   1369  36126  93781  65998   1369  18244
+7月 11 12:52:31 luo-pc bash[161067]:  120391 184345   1369 226534      7   2016    289     12   1301  31304
+7月 11 12:52:31 luo-pc bash[161067]:     142  45559    136  20903     70  66211  14407    594    195    647
+7月 11 12:52:31 luo-pc bash[161067]:    1405      9    856    304 182418  30675   1369   1517  75161  30675
+7月 11 12:52:31 luo-pc bash[161067]:       9  34479  77758   1369  36126  93781  65998   1369  18244 120391
+7月 11 12:52:31 luo-pc bash[161067]:  184345   1369 226534      7   2016    289     12   1301  31304    142
+7月 11 12:52:31 luo-pc bash[161067]:   45559    136  20903     70  66211      5      2]
+7月 11 12:52:31 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:31 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:31 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:31 luo-pc bash[161067]: tokenize string  Which Incident filter option is present?
+7月 11 12:52:31 luo-pc bash[161067]: tokens  {'input_ids': [0, 130078, 360, 36079, 46312, 35829, 83, 13379, 32, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:31 luo-pc bash[161067]: input_ids  [     0 130078    360  36079  46312  35829     83  13379     32      2]
+7月 11 12:52:31 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:31 luo-pc bash[161067]: tokenize string  knowledge 知识记忆：LongMemEval-V2 trajectory=trajectory-001 state=0 domain=enterprise environment=workarena URL: https://example.invalid/incidents Thought: Ope LongMemEval-V2 trajectory=trajectory-001 state=0 domain=enterprise environment=workarena
+7月 11 12:52:31 luo-pc bash[161067]: URL: https://example.invalid/incidents
+7月 11 12:52:31 luo-pc bash[161067]: Thought: Open the Incidents module.
+7月 11 12:52:31 luo-pc bash[161067]: Action: click('Incidents')
+7月 11 12:52:31 luo-pc bash[161067]: Visible state:
+7月 11 12:52:31 luo-pc bash[161067]: button Incidents; option My Open Incidents; option Incident Portal
+7月 11 12:52:31 luo-pc bash[161067]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 866, 4021, 594, 195, 647, 1405, 9, 856, 304, 182418, 30675, 1369, 1517, 75161, 30675, 9, 34479, 11341, 145407, 77758, 1369, 36126, 93781, 65998, 1369, 18244, 120391, 31862, 12, 3975, 696, 3355, 11, 33209, 5, 73, 7013, 71, 64, 73, 36079, 7, 145733, 18, 12, 2331, 13, 14407, 594, 195, 647, 1405, 9, 856, 304, 182418, 30675, 1369, 1517, 75161, 30675, 9, 34479, 11341, 145407, 77758, 1369, 36126, 93781, 65998, 1369, 18244, 120391, 31862, 12, 3975, 696, 3355, 11, 33209, 5, 73, 7013, 71, 64, 73, 36079, 7, 145733, 18, 12, 13527, 70, 360, 36079, 7, 88996, 5, 57945, 12, 18158, 132, 25, 4153, 36079, 7, 25, 16, 582, 55356, 11341, 12, 77679, 360, 36079, 7, 74, 35829, 2646, 13527, 360, 36079, 7, 74, 35829, 360, 36079, 17024, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:31 luo-pc bash[161067]: input_ids  [     0  51359      6  21001  84460     12    866   4021    594    195
+7月 11 12:52:31 luo-pc bash[161067]:     647   1405      9    856    304 182418  30675   1369   1517  75161
+7月 11 12:52:31 luo-pc bash[161067]:   30675      9  34479  11341 145407  77758   1369  36126  93781  65998
+7月 11 12:52:31 luo-pc bash[161067]:    1369  18244 120391  31862     12   3975    696   3355     11  33209
+7月 11 12:52:31 luo-pc bash[161067]:       5     73   7013     71     64     73  36079      7 145733     18
+7月 11 12:52:31 luo-pc bash[161067]:      12   2331     13  14407    594    195    647   1405      9    856
+7月 11 12:52:31 luo-pc bash[161067]:     304 182418  30675   1369   1517  75161  30675      9  34479  11341
+7月 11 12:52:31 luo-pc bash[161067]:  145407  77758   1369  36126  93781  65998   1369  18244 120391  31862
+7月 11 12:52:31 luo-pc bash[161067]:      12   3975    696   3355     11  33209      5     73   7013     71
+7月 11 12:52:31 luo-pc bash[161067]:      64     73  36079      7 145733     18     12  13527     70    360
+7月 11 12:52:31 luo-pc bash[161067]:   36079      7  88996      5  57945     12  18158    132     25   4153
+7月 11 12:52:31 luo-pc bash[161067]:   36079      7     25     16    582  55356  11341     12  77679    360
+7月 11 12:52:31 luo-pc bash[161067]:   36079      7     74  35829   2646  13527    360  36079      7     74
+7月 11 12:52:31 luo-pc bash[161067]:   35829    360  36079  17024      2]
+7月 11 12:52:31 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:31 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:31 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:31 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:31 luo-pc bash[161067]: tokenize string  blue-river
+7月 11 12:52:31 luo-pc bash[161067]: tokens  {'input_ids': [0, 57571, 9, 416, 814, 2], 'attention_mask': [1, 1, 1, 1, 1, 1]}
+7月 11 12:52:31 luo-pc bash[161067]: input_ids  [    0 57571     9   416   814     2]
+7月 11 12:52:31 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1]
+7月 11 12:52:31 luo-pc bash[161067]: tokenize string  knowledge 知识记忆：临时项目代号 blue-river 只用于预览遗忘 临时项目代号 blue-river 只用于预览遗忘
+7月 11 12:52:31 luo-pc bash[161067]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 155671, 6806, 5260, 5730, 57571, 9, 416, 814, 6, 5344, 48412, 23767, 188250, 70051, 44541, 6, 155671, 6806, 5260, 5730, 57571, 9, 416, 814, 6, 5344, 48412, 23767, 188250, 70051, 44541, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:31 luo-pc bash[161067]: input_ids  [     0  51359      6  21001  84460     12 155671   6806   5260   5730
+7月 11 12:52:31 luo-pc bash[161067]:   57571      9    416    814      6   5344  48412  23767 188250  70051
+7月 11 12:52:31 luo-pc bash[161067]:   44541      6 155671   6806   5260   5730  57571      9    416    814
+7月 11 12:52:31 luo-pc bash[161067]:       6   5344  48412  23767 188250  70051  44541      2]
+7月 11 12:52:31 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:31 luo-pc bash[161067]:  1]
+7月 11 12:52:31 luo-pc bash[161067]: tokenize string  systemctl status openKylin
+7月 11 12:52:31 luo-pc bash[161067]: tokens  {'input_ids': [0, 5426, 15390, 141, 10778, 9803, 605, 53, 2397, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:40 luo-pc bash[161067]: input_ids  [    0  5426 15390   141 10778  9803   605    53  2397     2]
+7月 11 12:52:40 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:40 luo-pc bash[161067]: tokenize string  knowledge 知识记忆：外部知识:openKylin 的服务使用 systemctl status 检查状态。 外部知识:openKylin 的服务使用 systemctl status 检查状态。
+7月 11 12:52:40 luo-pc bash[161067]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 78638, 21001, 12, 59636, 605, 53, 2397, 6, 71381, 2229, 5426, 15390, 141, 10778, 6, 28072, 47805, 30, 6, 78638, 21001, 12, 59636, 605, 53, 2397, 6, 71381, 2229, 5426, 15390, 141, 10778, 6, 28072, 47805, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:40 luo-pc bash[161067]: input_ids  [    0 51359     6 21001 84460    12 78638 21001    12 59636   605    53
+7月 11 12:52:40 luo-pc bash[161067]:   2397     6 71381  2229  5426 15390   141 10778     6 28072 47805    30
+7月 11 12:52:40 luo-pc bash[161067]:      6 78638 21001    12 59636   605    53  2397     6 71381  2229  5426
+7月 11 12:52:40 luo-pc bash[161067]:  15390   141 10778     6 28072 47805    30     2]
+7月 11 12:52:40 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:40 luo-pc bash[161067]:  1 1 1 1 1 1 1]
+7月 11 12:52:40 luo-pc bash[161067]: tokenize string  Linux 命令 中文
+7月 11 12:52:40 luo-pc bash[161067]: tokens  {'input_ids': [0, 29908, 6, 98168, 6, 32095, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:40 luo-pc bash[161067]: input_ids  [    0 29908     6 98168     6 32095     2]
+7月 11 12:52:40 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1]
+7月 11 12:52:40 luo-pc bash[161067]: tokenize string  preference 用户偏好：以后回答 Linux 命令时使用中文。 以后回答 Linux 命令时使用中文。
+7月 11 12:52:40 luo-pc bash[161067]: tokens  {'input_ids': [0, 205537, 6, 10501, 21919, 1322, 12, 21953, 27739, 29908, 6, 98168, 1898, 2229, 32095, 30, 6, 21953, 27739, 29908, 6, 98168, 1898, 2229, 32095, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:40 luo-pc bash[161067]: input_ids  [     0 205537      6  10501  21919   1322     12  21953  27739  29908
+7月 11 12:52:40 luo-pc bash[161067]:       6  98168   1898   2229  32095     30      6  21953  27739  29908
+7月 11 12:52:40 luo-pc bash[161067]:       6  98168   1898   2229  32095     30      2]
+7月 11 12:52:40 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:40 luo-pc bash[161067]: tokenize string  MGRES000022 精准遗忘 precise forgetting managed forgetting
+7月 11 12:52:40 luo-pc bash[161067]: tokens  {'input_ids': [0, 89624, 34465, 28568, 4015, 6, 132910, 70051, 44541, 134995, 90820, 1916, 145755, 90820, 1916, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:40 luo-pc bash[161067]: input_ids  [     0  89624  34465  28568   4015      6 132910  70051  44541 134995
+7月 11 12:52:40 luo-pc bash[161067]:   90820   1916 145755  90820   1916      2]
+7月 11 12:52:40 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:40 luo-pc bash[161067]: tokenize string  knowledge 知识记忆：MGRES000022 是 精准遗忘 场景的可复验记忆,编号 MGRES000022。 MGRES000022 是 精准遗忘 场景的可复验记忆,编号 MGRES000022。
+7月 11 12:52:40 luo-pc bash[161067]: tokens  {'input_ids': [0, 51359, 6, 21001, 84460, 12, 34926, 34465, 28568, 4015, 6, 354, 6, 132910, 70051, 44541, 6, 106636, 43, 1403, 28226, 198898, 84460, 4, 30862, 5730, 89624, 34465, 28568, 4015, 30, 89624, 34465, 28568, 4015, 6, 354, 6, 132910, 70051, 44541, 6, 106636, 43, 1403, 28226, 198898, 84460, 4, 30862, 5730, 89624, 34465, 28568, 4015, 30, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:40 luo-pc bash[161067]: input_ids  [     0  51359      6  21001  84460     12  34926  34465  28568   4015
+7月 11 12:52:40 luo-pc bash[161067]:       6    354      6 132910  70051  44541      6 106636     43   1403
+7月 11 12:52:40 luo-pc bash[161067]:   28226 198898  84460      4  30862   5730  89624  34465  28568   4015
+7月 11 12:52:40 luo-pc bash[161067]:      30  89624  34465  28568   4015      6    354      6 132910  70051
+7月 11 12:52:40 luo-pc bash[161067]:   44541      6 106636     43   1403  28226 198898  84460      4  30862
+7月 11 12:52:40 luo-pc bash[161067]:    5730  89624  34465  28568   4015     30      2]
+7月 11 12:52:40 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:40 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:40 luo-pc bash[161067]: tokenize string  代码搜索 优先使用 rg code search preferred tools for code search 查代码 ripgrep
+7月 11 12:52:40 luo-pc bash[161067]: tokens  {'input_ids': [0, 6, 99515, 63449, 6, 116300, 2229, 6, 10566, 18151, 33938, 12601, 2822, 72977, 100, 18151, 33938, 6, 9258, 99515, 26759, 7134, 254, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:40 luo-pc bash[161067]: input_ids  [     0      6  99515  63449      6 116300   2229      6  10566  18151
+7月 11 12:52:40 luo-pc bash[161067]:   33938  12601   2822  72977    100  18151  33938      6   9258  99515
+7月 11 12:52:40 luo-pc bash[161067]:   26759   7134    254      2]
+7月 11 12:52:40 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+7月 11 12:52:40 luo-pc bash[161067]: tokenize string  preference 用户偏好：以后进行代码搜索时优先使用 rg。工具结果统计显示 preferred_tool=rg success_count=2 failure_count=0 avg_duration_ms=180.000 avoid_tools=grep evidence=grep success=0 以后进行代码搜索时优先使用 rg。工具结果统计显示 preferred_tool=rg success_count=2 failure_count=0 avg_duration_ms=180.000 avoid_tools=grep evidence=grep success=0 failure=1 avg_ms=1800.0;rg success=2 failure=0 avg_ms=180.0;rg -n audit memguard -> success;rg -n service memguard -> success
+7月 11 12:52:40 luo-pc bash[161067]: tokens  {'input_ids': [0, 205537, 6, 10501, 21919, 1322, 12, 21953, 3327, 99515, 63449, 1898, 116300, 2229, 6, 10566, 30, 18321, 19015, 45425, 21662, 12601, 2822, 454, 89110, 1369, 10566, 36272, 454, 71013, 55257, 137578, 454, 71013, 145407, 185, 177, 454, 3020, 2320, 454, 4432, 33000, 153395, 71864, 454, 89110, 7, 1369, 7134, 254, 77950, 1369, 7134, 254, 36272, 145407, 6, 21953, 3327, 99515, 63449, 1898, 116300, 2229, 6, 10566, 30, 18321, 19015, 45425, 21662, 12601, 2822, 454, 89110, 1369, 10566, 36272, 454, 71013, 55257, 137578, 454, 71013, 145407, 185, 177, 454, 3020, 2320, 454, 4432, 33000, 153395, 71864, 454, 89110, 7, 1369, 7134, 254, 77950, 1369, 7134, 254, 36272, 145407, 137578, 33000, 185, 177, 454, 4432, 1369, 39425, 99929, 74, 10566, 36272, 55257, 137578, 145407, 185, 177, 454, 4432, 1369, 1819, 99929, 74, 10566, 20, 19, 44200, 7199, 32116, 33079, 36272, 74, 10566, 20, 19, 4516, 7199, 32116, 33079, 36272, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+7月 11 12:52:40 luo-pc bash[161067]: input_ids  [     0 205537      6  10501  21919   1322     12  21953   3327  99515
+7月 11 12:52:40 luo-pc bash[161067]:   63449   1898 116300   2229      6  10566     30  18321  19015  45425
+7月 11 12:52:40 luo-pc bash[161067]:   21662  12601   2822    454  89110   1369  10566  36272    454  71013
+7月 11 12:52:40 luo-pc bash[161067]:   55257 137578    454  71013 145407    185    177    454   3020   2320
+7月 11 12:52:40 luo-pc bash[161067]:     454   4432  33000 153395  71864    454  89110      7   1369   7134
+7月 11 12:52:40 luo-pc bash[161067]:     254  77950   1369   7134    254  36272 145407      6  21953   3327
+7月 11 12:52:40 luo-pc bash[161067]:   99515  63449   1898 116300   2229      6  10566     30  18321  19015
+7月 11 12:52:40 luo-pc bash[161067]:   45425  21662  12601   2822    454  89110   1369  10566  36272    454
+7月 11 12:52:40 luo-pc bash[161067]:   71013  55257 137578    454  71013 145407    185    177    454   3020
+7月 11 12:52:40 luo-pc bash[161067]:    2320    454   4432  33000 153395  71864    454  89110      7   1369
+7月 11 12:52:40 luo-pc bash[161067]:    7134    254  77950   1369   7134    254  36272 145407 137578  33000
+7月 11 12:52:40 luo-pc bash[161067]:     185    177    454   4432   1369  39425  99929     74  10566  36272
+7月 11 12:52:40 luo-pc bash[161067]:   55257 137578 145407    185    177    454   4432   1369   1819  99929
+7月 11 12:52:40 luo-pc bash[161067]:      74  10566     20     19  44200   7199  32116  33079  36272     74
+7月 11 12:52:40 luo-pc bash[161067]:   10566     20     19   4516   7199  32116  33079  36272      2]
+7月 11 12:52:40 luo-pc bash[161067]: attention_mask  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:40 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:40 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:40 luo-pc bash[161067]:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+7月 11 12:52:40 luo-pc bash[161067]:  1]
+7月 11 12:52:40 luo-pc bash[161067]: tokenize string  忘掉回答语言偏好 掉回 回答 答语 语言 言偏 偏好 回答语言偏好 preference
+7月 11 12:52:40 luo-pc bash[161067]: tokens  {'input_ids': [0, 6, 44541, 14224, 27739, 38046, 21919, 1322, 6, 14224, 2490, 6, 27739, 6, 24450, 11871, 6, 38046, 6, 6062, 21919, 6, 21919, 1322, 6, 27739, 38046, 21919, 1322, 205537, 2], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}

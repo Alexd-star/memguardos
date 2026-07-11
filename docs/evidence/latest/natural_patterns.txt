@@ -31,10 +31,10 @@ $ ".venv/bin/python" -m memguard.cli.memctl patterns suggest '把员工工号，
     }
   }
 }
-{"stored": true, "memory_id": "mem_56d79dc9df504511", "type": "sensitive_policy", "subtype": "security_policy", "tier": "long_term", "confidence": 0.8500000000000001, "quality": {"accepted": true, "score": 1.0, "issues": [], "warnings": [], "original_chars": 22, "normalized_chars": 22, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "sensitive_policy", "subtype": "security_policy", "summary": "安全策略：员工工号 [REDACTED:employee_id] 需要脱敏保存。", "confidence": 0.85, "method": "deterministic_semantic_rules", "signals": ["source_manual", "security_policy_intent"], "enhancer_used": false, "enhancer_error": ""}}
+{"stored": true, "memory_id": "mem_cd9e73582c1d4be4", "type": "sensitive_policy", "subtype": "security_policy", "tier": "long_term", "confidence": 0.8500000000000001, "quality": {"accepted": true, "score": 1.0, "issues": [], "warnings": [], "original_chars": 22, "normalized_chars": 22, "line_count": 1, "source_kind": "manual"}, "extraction": {"memory_type": "sensitive_policy", "subtype": "security_policy", "summary": "安全策略：员工工号 [REDACTED:employee_id] 需要脱敏保存。", "confidence": 0.85, "method": "deterministic_semantic_rules", "signals": ["source_manual", "security_policy_intent"], "enhancer_used": false, "enhancer_error": ""}}
 [
   {
-    "memory_id": "mem_56d79dc9df504511",
+    "memory_id": "mem_cd9e73582c1d4be4",
     "type": "sensitive_policy",
     "subtype": "security_policy",
     "scope": "default",
@@ -46,39 +46,54 @@ $ ".venv/bin/python" -m memguard.cli.memctl patterns suggest '把员工工号，
     "sensitivity_level": "low",
     "sensitivity_labels": "[\"employee_id\"]",
     "sensitivity_redacted": 1,
-    "version_id": "ver_2026a387be9642de",
-    "valid_from": "2026-06-07T04:34:35.718100+00:00",
+    "version_id": "ver_01de4419cb66437a",
+    "valid_from": "2026-07-11T04:55:54.836785+00:00",
     "valid_to": null,
     "superseded_by": null,
+    "preference_topic": "",
+    "preference_value": "",
+    "preference_scope": "global",
+    "preference_explicit": 1,
+    "agent_name": "",
+    "preference_session_id": "",
+    "project_root": "",
+    "task_type": "",
+    "trust_level": "trusted",
+    "trust_score": 0.95,
+    "governance_state": "active",
+    "governance_reason": "direct user or verified local source",
     "deleted": 0,
-    "updated_at": "2026-06-07T04:34:35.718312+00:00",
-    "rank": -1.3479212253829322e-06,
-    "score": 0.7229,
+    "updated_at": "2026-07-11T04:55:54.837055+00:00",
+    "rank": 1,
+    "score": 1.5429,
     "match_source": "hybrid",
-    "vector_backend": "hash"
-  },
-  {
-    "memory_id": "mem_c889f91bfe34444d",
-    "type": "knowledge",
-    "subtype": "fact",
-    "scope": "default",
-    "tier": "long_term",
-    "summary": "知识记忆：普通知识: systemd 可用 MemoryMax 限制服务内存。",
-    "content": "普通知识: systemd 可用 MemoryMax 限制服务内存。",
-    "source_kind": "manual",
-    "source_uri": "inline",
-    "sensitivity_level": "none",
-    "sensitivity_labels": "[]",
-    "sensitivity_redacted": 0,
-    "version_id": "ver_dd585a780fd14e92",
-    "valid_from": "2026-06-07T04:34:34.930516+00:00",
-    "valid_to": null,
-    "superseded_by": null,
-    "deleted": 0,
-    "updated_at": "2026-06-07T04:34:34.930827+00:00",
-    "score": 0.1309,
-    "match_source": "hybrid",
-    "vector_backend": "hash"
+    "vector_backend": "hash",
+    "score_breakdown": {
+      "summary_score": 0.16,
+      "content_score": 0.14,
+      "query_token_count": 4,
+      "lexical_hit_count": 4,
+      "distinctive_latin_token_count": 0,
+      "entity_score": 0.1,
+      "topic_score": 0.0,
+      "subtype_score": 0.0,
+      "exact_phrase_score": 0.42,
+      "hard_negative_penalty": 0.0,
+      "scope_penalty": 0.0,
+      "alias_expansion": {
+        "query": "员工工号",
+        "expanded_query": "员工工号",
+        "aliases": [],
+        "expansion_trace": []
+      },
+      "total": 0.82
+    },
+    "expansion_trace": [],
+    "duplicate_count": 1,
+    "duplicate_memory_ids": [
+      "mem_cd9e73582c1d4be4"
+    ],
+    "match_reason": "包含完整查询内容"
   }
 ]
 {

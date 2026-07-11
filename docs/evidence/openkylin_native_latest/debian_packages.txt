@@ -36,32 +36,32 @@ dpkg-deb: 正在 '/home/luo/memguardos/dist/memguardos_0.1.0-2_all.deb' 中构�
       "version": "0.1.0-2",
       "architecture": "amd64",
       "path": "/home/luo/memguardos/dist/memguardos-core_0.1.0-2_amd64.deb",
-      "bytes": 187484,
-      "sha256": "58d8021b46e65cc49bb52ac45467569051f5536eb9c795d46fb1ffbd3e07cc2b"
+      "bytes": 187440,
+      "sha256": "ce0084b6c65e54a3fe18cf8b582dee6bbcedd0d9c3058f2d6157303085a00c31"
     },
     {
       "package": "memguardos-ukui",
       "version": "0.1.0-2",
       "architecture": "amd64",
       "path": "/home/luo/memguardos/dist/memguardos-ukui_0.1.0-2_amd64.deb",
-      "bytes": 142312,
-      "sha256": "4fd06d33330dd57bacbea3c33631eca906b73c6860c90df150393c2774fc1fb4"
+      "bytes": 141892,
+      "sha256": "eb79c7d065d10ac4e60164c987767e09ed1f5137adc8c1d810cd3289a27358ee"
     },
     {
       "package": "memguardos-agent-bridge",
       "version": "0.1.0-2",
       "architecture": "amd64",
       "path": "/home/luo/memguardos/dist/memguardos-agent-bridge_0.1.0-2_amd64.deb",
-      "bytes": 8084,
-      "sha256": "82e638a185fa0ae94b6795d81b95f7b07bb6abe7fd98559ec5d69edf3bb5a505"
+      "bytes": 8080,
+      "sha256": "bcd1c1d1b5a8e2425f2d2f45c982d1f60730d34bdb35ad7eaee30b49a4876d67"
     },
     {
       "package": "memguardos-doc",
       "version": "0.1.0-2",
       "architecture": "all",
       "path": "/home/luo/memguardos/dist/memguardos-doc_0.1.0-2_all.deb",
-      "bytes": 196368,
-      "sha256": "a29ba05be7e6bd4a597705fe2d3a09f51b45443cb030f887d2ee3e8877441ae2"
+      "bytes": 196444,
+      "sha256": "777849d2f5c3011f6ac41e2299794c7d86a55fc2e2715d1e443f14386567db46"
     },
     {
       "package": "memguardos",
@@ -69,7 +69,7 @@ dpkg-deb: 正在 '/home/luo/memguardos/dist/memguardos_0.1.0-2_all.deb' 中构�
       "architecture": "all",
       "path": "/home/luo/memguardos/dist/memguardos_0.1.0-2_all.deb",
       "bytes": 888,
-      "sha256": "b0d5e5ff659892badfe3e1f705e7f69c97535e5e1c3d166323308794bce777d3"
+      "sha256": "2aaf17054653dc6f3db9a1d716764e2bbba961ed92654da310847f4aef0f70ea"
     }
   ]
 }
