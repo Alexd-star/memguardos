@@ -110,6 +110,7 @@ REQUIRED_SOURCE_PATHS = [
     "memguard/web/dashboard.py",
     "scripts/install_openkylin.sh",
     "scripts/collect_openkylin_evidence.sh",
+    "scripts/verify_deb_package_set.sh",
     "scripts/collect_agent_evidence.sh",
     "scripts/collect_memory_value_evidence.sh",
     "scripts/run_openhands_memguard_demo.py",
@@ -1599,7 +1600,6 @@ def _sha256_file(path: Path) -> str:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
 
 
 

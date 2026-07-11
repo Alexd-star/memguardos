@@ -277,6 +277,41 @@ def test_native_evidence_revision_reads_unquoted_non_ascii_delta_paths():
     assert 'errors="replace"' in source
 
 
+def test_openkylin_evidence_uses_package_manifest_instead_of_legacy_deb_name():
+    collector = (ROOT / "scripts/collect_openkylin_evidence.sh").read_text(encoding="utf-8")
+    verifier = (ROOT / "scripts/verify_deb_package_set.sh").read_text(encoding="utf-8")
+    source = collector + verifier
+
+    assert 'run_capture "deb_package" bash scripts/verify_deb_package_set.sh' in collector
+    assert "memguardos_debian_packages.json" in source
+    assert "memguardos_${DEB_VERSION}_$(dpkg --print-architecture).deb" not in source
+    assert "package_count=" in source
+    assert "offline_extract_doctor=ok" in source
+    assert "plugin_ldd_missing=0" in source
+
+
+def test_deb_package_set_verifier_is_in_every_delivery_registry():
+    required = "scripts/verify_deb_package_set.sh"
+    registries = [
+        ROOT / "scripts/package_submission.py",
+        ROOT / "scripts/inspect_submission_package.py",
+        ROOT / "scripts/check_competition_ready.py",
+        ROOT / "scripts/generate_sbom.py",
+    ]
+
+    for registry in registries:
+        assert required in registry.read_text(encoding="utf-8"), registry
+
+
+def test_openkylin_evidence_separates_sdk_path_from_latency_budget_fallback():
+    source = (ROOT / "scripts/collect_openkylin_evidence.sh").read_text(encoding="utf-8")
+
+    assert "MEMGUARD_KYLIN_RERANK_BUDGET_MS=5000" in source
+    assert "hits[0].get('vector_backend') == 'kylin_sdk'" in source
+    assert 'run_shell_capture "kylin_retrieval_budget_fallback"' in source
+    assert "exceeded latency budget" in source
+
+
 def test_competition_package_keeps_formal_and_process_materials_separate():
     formal_paths = [
         "memguard/service.py",

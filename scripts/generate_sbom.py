@@ -33,6 +33,7 @@ CORE_ARTIFACTS = [
     "scripts/run_openhands_behavior_suite.py",
     "scripts/run_security_scan.py",
     "scripts/collect_openkylin_evidence.sh",
+    "scripts/verify_deb_package_set.sh",
     "scripts/collect_memory_value_evidence.sh",
     "scripts/build_deb.sh",
     "native/bpf_lsm/memguard_lsm.bpf.c",
