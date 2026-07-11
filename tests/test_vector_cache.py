@@ -1,9 +1,11 @@
 import math
 import sqlite3
+import struct
 
 import pytest
 
 from memguard.retrieval.vector_cache import decode_vector, encode_vector, vector_content_hash
+import memguard.store.sqlite_meta as sqlite_meta
 from memguard.store.sqlite_meta import SQLiteMetaStore
 
 
@@ -34,6 +36,12 @@ def test_encode_vector_rejects_empty_or_non_finite_values(vector):
 def test_decode_vector_rejects_invalid_dimension_or_blob_length(blob, dimension):
     with pytest.raises(ValueError):
         decode_vector(blob, dimension)
+
+
+@pytest.mark.parametrize("value", [math.nan, math.inf, -math.inf])
+def test_decode_vector_rejects_non_finite_persisted_values(value):
+    with pytest.raises(ValueError):
+        decode_vector(struct.pack("<f", value), dimension=1)
 
 
 def test_vector_content_hash_is_stable_and_content_sensitive():
@@ -86,6 +94,41 @@ def test_embedding_schema_has_versioned_primary_key_status_check_and_index(tmp_p
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 ("m1", "hash", "sdk", "v1", 1, encode_vector([1.0]), "unknown", "now", "now"),
+            )
+    finally:
+        store.close()
+
+
+@pytest.mark.parametrize(
+    ("dimension", "vector_blob"),
+    [
+        (1, None),
+        (0, b""),
+        (2, encode_vector([1.0])),
+    ],
+)
+def test_ready_embedding_requires_complete_vector_blob(tmp_path, dimension, vector_blob):
+    store = SQLiteMetaStore(tmp_path / "meta.sqlite3")
+    try:
+        with pytest.raises(sqlite3.IntegrityError):
+            store.conn.execute(
+                """
+                INSERT INTO memory_embedding (
+                    memory_id, content_hash, backend, model_revision, dimension,
+                    vector_blob, status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "m1",
+                    "hash-a",
+                    "kylin",
+                    "v1",
+                    dimension,
+                    vector_blob,
+                    "ready",
+                    "created",
+                    "updated",
+                ),
             )
     finally:
         store.close()
@@ -180,6 +223,7 @@ def test_unready_embedding_without_vector_is_not_returned_or_touched(tmp_path, s
 def test_ready_embedding_with_null_blob_is_not_returned_or_touched(tmp_path):
     store = SQLiteMetaStore(tmp_path / "meta.sqlite3")
     try:
+        store.conn.execute("PRAGMA ignore_check_constraints = ON")
         store.conn.execute(
             """
             INSERT INTO memory_embedding (
@@ -190,12 +234,77 @@ def test_ready_embedding_with_null_blob_is_not_returned_or_touched(tmp_path):
             ("m1", "hash-a", "kylin", "v1", 2, None, "ready", "created", "updated"),
         )
         store.conn.commit()
+        store.conn.execute("PRAGMA ignore_check_constraints = OFF")
 
         assert store.get_memory_embedding("m1", "hash-a", "kylin", "v1") is None
         row = store.conn.execute(
             "SELECT last_used_at FROM memory_embedding"
         ).fetchone()
         assert row["last_used_at"] is None
+    finally:
+        store.close()
+
+
+def test_embedding_last_used_at_updates_at_most_once_per_minute(tmp_path, monkeypatch):
+    store = SQLiteMetaStore(tmp_path / "meta.sqlite3")
+    try:
+        store.upsert_memory_embedding("m1", "hash-a", "kylin", "v1", [1.0])
+        timestamps = iter(
+            [
+                "2026-07-11T12:00:00+00:00",
+                "2026-07-11T12:00:30+00:00",
+                "2026-07-11T12:01:01+00:00",
+            ]
+        )
+        monkeypatch.setattr(sqlite_meta, "utc_now", lambda: next(timestamps))
+        statements = []
+        store.conn.set_trace_callback(statements.append)
+
+        assert store.get_memory_embedding("m1", "hash-a", "kylin", "v1") is not None
+        first_used_at = store.conn.execute(
+            "SELECT last_used_at FROM memory_embedding"
+        ).fetchone()["last_used_at"]
+        assert first_used_at == "2026-07-11T12:00:00+00:00"
+
+        statements.clear()
+        assert store.get_memory_embedding("m1", "hash-a", "kylin", "v1") is not None
+        assert not any(statement.lstrip().startswith("UPDATE") for statement in statements)
+        assert "COMMIT" not in statements
+        second_used_at = store.conn.execute(
+            "SELECT last_used_at FROM memory_embedding"
+        ).fetchone()["last_used_at"]
+        assert second_used_at == first_used_at
+
+        statements.clear()
+        assert store.get_memory_embedding("m1", "hash-a", "kylin", "v1") is not None
+        assert any(statement.lstrip().startswith("UPDATE") for statement in statements)
+        assert "COMMIT" in statements
+        third_used_at = store.conn.execute(
+            "SELECT last_used_at FROM memory_embedding"
+        ).fetchone()["last_used_at"]
+        assert third_used_at == "2026-07-11T12:01:01+00:00"
+    finally:
+        store.close()
+
+
+def test_embedding_last_used_at_repairs_invalid_timestamp(tmp_path, monkeypatch):
+    store = SQLiteMetaStore(tmp_path / "meta.sqlite3")
+    try:
+        store.upsert_memory_embedding("m1", "hash-a", "kylin", "v1", [1.0])
+        store.conn.execute(
+            "UPDATE memory_embedding SET last_used_at = ? WHERE memory_id = ?",
+            ("not-an-iso-timestamp", "m1"),
+        )
+        store.conn.commit()
+        monkeypatch.setattr(
+            sqlite_meta, "utc_now", lambda: "2026-07-11T12:00:00+00:00"
+        )
+
+        assert store.get_memory_embedding("m1", "hash-a", "kylin", "v1") is not None
+        repaired = store.conn.execute(
+            "SELECT last_used_at FROM memory_embedding"
+        ).fetchone()["last_used_at"]
+        assert repaired == "2026-07-11T12:00:00+00:00"
     finally:
         store.close()
 

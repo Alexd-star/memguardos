@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 import json
 import sqlite3
+from datetime import datetime
 
 from memguard.models import MemoryRecord, stable_hash, utc_now
 from memguard.retrieval.vector_cache import PersistedVector, decode_vector, encode_vector
@@ -242,6 +243,14 @@ class SQLiteMetaStore:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 last_used_at TEXT,
+                CHECK(
+                    status != 'ready'
+                    OR (
+                        vector_blob IS NOT NULL
+                        AND dimension > 0
+                        AND length(vector_blob) = dimension * 4
+                    )
+                ),
                 PRIMARY KEY(memory_id, backend, model_revision, content_hash)
             )
             """
@@ -494,7 +503,7 @@ class SQLiteMetaStore:
         row = self.conn.execute(
             """
             SELECT memory_id, content_hash, backend, model_revision,
-                   dimension, vector_blob, status
+                   dimension, vector_blob, status, last_used_at
             FROM memory_embedding
             WHERE memory_id = ? AND content_hash = ?
               AND backend = ? AND model_revision = ? AND status = 'ready'
@@ -513,16 +522,27 @@ class SQLiteMetaStore:
             vector=decode_vector(row["vector_blob"], row["dimension"]),
             status=row["status"],
         )
-        self.conn.execute(
-            """
-            UPDATE memory_embedding SET last_used_at = ?
-            WHERE memory_id = ? AND content_hash = ?
-              AND backend = ? AND model_revision = ?
-              AND status = 'ready' AND vector_blob IS NOT NULL
-            """,
-            (utc_now(), memory_id, content_hash, backend, model_revision),
-        )
-        self.conn.commit()
+        now = utc_now()
+        should_touch = row["last_used_at"] is None
+        if not should_touch:
+            try:
+                elapsed = datetime.fromisoformat(now) - datetime.fromisoformat(
+                    row["last_used_at"]
+                )
+                should_touch = elapsed.total_seconds() >= 60
+            except (TypeError, ValueError):
+                should_touch = True
+        if should_touch:
+            self.conn.execute(
+                """
+                UPDATE memory_embedding SET last_used_at = ?
+                WHERE memory_id = ? AND content_hash = ?
+                  AND backend = ? AND model_revision = ?
+                  AND status = 'ready' AND vector_blob IS NOT NULL
+                """,
+                (now, memory_id, content_hash, backend, model_revision),
+            )
+            self.conn.commit()
         return persisted
 
     def delete_memory_embeddings(self, memory_id: str) -> int:

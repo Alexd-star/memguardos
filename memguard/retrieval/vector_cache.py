@@ -37,4 +37,7 @@ def decode_vector(blob: Union[bytes, bytearray, memoryview], dimension: int) -> 
     expected_length = dimension * 4
     if len(raw) != expected_length:
         raise ValueError("vector blob length does not match dimension")
-    return list(struct.unpack("<%df" % dimension, raw))
+    vector = list(struct.unpack("<%df" % dimension, raw))
+    if any(not math.isfinite(value) for value in vector):
+        raise ValueError("vector blob contains non-finite values")
+    return vector
