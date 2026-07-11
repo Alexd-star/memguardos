@@ -1,11 +1,11 @@
 {
   "schema": "memguardos-desktop-scan-manifest-v1",
   "ok": true,
-  "manifest_id": "93d8b37d-90ad-4d1d-b1a4-6fcd2dd1d875",
-  "nonce": "7VHzT5Vuc9uH4sbKgSV7gSeZ-64tSnMh",
+  "manifest_id": "04c77554-1b92-437b-8382-9b8ec83809e8",
+  "nonce": "O4Q0Hd3lvuBkDqW-BuFwzkKk7tkQTJsE",
   "namespace": "default",
-  "created_at": 1783732523.7798598,
-  "expires_at": 1783732823.7798598,
+  "created_at": 1783733630.3959825,
+  "expires_at": 1783733930.3959825,
   "used": false,
   "limits": {
     "max_files": 100,
@@ -16,7 +16,7 @@
   "items": [
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.UDXTVFyL8M/peony_preference.md",
+      "path": "/var/tmp/tmp.MLpFhSOb3W/peony_preference.md",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 57,
@@ -50,15 +50,15 @@
       "fingerprint": {
         "exists": true,
         "device": 2053,
-        "inode": 1861924,
+        "inode": 1861928,
         "size": 57,
-        "mtime_ns": 1783732523677892999,
+        "mtime_ns": 1783733630307954619,
         "mode": 33204
       }
     },
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.UDXTVFyL8M/peony_knowledge.txt",
+      "path": "/var/tmp/tmp.MLpFhSOb3W/peony_knowledge.txt",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 61,
@@ -92,13 +92,13 @@
       "fingerprint": {
         "exists": true,
         "device": 2053,
-        "inode": 1861925,
+        "inode": 1861931,
         "size": 61,
-        "mtime_ns": 1783732523677892999,
+        "mtime_ns": 1783733630307954619,
         "mode": 33204
       }
     }
   ],
-  "signature": "785d14468fde143b7394ee609714395ba5a304c25e3c26939fff57dfbabe82f7",
-  "manifest_path": "/var/tmp/memguardos-native-home.2lVQJj/desktop-scans/93d8b37d-90ad-4d1d-b1a4-6fcd2dd1d875.json"
+  "signature": "4cd9685369c41b63d32c72e7f6de8076ae5cf2d973c35242d20066d98f60cb3e",
+  "manifest_path": "/var/tmp/memguardos-native-home.ngNkO6/desktop-scans/04c77554-1b92-437b-8382-9b8ec83809e8.json"
 }
