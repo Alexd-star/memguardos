@@ -4,6 +4,7 @@ import json
 import sqlite3
 
 from memguard.models import MemoryRecord, stable_hash, utc_now
+from memguard.retrieval.vector_cache import PersistedVector, decode_vector, encode_vector
 
 
 _ALLOWED_COLUMN_MIGRATIONS = {
@@ -227,6 +228,24 @@ class SQLiteMetaStore:
         self._ensure_column("preference_observations", "task_type", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("preference_observations", "scope_agent_name", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("preference_observations", "scope_session_id", "TEXT NOT NULL DEFAULT ''")
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS memory_embedding (
+                memory_id TEXT NOT NULL,
+                content_hash TEXT NOT NULL,
+                backend TEXT NOT NULL,
+                model_revision TEXT NOT NULL,
+                dimension INTEGER NOT NULL,
+                vector_blob BLOB NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('pending', 'ready', 'failed')),
+                failure_reason TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                last_used_at TEXT,
+                PRIMARY KEY(memory_id, backend, model_revision, content_hash)
+            )
+            """
+        )
         try:
             self.conn.execute(
                 """
@@ -253,6 +272,12 @@ class SQLiteMetaStore:
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_preference_observations_topic "
             "ON preference_observations(topic, value, created_at)"
+        )
+        self.conn.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_memory_embedding_cache_status
+            ON memory_embedding(backend, model_revision, status, updated_at)
+            """
         )
         self.conn.commit()
 
@@ -422,6 +447,108 @@ class SQLiteMetaStore:
     def get_memory(self, memory_id: str) -> Optional[Dict[str, Any]]:
         row = self.conn.execute("SELECT * FROM memory WHERE memory_id = ?", (memory_id,)).fetchone()
         return dict(row) if row else None
+
+    def upsert_memory_embedding(
+        self,
+        memory_id: str,
+        content_hash: str,
+        backend: str,
+        model_revision: str,
+        vector: List[float],
+        status: str = "ready",
+        failure_reason: Optional[str] = None,
+    ) -> None:
+        vector_blob = encode_vector(vector)
+        now = utc_now()
+        self.conn.execute(
+            """
+            INSERT INTO memory_embedding (
+                memory_id, content_hash, backend, model_revision, dimension,
+                vector_blob, status, failure_reason, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(memory_id, backend, model_revision, content_hash) DO UPDATE SET
+                dimension=excluded.dimension,
+                vector_blob=excluded.vector_blob,
+                status=excluded.status,
+                failure_reason=excluded.failure_reason,
+                updated_at=excluded.updated_at
+            """,
+            (
+                memory_id,
+                content_hash,
+                backend,
+                model_revision,
+                len(vector),
+                sqlite3.Binary(vector_blob),
+                status,
+                failure_reason,
+                now,
+                now,
+            ),
+        )
+        self.conn.commit()
+
+    def get_memory_embedding(
+        self,
+        memory_id: str,
+        content_hash: str,
+        backend: str,
+        model_revision: str,
+    ) -> Optional[PersistedVector]:
+        row = self.conn.execute(
+            """
+            SELECT memory_id, content_hash, backend, model_revision,
+                   dimension, vector_blob, status
+            FROM memory_embedding
+            WHERE memory_id = ? AND content_hash = ?
+              AND backend = ? AND model_revision = ?
+            """,
+            (memory_id, content_hash, backend, model_revision),
+        ).fetchone()
+        if row is None:
+            return None
+
+        persisted = PersistedVector(
+            memory_id=row["memory_id"],
+            content_hash=row["content_hash"],
+            backend=row["backend"],
+            model_revision=row["model_revision"],
+            dimension=row["dimension"],
+            vector=decode_vector(row["vector_blob"], row["dimension"]),
+            status=row["status"],
+        )
+        self.conn.execute(
+            """
+            UPDATE memory_embedding SET last_used_at = ?
+            WHERE memory_id = ? AND content_hash = ?
+              AND backend = ? AND model_revision = ?
+            """,
+            (utc_now(), memory_id, content_hash, backend, model_revision),
+        )
+        self.conn.commit()
+        return persisted
+
+    def delete_memory_embeddings(self, memory_id: str) -> int:
+        cursor = self.conn.execute(
+            "DELETE FROM memory_embedding WHERE memory_id = ?", (memory_id,)
+        )
+        self.conn.commit()
+        return cursor.rowcount
+
+    def embedding_cache_status(self, backend: str, model_revision: str) -> Dict[str, Any]:
+        counts = {"pending": 0, "ready": 0, "failed": 0}
+        rows = self.conn.execute(
+            """
+            SELECT status, COUNT(*) AS count
+            FROM memory_embedding
+            WHERE backend = ? AND model_revision = ?
+            GROUP BY status
+            """,
+            (backend, model_revision),
+        ).fetchall()
+        for row in rows:
+            counts[row["status"]] = row["count"]
+        return counts
 
     def find_active_memory_by_content(self, content: str, scope: str) -> Optional[Dict[str, Any]]:
         row = self.conn.execute(
