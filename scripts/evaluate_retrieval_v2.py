@@ -46,7 +46,8 @@ def git_head(root: Path = ROOT, environment: Optional[Dict[str, str]] = None) ->
     if _REVISION_RE.fullmatch(revision):
         return revision
 
-    env_revision = (environment or os.environ).get(
+    source_environment = os.environ if environment is None else environment
+    env_revision = source_environment.get(
         "MEMGUARD_SOURCE_REVISION", ""
     ).strip()
     if _REVISION_RE.fullmatch(env_revision):
