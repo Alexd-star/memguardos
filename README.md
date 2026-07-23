@@ -35,7 +35,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | 类别 | 当前结果 |
 |---|---:|
 | 本地当前工作树全量测试 | 636 passed, 14 skipped |
-| openKylin 最近已归档证据 | 上一次实机快照已归档；本轮将在最终源代码 HEAD 下重采并以 `source_revision.json` 固化 |
+| openKylin 最终 HEAD 原生证据 | 源修订 `6146f43`；`649 passed, 1 skipped`；manifest 25 个文件并附 SHA256 |
 | openKylin systemd 服务重启 | 873 ms（服务恢复后为 active/running） |
 | openKylin 真实 Agent | OpenHands 1.28.1；原 12 组真实会话 12/12，新增 R13-R20 扩展 8/8，新增 holdout 留出盲测 8/8；合计 28 组均有证据 |
 | 本地 1k 负载 P95 | 0.429 ms |
@@ -44,7 +44,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | openKylin 10k 负载 P99 | 75.255 ms |
 | openKylin 10k RSS | 130444 KB |
 | openKylin 6 线程并发检索 | 三轮最差 P95 54.381 ms；完整 10k 评测内 P95 139.264 ms |
-| openKylin 持久化向量检索 v2 | 三轮 Kylin Recall@5 均为 1.0000；Kylin 最差 P99 279.931 ms；1k/6 worker 稳定路径最差 P99 357.559 ms |
+| openKylin 持久化向量检索 v2 | 最终 HEAD 三轮 Kylin Recall@5 均为 1.0000；Kylin 最差 P99 253.625 ms；1k/6 worker 稳定路径最差 P99 301.228 ms |
 | Recall@5 / 跨语言 Recall@5 | 1.0000 / 1.0000 |
 | 敏感阻断 F1 / 脱敏 F1 / 标签 F1 | 1.0000 / 1.0000 / 1.0000 |
 | 精准遗忘候选精确率 / 召回率 | 1.0000 / 1.0000 |
@@ -400,5 +400,3 @@ dist/memguardos_full_repository_<时间戳>_manifest.json
 ## 许可证
 
 MemGuardOS 使用 MIT License，见 [LICENSE](LICENSE)。
-
-
