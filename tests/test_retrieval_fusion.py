@@ -195,3 +195,22 @@ def test_single_distinctive_technical_term_is_protected_from_generic_tie(tmp_pat
         assert hits[0]["retrieval_explanation"]["protected_exact_hit"] is True
     finally:
         service.close()
+
+
+def test_common_latin_term_is_not_misclassified_as_rare_exact_hit(tmp_path):
+    service = make_service(tmp_path, "common-term-protection")
+    try:
+        for text in (
+            "openKylin systemd 服务内存限制。",
+            "openKylin UKUI 桌面入口。",
+            "openKylin Peony 文件扫描。",
+        ):
+            service.ingest_text(text, source_kind="agent_interaction")
+        hits = service.search("openKylin 系统能力", limit=5)
+        assert len(hits) == 3
+        assert all(
+            item["retrieval_explanation"]["protected_exact_hit"] is False
+            for item in hits
+        )
+    finally:
+        service.close()

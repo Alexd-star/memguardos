@@ -2104,6 +2104,23 @@ class MemGuardService:
             "graph": 1.25 if intent == QueryIntent.RELATIONAL else 0.0,
         }
         exact_hits = set()
+        distinctive_hit_ids = {
+            str(item.get("memory_id") or "")
+            for item in base_ranked
+            if int(
+                item.get("_score_breakdown", {}).get(
+                    "distinctive_latin_token_count", 0
+                )
+            )
+            == 1
+            and int(
+                item.get("_score_breakdown", {}).get(
+                    "distinctive_term_hit_count", 0
+                )
+            )
+            == 1
+        }
+        rare_distinctive_hit = len(distinctive_hit_ids) <= 2
         for item in base_ranked:
             memory_id = str(item.get("memory_id") or "")
             phrase_hit = bool(clean_query) and (
@@ -2112,18 +2129,7 @@ class MemGuardService:
             )
             id_hit = intent == QueryIntent.EXACT_LOOKUP and memory_id in exact_ids
             distinctive_hit = (
-                int(
-                    item.get("_score_breakdown", {}).get(
-                        "distinctive_latin_token_count", 0
-                    )
-                )
-                == 1
-                and int(
-                    item.get("_score_breakdown", {}).get(
-                        "distinctive_term_hit_count", 0
-                    )
-                )
-                == 1
+                rare_distinctive_hit and memory_id in distinctive_hit_ids
             )
             if phrase_hit or id_hit or distinctive_hit:
                 exact_hits.add(memory_id)
