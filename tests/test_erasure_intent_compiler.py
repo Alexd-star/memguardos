@@ -151,6 +151,13 @@ def test_compiler_marks_ambiguous_or_non_erasure_text_as_unresolved():
     assert result["requires_confirm"] is True
 
 
+def test_compiler_normalizes_high_risk_operation_confirmation_synonyms():
+    result = compile_request("删除高风险操作确认策略")
+
+    assert result["normalized_preference_topic"] == "high_risk_confirmation"
+    assert "高风险操作" in result["topic_aliases"]
+
+
 def test_service_exposes_intent_compiler_and_routes_to_agent_forgetting(tmp_path):
     service = MemGuardService(store_path=tmp_path / "memory.segment", db_path=tmp_path / "memguard.sqlite3")
     try:

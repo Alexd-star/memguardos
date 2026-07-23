@@ -358,6 +358,9 @@ class HybridRetriever:
         distinctive_term_hits = {
             term for term in distinctive_latin_terms if term in combined_lower
         }
+        distinctive_term_coverage = len(distinctive_term_hits) / float(
+            len(distinctive_latin_terms) or 1
+        )
         summary_score = min(0.28, 0.04 * len(query_tokens & summary_tokens))
         content_score = min(0.24, 0.035 * len(query_tokens & content_tokens))
         exact_phrase_score = 0.0
@@ -399,6 +402,7 @@ class HybridRetriever:
             "original_lexical_precision": round(original_lexical_precision, 4),
             "distinctive_latin_token_count": len(distinctive_latin_terms),
             "distinctive_term_hit_count": len(distinctive_term_hits),
+            "distinctive_term_coverage": round(distinctive_term_coverage, 4),
             "entity_score": round(entity_score, 4),
             "topic_score": round(topic_score, 4),
             "subtype_score": round(subtype_score, 4),

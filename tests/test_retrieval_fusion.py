@@ -197,6 +197,29 @@ def test_single_distinctive_technical_term_is_protected_from_generic_tie(tmp_pat
         service.close()
 
 
+def test_multi_term_command_signature_is_protected_from_semantic_noise(tmp_path):
+    service = make_service(tmp_path, "command-signature-protection")
+    try:
+        expected = service.ingest_text(
+            "User behavior: shell_command source=.bash_history command=sudo "
+            "systemctl restart memguardd category=maintenance "
+            "risk=service_disruption",
+            source_kind="user_behavior",
+        )["record"]
+        service.ingest_text(
+            "systemctl status memguardd 用于读取服务状态，不会重启服务。",
+            source_kind="agent_interaction",
+        )
+        hits = service.search(
+            "bash history 中 sudo systemctl restart memguardd 属于什么行为风险？",
+            limit=5,
+        )
+        assert hits[0]["memory_id"] == expected.memory_id
+        assert hits[0]["retrieval_explanation"]["protected_exact_hit"] is True
+    finally:
+        service.close()
+
+
 def test_common_latin_term_is_not_misclassified_as_rare_exact_hit(tmp_path):
     service = make_service(tmp_path, "common-term-protection")
     try:

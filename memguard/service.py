@@ -2124,6 +2124,23 @@ class MemGuardService:
             == 1
         }
         rare_distinctive_hit = len(distinctive_hit_ids) <= 2
+        command_signature_hit_ids = {
+            str(item.get("memory_id") or "")
+            for item in base_ranked
+            if int(
+                item.get("_score_breakdown", {}).get(
+                    "distinctive_latin_token_count", 0
+                )
+            )
+            >= 2
+            and float(
+                item.get("_score_breakdown", {}).get(
+                    "distinctive_term_coverage", 0.0
+                )
+            )
+            >= 0.75
+        }
+        rare_command_signature_hit = len(command_signature_hit_ids) <= 2
         for item in base_ranked:
             memory_id = str(item.get("memory_id") or "")
             phrase_hit = bool(clean_query) and (
@@ -2134,7 +2151,11 @@ class MemGuardService:
             distinctive_hit = (
                 rare_distinctive_hit and memory_id in distinctive_hit_ids
             )
-            if phrase_hit or id_hit or distinctive_hit:
+            command_signature_hit = (
+                rare_command_signature_hit
+                and memory_id in command_signature_hit_ids
+            )
+            if phrase_hit or id_hit or distinctive_hit or command_signature_hit:
                 exact_hits.add(memory_id)
         fused = rrf_fuse(rankings, weights=weights, exact_hits=exact_hits)
         ranked = []

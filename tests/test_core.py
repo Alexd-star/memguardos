@@ -1723,6 +1723,39 @@ def test_forgetting_uses_specific_anchors_for_realistic_os_agent_cases(tmp_path)
         service.close()
 
 
+def test_forgetting_preserves_polarity_and_expands_high_risk_topic(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        global_policy = service.ingest_text(
+            "安全策略：执行删除、覆盖、密钥导出等高风险操作前必须先让我确认。"
+        )["record"]
+        learned_policy = service.ingest_text(
+            "用户行为偏好：shell history 出现 rm -rf、dd、mkfs 时，Agent 必须二次确认。",
+            source_kind="user_behavior",
+        )["record"]
+        negative = service.ingest_text(
+            "知识：普通缓存清理不等于精准遗忘，不能替代索引清理和审计链。"
+        )["record"]
+        workflow = service.ingest_text(
+            "精准遗忘流程包括候选定位、用户确认、索引清理和审计记录。"
+        )["record"]
+
+        high_risk = service.forget("删除高风险操作确认策略")
+        high_risk_ids = {item["memory_id"] for item in high_risk["candidates"]}
+        assert high_risk_ids == {global_policy.memory_id, learned_policy.memory_id}
+
+        specific = service.forget("删除 rm-rf dd mkfs 二次确认偏好")
+        specific_ids = {item["memory_id"] for item in specific["candidates"]}
+        assert specific_ids == {learned_policy.memory_id}
+
+        polarity = service.forget("忘记普通缓存清理不等于精准遗忘这条知识")
+        polarity_ids = {item["memory_id"] for item in polarity["candidates"]}
+        assert polarity_ids == {negative.memory_id}
+        assert workflow.memory_id not in polarity_ids
+    finally:
+        service.close()
+
+
 def test_graph_search_and_related_memories(tmp_path):
     service = make_service(tmp_path)
     try:

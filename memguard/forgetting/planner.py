@@ -97,22 +97,31 @@ class ForgetPlanner:
             if not _sensitive_labels_match(intent, text):
                 continue
             matched = [keyword for keyword in keywords if keyword and keyword.lower() in text.lower()]
-            if not matched:
-                continue
             matched_distinctive = [keyword for keyword in distinctive_keywords if keyword and keyword.lower() in text.lower()]
+            matched_aliases: List[str] = []
             if aliases:
-                matched_distinctive.extend(alias for alias in aliases if alias and alias in text.lower() and alias not in matched_distinctive)
-                if not any(alias in text.lower() for alias in aliases) and not _alias_fallback_passes(
+                matched_aliases = [
+                    alias for alias in aliases if alias and alias in text.lower()
+                ]
+                matched_distinctive.extend(
+                    alias
+                    for alias in matched_aliases
+                    if alias not in matched_distinctive
+                )
+                if not matched_aliases and not _alias_fallback_passes(
                     intent,
                     target_phrase,
                     text,
                 ):
                     continue
-            if preference_topic and (
+            if not matched and not matched_aliases:
+                continue
+            preference_topic_match = bool(preference_topic) and (
                 preference_topic == str(record.get("preference_topic") or "")
                 or preference_topic in text.lower()
                 or _preference_topic_matches(preference_topic, text)
-            ):
+            )
+            if preference_topic_match:
                 matched_distinctive.append(preference_topic)
             if distinctive_keywords and not matched_distinctive:
                 continue
@@ -124,9 +133,10 @@ class ForgetPlanner:
             results.append(
                 {
                     "memory_id": record["memory_id"],
-                    "score": round(score, 4),
-                    "matched_keywords": matched,
+                    "score": round(score + (0.35 if preference_topic_match else 0.0), 4),
+                    "matched_keywords": list(dict.fromkeys(matched + matched_aliases)),
                     "matched_distinctive_keywords": matched_distinctive,
+                    "preference_topic_match": preference_topic_match,
                     "summary": record.get("summary", ""),
                     "type": record.get("type", ""),
                 }
@@ -168,6 +178,28 @@ def _required_qualifiers_match(request: str, text: str) -> bool:
     for qualifier in ("模板", "案例", "原始日志"):
         if qualifier in request and qualifier not in text:
             return False
+    polarity_markers = ("不等于", "不能替代", "并非", "不是")
+    if any(marker in request for marker in polarity_markers) and not any(
+        marker in text for marker in polarity_markers
+    ):
+        return False
+    request_lower = request.lower()
+    text_lower = text.lower()
+    command_patterns = {
+        "rm_rf": r"\brm\s*-?\s*rf\b",
+        "mkfs": r"\bmkfs\b",
+        "dd": r"\bdd\b",
+    }
+    requested_commands = {
+        name
+        for name, pattern in command_patterns.items()
+        if re.search(pattern, request_lower)
+    }
+    if requested_commands and not all(
+        re.search(command_patterns[name], text_lower)
+        for name in requested_commands
+    ):
+        return False
     return True
 
 
@@ -254,7 +286,13 @@ def _anchor_policy_passes(request: str, matched_distinctive: List[str], strong_m
         return "linux" in matched
     if "rg" in lowered_request:
         return "rg" in matched
-    if "高风险命令" in request or "二次确认" in request or "危险操作" in request:
+    if (
+        "高风险命令" in request
+        or "高风险操作" in request
+        or "二次确认" in request
+        or "操作确认" in request
+        or "危险操作" in request
+    ):
         return bool({"高风险命令", "高风", "风险", "命令", "二次确认", "二次", "确认", "high_risk_confirmation"} & matched)
     if "shell history" in lowered_request:
         if "pytest" in lowered_request:

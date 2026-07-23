@@ -814,7 +814,7 @@ python scripts/web_dashboard_smoke.py
 python -m memguard.eval.run_eval --latency-size 10000 --latency-queries 150 --output docs/eval_result_openkylin_10k.json --markdown docs/eval_report_openkylin_10k.md
 ```
 
-当前正式证据中，优化后的 openKylin 10k 负载 P95 为 10.105 ms，P99 为 75.255 ms，RSS 为 130444 KB；openKylin 原生目录保留上一次实机快照，本轮将在最终源代码 HEAD 下重采；本地工作树最近全量测试为 627 passed、14 skipped。独立三轮 6 worker 并发试验最差 P95 为 54.381 ms，完整 10k 评测内并发 P95 为 139.264 ms。真实 Agent 专项包含 200 条交互样例，提取、遗忘和跨会话指标均为 1.0000，角色污染率和敏感泄漏率为 0，P95 为 113.97 ms。通用评测、检索消融与 Agent 专项应分开报告，避免混淆任务口径。
+当前正式证据中，优化后的 openKylin 10k 负载 P95 为 10.105 ms，P99 为 75.255 ms，RSS 为 130444 KB；openKylin 原生目录保留上一次实机快照，本轮将在最终源代码 HEAD 下重采；本地工作树最近全量测试为 635 passed、14 skipped。独立三轮 6 worker 并发试验最差 P95 为 54.381 ms，完整 10k 评测内并发 P95 为 139.264 ms。真实 Agent 专项包含 200 条交互样例，提取、遗忘和跨会话指标均为 1.0000，角色污染率和敏感泄漏率为 0，P95 为 113.97 ms。通用评测、检索消融与 Agent 专项应分开报告，避免混淆任务口径。
 
 ### 10.3 竞赛就绪自检
 
@@ -1222,7 +1222,7 @@ RAG 上下文是敏感信息最容易外传的环节。写入系统内部的记�
 
 文档材料应以正式中文文档为主。研究笔记可以保留在仓库的研究目录中，但不应作为评委第一阅读入口。评委最需要的是项目介绍、部署手册、用户手册、测试报告、赛题符合性说明、证据包索引、答辩稿和操作手册。材料太多且重复，会让评委难以抓住重点；材料少但有清晰证据，反而更容易建立信任。
 
-提交前应检查所有指标口径是否一致。当前工作树本地测试为 627 passed、14 skipped；openKylin 最终 Git HEAD 实机证据将在本轮同步后重采。不同环境的测试数量如果确实不同是可以解释的，但文档之间不能引用过期数字。每次重新采集证据后，都应同步更新 README、平台摘要、测试报告、答辩稿和操作手册中的关键数字。
+提交前应检查所有指标口径是否一致。当前工作树本地测试为 635 passed、14 skipped；openKylin 最终 Git HEAD 实机证据将在本轮同步后重采。不同环境的测试数量如果确实不同是可以解释的，但文档之间不能引用过期数字。每次重新采集证据后，都应同步更新 README、平台摘要、测试报告、答辩稿和操作手册中的关键数字。
 
 ## 第19章 长期维护与二次开发说明
 
@@ -1490,7 +1490,6 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 - 未编造账号、密码、公网地址、外部 API 购买要求或未确认企业能力。
 - 对 BPF LSM、Kylin SDK、Peony/UKUI、Web 控制台等能力均保持准确边界。
 - Markdown 源文档可转换为 Word、PDF 或在线帮助中心。
-
 
 
 

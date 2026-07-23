@@ -23,7 +23,7 @@
 {"query":"修改 Python 项目后优先跑什么测试？","expected":["pref_pytest_fast_feedback"],"k":5,"case":"tool_preference"}
 {"query":"答辩里哪些 OS 或大模型能力不能夸大？","expected":["pref_answer_no_exaggeration"],"k":5,"case":"evidence_boundary"}
 {"query":"更多 Linux 发行版 smoke test 至少验证哪些内容？","expected":["knowledge_linux_smoke_portability"],"k":5,"case":"linux_portability"}
-{"query":"shell history 出现 sudo rm -rf 或 mkfs 时要不要先确认？","expected":["pref_real_shell_destructive_confirm"],"k":5,"case":"real_shell_history"}
+{"query":"shell history 出现 sudo rm -rf 或 mkfs 时要不要先确认？","expected":["pref_real_shell_danger_confirm"],"k":5,"case":"real_shell_history"}
 {"query":"真实 auditd PATH 日志里 /etc/shadow 应如何处理？","expected":["knowledge_real_audit_log_shadow"],"k":5,"case":"real_audit_log"}
 {"query":"bash history 中 sudo systemctl restart memguardd 属于什么行为风险？","expected":["knowledge_real_shell_history_risk"],"k":5,"case":"real_behavior"}
 {"query":"手动配置里的 search_tool=rg 如何覆盖旧 grep 偏好？","expected":["pref_real_config_search_tool"],"k":5,"case":"real_config_conflict"}
