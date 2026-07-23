@@ -1090,9 +1090,10 @@ def test_search_uses_bounded_candidate_pool_for_top_five(tmp_path, monkeypatch):
     try:
         observed = {}
 
-        def search_candidates(query, limit):
+        def search_candidates(query, limit, **kwargs):
             observed["query"] = query
             observed["limit"] = limit
+            observed["include_graph"] = kwargs.get("include_graph")
             return []
 
         monkeypatch.setattr(service, "_search_candidates", search_candidates)
@@ -1100,7 +1101,11 @@ def test_search_uses_bounded_candidate_pool_for_top_five(tmp_path, monkeypatch):
         monkeypatch.setattr(service.meta, "search_text", lambda query, limit: [])
 
         assert service.search("systemd MemoryMax", limit=5, audit=False) == []
-        assert observed == {"query": "systemd MemoryMax", "limit": 64}
+        assert observed == {
+            "query": "systemd MemoryMax",
+            "limit": 64,
+            "include_graph": False,
+        }
     finally:
         service.close()
 

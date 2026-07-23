@@ -48,6 +48,7 @@ from memguard.os_guard.events import parse_os_event
 from memguard.os_guard.cgroup import cgroup_status
 from memguard.os_guard.journald import JournaldLogger
 from memguard.retrieval.conflict import ConflictResolver, preference_topic as inferred_preference_topic
+from memguard.retrieval.fusion import QueryIntent, classify_query_intent, rrf_fuse
 from memguard.retrieval.hybrid import HybridRetriever, expand_query_aliases, tokenize_literal
 from memguard.retrieval.vector_cache import vector_content_hash
 from memguard.sensitivity.custom_patterns import PatternValidationError, load_patterns, save_pattern, save_pattern_from_instruction, suggest_pattern_from_instruction
@@ -1941,7 +1942,20 @@ class MemGuardService:
                 self._audit("search", None, {"query": clean_query, "count": len(results), "cache": "hit"})
             return results
 
-        candidates = self._search_candidates(query, limit=max(limit * 8, 64))
+        intent = classify_query_intent(clean_query)
+        candidates = self._search_candidates(
+            query, limit=max(limit * 8, 64), include_graph=False
+        )
+        exact_ids: List[str] = []
+        if intent == QueryIntent.EXACT_LOOKUP:
+            exact_ids = re.findall(r"\bmem[-_][a-zA-Z0-9-]{8,}\b", clean_query)
+            known_ids = {str(item.get("memory_id") or "") for item in candidates}
+            for memory_id in exact_ids:
+                record = self.meta.get_memory(memory_id)
+                if record and self._retrieval_record_is_eligible(record):
+                    if memory_id not in known_ids:
+                        candidates.insert(0, record)
+                        known_ids.add(memory_id)
         memory_hashes = {
             str(item["memory_id"]): vector_content_hash(
                 str(item.get("summary") or ""), str(item.get("content") or "")
@@ -1953,12 +1967,125 @@ class MemGuardService:
             self.EMBEDDING_BACKEND,
             self.EMBEDDING_MODEL_REVISION,
         )
-        ranked = self.retriever.rank(
+        base_pairs = self.retriever.rank(
             query,
             candidates,
-            limit=max(limit * 3, limit),
+            limit=max(limit * 4, 20),
             persisted_vectors=persisted_vectors,
         )
+        base_ranked = []
+        for base_score, record in base_pairs:
+            item = dict(record)
+            item["_base_score"] = float(base_score)
+            base_ranked.append(item)
+
+        lexical_ids = [
+            item["memory_id"]
+            for item in sorted(
+                base_ranked,
+                key=lambda row: (
+                    -float(
+                        row.get("_score_breakdown", {}).get(
+                            "exact_phrase_score", 0.0
+                        )
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get(
+                            "lexical_hit_count", 0.0
+                        )
+                    ),
+                    str(row.get("memory_id") or ""),
+                ),
+            )
+            if float(
+                item.get("_score_breakdown", {}).get("exact_phrase_score", 0.0)
+            )
+            > 0
+            or float(
+                item.get("_score_breakdown", {}).get("lexical_hit_count", 0.0)
+            )
+            > 0
+        ]
+        hash_ids = [
+            item["memory_id"]
+            for item in sorted(
+                base_ranked,
+                key=lambda row: (
+                    -float(row.get("_base_score", 0.0)),
+                    str(row.get("memory_id") or ""),
+                ),
+            )
+        ]
+        kylin_ids = [
+            item["memory_id"]
+            for item in sorted(
+                (
+                    row
+                    for row in base_ranked
+                    if float(row.get("_kylin_score", 0.0)) > 0.0
+                ),
+                key=lambda row: (
+                    -float(row.get("_kylin_score", 0.0)),
+                    str(row.get("memory_id") or ""),
+                ),
+            )
+        ]
+        rankings = {"lexical": lexical_ids, "hash": hash_ids, "kylin": kylin_ids}
+        by_id = {str(item["memory_id"]): item for item in base_ranked}
+
+        if intent == QueryIntent.RELATIONAL:
+            graph_result = self.hierarchical_graph_search(
+                clean_query, limit=max(limit * 3, 10)
+            )
+            summary_rows = graph_result.get("layers", {}).get("summary", [])
+            graph_ids = []
+            for summary_row in summary_rows:
+                memory_id = str(summary_row.get("memory_id") or "")
+                if not memory_id or memory_id in graph_ids:
+                    continue
+                graph_ids.append(memory_id)
+                if memory_id in by_id:
+                    continue
+                record = self.meta.get_memory(memory_id)
+                if record and self._retrieval_record_is_eligible(record):
+                    item = dict(record)
+                    item["_base_score"] = 0.0
+                    item["_vector_backend"] = "graph"
+                    by_id[memory_id] = item
+            rankings["graph"] = graph_ids
+
+        weights = {
+            "lexical": 1.25
+            if intent in {QueryIntent.EXACT_LOOKUP, QueryIntent.PREFERENCE}
+            else 1.0,
+            "hash": 1.0,
+            "kylin": 1.15,
+            "graph": 1.25 if intent == QueryIntent.RELATIONAL else 0.0,
+        }
+        exact_hits = set()
+        for item in base_ranked:
+            memory_id = str(item.get("memory_id") or "")
+            phrase_hit = bool(clean_query) and (
+                clean_query in str(item.get("summary") or "")
+                or clean_query in str(item.get("content") or "")
+            )
+            id_hit = intent == QueryIntent.EXACT_LOOKUP and memory_id in exact_ids
+            if phrase_hit or id_hit:
+                exact_hits.add(memory_id)
+        fused = rrf_fuse(rankings, weights=weights, exact_hits=exact_hits)
+        ranked = []
+        for fused_item in fused:
+            item = by_id.get(fused_item.memory_id)
+            if item is None:
+                continue
+            item["score"] = fused_item.score
+            item["retrieval_explanation"] = {
+                "query_intent": intent.value,
+                "fusion_sources": list(fused_item.sources),
+                "protected_exact_hit": fused_item.protected,
+                "kylin_vector_cached": fused_item.memory_id in persisted_vectors,
+            }
+            ranked.append((fused_item.score, item))
         results = []
         seen = set()
         for score, record in ranked:
@@ -1972,13 +2099,6 @@ class MemGuardService:
                 item["expansion_trace"] = item.pop("_expansion_trace")
             results.append(item)
             seen.add(item["memory_id"])
-        for record in self.meta.graph_search(query, limit=limit):
-            if record["memory_id"] in seen:
-                continue
-            record["score"] = 0.22
-            record["match_source"] = "graph"
-            results.append(record)
-            seen.add(record["memory_id"])
         if not results:
             for record in self.meta.search_text(query, limit=limit):
                 record["score"] = 0.1
@@ -2476,7 +2596,14 @@ class MemGuardService:
                 other += 1
         return cjk + ((latin_like + 3) // 4) + ((other + 1) // 2)
 
-    def _search_candidates(self, query: str, limit: int = 80) -> List[Dict[str, object]]:
+    def _search_candidates(
+        self,
+        query: str,
+        limit: int = 80,
+        *,
+        include_graph: bool = True,
+        include_recent: bool = True,
+    ) -> List[Dict[str, object]]:
         candidate_limit = max(1, int(limit))
         seen = set()
         candidates: List[Dict[str, object]] = []
@@ -2504,14 +2631,23 @@ class MemGuardService:
                     limit=candidate_limit - len(candidates),
                 )
             )
-        if len(candidates) < candidate_limit:
+        if include_graph and len(candidates) < candidate_limit:
             remaining = candidate_limit - len(candidates)
             graph_query = str(expanded.get("expanded_query") or query)
             add_unique(self.meta.graph_search(graph_query, limit=max(10, remaining)))
-        if len(candidates) < candidate_limit:
+        if include_recent and len(candidates) < candidate_limit:
             remaining = candidate_limit - len(candidates)
             add_unique(self.meta.list_recent_memories(remaining, exclude_ids=list(seen)))
         return candidates[:candidate_limit]
+
+    @staticmethod
+    def _retrieval_record_is_eligible(record: Dict[str, object]) -> bool:
+        return (
+            not bool(record.get("deleted"))
+            and str(record.get("governance_state") or "active") == "active"
+            and str(record.get("trust_level") or "trusted")
+            in {"trusted", "verified", "reviewed"}
+        )
 
     def graph_search(self, entity_query: str, limit: int = 10) -> List[Dict[str, object]]:
         results = self.meta.graph_search(entity_query, limit=limit)
@@ -2521,7 +2657,12 @@ class MemGuardService:
     def hierarchical_graph_search(self, entity_query: str, limit: int = 10) -> Dict[str, object]:
         summary_rows = self.meta.graph_search(entity_query, limit=limit)
         if not summary_rows:
-            summary_rows = self.search(entity_query, limit=limit, audit=False)
+            summary_rows = self._search_candidates(
+                entity_query,
+                limit=limit,
+                include_graph=False,
+                include_recent=False,
+            )
 
         summary_layer = []
         entity_relation_layer = []

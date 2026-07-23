@@ -26,7 +26,10 @@ class FusedResult:
 
 def classify_query_intent(query: str) -> QueryIntent:
     text = str(query or "").strip().lower()
-    if re.search(r"\bmem(?:ory)?[-_ ]?id\b|\bmem-[a-z0-9-]+\b", text):
+    if re.search(
+        r"\bmem(?:ory)?[-_ ]?id\b|\bmem[-_][a-z0-9-]{8,}\b|\bmem-[a-z0-9-]+\b",
+        text,
+    ):
         return QueryIntent.EXACT_LOOKUP
     if any(term in text for term in ("偏好", "习惯", "明确说", "prefer", "preference")):
         return QueryIntent.PREFERENCE
