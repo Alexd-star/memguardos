@@ -1177,6 +1177,7 @@ def test_auto_retrieval_can_use_successful_kylin_embedding_probe(monkeypatch):
     )
     assert ranked
     assert ranked[0][1]["memory_id"] == "m1"
+    assert all("_hash_score" in record for _, record in ranked)
     assert all(
         record["_vector_backend"] == "kylin_sdk_persisted"
         for _, record in ranked

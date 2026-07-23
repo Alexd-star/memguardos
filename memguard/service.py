@@ -1970,7 +1970,10 @@ class MemGuardService:
         base_pairs = self.retriever.rank(
             query,
             candidates,
-            limit=max(limit * 4, 20),
+            # RRF channels must be built from the same complete candidate set.
+            # Truncating by the blended semantic score here can discard a strong
+            # lexical hit before the lexical ranking is even constructed.
+            limit=max(len(candidates), limit * 4, 20),
             persisted_vectors=persisted_vectors,
         )
         base_ranked = []
@@ -2027,7 +2030,7 @@ class MemGuardService:
                     - float(
                         row.get("_score_breakdown", {}).get("content_score", 0.0)
                     ),
-                    -float(row.get("_base_score", 0.0)),
+                    -float(row.get("_hash_score", 0.0)),
                     str(row.get("memory_id") or ""),
                 ),
             )
@@ -2045,7 +2048,7 @@ class MemGuardService:
             for item in sorted(
                 base_ranked,
                 key=lambda row: (
-                    -float(row.get("_base_score", 0.0)),
+                    -float(row.get("_hash_score", 0.0)),
                     str(row.get("memory_id") or ""),
                 ),
             )

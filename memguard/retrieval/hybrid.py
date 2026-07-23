@@ -441,6 +441,7 @@ class HybridRetriever:
                 continue
             score += float(breakdown["total"])
             item = dict(record)
+            item["_hash_score"] = round(score, 6)
             item["_score_breakdown"] = breakdown
             item["_expansion_trace"] = expanded_info["expansion_trace"]
             if score > 0:

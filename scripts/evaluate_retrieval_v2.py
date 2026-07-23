@@ -83,6 +83,8 @@ def evaluate_gate(
             failures.append("round %d: p95_latency_ms >= 500" % index)
         if float(row.get("p99_latency_ms", float("inf"))) >= 500.0:
             failures.append("round %d: p99_latency_ms >= 500" % index)
+        if float(row.get("quality_p99_latency_ms", 0.0)) >= 500.0:
+            failures.append("round %d: quality_p99_latency_ms >= 500" % index)
     return {
         "pass": not failures,
         "failures": failures,
@@ -92,6 +94,7 @@ def evaluate_gate(
             "recall_at_5": 1.0,
             "p95_latency_ms_exclusive_upper": 500.0,
             "p99_latency_ms_exclusive_upper": 500.0,
+            "quality_p99_latency_ms_exclusive_upper": 500.0,
         },
     }
 
@@ -106,8 +109,11 @@ def _gate_metrics(ablation: dict, concurrent: dict) -> dict:
     return {
         "variant": selected_name,
         "recall_at_5": float(selected["recall_at_5"]),
+        "quality_p95_latency_ms": float(selected["p95_latency_ms"]),
+        "quality_p99_latency_ms": float(selected["p99_latency_ms"]),
         "p95_latency_ms": float(concurrent["p95_latency_ms"]),
         "p99_latency_ms": float(concurrent["p99_latency_ms"]),
+        "concurrent_load_backend": str(concurrent["embedding_backend"]),
         "ok": bool(concurrent.get("ok")),
     }
 
@@ -138,6 +144,7 @@ def run(
                 size=max(1, int(size)),
                 query_count=max(1, int(query_count)),
                 workers=max(1, int(workers)),
+                embedding_backend="hash",
             )
             gate_metrics = _gate_metrics(ablation, concurrent)
             gate_rows.append(gate_metrics)
@@ -163,6 +170,8 @@ def run(
             "queries_per_round": max(1, int(query_count)),
             "workers": max(1, int(workers)),
             "reporting": "all raw rounds plus worst-case gate",
+            "concurrent_load_backend": "hash",
+            "quality_backend": "kylin_persisted when available, otherwise rrf_selective_graph",
         },
         "rounds": raw_rounds,
         "gate": evaluate_gate(gate_rows, required_rounds=round_count),

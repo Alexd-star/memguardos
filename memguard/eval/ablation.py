@@ -93,6 +93,7 @@ def _metrics(
     recalls: List[float] = []
     latencies: List[float] = []
     candidate_counts: List[float] = []
+    misses: List[dict] = []
     started = time.perf_counter()
     for _ in range(repetitions):
         for row in queries:
@@ -102,7 +103,16 @@ def _metrics(
             hits, candidate_count = run_query(row)
             latencies.append((time.perf_counter() - query_started) * 1000)
             actual_labels = [id_to_label.get(str(hit["memory_id"]), str(hit["memory_id"])) for hit in hits]
-            recalls.append(recall_at_k(row["expected"], actual_labels, row.get("k", 5)))
+            recall = recall_at_k(row["expected"], actual_labels, row.get("k", 5))
+            recalls.append(recall)
+            if recall < 1.0 and len(misses) < 20:
+                misses.append(
+                    {
+                        "query": row["query"],
+                        "expected": list(row["expected"]),
+                        "actual": actual_labels,
+                    }
+                )
             candidate_counts.append(float(candidate_count))
     elapsed = max(time.perf_counter() - started, 1e-9)
     return {
@@ -118,6 +128,8 @@ def _metrics(
             "mean": round(mean(candidate_counts), 3),
             "max": int(max(candidate_counts) if candidate_counts else 0),
         },
+        "miss_count": sum(1 for value in recalls if value < 1.0),
+        "misses": misses,
     }
 
 

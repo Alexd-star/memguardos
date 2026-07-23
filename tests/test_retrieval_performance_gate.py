@@ -3,6 +3,8 @@ import subprocess
 import pytest
 
 from memguard.eval.ablation import VARIANTS
+from memguard.eval.run_eval import run_concurrent_search_load
+from memguard.retrieval import hybrid
 from scripts.evaluate_retrieval_v2 import evaluate_gate, git_head
 
 
@@ -16,24 +18,49 @@ def test_retrieval_v2_ablation_contains_required_variants():
     } <= names
 
 
+def test_concurrent_gate_can_pin_stable_hash_backend(monkeypatch, tmp_path):
+    monkeypatch.setattr(hybrid, "_platform_default_backend", lambda: "auto")
+    monkeypatch.setattr(
+        hybrid.KylinEmbeddingProvider,
+        "vector",
+        lambda *args, **kwargs: pytest.fail(
+            "hash load gate must not invoke the platform SDK"
+        ),
+    )
+
+    result = run_concurrent_search_load(
+        tmp_path,
+        size=12,
+        query_count=6,
+        workers=2,
+        embedding_backend="hash",
+    )
+
+    assert result["ok"] is True
+    assert result["embedding_backend"] == "hash"
+
+
 def test_gate_requires_all_rounds_to_meet_latency_and_recall():
     rounds = [
         {
             "recall_at_5": 1.0,
             "p95_latency_ms": 120.0,
             "p99_latency_ms": 310.0,
+            "quality_p99_latency_ms": 220.0,
             "ok": True,
         },
         {
             "recall_at_5": 1.0,
             "p95_latency_ms": 140.0,
             "p99_latency_ms": 330.0,
+            "quality_p99_latency_ms": 230.0,
             "ok": True,
         },
         {
             "recall_at_5": 1.0,
             "p95_latency_ms": 150.0,
             "p99_latency_ms": 350.0,
+            "quality_p99_latency_ms": 240.0,
             "ok": True,
         },
     ]
@@ -42,6 +69,11 @@ def test_gate_requires_all_rounds_to_meet_latency_and_recall():
     result = evaluate_gate(rounds)
     assert result["pass"] is False
     assert "p99_latency_ms" in result["failures"][0]
+    rounds[2]["p99_latency_ms"] = 350.0
+    rounds[2]["quality_p99_latency_ms"] = 501.0
+    result = evaluate_gate(rounds)
+    assert result["pass"] is False
+    assert any("quality_p99_latency_ms" in item for item in result["failures"])
 
 
 def test_gate_rejects_failed_or_incomplete_rounds():
