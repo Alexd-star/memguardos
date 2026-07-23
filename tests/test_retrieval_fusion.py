@@ -220,6 +220,32 @@ def test_multi_term_command_signature_is_protected_from_semantic_noise(tmp_path)
         service.close()
 
 
+def test_command_context_words_do_not_hide_destructive_action_anchor(tmp_path):
+    service = make_service(tmp_path, "destructive-action-anchor")
+    try:
+        expected = service.ingest_text(
+            "用户行为偏好：shell history 出现 rm -rf、dd、mkfs 时，"
+            "Agent 必须先二次确认。",
+            source_kind="user_behavior",
+        )["record"]
+        service.ingest_text(
+            "真实 shell history 难例：history -d 只清理记录，不等于 "
+            "sudo rm -rf 破坏性删除。",
+            source_kind="agent_interaction",
+        )
+
+        hits = service.search(
+            "shell history 出现 sudo rm -rf 或 mkfs 时要不要先确认？",
+            limit=5,
+        )
+
+        assert hits[0]["memory_id"] == expected.memory_id
+        assert hits[0]["retrieval_explanation"]["protected_exact_hit"] is True
+        assert hits[0]["score_breakdown"]["distinctive_latin_token_count"] == 1
+    finally:
+        service.close()
+
+
 def test_common_latin_term_is_not_misclassified_as_rare_exact_hit(tmp_path):
     service = make_service(tmp_path, "common-term-protection")
     try:
