@@ -1994,6 +1994,22 @@ class MemGuardService:
                             "lexical_hit_count", 0.0
                         )
                     ),
+                    -float(
+                        row.get("_score_breakdown", {}).get("topic_score", 0.0)
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get("subtype_score", 0.0)
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get("entity_score", 0.0)
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get("summary_score", 0.0)
+                    )
+                    - float(
+                        row.get("_score_breakdown", {}).get("content_score", 0.0)
+                    ),
+                    -float(row.get("_base_score", 0.0)),
                     str(row.get("memory_id") or ""),
                 ),
             )

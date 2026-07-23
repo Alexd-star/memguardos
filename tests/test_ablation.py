@@ -21,11 +21,21 @@ def test_ablation_uses_shared_dataset_and_reports_required_variants(tmp_path):
     assert set(variants) == {
         "text_only",
         "hybrid_no_graph",
+        "rrf_no_graph",
+        "rrf_selective_graph",
+        "kylin_persisted",
         "full_no_cache",
         "full_warm_cache",
         "full_kylin_sdk",
     }
-    for name in ("text_only", "hybrid_no_graph", "full_no_cache", "full_warm_cache"):
+    for name in (
+        "text_only",
+        "hybrid_no_graph",
+        "rrf_no_graph",
+        "rrf_selective_graph",
+        "full_no_cache",
+        "full_warm_cache",
+    ):
         metrics = variants[name]
         assert metrics["status"] == "completed"
         assert metrics["query_count"] == result["dataset"]["query_count"] * 2
@@ -38,6 +48,8 @@ def test_ablation_uses_shared_dataset_and_reports_required_variants(tmp_path):
 
     assert variants["full_kylin_sdk"]["status"] == "skipped"
     assert variants["full_kylin_sdk"]["reason"] == "disabled_by_caller"
+    assert variants["kylin_persisted"]["status"] == "skipped"
+    assert variants["kylin_persisted"]["reason"] == "disabled_by_caller"
 
 
 def test_ablation_reports_cold_and_warm_process_measurements(tmp_path):

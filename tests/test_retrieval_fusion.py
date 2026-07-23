@@ -14,6 +14,7 @@ def make_service(tmp_path, namespace):
 
 def test_query_intent_router_is_deterministic():
     assert classify_query_intent("我上次明确说代码搜索用什么工具") == QueryIntent.PREFERENCE
+    assert classify_query_intent("代码搜索应该优先用什么工具") == QueryIntent.PREFERENCE
     assert classify_query_intent("修复 systemd 服务失败的步骤是什么") == QueryIntent.PROCEDURAL
     assert classify_query_intent("项目 A 和工具 B 有什么关系") == QueryIntent.RELATIONAL
     assert classify_query_intent("上周更新后的配置") == QueryIntent.TEMPORAL

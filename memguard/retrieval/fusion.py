@@ -31,7 +31,18 @@ def classify_query_intent(query: str) -> QueryIntent:
         text,
     ):
         return QueryIntent.EXACT_LOOKUP
-    if any(term in text for term in ("偏好", "习惯", "明确说", "prefer", "preference")):
+    if any(
+        term in text
+        for term in (
+            "偏好",
+            "习惯",
+            "明确说",
+            "优先用",
+            "常用工具",
+            "prefer",
+            "preference",
+        )
+    ):
         return QueryIntent.PREFERENCE
     if any(
         term in text

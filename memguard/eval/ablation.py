@@ -18,6 +18,23 @@ BENCHMARK_DIR = ROOT / "data" / "benchmarks"
 SEED_PATH = BENCHMARK_DIR / "memory_seed.jsonl"
 QUERY_PATH = BENCHMARK_DIR / "retrieval.jsonl"
 
+VARIANTS = [
+    {"name": "hybrid_no_graph", "fusion": "legacy", "graph": "off", "kylin": "off"},
+    {"name": "rrf_no_graph", "fusion": "rrf", "graph": "off", "kylin": "off"},
+    {
+        "name": "rrf_selective_graph",
+        "fusion": "rrf",
+        "graph": "selective",
+        "kylin": "off",
+    },
+    {
+        "name": "kylin_persisted",
+        "fusion": "rrf",
+        "graph": "selective",
+        "kylin": "persisted",
+    },
+]
+
 
 def _load_jsonl(path: Path) -> List[dict]:
     rows = []
@@ -42,7 +59,7 @@ def _seed_service(work_dir: Path) -> Tuple[Path, Path, Dict[str, str]]:
         for row in _load_jsonl(SEED_PATH):
             result = service.ingest_text(
                 row["text"],
-                source_kind=row.get("source_kind", "ablation"),
+                source_kind=row.get("source_kind", "manual"),
                 source_uri=row.get("source_uri", row["label"]),
             )
             if result.get("stored"):
@@ -142,10 +159,34 @@ def _run_variants(
             hybrid_query,
         )
 
+        def rrf_no_graph_query(row: dict) -> Tuple[List[dict], int]:
+            service._search_cache.clear()
+            original_graph_search = service.hierarchical_graph_search
+            service.hierarchical_graph_search = lambda entity, limit=10: {
+                "layers": {"summary": [], "entity_relation": [], "chunk": []}
+            }
+            try:
+                hits = service.search(row["query"], limit=row.get("k", 5), audit=False)
+            finally:
+                service.hierarchical_graph_search = original_graph_search
+            return hits, candidate_count_by_query[row["query"]]
+
         candidate_count_by_query = {
-            row["query"]: len(service._search_candidates(row["query"], limit=candidate_limit))
+            row["query"]: len(
+                service._search_candidates(
+                    row["query"], limit=candidate_limit, include_graph=False
+                )
+            )
             for row in queries
         }
+
+        variants["rrf_no_graph"] = _metrics(
+            "rrf_no_graph",
+            queries,
+            repetitions,
+            id_to_label,
+            rrf_no_graph_query,
+        )
 
         def full_query(row: dict) -> Tuple[List[dict], int]:
             service._search_cache.clear()
@@ -161,6 +202,8 @@ def _run_variants(
             id_to_label,
             full_query,
         )
+        variants["rrf_selective_graph"] = dict(variants["full_no_cache"])
+        variants["rrf_selective_graph"]["name"] = "rrf_selective_graph"
 
         def warm(row: dict) -> None:
             service.search(row["query"], limit=row.get("k", 5), audit=False)
@@ -181,14 +224,14 @@ def _run_variants(
         )
 
         if not include_kylin:
-            variants["full_kylin_sdk"] = {
-                "name": "full_kylin_sdk",
+            variants["kylin_persisted"] = {
+                "name": "kylin_persisted",
                 "status": "skipped",
                 "reason": "disabled_by_caller",
             }
         elif os.name != "posix":
-            variants["full_kylin_sdk"] = {
-                "name": "full_kylin_sdk",
+            variants["kylin_persisted"] = {
+                "name": "kylin_persisted",
                 "status": "skipped",
                 "reason": "requires_openkylin_or_compatible_linux",
             }
@@ -196,26 +239,31 @@ def _run_variants(
             original_retriever = service.retriever
             service.retriever = HybridRetriever(embedding_backend="kylin_sdk")
             try:
+                backfill = service.backfill_embeddings(limit=1000, timeout_seconds=120.0)
                 probe_row = queries[0]
                 service._search_cache.clear()
                 service.search(probe_row["query"], limit=probe_row.get("k", 5), audit=False)
-                if service.retriever.last_backend_used != "kylin_sdk":
-                    variants["full_kylin_sdk"] = {
-                        "name": "full_kylin_sdk",
+                if service.retriever.last_backend_used != "kylin_sdk_persisted":
+                    variants["kylin_persisted"] = {
+                        "name": "kylin_persisted",
                         "status": "skipped",
                         "reason": service.retriever.status()["kylin"].get("disabled_reason")
                         or "kylin_sdk_did_not_complete_inference",
+                        "embedding_backfill": backfill,
                     }
                 else:
-                    variants["full_kylin_sdk"] = _metrics(
-                        "full_kylin_sdk",
+                    variants["kylin_persisted"] = _metrics(
+                        "kylin_persisted",
                         queries,
                         repetitions,
                         id_to_label,
                         full_query,
                     )
+                    variants["kylin_persisted"]["embedding_backfill"] = backfill
             finally:
                 service.retriever = original_retriever
+        variants["full_kylin_sdk"] = dict(variants["kylin_persisted"])
+        variants["full_kylin_sdk"]["name"] = "full_kylin_sdk"
         return variants
     finally:
         service.close()
