@@ -130,6 +130,10 @@ def _run_variants(
 ) -> Dict[str, dict]:
     queries = _load_jsonl(QUERY_PATH)
     service = MemGuardService(store_path=store_path, db_path=db_path)
+    # Keep every baseline independent from the platform default. On openKylin the
+    # product default is ``auto``, which would otherwise call the SDK inside the
+    # nominally non-Kylin variants and invalidate both latency and attribution.
+    service.retriever = HybridRetriever(embedding_backend="hash")
     candidate_limit = 64
     try:
         variants: Dict[str, dict] = {}
@@ -276,6 +280,7 @@ def _startup_and_cache_measurement(
 ) -> dict:
     startup_started = time.perf_counter()
     service = MemGuardService(store_path=store_path, db_path=db_path)
+    service.retriever = HybridRetriever(embedding_backend="hash")
     startup_ms = (time.perf_counter() - startup_started) * 1000
     try:
         first_started = time.perf_counter()
@@ -326,6 +331,10 @@ def run_ablation(
             "top_k": 5,
             "repetitions": repetitions,
             "latency_clock": "time.perf_counter",
+            "backend_isolation": {
+                "baseline_variants": "hash",
+                "kylin_persisted": "kylin_sdk_with_persisted_candidate_vectors",
+            },
             "cache_policy": {
                 "text_only": "no_application_result_cache",
                 "hybrid_no_graph": "no_application_result_cache",
