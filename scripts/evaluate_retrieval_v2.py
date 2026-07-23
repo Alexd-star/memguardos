@@ -3,7 +3,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
+import re
 import subprocess
 from tempfile import TemporaryDirectory
 import sys
@@ -26,10 +28,40 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def git_head() -> str:
-    return subprocess.check_output(
-        ["git", "rev-parse", "HEAD"], text=True, encoding="utf-8"
+_REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
+
+
+def git_head(root: Path = ROOT, environment: Optional[Dict[str, str]] = None) -> str:
+    """Return a verified source revision in Git and packaged environments."""
+    try:
+        revision = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=root,
+            text=True,
+            encoding="utf-8",
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        revision = ""
+    if _REVISION_RE.fullmatch(revision):
+        return revision
+
+    env_revision = (environment or os.environ).get(
+        "MEMGUARD_SOURCE_REVISION", ""
     ).strip()
+    if _REVISION_RE.fullmatch(env_revision):
+        return env_revision
+
+    revision_file = root / ".source_revision"
+    if revision_file.is_file():
+        file_revision = revision_file.read_text(encoding="utf-8").strip()
+        if _REVISION_RE.fullmatch(file_revision):
+            return file_revision
+
+    raise RuntimeError(
+        "unable to determine a verified source revision; provide Git metadata, "
+        "MEMGUARD_SOURCE_REVISION, or a valid .source_revision file"
+    )
 
 
 def evaluate_gate(

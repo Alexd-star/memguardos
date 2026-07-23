@@ -1,5 +1,9 @@
+import subprocess
+
+import pytest
+
 from memguard.eval.ablation import VARIANTS
-from scripts.evaluate_retrieval_v2 import evaluate_gate
+from scripts.evaluate_retrieval_v2 import evaluate_gate, git_head
 
 
 def test_retrieval_v2_ablation_contains_required_variants():
@@ -55,3 +59,40 @@ def test_gate_rejects_failed_or_incomplete_rounds():
     assert result["pass"] is False
     assert any("required 3 rounds" in item for item in result["failures"])
     assert any("execution failed" in item for item in result["failures"])
+
+
+def test_source_revision_falls_back_to_verified_environment(monkeypatch, tmp_path):
+    revision = "a" * 40
+    monkeypatch.setattr(
+        subprocess,
+        "check_output",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            subprocess.CalledProcessError(128, args[0])
+        ),
+    )
+
+    assert git_head(tmp_path, {"MEMGUARD_SOURCE_REVISION": revision}) == revision
+
+
+def test_source_revision_falls_back_to_archive_marker(monkeypatch, tmp_path):
+    revision = "b" * 40
+    (tmp_path / ".source_revision").write_text(revision + "\n", encoding="utf-8")
+    monkeypatch.setattr(
+        subprocess,
+        "check_output",
+        lambda *args, **kwargs: (_ for _ in ()).throw(OSError("git unavailable")),
+    )
+
+    assert git_head(tmp_path, {}) == revision
+
+
+def test_source_revision_rejects_unverified_packaged_source(monkeypatch, tmp_path):
+    (tmp_path / ".source_revision").write_text("not-a-revision\n", encoding="utf-8")
+    monkeypatch.setattr(
+        subprocess,
+        "check_output",
+        lambda *args, **kwargs: (_ for _ in ()).throw(OSError("git unavailable")),
+    )
+
+    with pytest.raises(RuntimeError, match="verified source revision"):
+        git_head(tmp_path, {"MEMGUARD_SOURCE_REVISION": "also-invalid"})
