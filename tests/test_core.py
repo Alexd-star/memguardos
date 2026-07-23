@@ -297,13 +297,22 @@ def test_versions_update_and_rollback(tmp_path):
         assert updated["updated"] is True
         updated_record = updated["record"]
         updated_hash = vector_content_hash(updated_record.summary, updated_record.content)
+        updated_job = next(
+            row
+            for row in service.meta.list_pending_embeddings(
+                "kylin_sdk", "kylin-sdk-v1", 10
+            )
+            if row["memory_id"] == created.memory_id
+            and row["content_hash"] == updated_hash
+        )
         assert service.meta.complete_memory_embedding(
             created.memory_id,
             updated_hash,
             "kylin_sdk",
             "kylin-sdk-v1",
             [1.0, 2.0],
-            expected_attempt_count=0,
+            expected_attempt_count=updated_job["attempt_count"],
+            expected_job_token=updated_job["job_token"],
         )
 
         versions = service.versions(created.memory_id)
@@ -406,6 +415,29 @@ def test_embedding_jobs_follow_ingest_governance_and_update_lifecycle(tmp_path):
             "SELECT COUNT(*) FROM memory_embedding WHERE memory_id = ?",
             (rejected.memory_id,),
         ).fetchone()[0] == 0
+    finally:
+        service.close()
+
+
+def test_service_exposes_atomic_bounded_embedding_scan(tmp_path):
+    service = make_service(tmp_path)
+    record = make_memory(
+        content="bounded service scan",
+        memory_type="knowledge",
+        source=MemorySource(kind="manual", uri="test"),
+        summary="bounded service scan",
+    )
+    try:
+        service.meta.upsert_memory(record)
+
+        report = service.enqueue_missing_embedding_jobs(scan_limit=1)
+
+        assert report == {
+            "scanned": 1,
+            "enqueued": 1,
+            "next_cursor": record.memory_id,
+            "wrapped": False,
+        }
     finally:
         service.close()
 
@@ -1269,13 +1301,22 @@ def test_memory_tier_promote_and_evict(tmp_path):
         assert working.tier == "working"
         assert service.list_memories(tier="working")[0]["memory_id"] == working.memory_id
         current_hash = vector_content_hash(working.summary, working.content)
+        current_job = next(
+            row
+            for row in service.meta.list_pending_embeddings(
+                "kylin_sdk", "kylin-sdk-v1", 10
+            )
+            if row["memory_id"] == working.memory_id
+            and row["content_hash"] == current_hash
+        )
         assert service.meta.complete_memory_embedding(
             working.memory_id,
             current_hash,
             "kylin_sdk",
             "kylin-sdk-v1",
             [1.0, 2.0],
-            expected_attempt_count=0,
+            expected_attempt_count=current_job["attempt_count"],
+            expected_job_token=current_job["job_token"],
         )
 
         promoted = service.promote_memory(working.memory_id, "long_term")

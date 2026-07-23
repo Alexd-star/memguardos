@@ -82,6 +82,15 @@ class MemGuardService:
     def close(self) -> None:
         self.meta.close()
 
+    def enqueue_missing_embedding_jobs(
+        self, scan_limit: int = 100
+    ) -> Dict[str, object]:
+        return self.meta.enqueue_missing_embedding_jobs(
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+            scan_limit,
+        )
+
     def ingest_text(self, text: str, source_kind: str = "manual", source_uri: str = "", tier: Optional[str] = None) -> Dict[str, object]:
         clean_text, quality = assess_text_quality(text, source_kind=source_kind)
         if not quality.accepted:
