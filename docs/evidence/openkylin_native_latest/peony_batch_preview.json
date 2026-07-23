@@ -1,11 +1,11 @@
 {
   "schema": "memguardos-desktop-scan-manifest-v1",
   "ok": true,
-  "manifest_id": "c9affdc7-c1db-41cf-8269-8aeb1f15ada7",
-  "nonce": "xTFuE1y1Hy368_Tp4hN104ZG0gOXMHL-",
+  "manifest_id": "f61cedc6-1562-40cb-ac9d-f0aa9ebd7949",
+  "nonce": "B_BYJ0EnL5e6fDX3e50GFRJBKnHfUSaF",
   "namespace": "default",
-  "created_at": 1783746323.923389,
-  "expires_at": 1783746623.923389,
+  "created_at": 1784805760.587592,
+  "expires_at": 1784806060.587592,
   "used": false,
   "limits": {
     "max_files": 100,
@@ -16,7 +16,7 @@
   "items": [
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.YhdXM6VzsO/peony_preference.md",
+      "path": "/var/tmp/tmp.KnUoy2StCT/peony_preference.md",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 57,
@@ -50,15 +50,15 @@
       "fingerprint": {
         "exists": true,
         "device": 2053,
-        "inode": 1862345,
+        "inode": 1861622,
         "size": 57,
-        "mtime_ns": 1783746323829842471,
+        "mtime_ns": 1784805760436687841,
         "mode": 33204
       }
     },
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.YhdXM6VzsO/peony_knowledge.txt",
+      "path": "/var/tmp/tmp.KnUoy2StCT/peony_knowledge.txt",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 61,
@@ -92,13 +92,13 @@
       "fingerprint": {
         "exists": true,
         "device": 2053,
-        "inode": 1862346,
+        "inode": 1861623,
         "size": 61,
-        "mtime_ns": 1783746323829842471,
+        "mtime_ns": 1784805760437687858,
         "mode": 33204
       }
     }
   ],
-  "signature": "29aaa35b20400181e0c9dc6f9cd60de8415e5cd3a39d7ef7eebf1f17951b2ac2",
-  "manifest_path": "/var/tmp/memguardos-native-home.H0bdPf/desktop-scans/c9affdc7-c1db-41cf-8269-8aeb1f15ada7.json"
+  "signature": "fad3ec25f113af96b8945fef160410ae983f1e559df3d8f913aa0f5cb5764dfa",
+  "manifest_path": "/var/tmp/memguardos-native-home.iybTxl/desktop-scans/f61cedc6-1562-40cb-ac9d-f0aa9ebd7949.json"
 }

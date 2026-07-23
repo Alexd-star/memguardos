@@ -119,6 +119,19 @@ def build_parser() -> argparse.ArgumentParser:
     batch_search.add_argument("--top-k", type=int, default=5)
     batch_search.add_argument("--workers", type=int, default=4)
 
+    embedding_cache = sub.add_parser(
+        "embedding-cache", help="Manage persistent semantic vectors"
+    )
+    embedding_sub = embedding_cache.add_subparsers(
+        dest="embedding_cache_command", required=True
+    )
+    embedding_sub.add_parser("status", help="Show vector coverage and retry state")
+    embedding_backfill = embedding_sub.add_parser(
+        "backfill", help="Backfill missing vectors within a time budget"
+    )
+    embedding_backfill.add_argument("--limit", type=int, default=100)
+    embedding_backfill.add_argument("--timeout", type=float, default=30.0)
+
     context = sub.add_parser("build-context", help="Build a redacted RAG context package for OS Agent generation")
     context.add_argument("query")
     context.add_argument("--top-k", type=int, default=5)
@@ -452,6 +465,23 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "notifications":
             print(json.dumps(service.recent_notifications(limit=args.limit), ensure_ascii=False, indent=2))
             return 0
+
+        if args.command == "embedding-cache":
+            if args.embedding_cache_command == "status":
+                print(
+                    json.dumps(
+                        service.embedding_cache_status(),
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                )
+                return 0
+            report = service.backfill_embeddings(
+                limit=args.limit,
+                timeout_seconds=args.timeout,
+            )
+            print(json.dumps(report, ensure_ascii=False, indent=2))
+            return 0 if report["failed"] == 0 else 2
 
         if args.command == "explain-extraction":
             print(json.dumps(service.explain_extraction(args.text, source_kind=args.source_kind), ensure_ascii=False, indent=2))

@@ -237,6 +237,52 @@ def test_forget_planner_requires_the_requested_latin_anchor(tmp_path: Path):
         service.close()
 
 
+def test_forget_planner_keeps_short_procedural_peer_without_unrelated_records(
+    tmp_path: Path,
+):
+    service = MemGuardService(
+        store_path=tmp_path / "memory.segment", db_path=tmp_path / "memguard.sqlite3"
+    )
+    try:
+        primary = service.ingest_text(
+            "自然语言请求：pytest 失败后先定位最小失败用例，再修复并回归全量测试。"
+        )
+        peer = service.ingest_text(
+            "自然语言请求补充：最小失败用例是本任务必须复核的关键点。"
+        )
+        unrelated = service.ingest_text("BPF 教程解释 verifier 的基本检查流程。")
+
+        plan = service.forget(
+            "忘记自然语言请求中关于最小失败用例的两条记忆，但保留其他主题。"
+        )
+        candidate_ids = {item["memory_id"] for item in plan["candidates"]}
+
+        assert candidate_ids == {
+            primary["record"].memory_id,
+            peer["record"].memory_id,
+        }
+        assert unrelated["record"].memory_id not in candidate_ids
+    finally:
+        service.close()
+
+
+def test_erasure_intent_does_not_treat_retention_prefix_or_plain_pytest_as_preference():
+    compiler = ErasureIntentCompiler()
+    retained_prefix = compiler.compile(
+        "忘记保留约束中关于二次确认的两条记忆，但保留其他主题。"
+    )
+    plain_pytest = compiler.compile(
+        "忘记独立留出任务中关于 python -m pytest 的两条记忆，但保留其他主题。"
+    )
+
+    assert retained_prefix["target_phrase"] == "二次确认"
+    assert retained_prefix["preference_topic"] == "high_risk_confirmation"
+    assert retained_prefix["normalized_preference_topic"] == "high_risk_confirmation"
+    assert plain_pytest["target_phrase"] == "python -m pytest"
+    assert plain_pytest["preference_topic"] == ""
+    assert plain_pytest["normalized_preference_topic"] == ""
+
+
 def test_evidencebench_dataset_audit_reports_topic_acceptable_metadata():
     report = audit_dataset()
 

@@ -30,7 +30,15 @@ SENSITIVE_LABELS = [
 ]
 
 PREFERENCE_TOPIC_ALIASES = {
-    "high_risk_confirmation": ("高风险命令", "危险操作", "二次确认", "安全确认", "高风险安全策略"),
+    "high_risk_confirmation": (
+        "高风险命令",
+        "高风险操作",
+        "危险操作",
+        "二次确认",
+        "操作确认",
+        "安全确认",
+        "高风险安全策略",
+    ),
     "code_search_tool": ("查代码", "代码搜索", "rg", "grep", "ripgrep"),
     "response_order": ("先给命令", "先给结论", "先命令后解释", "回答顺序"),
     "response_language": ("中文回答", "用中文", "中文"),
@@ -139,7 +147,7 @@ class ErasureIntentCompiler:
 
     @staticmethod
     def _memory_types(text: str) -> List[str]:
-        target_text = text.split("保留", 1)[0]
+        target_text, _ = _split_retention_clause(text)
         selected: List[str] = []
         for memory_type, markers in MEMORY_TYPE_PATTERNS:
             if any(marker in target_text for marker in markers):
@@ -207,7 +215,13 @@ class ErasureIntentCompiler:
         project_match = re.search(r"忘(?:记|掉)?\s*([^，。,；;]+?项目)的偏好", text)
         if project_match:
             return project_match.group(1).strip()
-        if "高风险命令" in text or "危险操作" in text or "二次确认" in text:
+        if (
+            "高风险命令" in text
+            or "高风险操作" in text
+            or "危险操作" in text
+            or "二次确认" in text
+            or "操作确认" in text
+        ):
             return "高风险命令需要二次确认"
         if "高风险安全策略" in text:
             return "高风险安全策略"
@@ -227,7 +241,8 @@ class ErasureIntentCompiler:
 
     @staticmethod
     def _target_phrase(text: str, topic: str) -> str:
-        target = re.split(r"[，,]?\s*(?:但是|但)?\s*保留", text, maxsplit=1)[0].strip(" ，。,；;")
+        target, _ = _split_retention_clause(text)
+        target = target.strip(" ，。,；;")
         target = re.sub(r"^(?:请\s*)?(?:帮我\s*)?(?:把\s*)?(?:忘记|忘掉|遗忘|删除|清除)\s*", "", target)
         if "关于" in target:
             target = target.split("关于", 1)[1].strip()
@@ -244,7 +259,7 @@ class ErasureIntentCompiler:
 
     @staticmethod
     def _preference_topic(text: str, topic: str) -> str:
-        target_text = text.split("保留", 1)[0]
+        target_text, _ = _split_retention_clause(text)
         lowered = target_text.lower()
         if "回答风格" in target_text:
             return "回答风格"
@@ -257,7 +272,13 @@ class ErasureIntentCompiler:
             and "查代码" not in target_text
         ):
             return "rg"
-        if "高风险命令" in target_text or "危险操作" in target_text or "二次确认" in target_text:
+        if (
+            "高风险命令" in target_text
+            or "高风险操作" in target_text
+            or "危险操作" in target_text
+            or "二次确认" in target_text
+            or "操作确认" in target_text
+        ):
             return "high_risk_confirmation"
         if "代码搜索" in target_text or "查代码" in target_text:
             return "code_search_tool"
@@ -277,7 +298,9 @@ class ErasureIntentCompiler:
     def _normalized_preference_topic(text: str, preference_topic: str) -> str:
         if preference_topic in PREFERENCE_TOPIC_ALIASES:
             return preference_topic
-        target_text = text.split("保留", 1)[0]
+        if not preference_topic:
+            return ""
+        target_text, _ = _split_retention_clause(text)
         lowered = target_text.lower()
         if preference_topic == "回答风格":
             return "response_order"
@@ -374,9 +397,9 @@ class ErasureIntentCompiler:
 
     @staticmethod
     def _retention_constraints(text: str, topic: str) -> List[Dict[str, Any]]:
-        if "保留" not in text:
+        _, keep_text = _split_retention_clause(text)
+        if not keep_text:
             return []
-        keep_text = text.split("保留", 1)[1]
         constraints: List[Dict[str, Any]] = []
         if "知识" in keep_text:
             constraints.append({"memory_types": ["knowledge"], "topic": topic})
@@ -387,3 +410,13 @@ class ErasureIntentCompiler:
         if "安全确认策略" in keep_text:
             constraints.append({"memory_types": ["security_policy"], "topic": "安全确认策略"})
         return constraints
+
+
+def _split_retention_clause(text: str) -> tuple[str, str]:
+    match = re.search(
+        r"(?:[，,；;]|\s+(?:但是|但))\s*(?:但是|但)?\s*保留",
+        text,
+    )
+    if not match:
+        return text, ""
+    return text[: match.start()], text[match.end() :]

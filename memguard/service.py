@@ -48,7 +48,9 @@ from memguard.os_guard.events import parse_os_event
 from memguard.os_guard.cgroup import cgroup_status
 from memguard.os_guard.journald import JournaldLogger
 from memguard.retrieval.conflict import ConflictResolver, preference_topic as inferred_preference_topic
+from memguard.retrieval.fusion import QueryIntent, classify_query_intent, rrf_fuse
 from memguard.retrieval.hybrid import HybridRetriever, expand_query_aliases, tokenize_literal
+from memguard.retrieval.vector_cache import vector_content_hash
 from memguard.sensitivity.custom_patterns import PatternValidationError, load_patterns, save_pattern, save_pattern_from_instruction, suggest_pattern_from_instruction
 from memguard.sensitivity.detector import SensitiveDetector
 from memguard.store.mmap_store import AppendOnlyMemoryStore
@@ -56,6 +58,9 @@ from memguard.store.sqlite_meta import SQLiteMetaStore
 
 
 class MemGuardService:
+    EMBEDDING_BACKEND = "kylin_sdk"
+    EMBEDDING_MODEL_REVISION = "kylin-sdk-v1"
+
     def __init__(self, store_path: Optional[Path] = None, db_path: Optional[Path] = None, namespace: Optional[str] = None):
         self.namespace = normalize_namespace(namespace)
         self.store = AppendOnlyMemoryStore(store_path or default_store_path(self.namespace))
@@ -77,6 +82,125 @@ class MemGuardService:
 
     def close(self) -> None:
         self.meta.close()
+
+    def enqueue_missing_embedding_jobs(
+        self, scan_limit: int = 100
+    ) -> Dict[str, object]:
+        return self.meta.enqueue_missing_embedding_jobs(
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+            scan_limit,
+        )
+
+    def embedding_cache_status(self) -> Dict[str, object]:
+        status = self.meta.embedding_cache_status(
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+        )
+        return {
+            "backend": self.EMBEDDING_BACKEND,
+            "model_revision": self.EMBEDDING_MODEL_REVISION,
+            **status,
+        }
+
+    def backfill_embeddings(
+        self,
+        limit: int = 100,
+        timeout_seconds: float = 30.0,
+    ) -> Dict[str, object]:
+        started = perf_counter()
+        deadline = started + max(0.05, float(timeout_seconds))
+        effective_limit = max(1, min(int(limit), 1000))
+        scan_report = self.meta.enqueue_missing_embedding_jobs(
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+            effective_limit,
+        )
+        rows = self.meta.list_pending_embeddings(
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+            effective_limit,
+        )
+        provider = self.retriever.kylin_provider
+        ready = 0
+        failed = 0
+        memory_ids: List[str] = []
+        failures: List[Dict[str, str]] = []
+
+        for row in rows:
+            remaining = deadline - perf_counter()
+            if remaining <= 0:
+                break
+            text = "%s\n%s" % (row["summary"], row["content"])
+            vector = None
+            failure_reason = "Kylin SDK 未在时间预算内返回有效向量"
+            if provider is None:
+                failure_reason = "Kylin SDK 向量提供器未启用"
+            else:
+                try:
+                    vector = provider.vector(text, timeout_seconds=remaining)
+                except Exception as exc:  # SDK boundary: isolate one failed job.
+                    failure_reason = "Kylin SDK 回填失败：%s" % str(exc)[:240]
+
+            completed = False
+            if vector:
+                try:
+                    completed = self.meta.complete_memory_embedding(
+                        row["memory_id"],
+                        row["content_hash"],
+                        self.EMBEDDING_BACKEND,
+                        self.EMBEDDING_MODEL_REVISION,
+                        vector,
+                        expected_attempt_count=row["attempt_count"],
+                        expected_job_token=row["job_token"],
+                    )
+                except (TypeError, ValueError) as exc:
+                    failure_reason = "Kylin SDK 返回非法向量：%s" % str(exc)[:240]
+            if completed:
+                ready += 1
+                memory_ids.append(row["memory_id"])
+                continue
+
+            marked_failed = self.meta.mark_embedding_failed(
+                row["memory_id"],
+                row["content_hash"],
+                self.EMBEDDING_BACKEND,
+                self.EMBEDDING_MODEL_REVISION,
+                failure_reason,
+                expected_attempt_count=row["attempt_count"],
+                expected_job_token=row["job_token"],
+            )
+            if marked_failed:
+                failed += 1
+                failures.append(
+                    {
+                        "memory_id": row["memory_id"],
+                        "reason": failure_reason,
+                    }
+                )
+
+        status = self.embedding_cache_status()
+        queue_remaining = int(status["pending"]) + int(status["failed"])
+        due_remaining = int(status["due"])
+        scan_complete = bool(scan_report["wrapped"])
+        return {
+            "backend": self.EMBEDDING_BACKEND,
+            "model_revision": self.EMBEDDING_MODEL_REVISION,
+            "processed": ready + failed,
+            "ready": ready,
+            "failed": failed,
+            "queue_remaining": queue_remaining,
+            "due_remaining": due_remaining,
+            "retry_deferred": int(status["retry_deferred"]),
+            "next_retry_at": status["next_retry_at"],
+            "scan_complete": scan_complete,
+            "remaining": queue_remaining if scan_complete else None,
+            "has_more": (not scan_complete) or due_remaining > 0,
+            "scan": scan_report,
+            "elapsed_ms": round((perf_counter() - started) * 1000.0, 3),
+            "memory_ids": memory_ids,
+            "failures": failures,
+        }
 
     def ingest_text(self, text: str, source_kind: str = "manual", source_uri: str = "", tier: Optional[str] = None) -> Dict[str, object]:
         clean_text, quality = assess_text_quality(text, source_kind=source_kind)
@@ -184,7 +308,12 @@ class MemGuardService:
         record.confidence = min(record.confidence, quality.score, extraction.confidence)
         self._enrich_graph(record)
         self.store.append(record)
-        self.meta.upsert_memory(record)
+        self.meta.upsert_memory_with_embedding_job(
+            record,
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+            vector_content_hash(record.summary, record.content),
+        )
         audit = self._audit(
             "ingest",
             record.memory_id,
@@ -1126,7 +1255,12 @@ class MemGuardService:
         record.evidence = ["agent_event:%s" % event.event_id]
         self._enrich_graph(record)
         self.store.append(record)
-        self.meta.upsert_memory(record)
+        self.meta.upsert_memory_with_embedding_job(
+            record,
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+            vector_content_hash(record.summary, record.content),
+        )
         self._audit(
             "interaction_preference_extract",
             record.memory_id,
@@ -1325,7 +1459,12 @@ class MemGuardService:
         ).finalize_hash()
         self._enrich_graph(record)
         self.store.append(record)
-        self.meta.upsert_memory(record)
+        self.meta.upsert_memory_with_embedding_job(
+            record,
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+            vector_content_hash(record.summary, record.content),
+        )
         self._audit(
             "update",
             memory_id,
@@ -1429,7 +1568,12 @@ class MemGuardService:
         payload["deleted"] = False
         approved = MemoryRecord.from_dict(payload).finalize_hash()
         self.store.append(approved)
-        self.meta.upsert_memory(approved)
+        self.meta.upsert_memory_with_embedding_job(
+            approved,
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+            vector_content_hash(approved.summary, approved.content),
+        )
         self._audit(
             "governance_approve",
             memory_id,
@@ -1490,7 +1634,12 @@ class MemGuardService:
             governance_reason=record.governance_reason,
         ).finalize_hash()
         self.store.append(promoted)
-        self.meta.upsert_memory(promoted)
+        self.meta.upsert_memory_with_embedding_job(
+            promoted,
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+            vector_content_hash(promoted.summary, promoted.content),
+        )
         self._audit(
             "promote",
             memory_id,
@@ -1762,7 +1911,12 @@ class MemGuardService:
             deleted=False,
         )
         self.store.append(record)
-        self.meta.upsert_memory(record)
+        self.meta.upsert_memory_with_embedding_job(
+            record,
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+            vector_content_hash(record.summary, record.content),
+        )
         self._audit(
             "rollback",
             memory_id,
@@ -1788,8 +1942,235 @@ class MemGuardService:
                 self._audit("search", None, {"query": clean_query, "count": len(results), "cache": "hit"})
             return results
 
-        candidates = self._search_candidates(query, limit=max(limit * 8, 64))
-        ranked = self.retriever.rank(query, candidates, limit=max(limit * 3, limit))
+        intent = classify_query_intent(clean_query)
+        candidates = self._search_candidates(
+            query, limit=max(limit * 8, 64), include_graph=False
+        )
+        exact_ids: List[str] = []
+        if intent == QueryIntent.EXACT_LOOKUP:
+            exact_ids = re.findall(r"\bmem[-_][a-zA-Z0-9-]{8,}\b", clean_query)
+            known_ids = {str(item.get("memory_id") or "") for item in candidates}
+            for memory_id in exact_ids:
+                record = self.meta.get_memory(memory_id)
+                if record and self._retrieval_record_is_eligible(record):
+                    if memory_id not in known_ids:
+                        candidates.insert(0, record)
+                        known_ids.add(memory_id)
+        memory_hashes = {
+            str(item["memory_id"]): vector_content_hash(
+                str(item.get("summary") or ""), str(item.get("content") or "")
+            )
+            for item in candidates
+        }
+        persisted_vectors = self.meta.get_memory_embeddings(
+            memory_hashes,
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+        )
+        base_pairs = self.retriever.rank(
+            query,
+            candidates,
+            # RRF channels must be built from the same complete candidate set.
+            # Truncating by the blended semantic score here can discard a strong
+            # lexical hit before the lexical ranking is even constructed.
+            limit=max(len(candidates), limit * 4, 20),
+            persisted_vectors=persisted_vectors,
+        )
+        base_ranked = []
+        for base_score, record in base_pairs:
+            item = dict(record)
+            item["_base_score"] = float(base_score)
+            base_ranked.append(item)
+
+        lexical_ids = [
+            item["memory_id"]
+            for item in sorted(
+                base_ranked,
+                key=lambda row: (
+                    -float(
+                        row.get("_score_breakdown", {}).get(
+                            "exact_phrase_score", 0.0
+                        )
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get("routing_score", 0.0)
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get(
+                            "original_lexical_hit_count", 0.0
+                        )
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get(
+                            "original_lexical_precision", 0.0
+                        )
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get(
+                            "lexical_hit_count", 0.0
+                        )
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get(
+                            "lexical_precision", 0.0
+                        )
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get("topic_score", 0.0)
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get("subtype_score", 0.0)
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get("entity_score", 0.0)
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get("summary_score", 0.0)
+                    )
+                    - float(
+                        row.get("_score_breakdown", {}).get("content_score", 0.0)
+                    ),
+                    -float(row.get("_hash_score", 0.0)),
+                    str(row.get("memory_id") or ""),
+                ),
+            )
+            if float(
+                item.get("_score_breakdown", {}).get("exact_phrase_score", 0.0)
+            )
+            > 0
+            or float(
+                item.get("_score_breakdown", {}).get("lexical_hit_count", 0.0)
+            )
+            > 0
+        ]
+        hash_ids = [
+            item["memory_id"]
+            for item in sorted(
+                base_ranked,
+                key=lambda row: (
+                    -float(row.get("_hash_score", 0.0)),
+                    str(row.get("memory_id") or ""),
+                ),
+            )
+        ]
+        kylin_ids = [
+            item["memory_id"]
+            for item in sorted(
+                (
+                    row
+                    for row in base_ranked
+                    if float(row.get("_kylin_score", 0.0)) > 0.0
+                ),
+                key=lambda row: (
+                    -float(row.get("_kylin_score", 0.0)),
+                    str(row.get("memory_id") or ""),
+                ),
+            )
+        ]
+        rankings = {"lexical": lexical_ids, "hash": hash_ids, "kylin": kylin_ids}
+        by_id = {str(item["memory_id"]): item for item in base_ranked}
+
+        if intent == QueryIntent.RELATIONAL:
+            graph_result = self.hierarchical_graph_search(
+                clean_query, limit=max(limit * 3, 10)
+            )
+            summary_rows = graph_result.get("layers", {}).get("summary", [])
+            graph_ids = []
+            for summary_row in summary_rows:
+                memory_id = str(summary_row.get("memory_id") or "")
+                if not memory_id or memory_id in graph_ids:
+                    continue
+                graph_ids.append(memory_id)
+                if memory_id in by_id:
+                    continue
+                record = self.meta.get_memory(memory_id)
+                if record and self._retrieval_record_is_eligible(record):
+                    item = dict(record)
+                    item["_base_score"] = 0.0
+                    item["_vector_backend"] = "graph"
+                    by_id[memory_id] = item
+            rankings["graph"] = graph_ids
+
+        weights = {
+            "lexical": 1.25
+            if intent
+            in {
+                QueryIntent.EXACT_LOOKUP,
+                QueryIntent.PREFERENCE,
+                QueryIntent.PROCEDURAL,
+                QueryIntent.TEMPORAL,
+                QueryIntent.RELATIONAL,
+            }
+            else 1.0,
+            "hash": 1.0,
+            "kylin": 1.15,
+            "graph": 1.25 if intent == QueryIntent.RELATIONAL else 0.0,
+        }
+        exact_hits = set()
+        distinctive_hit_ids = {
+            str(item.get("memory_id") or "")
+            for item in base_ranked
+            if int(
+                item.get("_score_breakdown", {}).get(
+                    "distinctive_latin_token_count", 0
+                )
+            )
+            == 1
+            and int(
+                item.get("_score_breakdown", {}).get(
+                    "distinctive_term_hit_count", 0
+                )
+            )
+            == 1
+        }
+        rare_distinctive_hit = len(distinctive_hit_ids) <= 2
+        command_signature_hit_ids = {
+            str(item.get("memory_id") or "")
+            for item in base_ranked
+            if int(
+                item.get("_score_breakdown", {}).get(
+                    "distinctive_latin_token_count", 0
+                )
+            )
+            >= 2
+            and float(
+                item.get("_score_breakdown", {}).get(
+                    "distinctive_term_coverage", 0.0
+                )
+            )
+            >= 0.75
+        }
+        rare_command_signature_hit = len(command_signature_hit_ids) <= 2
+        for item in base_ranked:
+            memory_id = str(item.get("memory_id") or "")
+            phrase_hit = bool(clean_query) and (
+                clean_query in str(item.get("summary") or "")
+                or clean_query in str(item.get("content") or "")
+            )
+            id_hit = intent == QueryIntent.EXACT_LOOKUP and memory_id in exact_ids
+            distinctive_hit = (
+                rare_distinctive_hit and memory_id in distinctive_hit_ids
+            )
+            command_signature_hit = (
+                rare_command_signature_hit
+                and memory_id in command_signature_hit_ids
+            )
+            if phrase_hit or id_hit or distinctive_hit or command_signature_hit:
+                exact_hits.add(memory_id)
+        fused = rrf_fuse(rankings, weights=weights, exact_hits=exact_hits)
+        ranked = []
+        for fused_item in fused:
+            item = by_id.get(fused_item.memory_id)
+            if item is None:
+                continue
+            item["score"] = fused_item.score
+            item["retrieval_explanation"] = {
+                "query_intent": intent.value,
+                "fusion_sources": list(fused_item.sources),
+                "protected_exact_hit": fused_item.protected,
+                "kylin_vector_cached": fused_item.memory_id in persisted_vectors,
+            }
+            ranked.append((fused_item.score, item))
         results = []
         seen = set()
         for score, record in ranked:
@@ -1803,13 +2184,6 @@ class MemGuardService:
                 item["expansion_trace"] = item.pop("_expansion_trace")
             results.append(item)
             seen.add(item["memory_id"])
-        for record in self.meta.graph_search(query, limit=limit):
-            if record["memory_id"] in seen:
-                continue
-            record["score"] = 0.22
-            record["match_source"] = "graph"
-            results.append(record)
-            seen.add(record["memory_id"])
         if not results:
             for record in self.meta.search_text(query, limit=limit):
                 record["score"] = 0.1
@@ -2307,7 +2681,14 @@ class MemGuardService:
                 other += 1
         return cjk + ((latin_like + 3) // 4) + ((other + 1) // 2)
 
-    def _search_candidates(self, query: str, limit: int = 80) -> List[Dict[str, object]]:
+    def _search_candidates(
+        self,
+        query: str,
+        limit: int = 80,
+        *,
+        include_graph: bool = True,
+        include_recent: bool = True,
+    ) -> List[Dict[str, object]]:
         candidate_limit = max(1, int(limit))
         seen = set()
         candidates: List[Dict[str, object]] = []
@@ -2335,14 +2716,23 @@ class MemGuardService:
                     limit=candidate_limit - len(candidates),
                 )
             )
-        if len(candidates) < candidate_limit:
+        if include_graph and len(candidates) < candidate_limit:
             remaining = candidate_limit - len(candidates)
             graph_query = str(expanded.get("expanded_query") or query)
             add_unique(self.meta.graph_search(graph_query, limit=max(10, remaining)))
-        if len(candidates) < candidate_limit:
+        if include_recent and len(candidates) < candidate_limit:
             remaining = candidate_limit - len(candidates)
             add_unique(self.meta.list_recent_memories(remaining, exclude_ids=list(seen)))
         return candidates[:candidate_limit]
+
+    @staticmethod
+    def _retrieval_record_is_eligible(record: Dict[str, object]) -> bool:
+        return (
+            not bool(record.get("deleted"))
+            and str(record.get("governance_state") or "active") == "active"
+            and str(record.get("trust_level") or "trusted")
+            in {"trusted", "verified", "reviewed"}
+        )
 
     def graph_search(self, entity_query: str, limit: int = 10) -> List[Dict[str, object]]:
         results = self.meta.graph_search(entity_query, limit=limit)
@@ -2352,7 +2742,12 @@ class MemGuardService:
     def hierarchical_graph_search(self, entity_query: str, limit: int = 10) -> Dict[str, object]:
         summary_rows = self.meta.graph_search(entity_query, limit=limit)
         if not summary_rows:
-            summary_rows = self.search(entity_query, limit=limit, audit=False)
+            summary_rows = self._search_candidates(
+                entity_query,
+                limit=limit,
+                include_graph=False,
+                include_recent=False,
+            )
 
         summary_layer = []
         entity_relation_layer = []

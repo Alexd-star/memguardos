@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from memguard.eval.metrics import f1, mean, percentile, precision, recall_at_k
 from memguard.ingestion.tool_result import ToolResult
+from memguard.retrieval.hybrid import HybridRetriever
 from memguard.service import MemGuardService
 
 
@@ -338,7 +339,13 @@ def run_latency_load(root: Path, size: int, query_count: int = 100) -> dict:
         service.close()
 
 
-def run_concurrent_search_load(root: Path, size: int, query_count: int = 100, workers: int = 6) -> dict:
+def run_concurrent_search_load(
+    root: Path,
+    size: int,
+    query_count: int = 100,
+    workers: int = 6,
+    embedding_backend: str | None = None,
+) -> dict:
     size = max(1, int(size))
     query_count = max(workers, int(query_count))
     workers = max(1, int(workers))
@@ -371,6 +378,10 @@ def run_concurrent_search_load(root: Path, size: int, query_count: int = 100, wo
 
     def worker(worker_id: int, count: int) -> list[float]:
         service = MemGuardService(store_path=store_path, db_path=db_path)
+        if embedding_backend:
+            service.retriever = HybridRetriever(
+                embedding_backend=embedding_backend
+            )
         worker_latencies = []
         try:
             for idx in range(count):
@@ -407,6 +418,7 @@ def run_concurrent_search_load(root: Path, size: int, query_count: int = 100, wo
         "memory_count": size,
         "query_count": len(latencies),
         "workers": workers,
+        "embedding_backend": embedding_backend or "platform_default",
         "read_path_audit": "disabled_for_latency_measurement",
         "errors": errors,
         "ok": not errors and len(latencies) == query_count and audit.get("ok", False),

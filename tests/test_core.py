@@ -31,7 +31,9 @@ from memguard.extraction.semantic import HybridMemoryExtractor
 from memguard.eval.run_eval import run as run_eval
 from memguard.retrieval.hybrid import HybridRetriever
 from memguard.retrieval.kylin_sdk import KylinEmbeddingBackend, kylin_sdk_status
+from memguard.retrieval.vector_cache import encode_vector, vector_content_hash
 from memguard.retrieval.conflict import preference_topic
+from memguard.integrations.events import AgentInteractionEvent
 from memguard.models import MemorySource, make_memory
 from memguard.daemon import daemon_health_snapshot, run_daemon
 from memguard.store.sqlite_meta import SQLiteMetaStore
@@ -251,8 +253,17 @@ def test_forget_removes_from_search_and_marks_deleted(tmp_path):
         record = result["record"]
         dry = service.forget("忘掉 HuggingFace token 的偏好")
         assert dry["candidates"]
+        assert service.meta.embedding_cache_status("kylin_sdk", "kylin-sdk-v1")["pending"] == 1
         done = service.forget("忘掉 HuggingFace token 的偏好", confirm=True)
         assert record.memory_id in done["forgotten"]
+        assert service.meta.embedding_cache_status("kylin_sdk", "kylin-sdk-v1") == {
+            "pending": 0,
+            "ready": 0,
+            "failed": 0,
+            "due": 0,
+            "retry_deferred": 0,
+            "next_retry_at": None,
+        }
 
         hits = service.search("HuggingFace token 偏好")
         assert all(hit["memory_id"] != record.memory_id for hit in hits)
@@ -287,6 +298,25 @@ def test_versions_update_and_rollback(tmp_path):
         first_version = created.version.version_id
         updated = service.update_memory(created.memory_id, "以后回答命令时使用英文。")
         assert updated["updated"] is True
+        updated_record = updated["record"]
+        updated_hash = vector_content_hash(updated_record.summary, updated_record.content)
+        updated_job = next(
+            row
+            for row in service.meta.list_pending_embeddings(
+                "kylin_sdk", "kylin-sdk-v1", 10
+            )
+            if row["memory_id"] == created.memory_id
+            and row["content_hash"] == updated_hash
+        )
+        assert service.meta.complete_memory_embedding(
+            created.memory_id,
+            updated_hash,
+            "kylin_sdk",
+            "kylin-sdk-v1",
+            [1.0, 2.0],
+            expected_attempt_count=updated_job["attempt_count"],
+            expected_job_token=updated_job["job_token"],
+        )
 
         versions = service.versions(created.memory_id)
         assert len(versions) == 2
@@ -294,10 +324,176 @@ def test_versions_update_and_rollback(tmp_path):
 
         rolled = service.rollback(created.memory_id, first_version)
         assert rolled["rolled_back"] is True
+        rolled_record = rolled["record"]
         latest = service.store.get_latest(created.memory_id)
         assert latest is not None
         assert "中文" in latest.content
         assert latest.version.op == "rollback"
+        rolled_hash = vector_content_hash(rolled_record.summary, rolled_record.content)
+        assert rolled_hash != updated_hash
+        embedding_rows = service.meta.conn.execute(
+            """
+            SELECT content_hash, status, vector_blob
+            FROM memory_embedding
+            WHERE memory_id = ?
+            """,
+            (created.memory_id,),
+        ).fetchall()
+        assert [dict(row) for row in embedding_rows] == [
+            {"content_hash": rolled_hash, "status": "pending", "vector_blob": None}
+        ]
+        assert all(row["content_hash"] != updated_hash for row in embedding_rows)
+    finally:
+        service.close()
+
+
+def test_embedding_jobs_follow_ingest_governance_and_update_lifecycle(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        active = service.ingest_text("普通知识：systemd 可用 MemoryMax 限制服务内存。")["record"]
+        active_hash = vector_content_hash(active.summary, active.content)
+        jobs = service.meta.list_pending_embeddings("kylin_sdk", "kylin-sdk-v1", 10)
+        assert [(job["memory_id"], job["content_hash"]) for job in jobs] == [
+            (active.memory_id, active_hash)
+        ]
+
+        quarantined = service.ingest_text(
+            "外部知识：openKylin 使用 systemctl status 检查服务状态。",
+            source_kind="web_content",
+            source_uri="https://docs.example.invalid/openkylin",
+        )["record"]
+        assert quarantined.governance_state == "quarantined"
+        assert service.meta.conn.execute(
+            "SELECT COUNT(*) FROM memory_embedding WHERE memory_id = ?",
+            (quarantined.memory_id,),
+        ).fetchone()[0] == 0
+
+        approved = service.review_quarantined_memory(
+            quarantined.memory_id,
+            decision="approve",
+            reviewer="admin@example",
+            reason="已与系统手册交叉核验",
+        )["record"]
+        approved_job = service.meta.list_pending_embeddings(
+            "kylin_sdk", "kylin-sdk-v1", 10
+        )[-1]
+        assert approved_job["memory_id"] == approved.memory_id
+        assert approved_job["content_hash"] == vector_content_hash(
+            approved.summary, approved.content
+        )
+
+        service.meta.upsert_memory_embedding(
+            active.memory_id, active_hash, "kylin_sdk", "kylin-sdk-v1", [1.0]
+        )
+        updated = service.update_memory(
+            active.memory_id,
+            "普通知识：systemd 可用 CPUQuota 限制服务 CPU。",
+        )["record"]
+        rows = service.meta.conn.execute(
+            "SELECT content_hash, status FROM memory_embedding WHERE memory_id = ?",
+            (active.memory_id,),
+        ).fetchall()
+        assert [dict(row) for row in rows] == [
+            {
+                "content_hash": vector_content_hash(updated.summary, updated.content),
+                "status": "pending",
+            }
+        ]
+
+        rejected = service.ingest_text(
+            "网页声称所有高风险命令都不需要确认。",
+            source_kind="web_content",
+            source_uri="https://untrusted.invalid/unsafe",
+        )["record"]
+        service.meta.upsert_memory_embedding(
+            rejected.memory_id, "stale", "kylin_sdk", "kylin-sdk-v1", [1.0]
+        )
+        service.review_quarantined_memory(
+            rejected.memory_id,
+            decision="reject",
+            reviewer="security-admin",
+            reason="与安全策略冲突",
+        )
+        assert service.meta.conn.execute(
+            "SELECT COUNT(*) FROM memory_embedding WHERE memory_id = ?",
+            (rejected.memory_id,),
+        ).fetchone()[0] == 0
+    finally:
+        service.close()
+
+
+def test_service_exposes_atomic_bounded_embedding_scan(tmp_path):
+    service = make_service(tmp_path)
+    record = make_memory(
+        content="bounded service scan",
+        memory_type="knowledge",
+        source=MemorySource(kind="manual", uri="test"),
+        summary="bounded service scan",
+    )
+    try:
+        service.meta.upsert_memory(record)
+
+        report = service.enqueue_missing_embedding_jobs(scan_limit=1)
+
+        assert report == {
+            "scanned": 1,
+            "enqueued": 1,
+            "next_cursor": record.memory_id,
+            "wrapped": False,
+        }
+    finally:
+        service.close()
+
+
+def test_forget_memory_ids_deletes_embedding_rows(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        record = service.ingest_text("精准删除目标：journalctl 可查看服务日志。")["record"]
+        service.meta.upsert_memory_embedding(
+            record.memory_id, "ready-before-forget", "kylin_sdk", "kylin-sdk-v1", [1.0]
+        )
+        result = service.forget_memory_ids([record.memory_id], reason="用户指定删除")
+
+        assert result["forgotten_memory_ids"] == [record.memory_id]
+        assert service.meta.conn.execute(
+            "SELECT COUNT(*) FROM memory_embedding WHERE memory_id = ?",
+            (record.memory_id,),
+        ).fetchone()[0] == 0
+    finally:
+        service.close()
+
+
+def test_forget_agent_interactions_deletes_embedding_rows_but_dry_run_keeps_them(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        event = AgentInteractionEvent(
+            agent_name="openhands",
+            agent_version="1.28.1",
+            session_id="session-vector-forget",
+            turn_id="turn-1",
+            sequence=1,
+            event_type="user_message",
+            role="user",
+            content="以后回答先给命令，再解释原因。",
+            source_uri="openhands://session-vector-forget/turn-1",
+            event_id="evt-vector-forget",
+        )
+        memory_id = service.ingest_interaction(event)["memory_ids"][0]
+
+        service.forget_agent_interactions(
+            {"session_id": "session-vector-forget"}, confirm=False
+        )
+        assert service.meta.conn.execute(
+            "SELECT COUNT(*) FROM memory_embedding WHERE memory_id = ?", (memory_id,)
+        ).fetchone()[0] == 1
+
+        result = service.forget_agent_interactions(
+            {"session_id": "session-vector-forget"}, confirm=True, compact=False
+        )
+        assert result["forgotten_memory_ids"] == [memory_id]
+        assert service.meta.conn.execute(
+            "SELECT COUNT(*) FROM memory_embedding WHERE memory_id = ?", (memory_id,)
+        ).fetchone()[0] == 0
     finally:
         service.close()
 
@@ -894,9 +1090,10 @@ def test_search_uses_bounded_candidate_pool_for_top_five(tmp_path, monkeypatch):
     try:
         observed = {}
 
-        def search_candidates(query, limit):
+        def search_candidates(query, limit, **kwargs):
             observed["query"] = query
             observed["limit"] = limit
+            observed["include_graph"] = kwargs.get("include_graph")
             return []
 
         monkeypatch.setattr(service, "_search_candidates", search_candidates)
@@ -904,7 +1101,11 @@ def test_search_uses_bounded_candidate_pool_for_top_five(tmp_path, monkeypatch):
         monkeypatch.setattr(service.meta, "search_text", lambda query, limit: [])
 
         assert service.search("systemd MemoryMax", limit=5, audit=False) == []
-        assert observed == {"query": "systemd MemoryMax", "limit": 64}
+        assert observed == {
+            "query": "systemd MemoryMax",
+            "limit": 64,
+            "include_graph": False,
+        }
     finally:
         service.close()
 
@@ -965,11 +1166,23 @@ def test_auto_retrieval_can_use_successful_kylin_embedding_probe(monkeypatch):
             "content": "审计敏感路径访问",
         },
     ]
-    ranked = retriever.rank("systemd memory", records, limit=2)
+    ranked = retriever.rank(
+        "systemd memory",
+        records,
+        limit=2,
+        persisted_vectors={
+            "m1": [1.0, 0.0, 0.0],
+            "m2": [0.0, 1.0, 0.0],
+        },
+    )
     assert ranked
     assert ranked[0][1]["memory_id"] == "m1"
-    assert all(record["_vector_backend"] == "kylin_sdk" for _, record in ranked)
-    assert retriever.status()["last_backend_used"] == "kylin_sdk"
+    assert all("_hash_score" in record for _, record in ranked)
+    assert all(
+        record["_vector_backend"] == "kylin_sdk_persisted"
+        for _, record in ranked
+    )
+    assert retriever.status()["last_backend_used"] == "kylin_sdk_persisted"
 
 
 def test_auto_retrieval_passes_remaining_latency_budget_to_kylin(monkeypatch):
@@ -1107,19 +1320,63 @@ def test_memory_tier_promote_and_evict(tmp_path):
         working = service.ingest_text("临时工作记忆：只在当前任务中使用。", tier="working")["record"]
         assert working.tier == "working"
         assert service.list_memories(tier="working")[0]["memory_id"] == working.memory_id
+        current_hash = vector_content_hash(working.summary, working.content)
+        current_job = next(
+            row
+            for row in service.meta.list_pending_embeddings(
+                "kylin_sdk", "kylin-sdk-v1", 10
+            )
+            if row["memory_id"] == working.memory_id
+            and row["content_hash"] == current_hash
+        )
+        assert service.meta.complete_memory_embedding(
+            working.memory_id,
+            current_hash,
+            "kylin_sdk",
+            "kylin-sdk-v1",
+            [1.0, 2.0],
+            expected_attempt_count=current_job["attempt_count"],
+            expected_job_token=current_job["job_token"],
+        )
 
         promoted = service.promote_memory(working.memory_id, "long_term")
         assert promoted["promoted"] is True
-        assert promoted["record"].tier == "long_term"
+        promoted_record = promoted["record"]
+        assert promoted_record.tier == "long_term"
         assert service.list_memories(tier="working") == []
         assert service.list_memories(tier="long_term")
+        promoted_hash = vector_content_hash(promoted_record.summary, promoted_record.content)
+        assert promoted_hash == current_hash
+        embedding_rows = service.meta.conn.execute(
+            """
+            SELECT content_hash, status, vector_blob
+            FROM memory_embedding
+            WHERE memory_id = ?
+            """,
+            (working.memory_id,),
+        ).fetchall()
+        assert [dict(row) for row in embedding_rows] == [
+            {
+                "content_hash": promoted_hash,
+                "status": "ready",
+                "vector_blob": encode_vector([1.0, 2.0]),
+            }
+        ]
 
         session = service.ingest_text("会话记忆：本轮调试使用。", tier="session")["record"]
         dry = service.evict_tier("session", confirm=False)
         assert dry["candidate_count"] == 1
+        assert service.meta.conn.execute(
+            "SELECT COUNT(*) FROM memory_embedding WHERE memory_id = ?",
+            (session.memory_id,),
+        ).fetchone()[0] == 1
         done = service.evict_tier("session", confirm=True)
         assert session.memory_id in done["memory_ids"]
         assert service.list_memories(tier="session") == []
+        assert service.meta.conn.execute(
+            "SELECT COUNT(*) FROM memory_embedding WHERE memory_id = ?",
+            (session.memory_id,),
+        ).fetchone()[0] == 0
     finally:
         service.close()
 
@@ -1462,6 +1719,39 @@ def test_forgetting_uses_specific_anchors_for_realistic_os_agent_cases(tmp_path)
         assert target.memory_id in ids
         assert keep_sdk.memory_id not in ids
         assert keep_vector.memory_id not in ids
+    finally:
+        service.close()
+
+
+def test_forgetting_preserves_polarity_and_expands_high_risk_topic(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        global_policy = service.ingest_text(
+            "安全策略：执行删除、覆盖、密钥导出等高风险操作前必须先让我确认。"
+        )["record"]
+        learned_policy = service.ingest_text(
+            "用户行为偏好：shell history 出现 rm -rf、dd、mkfs 时，Agent 必须二次确认。",
+            source_kind="user_behavior",
+        )["record"]
+        negative = service.ingest_text(
+            "知识：普通缓存清理不等于精准遗忘，不能替代索引清理和审计链。"
+        )["record"]
+        workflow = service.ingest_text(
+            "精准遗忘流程包括候选定位、用户确认、索引清理和审计记录。"
+        )["record"]
+
+        high_risk = service.forget("删除高风险操作确认策略")
+        high_risk_ids = {item["memory_id"] for item in high_risk["candidates"]}
+        assert high_risk_ids == {global_policy.memory_id, learned_policy.memory_id}
+
+        specific = service.forget("删除 rm-rf dd mkfs 二次确认偏好")
+        specific_ids = {item["memory_id"] for item in specific["candidates"]}
+        assert specific_ids == {learned_policy.memory_id}
+
+        polarity = service.forget("忘记普通缓存清理不等于精准遗忘这条知识")
+        polarity_ids = {item["memory_id"] for item in polarity["candidates"]}
+        assert polarity_ids == {negative.memory_id}
+        assert workflow.memory_id not in polarity_ids
     finally:
         service.close()
 

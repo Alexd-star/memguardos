@@ -19,6 +19,7 @@ IGNORED_HYGIENE_PARTS = {
     ".ruff_cache",
     ".venv",
     "__pycache__",
+    "artifacts",
     "dist",
     "local_notes",
     "outputs",
@@ -1600,7 +1601,6 @@ def _sha256_file(path: Path) -> str:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
 
 
 

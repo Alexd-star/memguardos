@@ -28,9 +28,9 @@
 {"label":"pref_pytest_fast_feedback","text":"以后修改 Python 项目后，请优先运行 pytest 相关单元测试，再补充 ruff 和文档链接检查。","expected_type":"preference","expected_subtype":"tool_preference"}
 {"label":"pref_answer_no_exaggeration","text":"答辩材料不要夸大 LSM、eBPF、UKUI 深度插件和默认大模型依赖，必须按证据边界表达。","expected_type":"preference","expected_subtype":"output_style"}
 {"label":"knowledge_linux_smoke_portability","text":"在更多 Linux 发行版上做 smoke test 时，应至少验证 Python 版本、SQLite FTS、pytest、memctl doctor 和 demo_smoke。","expected_type":"knowledge","expected_subtype":"workflow"}
-{"label":"pref_real_shell_destructive_confirm","text":"请记住：如果 shell history 中出现 sudo rm -rf、mkfs、dd 等高风险命令，后续执行前必须先二次确认。","expected_type":"preference","expected_subtype":"tool_preference"}
+{"label":"knowledge_shell_history_observation_boundary","text":"证据解释边界：.bash_history 只记录交互式 shell 接收过的命令文本；单凭该文件无法证明命令执行成功，也无法确定命令发起主体。","expected_type":"knowledge","expected_subtype":"fact"}
 {"label":"knowledge_real_audit_log_shadow","text":"真实案例：auditd log type=PATH msg=audit(1710000000.1:42): name=\"/etc/shadow\" nametype=NORMAL key=\"memguard_sensitive\"，应转换为 OS event 并触发敏感阻断。","expected_type":"knowledge","expected_subtype":"case"}
-{"label":"knowledge_real_shell_history_risk","text":"User behavior: shell_command source=.bash_history index=31 command=sudo systemctl restart memguardd category=maintenance","source_kind":"user_behavior","expected_type":"knowledge","expected_subtype":"behavior_risk"}
+{"label":"knowledge_real_shell_history_risk","text":"User behavior: shell_command source=.bash_history index=31 command=sudo systemctl restart memguardd category=maintenance risk=service_disruption；该记录表示可能中断服务的维护行为，生产环境执行前需要确认影响范围。","source_kind":"user_behavior","expected_type":"knowledge","expected_subtype":"behavior_risk"}
 {"label":"pref_real_config_search_tool","text":"手动配置：user.preferences.search_tool=rg；该配置覆盖旧的 grep 仓库搜索偏好。","source_kind":"manual_config","expected_type":"preference","expected_subtype":"tool_preference"}
 {"label":"pref_real_config_answer_style","text":"手动配置：answer.style=concise_with_risk；Linux 运维回答先给命令，再给风险提醒。","source_kind":"manual_config","expected_type":"preference","expected_subtype":"output_style"}
 {"label":"knowledge_real_incident_oom","text":"生产故障案例：memguardd.service was killed by cgroup OOM；修复步骤包括调低并发、执行 compact、检查 MemoryMax 和 journalctl。","expected_type":"knowledge","expected_subtype":"case"}

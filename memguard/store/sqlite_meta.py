@@ -2,8 +2,15 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 import json
 import sqlite3
+from datetime import datetime, timedelta
 
-from memguard.models import MemoryRecord, stable_hash, utc_now
+from memguard.models import MemoryRecord, new_id, stable_hash, utc_now
+from memguard.retrieval.vector_cache import (
+    PersistedVector,
+    decode_vector,
+    encode_vector,
+    vector_content_hash,
+)
 
 
 _ALLOWED_COLUMN_MIGRATIONS = {
@@ -35,6 +42,9 @@ _ALLOWED_COLUMN_MIGRATIONS = {
     ("preference_observations", "task_type", "TEXT NOT NULL DEFAULT ''"),
     ("preference_observations", "scope_agent_name", "TEXT NOT NULL DEFAULT ''"),
     ("preference_observations", "scope_session_id", "TEXT NOT NULL DEFAULT ''"),
+    ("memory_embedding", "attempt_count", "INTEGER NOT NULL DEFAULT 0"),
+    ("memory_embedding", "next_attempt_at", "TEXT NOT NULL DEFAULT ''"),
+    ("memory_embedding", "job_token", "TEXT NOT NULL DEFAULT ''"),
 }
 
 
@@ -44,6 +54,9 @@ class SQLiteMetaStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(str(self.path), timeout=30.0)
         self.conn.row_factory = sqlite3.Row
+        self.conn.create_function(
+            "memguard_content_hash", 2, vector_content_hash, deterministic=True
+        )
         self.conn.execute("PRAGMA busy_timeout = 30000")
         self.conn.execute("PRAGMA temp_store = MEMORY")
         self.conn.execute("PRAGMA cache_size = -32768")
@@ -227,6 +240,18 @@ class SQLiteMetaStore:
         self._ensure_column("preference_observations", "task_type", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("preference_observations", "scope_agent_name", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("preference_observations", "scope_session_id", "TEXT NOT NULL DEFAULT ''")
+        self._init_memory_embedding_schema()
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS embedding_scan_cursor (
+                backend TEXT NOT NULL,
+                model_revision TEXT NOT NULL,
+                last_memory_id TEXT NOT NULL DEFAULT '',
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY(backend, model_revision)
+            )
+            """
+        )
         try:
             self.conn.execute(
                 """
@@ -254,12 +279,18 @@ class SQLiteMetaStore:
             "CREATE INDEX IF NOT EXISTS idx_preference_observations_topic "
             "ON preference_observations(topic, value, created_at)"
         )
+        self.conn.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_memory_embedding_cache_status
+            ON memory_embedding(backend, model_revision, status, updated_at)
+            """
+        )
         self.conn.commit()
 
     def close(self) -> None:
         self.conn.close()
 
-    def upsert_memory(self, record: MemoryRecord) -> None:
+    def _upsert_memory_no_commit(self, record: MemoryRecord) -> None:
         self.conn.execute(
             """
             INSERT INTO memory (
@@ -347,7 +378,48 @@ class SQLiteMetaStore:
         else:
             self.conn.execute("DELETE FROM memory_entity WHERE memory_id = ?", (record.memory_id,))
             self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (record.memory_id,))
-        self.conn.commit()
+
+    def upsert_memory(self, record: MemoryRecord) -> None:
+        with self.conn:
+            self._upsert_memory_no_commit(record)
+
+    def upsert_memory_with_embedding_job(
+        self,
+        record: MemoryRecord,
+        backend: str,
+        model_revision: str,
+        content_hash: str,
+    ) -> None:
+        with self.conn:
+            self._upsert_memory_no_commit(record)
+            if (
+                not record.deleted
+                and record.governance_state == "active"
+                and record.trust_level in {"trusted", "verified", "reviewed"}
+            ):
+                self.conn.execute(
+                    """
+                    DELETE FROM memory_embedding
+                    WHERE memory_id = ?
+                      AND NOT (
+                          content_hash = ? AND backend = ? AND model_revision = ?
+                      )
+                    """,
+                    (record.memory_id, content_hash, backend, model_revision),
+                )
+                now = utc_now()
+                self._enqueue_memory_embedding_no_commit(
+                    record.memory_id,
+                    content_hash,
+                    backend,
+                    model_revision,
+                    now=now,
+                )
+            else:
+                self.conn.execute(
+                    "DELETE FROM memory_embedding WHERE memory_id = ?",
+                    (record.memory_id,),
+                )
 
     def update_tier(self, memory_id: str, tier: str) -> None:
         self.conn.execute(
@@ -365,20 +437,21 @@ class SQLiteMetaStore:
 
     def mark_deleted(self, memory_id: str, superseded_by: Optional[str] = None) -> None:
         now = utc_now()
-        self.conn.execute(
-            """
-            UPDATE memory
-            SET deleted = 1, content = '', summary = 'FORGOTTEN',
-                valid_to = ?, superseded_by = ?, updated_at = ?
-            WHERE memory_id = ?
-            """,
-            (now, superseded_by, now, memory_id),
-        )
-        if self._fts_enabled:
-            self.conn.execute("DELETE FROM memory_fts WHERE memory_id = ?", (memory_id,))
-        self.conn.execute("DELETE FROM memory_entity WHERE memory_id = ?", (memory_id,))
-        self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (memory_id,))
-        self.conn.commit()
+        with self.conn:
+            self.conn.execute(
+                """
+                UPDATE memory
+                SET deleted = 1, content = '', summary = 'FORGOTTEN',
+                    valid_to = ?, superseded_by = ?, updated_at = ?
+                WHERE memory_id = ?
+                """,
+                (now, superseded_by, now, memory_id),
+            )
+            if self._fts_enabled:
+                self.conn.execute("DELETE FROM memory_fts WHERE memory_id = ?", (memory_id,))
+            self.conn.execute("DELETE FROM memory_entity WHERE memory_id = ?", (memory_id,))
+            self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (memory_id,))
+            self.conn.execute("DELETE FROM memory_embedding WHERE memory_id = ?", (memory_id,))
 
     def list_memories(self, include_deleted: bool = False, tier: Optional[str] = None, limit: Optional[int] = None, governance_state: Optional[str] = "active") -> List[Dict[str, Any]]:
         sql = "SELECT * FROM memory"
@@ -422,6 +495,549 @@ class SQLiteMetaStore:
     def get_memory(self, memory_id: str) -> Optional[Dict[str, Any]]:
         row = self.conn.execute("SELECT * FROM memory WHERE memory_id = ?", (memory_id,)).fetchone()
         return dict(row) if row else None
+
+    def _enqueue_memory_embedding_no_commit(
+        self,
+        memory_id: str,
+        content_hash: str,
+        backend: str,
+        model_revision: str,
+        *,
+        now: Optional[str] = None,
+    ) -> bool:
+        timestamp = now or utc_now()
+        cursor = self.conn.execute(
+            """
+            INSERT INTO memory_embedding (
+                memory_id, content_hash, backend, model_revision, dimension,
+                vector_blob, status, failure_reason, created_at, updated_at,
+                attempt_count, next_attempt_at, job_token
+            )
+            SELECT ?, ?, ?, ?, 0, NULL, 'pending', '', ?, ?, 0, '', ?
+            WHERE EXISTS (
+                SELECT 1
+                FROM memory
+                WHERE memory_id = ?
+                  AND deleted = 0
+                  AND governance_state = 'active'
+                  AND trust_level IN ('trusted', 'verified', 'reviewed')
+                  AND memguard_content_hash(summary, content) = ?
+            )
+            ON CONFLICT(memory_id, backend, model_revision, content_hash) DO NOTHING
+            """,
+            (
+                memory_id,
+                content_hash,
+                backend,
+                model_revision,
+                timestamp,
+                timestamp,
+                new_id("embjob"),
+                memory_id,
+                content_hash,
+            ),
+        )
+        return cursor.rowcount == 1
+
+    def enqueue_memory_embedding(
+        self,
+        memory_id: str,
+        content_hash: str,
+        backend: str,
+        model_revision: str,
+    ) -> bool:
+        with self.conn:
+            return self._enqueue_memory_embedding_no_commit(
+                memory_id, content_hash, backend, model_revision
+            )
+
+    def list_pending_embeddings(
+        self,
+        backend: str,
+        model_revision: str,
+        limit: int,
+    ) -> List[Dict[str, Any]]:
+        effective_limit = int(limit)
+        if effective_limit <= 0:
+            return []
+        if effective_limit == 1:
+            rows = self.conn.execute(
+                """
+                SELECT embedding.memory_id, embedding.content_hash,
+                       embedding.backend, embedding.model_revision,
+                       embedding.status, embedding.failure_reason,
+                       embedding.created_at, embedding.updated_at,
+                       embedding.attempt_count, embedding.next_attempt_at,
+                       embedding.job_token,
+                       memory.summary, memory.content
+                FROM memory_embedding AS embedding
+                JOIN memory ON memory.memory_id = embedding.memory_id
+                WHERE embedding.backend = ? AND embedding.model_revision = ?
+                  AND embedding.status IN ('pending', 'failed')
+                  AND (
+                      embedding.status = 'pending'
+                      OR embedding.next_attempt_at = ''
+                      OR embedding.next_attempt_at <= ?
+                  )
+                  AND memory.deleted = 0
+                  AND memory.governance_state = 'active'
+                  AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
+                  AND embedding.content_hash =
+                      memguard_content_hash(memory.summary, memory.content)
+                ORDER BY embedding.updated_at, embedding.memory_id, embedding.content_hash
+                LIMIT 1
+                """,
+                (backend, model_revision, utc_now()),
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+        def select_rows(status: str, row_limit: int, offset: int = 0) -> List[Dict[str, Any]]:
+            due_clause = "" if status == "pending" else "AND (embedding.next_attempt_at = '' OR embedding.next_attempt_at <= ?)"
+            params: List[Any] = [backend, model_revision]
+            if status == "failed":
+                params.append(utc_now())
+            params.extend([row_limit, offset])
+            rows = self.conn.execute(
+                """
+                SELECT embedding.memory_id, embedding.content_hash,
+                       embedding.backend, embedding.model_revision,
+                       embedding.status, embedding.failure_reason,
+                       embedding.created_at, embedding.updated_at,
+                       embedding.attempt_count, embedding.next_attempt_at,
+                       embedding.job_token,
+                       memory.summary, memory.content
+                FROM memory_embedding AS embedding
+                JOIN memory ON memory.memory_id = embedding.memory_id
+                WHERE embedding.backend = ? AND embedding.model_revision = ?
+                  AND embedding.status = '%s'
+                  %s
+                  AND memory.deleted = 0
+                  AND memory.governance_state = 'active'
+                  AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
+                  AND embedding.content_hash =
+                      memguard_content_hash(memory.summary, memory.content)
+                ORDER BY embedding.updated_at, embedding.memory_id, embedding.content_hash
+                LIMIT ? OFFSET ?
+                """ % (status, due_clause),
+                params,
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+        pending_limit = effective_limit - 1
+        pending = select_rows("pending", pending_limit)
+        failed = select_rows("failed", 1)
+        selected = pending + failed
+        remaining = effective_limit - len(selected)
+        if remaining > 0:
+            if failed:
+                selected.extend(select_rows("failed", remaining, offset=1))
+            else:
+                selected.extend(select_rows("pending", remaining, offset=len(pending)))
+        return selected
+
+    def mark_embedding_failed(
+        self,
+        memory_id: str,
+        content_hash: str,
+        backend: str,
+        model_revision: str,
+        reason: str,
+        *,
+        expected_attempt_count: int,
+        expected_job_token: str,
+    ) -> bool:
+        with self.conn:
+            previous_attempts = int(expected_attempt_count)
+            attempt_count = previous_attempts + 1
+            delay_seconds = min(300, 2 ** min(previous_attempts, 9))
+            now = utc_now()
+            parsed_now = datetime.fromisoformat(now.replace("Z", "+00:00"))
+            next_attempt_at = (parsed_now + timedelta(seconds=delay_seconds)).isoformat()
+            cursor = self.conn.execute(
+                """
+                UPDATE memory_embedding
+                SET status = 'failed', vector_blob = NULL, dimension = 0,
+                    failure_reason = ?, attempt_count = ?, next_attempt_at = ?,
+                    updated_at = ?
+                WHERE memory_id = ? AND content_hash = ?
+                  AND backend = ? AND model_revision = ?
+                  AND status IN ('pending', 'failed')
+                  AND attempt_count = ?
+                  AND job_token = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM memory
+                      WHERE memory.memory_id = memory_embedding.memory_id
+                        AND memory.deleted = 0
+                        AND memory.governance_state = 'active'
+                        AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
+                        AND memguard_content_hash(memory.summary, memory.content) =
+                            memory_embedding.content_hash
+                  )
+                """,
+                (
+                    str(reason)[:500],
+                    attempt_count,
+                    next_attempt_at,
+                    now,
+                    memory_id,
+                    content_hash,
+                    backend,
+                    model_revision,
+                    previous_attempts,
+                    expected_job_token,
+                ),
+            )
+            return cursor.rowcount == 1
+
+    def complete_memory_embedding(
+        self,
+        memory_id: str,
+        content_hash: str,
+        backend: str,
+        model_revision: str,
+        vector: List[float],
+        *,
+        expected_attempt_count: int,
+        expected_job_token: str,
+    ) -> bool:
+        vector_blob = encode_vector(vector)
+        with self.conn:
+            cursor = self.conn.execute(
+                """
+                UPDATE memory_embedding
+                SET dimension = ?, vector_blob = ?, status = 'ready',
+                    failure_reason = '', next_attempt_at = '', updated_at = ?
+                WHERE memory_id = ? AND content_hash = ?
+                  AND backend = ? AND model_revision = ?
+                  AND status IN ('pending', 'failed')
+                  AND attempt_count = ?
+                  AND job_token = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM memory
+                      WHERE memory.memory_id = memory_embedding.memory_id
+                        AND memory.deleted = 0
+                        AND memory.governance_state = 'active'
+                        AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
+                        AND memguard_content_hash(memory.summary, memory.content) =
+                            memory_embedding.content_hash
+                  )
+                """,
+                (
+                    len(vector),
+                    sqlite3.Binary(vector_blob),
+                    utc_now(),
+                    memory_id,
+                    content_hash,
+                    backend,
+                    model_revision,
+                    int(expected_attempt_count),
+                    expected_job_token,
+                ),
+            )
+            return cursor.rowcount == 1
+
+    def upsert_memory_embedding(
+        self,
+        memory_id: str,
+        content_hash: str,
+        backend: str,
+        model_revision: str,
+        vector: List[float],
+    ) -> None:
+        # Explicit import/test API. Workers must use complete_memory_embedding so stale
+        # results cannot recreate deleted or superseded jobs.
+        vector_blob = encode_vector(vector)
+        now = utc_now()
+        self.conn.execute(
+            """
+            INSERT INTO memory_embedding (
+                memory_id, content_hash, backend, model_revision, dimension,
+                vector_blob, status, failure_reason, created_at, updated_at,
+                job_token
+            ) VALUES (?, ?, ?, ?, ?, ?, 'ready', '', ?, ?, ?)
+            ON CONFLICT(memory_id, backend, model_revision, content_hash) DO UPDATE SET
+                dimension=excluded.dimension,
+                vector_blob=excluded.vector_blob,
+                status='ready',
+                failure_reason='',
+                updated_at=excluded.updated_at,
+                job_token=excluded.job_token
+            """,
+            (
+                memory_id,
+                content_hash,
+                backend,
+                model_revision,
+                len(vector),
+                sqlite3.Binary(vector_blob),
+                now,
+                now,
+                new_id("embjob"),
+            ),
+        )
+        self.conn.commit()
+
+    def _select_embedding_scan_window(
+        self,
+        last_memory_id: str,
+        scan_limit: int,
+    ) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT memory_id, summary, content
+            FROM memory
+            WHERE deleted = 0
+              AND governance_state = 'active'
+              AND trust_level IN ('trusted', 'verified', 'reviewed')
+              AND memory_id > ?
+            ORDER BY memory_id
+            LIMIT ?
+            """,
+            (last_memory_id, scan_limit),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def enqueue_missing_embedding_jobs(
+        self,
+        backend: str,
+        model_revision: str,
+        scan_limit: int,
+    ) -> Dict[str, Any]:
+        effective_limit = int(scan_limit)
+        if effective_limit <= 0:
+            cursor_row = self.conn.execute(
+                """
+                SELECT last_memory_id
+                FROM embedding_scan_cursor
+                WHERE backend = ? AND model_revision = ?
+                """,
+                (backend, model_revision),
+            ).fetchone()
+            last_memory_id = str(cursor_row["last_memory_id"]) if cursor_row else ""
+            return {
+                "scanned": 0,
+                "enqueued": 0,
+                "next_cursor": last_memory_id,
+                "wrapped": False,
+            }
+
+        with self.conn:
+            self.conn.execute("BEGIN IMMEDIATE")
+            cursor_row = self.conn.execute(
+                """
+                SELECT last_memory_id
+                FROM embedding_scan_cursor
+                WHERE backend = ? AND model_revision = ?
+                """,
+                (backend, model_revision),
+            ).fetchone()
+            last_memory_id = str(cursor_row["last_memory_id"]) if cursor_row else ""
+            rows = self._select_embedding_scan_window(last_memory_id, effective_limit)
+            enqueued = 0
+            for row in rows:
+                content_hash = vector_content_hash(row["summary"], row["content"])
+                if self._enqueue_memory_embedding_no_commit(
+                    row["memory_id"],
+                    content_hash,
+                    backend,
+                    model_revision,
+                ):
+                    enqueued += 1
+
+            wrapped = len(rows) < effective_limit
+            next_cursor = "" if wrapped else str(rows[-1]["memory_id"])
+            self.conn.execute(
+                """
+                INSERT INTO embedding_scan_cursor (
+                    backend, model_revision, last_memory_id, updated_at
+                ) VALUES (?, ?, ?, ?)
+                ON CONFLICT(backend, model_revision) DO UPDATE SET
+                    last_memory_id=excluded.last_memory_id,
+                    updated_at=excluded.updated_at
+                """,
+                (backend, model_revision, next_cursor, utc_now()),
+            )
+        return {
+            "scanned": len(rows),
+            "enqueued": enqueued,
+            "next_cursor": next_cursor,
+            "wrapped": wrapped,
+        }
+
+    def list_memories_missing_embeddings(
+        self,
+        backend: str,
+        model_revision: str,
+        limit: int,
+    ) -> List[Dict[str, Any]]:
+        effective_limit = int(limit)
+        if effective_limit <= 0:
+            return []
+        rows = self._select_embedding_scan_window("", effective_limit)
+        missing = []
+        for row in rows:
+            content_hash = vector_content_hash(row["summary"], row["content"])
+            exists = self.conn.execute(
+                """
+                SELECT 1
+                FROM memory_embedding
+                WHERE memory_id = ? AND content_hash = ?
+                  AND backend = ? AND model_revision = ?
+                LIMIT 1
+                """,
+                (row["memory_id"], content_hash, backend, model_revision),
+            ).fetchone()
+            if exists is None:
+                row["content_hash"] = content_hash
+                missing.append(row)
+        return missing
+
+    def get_memory_embedding(
+        self,
+        memory_id: str,
+        content_hash: str,
+        backend: str,
+        model_revision: str,
+    ) -> Optional[PersistedVector]:
+        row = self.conn.execute(
+            """
+            SELECT embedding.memory_id, embedding.content_hash, embedding.backend,
+                   embedding.model_revision, embedding.dimension,
+                   embedding.vector_blob, embedding.status, embedding.last_used_at
+            FROM memory_embedding AS embedding
+            JOIN memory ON memory.memory_id = embedding.memory_id
+            WHERE embedding.memory_id = ? AND embedding.content_hash = ?
+              AND embedding.backend = ? AND embedding.model_revision = ?
+              AND embedding.status = 'ready'
+              AND memory.deleted = 0
+              AND memory.governance_state = 'active'
+              AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
+              AND embedding.content_hash =
+                  memguard_content_hash(memory.summary, memory.content)
+            """,
+            (memory_id, content_hash, backend, model_revision),
+        ).fetchone()
+        if row is None or row["vector_blob"] is None:
+            return None
+
+        persisted = PersistedVector(
+            memory_id=row["memory_id"],
+            content_hash=row["content_hash"],
+            backend=row["backend"],
+            model_revision=row["model_revision"],
+            dimension=row["dimension"],
+            vector=decode_vector(row["vector_blob"], row["dimension"]),
+            status=row["status"],
+        )
+        now = utc_now()
+        should_touch = row["last_used_at"] is None
+        if not should_touch:
+            try:
+                elapsed = datetime.fromisoformat(now) - datetime.fromisoformat(
+                    row["last_used_at"]
+                )
+                should_touch = elapsed.total_seconds() >= 60
+            except (TypeError, ValueError):
+                should_touch = True
+        if should_touch:
+            self.conn.execute(
+                """
+                UPDATE memory_embedding SET last_used_at = ?
+                WHERE memory_id = ? AND content_hash = ?
+                  AND backend = ? AND model_revision = ?
+                  AND status = 'ready' AND vector_blob IS NOT NULL
+                """,
+                (now, memory_id, content_hash, backend, model_revision),
+            )
+            self.conn.commit()
+        return persisted
+
+    def get_memory_embeddings(
+        self,
+        memory_hashes: Dict[str, str],
+        backend: str,
+        model_revision: str,
+    ) -> Dict[str, List[float]]:
+        """Load current, governed vectors for a candidate set in one query."""
+        if not memory_hashes:
+            return {}
+        memory_ids = list(memory_hashes)
+        placeholders = ",".join("?" for _ in memory_ids)
+        rows = self.conn.execute(
+            f"""
+            SELECT embedding.memory_id, embedding.content_hash,
+                   embedding.dimension, embedding.vector_blob
+            FROM memory_embedding AS embedding
+            JOIN memory ON memory.memory_id = embedding.memory_id
+            WHERE embedding.memory_id IN ({placeholders})
+              AND embedding.backend = ? AND embedding.model_revision = ?
+              AND embedding.status = 'ready' AND embedding.vector_blob IS NOT NULL
+              AND memory.deleted = 0
+              AND memory.governance_state = 'active'
+              AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
+              AND embedding.content_hash =
+                  memguard_content_hash(memory.summary, memory.content)
+            """,
+            [*memory_ids, backend, model_revision],
+        ).fetchall()
+        vectors: Dict[str, List[float]] = {}
+        for row in rows:
+            memory_id = str(row["memory_id"])
+            if memory_hashes.get(memory_id) != row["content_hash"]:
+                continue
+            try:
+                vectors[memory_id] = decode_vector(
+                    row["vector_blob"], int(row["dimension"])
+                )
+            except (TypeError, ValueError):
+                # A damaged cache row must not break the retrieval read path.
+                continue
+        return vectors
+
+    def delete_memory_embeddings(self, memory_id: str) -> int:
+        cursor = self.conn.execute(
+            "DELETE FROM memory_embedding WHERE memory_id = ?", (memory_id,)
+        )
+        self.conn.commit()
+        return cursor.rowcount
+
+    def embedding_cache_status(self, backend: str, model_revision: str) -> Dict[str, Any]:
+        now = utc_now()
+        row = self.conn.execute(
+            """
+            SELECT
+                SUM(CASE WHEN embedding.status = 'pending' THEN 1 ELSE 0 END) AS pending,
+                SUM(CASE WHEN embedding.status = 'ready' THEN 1 ELSE 0 END) AS ready,
+                SUM(CASE WHEN embedding.status = 'failed' THEN 1 ELSE 0 END) AS failed,
+                SUM(CASE WHEN embedding.status = 'pending' THEN 1 ELSE 0 END) +
+                SUM(CASE WHEN embedding.status = 'failed' AND
+                    (embedding.next_attempt_at = '' OR embedding.next_attempt_at <= ?)
+                    THEN 1 ELSE 0 END) AS due,
+                SUM(CASE WHEN embedding.status = 'failed' AND
+                    embedding.next_attempt_at > ? THEN 1 ELSE 0 END) AS retry_deferred,
+                MIN(CASE WHEN embedding.status = 'failed' AND
+                    embedding.next_attempt_at > ? THEN embedding.next_attempt_at END) AS next_retry_at
+            FROM memory_embedding AS embedding
+            JOIN memory ON memory.memory_id = embedding.memory_id
+            WHERE embedding.backend = ? AND embedding.model_revision = ?
+              AND memory.deleted = 0
+              AND memory.governance_state = 'active'
+              AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
+              AND embedding.content_hash =
+                  memguard_content_hash(memory.summary, memory.content)
+            """,
+            (now, now, now, backend, model_revision),
+        ).fetchone()
+        return {
+            "pending": int(row["pending"] or 0),
+            "ready": int(row["ready"] or 0),
+            "failed": int(row["failed"] or 0),
+            "due": int(row["due"] or 0),
+            "retry_deferred": int(row["retry_deferred"] or 0),
+            "next_retry_at": row["next_retry_at"],
+        }
 
     def find_active_memory_by_content(self, content: str, scope: str) -> Optional[Dict[str, Any]]:
         row = self.conn.execute(
@@ -1036,6 +1652,240 @@ class SQLiteMetaStore:
             return ""
         return row["event_hash"] or ""
 
+    def _create_memory_embedding_table(
+        self, table: str, *, if_not_exists: bool = False
+    ) -> None:
+        if table not in {"memory_embedding", "memory_embedding_rebuild"}:
+            raise ValueError("unapproved embedding table: %s" % table)
+        clause = "IF NOT EXISTS " if if_not_exists else ""
+        self.conn.execute(
+            """
+            CREATE TABLE %s%s (
+                memory_id TEXT NOT NULL,
+                content_hash TEXT NOT NULL,
+                backend TEXT NOT NULL,
+                model_revision TEXT NOT NULL,
+                dimension INTEGER NOT NULL,
+                vector_blob BLOB,
+                status TEXT NOT NULL CHECK(status IN ('pending', 'ready', 'failed')),
+                failure_reason TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                last_used_at TEXT,
+                attempt_count INTEGER NOT NULL DEFAULT 0,
+                next_attempt_at TEXT NOT NULL DEFAULT '',
+                job_token TEXT NOT NULL,
+                CHECK(
+                    status != 'ready'
+                    OR (
+                        vector_blob IS NOT NULL
+                        AND dimension > 0
+                        AND length(vector_blob) = dimension * 4
+                    )
+                ),
+                PRIMARY KEY(memory_id, backend, model_revision, content_hash)
+            )
+            """
+            % (clause, table)
+        )
+
+    @staticmethod
+    def _memory_embedding_needs_rebuild(
+        table_info: Dict[str, sqlite3.Row], table_sql: str
+    ) -> bool:
+        required_columns = {
+            "memory_id",
+            "content_hash",
+            "backend",
+            "model_revision",
+            "dimension",
+            "vector_blob",
+            "status",
+            "failure_reason",
+            "created_at",
+            "updated_at",
+            "last_used_at",
+            "attempt_count",
+            "next_attempt_at",
+            "job_token",
+        }
+        if not required_columns.issubset(table_info):
+            return True
+        required_not_null = required_columns - {"vector_blob", "last_used_at"}
+        if any(not table_info[name]["notnull"] for name in required_not_null):
+            return True
+        if table_info["vector_blob"]["notnull"]:
+            return True
+        empty_defaults = ("failure_reason", "next_attempt_at")
+        if any(table_info[name]["dflt_value"] != "''" for name in empty_defaults):
+            return True
+        if str(table_info["attempt_count"]["dflt_value"]).strip("() ") != "0":
+            return True
+        if table_info["job_token"]["dflt_value"] is not None:
+            return True
+        primary_key = sorted(
+            (
+                (row["pk"], name)
+                for name, row in table_info.items()
+                if row["pk"]
+            )
+        )
+        if [name for _, name in primary_key] != [
+            "memory_id",
+            "backend",
+            "model_revision",
+            "content_hash",
+        ]:
+            return True
+        normalized_sql = "".join((table_sql or "").lower().split())
+        required_constraints = (
+            "check(statusin('pending','ready','failed'))",
+            "check(status!='ready'or(vector_blobisnotnullanddimension>0"
+            "andlength(vector_blob)=dimension*4))",
+        )
+        return any(fragment not in normalized_sql for fragment in required_constraints)
+
+    def _rebuild_memory_embedding(self, old_columns: set) -> None:
+        source_cursor = self.conn.execute("SELECT * FROM memory_embedding")
+        self.conn.execute("DROP TABLE IF EXISTS memory_embedding_rebuild")
+        self._create_memory_embedding_table("memory_embedding_rebuild")
+        used_tokens = set()
+        while rows := source_cursor.fetchmany(256):
+            for row in rows:
+                status = row["status"] if "status" in old_columns else ""
+                if status not in {"pending", "ready", "failed"}:
+                    continue
+                dimension = row["dimension"] if "dimension" in old_columns else 0
+                vector_blob = (
+                    row["vector_blob"] if "vector_blob" in old_columns else None
+                )
+                if status == "ready":
+                    try:
+                        dimension = int(dimension)
+                        valid_ready = (
+                            vector_blob is not None
+                            and dimension > 0
+                            and len(vector_blob) == dimension * 4
+                        )
+                    except (TypeError, ValueError):
+                        valid_ready = False
+                    if not valid_ready:
+                        continue
+                else:
+                    dimension = 0
+                    vector_blob = None
+
+                token = row["job_token"] if "job_token" in old_columns else ""
+                token = str(token or "")
+                while not token or token in used_tokens:
+                    token = new_id("embjob")
+                used_tokens.add(token)
+                failure_reason = (
+                    row["failure_reason"] if "failure_reason" in old_columns else ""
+                )
+                attempt_count = (
+                    row["attempt_count"] if "attempt_count" in old_columns else 0
+                )
+                next_attempt_at = (
+                    row["next_attempt_at"] if "next_attempt_at" in old_columns else ""
+                )
+                self.conn.execute(
+                    """
+                    INSERT INTO memory_embedding_rebuild (
+                        memory_id, content_hash, backend, model_revision, dimension,
+                        vector_blob, status, failure_reason, created_at, updated_at,
+                        last_used_at, attempt_count, next_attempt_at, job_token
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        row["memory_id"],
+                        row["content_hash"],
+                        row["backend"],
+                        row["model_revision"],
+                        dimension,
+                        vector_blob,
+                        status,
+                        failure_reason or "",
+                        row["created_at"],
+                        row["updated_at"],
+                        row["last_used_at"] if "last_used_at" in old_columns else None,
+                        attempt_count if attempt_count is not None else 0,
+                        next_attempt_at or "",
+                        token,
+                    ),
+                )
+        source_cursor.close()
+        self.conn.execute("DROP TABLE memory_embedding")
+        self.conn.execute(
+            "ALTER TABLE memory_embedding_rebuild RENAME TO memory_embedding"
+        )
+
+    def _init_memory_embedding_schema(self) -> None:
+        try:
+            self.conn.execute("BEGIN IMMEDIATE")
+            self._create_memory_embedding_table(
+                "memory_embedding", if_not_exists=True
+            )
+            table_info = {
+                row["name"]: row
+                for row in self.conn.execute(
+                    "PRAGMA table_info(memory_embedding)"
+                ).fetchall()
+            }
+            table_row = self.conn.execute(
+                """
+                SELECT sql
+                FROM sqlite_master
+                WHERE type = 'table' AND name = 'memory_embedding'
+                """
+            ).fetchone()
+            table_sql = table_row["sql"] if table_row else ""
+            if self._memory_embedding_needs_rebuild(table_info, table_sql):
+                self._rebuild_memory_embedding(set(table_info))
+
+            self.conn.execute(
+                """
+                DELETE FROM memory_embedding
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM memory
+                    WHERE memory.memory_id = memory_embedding.memory_id
+                      AND memory.deleted = 0
+                      AND memory.governance_state = 'active'
+                      AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
+                      AND memguard_content_hash(memory.summary, memory.content) =
+                          memory_embedding.content_hash
+                )
+                """
+            )
+            legacy_jobs = self.conn.execute(
+                """
+                SELECT memory_id, backend, model_revision, content_hash
+                FROM memory_embedding
+                WHERE job_token = ''
+                """
+            ).fetchall()
+            for row in legacy_jobs:
+                self.conn.execute(
+                    """
+                    UPDATE memory_embedding
+                    SET job_token = ?
+                    WHERE memory_id = ? AND backend = ? AND model_revision = ?
+                      AND content_hash = ? AND job_token = ''
+                    """,
+                    (
+                        new_id("embjob"),
+                        row["memory_id"],
+                        row["backend"],
+                        row["model_revision"],
+                        row["content_hash"],
+                    ),
+                )
+            self.conn.commit()
+        except Exception:
+            self.conn.rollback()
+            raise
+
     def _ensure_column(self, table: str, column: str, declaration: str) -> None:
         migration = (table, column, declaration)
         if migration not in _ALLOWED_COLUMN_MIGRATIONS:
@@ -1043,9 +1893,25 @@ class SQLiteMetaStore:
         # The complete table/column/declaration tuple is matched against a fixed schema allowlist.
         rows = self.conn.execute("PRAGMA table_info(%s)" % table).fetchall()
         names = {row["name"] for row in rows}
-        if column not in names:
-            self.conn.execute("ALTER TABLE %s ADD COLUMN %s %s" % migration)
+        if column in names:
+            return
+        try:
+            self.conn.execute("BEGIN IMMEDIATE")
+            rows = self.conn.execute("PRAGMA table_info(%s)" % table).fetchall()
+            names = {row["name"] for row in rows}
+            if column not in names:
+                self.conn.execute("ALTER TABLE %s ADD COLUMN %s %s" % migration)
             self.conn.commit()
+        except sqlite3.OperationalError as exc:
+            self.conn.rollback()
+            if "duplicate column name" not in str(exc).lower():
+                raise
+            rows = self.conn.execute("PRAGMA table_info(%s)" % table).fetchall()
+            if column not in {row["name"] for row in rows}:
+                raise
+        except Exception:
+            self.conn.rollback()
+            raise
 
     def _upsert_graph(self, record: MemoryRecord) -> None:
         self.conn.execute("DELETE FROM memory_entity WHERE memory_id = ?", (record.memory_id,))

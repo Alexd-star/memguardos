@@ -1,5 +1,8 @@
+import pytest
+
 from memguard.eval.ablation import run_ablation, to_markdown
 from memguard.eval.performance_suite import summarize_concurrent_trials
+from memguard.retrieval import hybrid
 
 
 def test_ablation_uses_shared_dataset_and_reports_required_variants(tmp_path):
@@ -12,6 +15,10 @@ def test_ablation_uses_shared_dataset_and_reports_required_variants(tmp_path):
     assert result["protocol"]["same_dataset_for_all_variants"] is True
     assert result["protocol"]["same_query_order_for_all_variants"] is True
     assert result["protocol"]["top_k"] == 5
+    assert result["protocol"]["backend_isolation"] == {
+        "baseline_variants": "hash",
+        "kylin_persisted": "kylin_sdk_with_persisted_candidate_vectors",
+    }
     assert result["dataset"]["seed_count"] > 0
     assert result["dataset"]["query_count"] > 0
     assert len(result["dataset"]["seed_sha256"]) == 64
@@ -21,11 +28,21 @@ def test_ablation_uses_shared_dataset_and_reports_required_variants(tmp_path):
     assert set(variants) == {
         "text_only",
         "hybrid_no_graph",
+        "rrf_no_graph",
+        "rrf_selective_graph",
+        "kylin_persisted",
         "full_no_cache",
         "full_warm_cache",
         "full_kylin_sdk",
     }
-    for name in ("text_only", "hybrid_no_graph", "full_no_cache", "full_warm_cache"):
+    for name in (
+        "text_only",
+        "hybrid_no_graph",
+        "rrf_no_graph",
+        "rrf_selective_graph",
+        "full_no_cache",
+        "full_warm_cache",
+    ):
         metrics = variants[name]
         assert metrics["status"] == "completed"
         assert metrics["query_count"] == result["dataset"]["query_count"] * 2
@@ -38,6 +55,29 @@ def test_ablation_uses_shared_dataset_and_reports_required_variants(tmp_path):
 
     assert variants["full_kylin_sdk"]["status"] == "skipped"
     assert variants["full_kylin_sdk"]["reason"] == "disabled_by_caller"
+    assert variants["kylin_persisted"]["status"] == "skipped"
+    assert variants["kylin_persisted"]["reason"] == "disabled_by_caller"
+
+
+def test_non_kylin_ablation_never_invokes_platform_default_sdk(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setattr(hybrid, "_platform_default_backend", lambda: "auto")
+    monkeypatch.setattr(
+        hybrid.KylinEmbeddingProvider,
+        "vector",
+        lambda *args, **kwargs: pytest.fail(
+            "non-Kylin ablation must not invoke the platform SDK"
+        ),
+    )
+
+    result = run_ablation(
+        work_dir=tmp_path,
+        repetitions=1,
+        include_kylin=False,
+    )
+
+    assert result["variants"]["rrf_selective_graph"]["status"] == "completed"
 
 
 def test_ablation_reports_cold_and_warm_process_measurements(tmp_path):

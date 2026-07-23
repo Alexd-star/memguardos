@@ -1,0 +1,508 @@
+{
+  "schema_version": "retrieval-evidence-v2",
+  "git_head": "fb7378a4fe0bd8ce80f3a82878668150599c8086",
+  "datasets": {
+    "seed": {
+      "path": "D:\\Luo_docs\\竞赛\\研创赛\\memguardos\\.worktrees\\ukui-color-refinement\\data\\benchmarks\\memory_seed.jsonl",
+      "sha256": "f2b9297977587da8bba1081d5f5b5cae67459d7b95af7e521352c5450bc82b11"
+    },
+    "query": {
+      "path": "D:\\Luo_docs\\竞赛\\研创赛\\memguardos\\.worktrees\\ukui-color-refinement\\data\\benchmarks\\retrieval.jsonl",
+      "sha256": "ffb171affbde784c58e925a752892df91d06dc0156adfe0dfab11d2d3989ca2d"
+    }
+  },
+  "protocol": {
+    "rounds": 3,
+    "memory_count": 1000,
+    "queries_per_round": 120,
+    "workers": 6,
+    "reporting": "all raw rounds plus worst-case gate"
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "started_at_epoch": 1784800476.8779404,
+      "gate_metrics": {
+        "variant": "rrf_selective_graph",
+        "recall_at_5": 1.0,
+        "p95_latency_ms": 123.408,
+        "p99_latency_ms": 128.68,
+        "ok": true
+      },
+      "ablation": {
+        "protocol": {
+          "same_dataset_for_all_variants": true,
+          "same_query_order_for_all_variants": true,
+          "top_k": 5,
+          "repetitions": 1,
+          "latency_clock": "time.perf_counter",
+          "cache_policy": {
+            "text_only": "no_application_result_cache",
+            "hybrid_no_graph": "no_application_result_cache",
+            "full_no_cache": "clear_before_each_query",
+            "full_warm_cache": "one_prime_then_timed_hit",
+            "full_kylin_sdk": "clear_before_each_query"
+          }
+        },
+        "environment": {
+          "python": "3.9.6",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "machine": "AMD64"
+        },
+        "dataset": {
+          "seed_count": 59,
+          "stored_seed_count": 59,
+          "query_count": 54,
+          "seed_sha256": "f2b9297977587da8bba1081d5f5b5cae67459d7b95af7e521352c5450bc82b11",
+          "query_sha256": "ffb171affbde784c58e925a752892df91d06dc0156adfe0dfab11d2d3989ca2d"
+        },
+        "variants": {
+          "text_only": {
+            "name": "text_only",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 0.8426,
+            "p50_latency_ms": 0.346,
+            "p95_latency_ms": 0.596,
+            "p99_latency_ms": 1.245,
+            "qps": 2568.689,
+            "candidate_count": {
+              "mean": 3.907,
+              "max": 5
+            }
+          },
+          "hybrid_no_graph": {
+            "name": "hybrid_no_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 31.735,
+            "p95_latency_ms": 37.174,
+            "p99_latency_ms": 62.299,
+            "qps": 30.314,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            }
+          },
+          "rrf_no_graph": {
+            "name": "rrf_no_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 34.396,
+            "p95_latency_ms": 41.926,
+            "p99_latency_ms": 45.313,
+            "qps": 28.686,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            }
+          },
+          "full_no_cache": {
+            "name": "full_no_cache",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 30.395,
+            "p95_latency_ms": 38.163,
+            "p99_latency_ms": 92.73,
+            "qps": 30.359,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            }
+          },
+          "rrf_selective_graph": {
+            "name": "rrf_selective_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 30.395,
+            "p95_latency_ms": 38.163,
+            "p99_latency_ms": 92.73,
+            "qps": 30.359,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            }
+          },
+          "full_warm_cache": {
+            "name": "full_warm_cache",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 0.099,
+            "p95_latency_ms": 0.213,
+            "p99_latency_ms": 0.272,
+            "qps": 35.136,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            }
+          },
+          "kylin_persisted": {
+            "name": "kylin_persisted",
+            "status": "skipped",
+            "reason": "disabled_by_caller"
+          },
+          "full_kylin_sdk": {
+            "name": "full_kylin_sdk",
+            "status": "skipped",
+            "reason": "disabled_by_caller"
+          }
+        },
+        "startup_and_cache": {
+          "measurement_scope": "process_cold_vs_process_warm",
+          "service_startup_ms": 116.052,
+          "first_query_ms": 27.538,
+          "warm_query_ms": 0.142,
+          "warm_speedup": 194.342,
+          "os_page_cache_claimed": false,
+          "note": "该测量比较新服务实例首次查询与同进程重复查询，不等同于清空 Linux 内核页缓存。"
+        }
+      },
+      "concurrent": {
+        "memory_count": 1000,
+        "query_count": 120,
+        "workers": 6,
+        "read_path_audit": "disabled_for_latency_measurement",
+        "errors": [],
+        "ok": true,
+        "p50_latency_ms": 0.32,
+        "p95_latency_ms": 123.408,
+        "p99_latency_ms": 128.68,
+        "audit_chain_ok": true,
+        "audit_events_checked": 1000,
+        "policy_eviction_candidates": 5
+      }
+    },
+    {
+      "round": 2,
+      "started_at_epoch": 1784800508.8992069,
+      "gate_metrics": {
+        "variant": "rrf_selective_graph",
+        "recall_at_5": 1.0,
+        "p95_latency_ms": 139.057,
+        "p99_latency_ms": 163.973,
+        "ok": true
+      },
+      "ablation": {
+        "protocol": {
+          "same_dataset_for_all_variants": true,
+          "same_query_order_for_all_variants": true,
+          "top_k": 5,
+          "repetitions": 1,
+          "latency_clock": "time.perf_counter",
+          "cache_policy": {
+            "text_only": "no_application_result_cache",
+            "hybrid_no_graph": "no_application_result_cache",
+            "full_no_cache": "clear_before_each_query",
+            "full_warm_cache": "one_prime_then_timed_hit",
+            "full_kylin_sdk": "clear_before_each_query"
+          }
+        },
+        "environment": {
+          "python": "3.9.6",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "machine": "AMD64"
+        },
+        "dataset": {
+          "seed_count": 59,
+          "stored_seed_count": 59,
+          "query_count": 54,
+          "seed_sha256": "f2b9297977587da8bba1081d5f5b5cae67459d7b95af7e521352c5450bc82b11",
+          "query_sha256": "ffb171affbde784c58e925a752892df91d06dc0156adfe0dfab11d2d3989ca2d"
+        },
+        "variants": {
+          "text_only": {
+            "name": "text_only",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 0.8426,
+            "p50_latency_ms": 0.236,
+            "p95_latency_ms": 0.377,
+            "p99_latency_ms": 0.722,
+            "qps": 3877.026,
+            "candidate_count": {
+              "mean": 3.907,
+              "max": 5
+            }
+          },
+          "hybrid_no_graph": {
+            "name": "hybrid_no_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 18.16,
+            "p95_latency_ms": 23.028,
+            "p99_latency_ms": 24.29,
+            "qps": 54.751,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            }
+          },
+          "rrf_no_graph": {
+            "name": "rrf_no_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 17.894,
+            "p95_latency_ms": 20.427,
+            "p99_latency_ms": 21.526,
+            "qps": 56.17,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            }
+          },
+          "full_no_cache": {
+            "name": "full_no_cache",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 17.936,
+            "p95_latency_ms": 22.971,
+            "p99_latency_ms": 24.018,
+            "qps": 54.111,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            }
+          },
+          "rrf_selective_graph": {
+            "name": "rrf_selective_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 17.936,
+            "p95_latency_ms": 22.971,
+            "p99_latency_ms": 24.018,
+            "qps": 54.111,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            }
+          },
+          "full_warm_cache": {
+            "name": "full_warm_cache",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 0.081,
+            "p95_latency_ms": 0.153,
+            "p99_latency_ms": 0.17,
+            "qps": 55.784,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            }
+          },
+          "kylin_persisted": {
+            "name": "kylin_persisted",
+            "status": "skipped",
+            "reason": "disabled_by_caller"
+          },
+          "full_kylin_sdk": {
+            "name": "full_kylin_sdk",
+            "status": "skipped",
+            "reason": "disabled_by_caller"
+          }
+        },
+        "startup_and_cache": {
+          "measurement_scope": "process_cold_vs_process_warm",
+          "service_startup_ms": 67.903,
+          "first_query_ms": 17.446,
+          "warm_query_ms": 0.087,
+          "warm_speedup": 200.3,
+          "os_page_cache_claimed": false,
+          "note": "该测量比较新服务实例首次查询与同进程重复查询，不等同于清空 Linux 内核页缓存。"
+        }
+      },
+      "concurrent": {
+        "memory_count": 1000,
+        "query_count": 120,
+        "workers": 6,
+        "read_path_audit": "disabled_for_latency_measurement",
+        "errors": [],
+        "ok": true,
+        "p50_latency_ms": 0.266,
+        "p95_latency_ms": 139.057,
+        "p99_latency_ms": 163.973,
+        "audit_chain_ok": true,
+        "audit_events_checked": 1000,
+        "policy_eviction_candidates": 5
+      }
+    },
+    {
+      "round": 3,
+      "started_at_epoch": 1784800532.733109,
+      "gate_metrics": {
+        "variant": "rrf_selective_graph",
+        "recall_at_5": 1.0,
+        "p95_latency_ms": 76.537,
+        "p99_latency_ms": 97.793,
+        "ok": true
+      },
+      "ablation": {
+        "protocol": {
+          "same_dataset_for_all_variants": true,
+          "same_query_order_for_all_variants": true,
+          "top_k": 5,
+          "repetitions": 1,
+          "latency_clock": "time.perf_counter",
+          "cache_policy": {
+            "text_only": "no_application_result_cache",
+            "hybrid_no_graph": "no_application_result_cache",
+            "full_no_cache": "clear_before_each_query",
+            "full_warm_cache": "one_prime_then_timed_hit",
+            "full_kylin_sdk": "clear_before_each_query"
+          }
+        },
+        "environment": {
+          "python": "3.9.6",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "machine": "AMD64"
+        },
+        "dataset": {
+          "seed_count": 59,
+          "stored_seed_count": 59,
+          "query_count": 54,
+          "seed_sha256": "f2b9297977587da8bba1081d5f5b5cae67459d7b95af7e521352c5450bc82b11",
+          "query_sha256": "ffb171affbde784c58e925a752892df91d06dc0156adfe0dfab11d2d3989ca2d"
+        },
+        "variants": {
+          "text_only": {
+            "name": "text_only",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 0.8426,
+            "p50_latency_ms": 0.213,
+            "p95_latency_ms": 0.335,
+            "p99_latency_ms": 0.466,
+            "qps": 4357.896,
+            "candidate_count": {
+              "mean": 3.907,
+              "max": 5
+            }
+          },
+          "hybrid_no_graph": {
+            "name": "hybrid_no_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 16.372,
+            "p95_latency_ms": 18.975,
+            "p99_latency_ms": 19.928,
+            "qps": 60.33,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            }
+          },
+          "rrf_no_graph": {
+            "name": "rrf_no_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 17.752,
+            "p95_latency_ms": 25.393,
+            "p99_latency_ms": 32.841,
+            "qps": 53.396,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            }
+          },
+          "full_no_cache": {
+            "name": "full_no_cache",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 17.542,
+            "p95_latency_ms": 21.639,
+            "p99_latency_ms": 23.219,
+            "qps": 55.848,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            }
+          },
+          "rrf_selective_graph": {
+            "name": "rrf_selective_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 17.542,
+            "p95_latency_ms": 21.639,
+            "p99_latency_ms": 23.219,
+            "qps": 55.848,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            }
+          },
+          "full_warm_cache": {
+            "name": "full_warm_cache",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 0.079,
+            "p95_latency_ms": 0.18,
+            "p99_latency_ms": 0.22,
+            "qps": 56.403,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            }
+          },
+          "kylin_persisted": {
+            "name": "kylin_persisted",
+            "status": "skipped",
+            "reason": "disabled_by_caller"
+          },
+          "full_kylin_sdk": {
+            "name": "full_kylin_sdk",
+            "status": "skipped",
+            "reason": "disabled_by_caller"
+          }
+        },
+        "startup_and_cache": {
+          "measurement_scope": "process_cold_vs_process_warm",
+          "service_startup_ms": 57.522,
+          "first_query_ms": 18.939,
+          "warm_query_ms": 0.075,
+          "warm_speedup": 252.853,
+          "os_page_cache_claimed": false,
+          "note": "该测量比较新服务实例首次查询与同进程重复查询，不等同于清空 Linux 内核页缓存。"
+        }
+      },
+      "concurrent": {
+        "memory_count": 1000,
+        "query_count": 120,
+        "workers": 6,
+        "read_path_audit": "disabled_for_latency_measurement",
+        "errors": [],
+        "ok": true,
+        "p50_latency_ms": 0.352,
+        "p95_latency_ms": 76.537,
+        "p99_latency_ms": 97.793,
+        "audit_chain_ok": true,
+        "audit_events_checked": 1000,
+        "policy_eviction_candidates": 5
+      }
+    }
+  ],
+  "gate": {
+    "pass": true,
+    "failures": [],
+    "required_rounds": 3,
+    "evaluated_rounds": 3,
+    "thresholds": {
+      "recall_at_5": 1.0,
+      "p95_latency_ms_exclusive_upper": 500.0,
+      "p99_latency_ms_exclusive_upper": 500.0
+    }
+  }
+}
