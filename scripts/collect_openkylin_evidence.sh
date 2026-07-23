@@ -119,6 +119,9 @@ EOF
 | `environment.txt` | OS、内核、Python、SQLite、项目解释器等基础环境 |
 | `doctor.txt` | MemGuardOS doctor 输出 |
 | `pytest.txt` | 单元测试输出 |
+| `embedding_cache_status.txt` | 持久化 Kylin 向量缓存 ready、pending、failed、due 与退避状态 |
+| `retrieval_v2.txt` | 三轮检索质量和并发 P95/P99 门禁命令输出 |
+| `retrieval_v2.json` | 带 Git HEAD、数据 SHA256、消融原始轮次和门禁结论的检索 v2 证据 |
 | `eval_1k.txt` | 1k 负载评测命令输出 |
 | `eval_result_openkylin.json` | 1k 负载评测 JSON |
 | `eval_report_openkylin.md` | 1k 负载评测 Markdown |
@@ -233,6 +236,13 @@ else
 fi
 
 run_capture "pytest" "${PYTHON_BIN}" -m pytest -q
+run_capture "embedding_cache_status" "${PYTHON_BIN}" -m memguard.cli.memctl embedding-cache status
+run_capture "retrieval_v2" "${PYTHON_BIN}" scripts/evaluate_retrieval_v2.py \
+  --rounds 3 \
+  --size 1000 \
+  --queries 120 \
+  --workers 6 \
+  --output "${OUT_DIR}/retrieval_v2.json"
 run_capture "eval_1k" "${PYTHON_BIN}" -m memguard.eval.run_eval \
   --latency-size 1000 \
   --latency-queries 120 \

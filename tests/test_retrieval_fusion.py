@@ -16,8 +16,10 @@ def test_query_intent_router_is_deterministic():
     assert classify_query_intent("我上次明确说代码搜索用什么工具") == QueryIntent.PREFERENCE
     assert classify_query_intent("代码搜索应该优先用什么工具") == QueryIntent.PREFERENCE
     assert classify_query_intent("修复 systemd 服务失败的步骤是什么") == QueryIntent.PROCEDURAL
+    assert classify_query_intent("cgroup 的直接操作要求") == QueryIntent.PROCEDURAL
     assert classify_query_intent("项目 A 和工具 B 有什么关系") == QueryIntent.RELATIONAL
     assert classify_query_intent("上周更新后的配置") == QueryIntent.TEMPORAL
+    assert classify_query_intent("本周 cgroup") == QueryIntent.TEMPORAL
     assert classify_query_intent("memory_id mem-123") == QueryIntent.EXACT_LOOKUP
     assert classify_query_intent("openKylin 系统服务") == QueryIntent.GENERAL
 
@@ -142,5 +144,54 @@ def test_relational_query_can_add_graph_only_candidate(tmp_path, monkeypatch):
         hits = service.search("项目 A 和工具 B 有什么关系", limit=5)
         row = next(item for item in hits if item["memory_id"] == related.memory_id)
         assert "graph" in row["retrieval_explanation"]["fusion_sources"]
+    finally:
+        service.close()
+
+
+def test_query_routing_prefers_matching_language_time_and_relation_sources(tmp_path):
+    service = make_service(tmp_path, "route-suitability")
+    try:
+        cross = service.ingest_text(
+            "跨语言术语记录：服务重启前先查看 journalctl 和 cgroup 限制。",
+            source_kind="agent_interaction",
+        )["record"]
+        service.ingest_text(
+            "本周有效记录：服务重启前先查看 journalctl 和 cgroup 限制。",
+            source_kind="agent_interaction",
+        )
+        hits = service.search(
+            "Which logs and resource limits should be checked before restarting a service?",
+            limit=5,
+        )
+        assert hits[0]["memory_id"] == cross.memory_id
+        assert "cross_language_source" in hits[0]["score_breakdown"]["routing_reasons"]
+
+        temporal = service.search("本周 cgroup", limit=5)[0]
+        assert "temporal_scope_match" in temporal["score_breakdown"]["routing_reasons"]
+        assert "cross_language_source" not in temporal["score_breakdown"]["routing_reasons"]
+
+        relation = service.ingest_text(
+            "关联图记录：namespace 与 cgroup 共同约束服务。",
+            source_kind="agent_interaction",
+        )["record"]
+        relational_hits = service.search("namespace 与 cgroup 有什么关联", limit=5)
+        assert relational_hits[0]["memory_id"] == relation.memory_id
+        assert "relational_source" in relational_hits[0]["score_breakdown"]["routing_reasons"]
+    finally:
+        service.close()
+
+
+def test_single_distinctive_technical_term_is_protected_from_generic_tie(tmp_path):
+    service = make_service(tmp_path, "distinctive-protection")
+    try:
+        expected = service.ingest_text(
+            "批量删除确认后执行 compact。", source_kind="agent_interaction"
+        )["record"]
+        service.ingest_text(
+            "操作证据应保留完整上下文。", source_kind="agent_interaction"
+        )
+        hits = service.search("请检索与 compact 直接相关的操作证据", limit=5)
+        assert hits[0]["memory_id"] == expected.memory_id
+        assert hits[0]["retrieval_explanation"]["protected_exact_hit"] is True
     finally:
         service.close()

@@ -1990,8 +1990,26 @@ class MemGuardService:
                         )
                     ),
                     -float(
+                        row.get("_score_breakdown", {}).get("routing_score", 0.0)
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get(
+                            "original_lexical_hit_count", 0.0
+                        )
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get(
+                            "original_lexical_precision", 0.0
+                        )
+                    ),
+                    -float(
                         row.get("_score_breakdown", {}).get(
                             "lexical_hit_count", 0.0
+                        )
+                    ),
+                    -float(
+                        row.get("_score_breakdown", {}).get(
+                            "lexical_precision", 0.0
                         )
                     ),
                     -float(
@@ -2072,7 +2090,14 @@ class MemGuardService:
 
         weights = {
             "lexical": 1.25
-            if intent in {QueryIntent.EXACT_LOOKUP, QueryIntent.PREFERENCE}
+            if intent
+            in {
+                QueryIntent.EXACT_LOOKUP,
+                QueryIntent.PREFERENCE,
+                QueryIntent.PROCEDURAL,
+                QueryIntent.TEMPORAL,
+                QueryIntent.RELATIONAL,
+            }
             else 1.0,
             "hash": 1.0,
             "kylin": 1.15,
@@ -2086,7 +2111,21 @@ class MemGuardService:
                 or clean_query in str(item.get("content") or "")
             )
             id_hit = intent == QueryIntent.EXACT_LOOKUP and memory_id in exact_ids
-            if phrase_hit or id_hit:
+            distinctive_hit = (
+                int(
+                    item.get("_score_breakdown", {}).get(
+                        "distinctive_latin_token_count", 0
+                    )
+                )
+                == 1
+                and int(
+                    item.get("_score_breakdown", {}).get(
+                        "distinctive_term_hit_count", 0
+                    )
+                )
+                == 1
+            )
+            if phrase_hit or id_hit or distinctive_hit:
                 exact_hits.add(memory_id)
         fused = rrf_fuse(rankings, weights=weights, exact_hits=exact_hits)
         ranked = []

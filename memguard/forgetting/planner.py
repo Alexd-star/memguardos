@@ -134,7 +134,7 @@ class ForgetPlanner:
         if not results:
             return []
         top_score = max(float(item["score"]) for item in results)
-        relative_floor = 0.50 if preference_topic else 0.80
+        relative_floor = 0.45 if preference_topic else 0.70 if target_phrase else 0.80
         score_floor = max(0.18, top_score * relative_floor)
         return [item for item in results if float(item["score"]) >= score_floor]
 

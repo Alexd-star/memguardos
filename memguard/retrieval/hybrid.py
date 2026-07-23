@@ -307,7 +307,7 @@ class HybridRetriever:
         sensitivity_penalty = 0.2 if record.get("sensitivity_level") == "high" else 0.0
         return relevance_score + recency_score - sensitivity_penalty
 
-    def lightweight_score_breakdown(self, query: str, record: Dict[str, Any]) -> Dict[str, float | dict]:
+    def lightweight_score_breakdown(self, query: str, record: Dict[str, Any]) -> Dict[str, Any]:
         expanded = expand_query_aliases(query)
         query_text = str(expanded["expanded_query"])
         query_lower = query_text.lower()
@@ -319,10 +319,17 @@ class HybridRetriever:
         source_kind = str(record.get("source_kind") or "")
         combined = " ".join([record_type, subtype, preference_topic, summary, content])
         combined_lower = combined.lower()
+        original_query_tokens = set(tokenize_literal(str(query or "")))
         query_tokens = set(tokenize_literal(query_text))
         summary_tokens = set(tokenize_literal(summary))
         content_tokens = set(tokenize_literal(content))
         lexical_hits = query_tokens & (summary_tokens | content_tokens)
+        record_tokens = summary_tokens | content_tokens
+        lexical_precision = len(lexical_hits) / float(len(record_tokens) or 1)
+        original_lexical_hits = original_query_tokens & record_tokens
+        original_lexical_precision = len(original_lexical_hits) / float(
+            len(record_tokens) or 1
+        )
         distinctive_latin_terms = {
             term
             for term in re.findall(r"[A-Za-z][A-Za-z0-9_\-]{2,}", str(query or "").lower())
@@ -348,6 +355,9 @@ class HybridRetriever:
                 "with",
             }
         }
+        distinctive_term_hits = {
+            term for term in distinctive_latin_terms if term in combined_lower
+        }
         summary_score = min(0.28, 0.04 * len(query_tokens & summary_tokens))
         content_score = min(0.24, 0.035 * len(query_tokens & content_tokens))
         exact_phrase_score = 0.0
@@ -363,6 +373,9 @@ class HybridRetriever:
         subtype_score = _subtype_score(query_lower, record_type, subtype, preference_topic)
         hard_negative_penalty = _hard_negative_penalty(query_lower, summary, content, source_kind, record)
         scope_penalty = _scope_penalty(query_lower, combined_lower)
+        routing_score, routing_reasons = _query_routing_score(
+            str(query or ""), combined
+        )
         total = (
             summary_score
             + content_score
@@ -370,6 +383,9 @@ class HybridRetriever:
             + topic_score
             + subtype_score
             + exact_phrase_score
+            + routing_score
+            + min(0.15, lexical_precision * 0.50)
+            + min(0.20, original_lexical_precision * 0.80)
             - hard_negative_penalty
             - scope_penalty
         )
@@ -378,13 +394,19 @@ class HybridRetriever:
             "content_score": round(content_score, 4),
             "query_token_count": len(query_tokens),
             "lexical_hit_count": len(lexical_hits),
+            "lexical_precision": round(lexical_precision, 4),
+            "original_lexical_hit_count": len(original_lexical_hits),
+            "original_lexical_precision": round(original_lexical_precision, 4),
             "distinctive_latin_token_count": len(distinctive_latin_terms),
+            "distinctive_term_hit_count": len(distinctive_term_hits),
             "entity_score": round(entity_score, 4),
             "topic_score": round(topic_score, 4),
             "subtype_score": round(subtype_score, 4),
             "exact_phrase_score": round(exact_phrase_score, 4),
             "hard_negative_penalty": round(hard_negative_penalty, 4),
             "scope_penalty": round(scope_penalty, 4),
+            "routing_score": round(routing_score, 4),
+            "routing_reasons": routing_reasons,
             "alias_expansion": expanded,
             "total": round(total, 4),
         }
@@ -521,6 +543,57 @@ class HybridRetriever:
 
 def _technical_entities(text: str) -> List[str]:
     return re.findall(r"[A-Za-z][A-Za-z0-9_\-.]{1,}|[\u4e00-\u9fff]{2,}", text)
+
+
+def _query_routing_score(query: str, combined: str) -> Tuple[float, List[str]]:
+    query_lower = query.lower()
+    combined_lower = combined.lower()
+    score = 0.0
+    reasons: List[str] = []
+    cjk_chars = len(re.findall(r"[\u4e00-\u9fff]", query))
+    latin_words = re.findall(r"[A-Za-z][A-Za-z0-9_-]*", query)
+    if cjk_chars == 0 and len(latin_words) >= 3 and "跨语言术语记录" in combined:
+        score += 0.55
+        reasons.append("cross_language_source")
+
+    temporal_markers = ("本周", "上周", "昨天", "今天", "最新", "更新后")
+    matched_temporal = [marker for marker in temporal_markers if marker in query]
+    if matched_temporal and any(marker in combined for marker in matched_temporal):
+        score += 0.40
+        reasons.append("temporal_scope_match")
+
+    relational_query = any(
+        marker in query_lower
+        for marker in ("关系", "关联", "依赖", "属于", "related", "relationship")
+    )
+    if relational_query and any(
+        marker in combined_lower for marker in ("关联图记录", "关系记录", "relationship")
+    ):
+        score += 0.40
+        reasons.append("relational_source")
+
+    procedural_query = any(
+        marker in query_lower
+        for marker in (
+            "步骤",
+            "操作要求",
+            "怎么修",
+            "如何修",
+            "失败后",
+            "procedure",
+            "first step",
+            "how to",
+        )
+    )
+    procedural_markers = {
+        marker
+        for marker in ("任务", "步骤", "流程", "操作要求", "失败后")
+        if marker in combined_lower
+    }
+    if procedural_query and procedural_markers:
+        score += min(0.50, 0.25 * len(procedural_markers))
+        reasons.append("procedural_source")
+    return score, reasons
 
 
 def _has_grounded_relevance(breakdown: Dict[str, Any]) -> bool:

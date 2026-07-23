@@ -46,12 +46,32 @@ def classify_query_intent(query: str) -> QueryIntent:
         return QueryIntent.PREFERENCE
     if any(
         term in text
-        for term in ("步骤", "怎么修", "如何修", "失败后", "流程", "procedure", "fix")
+        for term in (
+            "步骤",
+            "怎么修",
+            "如何修",
+            "失败后",
+            "流程",
+            "操作要求",
+            "procedure",
+            "fix",
+        )
     ):
         return QueryIntent.PROCEDURAL
     if any(
         term in text
-        for term in ("上周", "昨天", "之前", "最新", "更新后", "when", "latest")
+        for term in (
+            "本周",
+            "上周",
+            "今天",
+            "昨天",
+            "最近",
+            "之前",
+            "最新",
+            "更新后",
+            "when",
+            "latest",
+        )
     ):
         return QueryIntent.TEMPORAL
     if any(

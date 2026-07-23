@@ -29,26 +29,26 @@ EvidenceBench v2 是抗质疑评测，用于补充原 benchmark 的功能正确�
 |---|---:|
 | alias_expansion_hit_rate | 0.65 |
 | cross_language_cases_evaluated | 10 |
-| cross_language_recall_at_1 | 0.2 |
+| cross_language_recall_at_1 | 1.0 |
 | cross_language_recall_at_5 | 1.0 |
 | hard_negative_false_positive_rate | 0.0 |
-| mrr | 0.7791 |
-| ndcg_at_5 | 0.83 |
-| recall_at_1 | 0.6667 |
-| recall_at_3 | 0.8667 |
-| recall_at_5 | 0.9833 |
+| mrr | 1.0 |
+| ndcg_at_5 | 1.0 |
+| recall_at_1 | 1.0 |
+| recall_at_3 | 1.0 |
+| recall_at_5 | 1.0 |
 | retrieval_cases_evaluated | 60 |
-| strict_recall_at_1 | 0.6667 |
-| strict_recall_at_5 | 0.9833 |
-| topic_recall_at_1 | 0.6667 |
-| topic_recall_at_5 | 0.9833 |
+| strict_recall_at_1 | 1.0 |
+| strict_recall_at_5 | 1.0 |
+| topic_recall_at_1 | 1.0 |
+| topic_recall_at_5 | 1.0 |
 | forget_candidates_evaluated | 240 |
 | forget_cases_evaluated | 60 |
 | forget_expected_delete_count | 120 |
 | forget_expected_keep_count | 120 |
 | forget_keep_success | 1.0 |
 | forget_precision | 1.0 |
-| forget_recall | 0.9417 |
+| forget_recall | 1.0 |
 | forget_residual_leak_rate | 0.0 |
 | sensitive_block_f1 | 1.0 |
 | sensitive_redaction_f1 | 1.0 |
@@ -66,13 +66,13 @@ EvidenceBench v2 是抗质疑评测，用于补充原 benchmark 的功能正确�
 | agent_context_cases_evaluated | 60 |
 | agent_context_hint_accuracy | 1.0 |
 | agent_context_scope_accuracy | 1.0 |
-| p50_latency_ms | 32.596 |
-| p95_latency_ms | 41.459 |
-| p99_latency_ms | 47.584 |
+| p50_latency_ms | 20.3 |
+| p95_latency_ms | 26.598 |
+| p99_latency_ms | 31.61 |
 | rss_kb | None |
 | rss_delta_kb | None |
-| cpu_time_ms | 17171.875 |
-| storage_footprint_kb | 9203.78 |
+| cpu_time_ms | 10312.5 |
+| storage_footprint_kb | 9185.115 |
 | audit_chain_ok | True |
 
 ## 公开 split
@@ -81,17 +81,17 @@ EvidenceBench v2 是抗质疑评测，用于补充原 benchmark 的功能正确�
 |---|---:|
 | retrieval_cases_evaluated | 40 |
 | cross_language_cases_evaluated | 10 |
-| strict_recall_at_1 | 0.55 |
-| strict_recall_at_5 | 0.975 |
-| topic_recall_at_1 | 0.55 |
-| topic_recall_at_5 | 0.975 |
-| recall_at_1 | 0.55 |
-| recall_at_3 | 0.8 |
-| recall_at_5 | 0.975 |
-| mrr | 0.6937 |
-| ndcg_at_5 | 0.7635 |
+| strict_recall_at_1 | 1.0 |
+| strict_recall_at_5 | 1.0 |
+| topic_recall_at_1 | 1.0 |
+| topic_recall_at_5 | 1.0 |
+| recall_at_1 | 1.0 |
+| recall_at_3 | 1.0 |
+| recall_at_5 | 1.0 |
+| mrr | 1.0 |
+| ndcg_at_5 | 1.0 |
 | hard_negative_false_positive_rate | 0.0 |
-| cross_language_recall_at_1 | 0.2 |
+| cross_language_recall_at_1 | 1.0 |
 | cross_language_recall_at_5 | 1.0 |
 | alias_expansion_hit_rate | 0.925 |
 | forget_cases_evaluated | 40 |
@@ -99,7 +99,7 @@ EvidenceBench v2 是抗质疑评测，用于补充原 benchmark 的功能正确�
 | forget_expected_delete_count | 80 |
 | forget_expected_keep_count | 80 |
 | forget_precision | 1.0 |
-| forget_recall | 0.925 |
+| forget_recall | 1.0 |
 | forget_keep_success | 1.0 |
 | forget_residual_leak_rate | 0.0 |
 | agent_context_cases_evaluated | 40 |
@@ -114,15 +114,15 @@ EvidenceBench v2 是抗质疑评测，用于补充原 benchmark 的功能正确�
 |---|---:|
 | retrieval_cases_evaluated | 20 |
 | cross_language_cases_evaluated | 0 |
-| strict_recall_at_1 | 0.9 |
+| strict_recall_at_1 | 1.0 |
 | strict_recall_at_5 | 1.0 |
-| topic_recall_at_1 | 0.9 |
+| topic_recall_at_1 | 1.0 |
 | topic_recall_at_5 | 1.0 |
-| recall_at_1 | 0.9 |
+| recall_at_1 | 1.0 |
 | recall_at_3 | 1.0 |
 | recall_at_5 | 1.0 |
-| mrr | 0.95 |
-| ndcg_at_5 | 0.9631 |
+| mrr | 1.0 |
+| ndcg_at_5 | 1.0 |
 | hard_negative_false_positive_rate | 0.0 |
 | cross_language_recall_at_1 | 0.0 |
 | cross_language_recall_at_5 | 0.0 |
@@ -132,7 +132,7 @@ EvidenceBench v2 是抗质疑评测，用于补充原 benchmark 的功能正确�
 | forget_expected_delete_count | 40 |
 | forget_expected_keep_count | 40 |
 | forget_precision | 1.0 |
-| forget_recall | 0.975 |
+| forget_recall | 1.0 |
 | forget_keep_success | 1.0 |
 | forget_residual_leak_rate | 0.0 |
 | agent_context_cases_evaluated | 20 |
@@ -143,33 +143,7 @@ EvidenceBench v2 是抗质疑评测，用于补充原 benchmark 的功能正确�
 
 ## 失败样例与原因
 
-- `retrieval_cross_language_retrieval_01`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_cross_language_retrieval_02`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_cross_language_retrieval_03`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_cross_language_retrieval_04`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_cross_language_retrieval_06`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_cross_language_retrieval_07`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_cross_language_retrieval_08`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_cross_language_retrieval_10`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_hard_negative_retrieval_02`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_hard_negative_retrieval_04`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_hard_negative_retrieval_05`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_hard_negative_retrieval_06`（strict_rank_miss, topic_retrieval_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_hard_negative_retrieval_07`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_hard_negative_retrieval_08`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_hard_negative_retrieval_09`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_hard_negative_retrieval_10`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_temporal_retrieval_06`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `retrieval_graph_association_retrieval_06`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `forgetting_natural_language_erasure_10`（forgetting_candidate_miss）：遗忘候选未完全命中目标或误伤应保留样例。
-- `forgetting_scoped_agent_forgetting_09`（forgetting_candidate_miss）：遗忘候选未完全命中目标或误伤应保留样例。
-- `forgetting_time_range_forgetting_09`（forgetting_candidate_miss）：遗忘候选未完全命中目标或误伤应保留样例。
-- `forgetting_time_range_forgetting_10`（forgetting_candidate_miss）：遗忘候选未完全命中目标或误伤应保留样例。
-- `forgetting_forget_keep_hard_negatives_09`（forgetting_candidate_miss）：遗忘候选未完全命中目标或误伤应保留样例。
-- `forgetting_forget_keep_hard_negatives_10`（forgetting_candidate_miss）：遗忘候选未完全命中目标或误伤应保留样例。
-- `holdout_holdout_retrieval_03`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `holdout_holdout_retrieval_09`（strict_rank_miss）：strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。
-- `holdout_holdout_forgetting_08`（forgetting_candidate_miss）：遗忘候选未完全命中目标或误伤应保留样例。
+- `boundary-note`（open_world_boundary）：本轮未产生样例内失败；开放世界表达、外部 Agent 日志和介质级取证仍需按边界文档单独验证。
 
 ## 边界说明
 

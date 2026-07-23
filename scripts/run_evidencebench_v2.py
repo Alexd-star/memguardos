@@ -154,7 +154,7 @@ def run(output: Path | str | None = None, markdown: Path | str | None = None, la
                     {
                         "case_id": "boundary-note",
                         "metric": "open_world_boundary",
-                        "reason": "当前样例全部通过；开放世界表达、外部 Agent 日志和介质级取证仍按边界文档处理。",
+                        "reason": "本轮未产生样例内失败；开放世界表达、外部 Agent 日志和介质级取证仍需按边界文档单独验证。",
                     }
                 )
             result = {
