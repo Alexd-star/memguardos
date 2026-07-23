@@ -954,6 +954,48 @@ class SQLiteMetaStore:
             self.conn.commit()
         return persisted
 
+    def get_memory_embeddings(
+        self,
+        memory_hashes: Dict[str, str],
+        backend: str,
+        model_revision: str,
+    ) -> Dict[str, List[float]]:
+        """Load current, governed vectors for a candidate set in one query."""
+        if not memory_hashes:
+            return {}
+        memory_ids = list(memory_hashes)
+        placeholders = ",".join("?" for _ in memory_ids)
+        rows = self.conn.execute(
+            f"""
+            SELECT embedding.memory_id, embedding.content_hash,
+                   embedding.dimension, embedding.vector_blob
+            FROM memory_embedding AS embedding
+            JOIN memory ON memory.memory_id = embedding.memory_id
+            WHERE embedding.memory_id IN ({placeholders})
+              AND embedding.backend = ? AND embedding.model_revision = ?
+              AND embedding.status = 'ready' AND embedding.vector_blob IS NOT NULL
+              AND memory.deleted = 0
+              AND memory.governance_state = 'active'
+              AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
+              AND embedding.content_hash =
+                  memguard_content_hash(memory.summary, memory.content)
+            """,
+            [*memory_ids, backend, model_revision],
+        ).fetchall()
+        vectors: Dict[str, List[float]] = {}
+        for row in rows:
+            memory_id = str(row["memory_id"])
+            if memory_hashes.get(memory_id) != row["content_hash"]:
+                continue
+            try:
+                vectors[memory_id] = decode_vector(
+                    row["vector_blob"], int(row["dimension"])
+                )
+            except (TypeError, ValueError):
+                # A damaged cache row must not break the retrieval read path.
+                continue
+        return vectors
+
     def delete_memory_embeddings(self, memory_id: str) -> int:
         cursor = self.conn.execute(
             "DELETE FROM memory_embedding WHERE memory_id = ?", (memory_id,)
@@ -962,10 +1004,21 @@ class SQLiteMetaStore:
         return cursor.rowcount
 
     def embedding_cache_status(self, backend: str, model_revision: str) -> Dict[str, Any]:
-        counts = {"pending": 0, "ready": 0, "failed": 0}
-        rows = self.conn.execute(
+        now = utc_now()
+        row = self.conn.execute(
             """
-            SELECT embedding.status, COUNT(*) AS count
+            SELECT
+                SUM(CASE WHEN embedding.status = 'pending' THEN 1 ELSE 0 END) AS pending,
+                SUM(CASE WHEN embedding.status = 'ready' THEN 1 ELSE 0 END) AS ready,
+                SUM(CASE WHEN embedding.status = 'failed' THEN 1 ELSE 0 END) AS failed,
+                SUM(CASE WHEN embedding.status = 'pending' THEN 1 ELSE 0 END) +
+                SUM(CASE WHEN embedding.status = 'failed' AND
+                    (embedding.next_attempt_at = '' OR embedding.next_attempt_at <= ?)
+                    THEN 1 ELSE 0 END) AS due,
+                SUM(CASE WHEN embedding.status = 'failed' AND
+                    embedding.next_attempt_at > ? THEN 1 ELSE 0 END) AS retry_deferred,
+                MIN(CASE WHEN embedding.status = 'failed' AND
+                    embedding.next_attempt_at > ? THEN embedding.next_attempt_at END) AS next_retry_at
             FROM memory_embedding AS embedding
             JOIN memory ON memory.memory_id = embedding.memory_id
             WHERE embedding.backend = ? AND embedding.model_revision = ?
@@ -974,13 +1027,17 @@ class SQLiteMetaStore:
               AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
               AND embedding.content_hash =
                   memguard_content_hash(memory.summary, memory.content)
-            GROUP BY embedding.status
             """,
-            (backend, model_revision),
-        ).fetchall()
-        for row in rows:
-            counts[row["status"]] = row["count"]
-        return counts
+            (now, now, now, backend, model_revision),
+        ).fetchone()
+        return {
+            "pending": int(row["pending"] or 0),
+            "ready": int(row["ready"] or 0),
+            "failed": int(row["failed"] or 0),
+            "due": int(row["due"] or 0),
+            "retry_deferred": int(row["retry_deferred"] or 0),
+            "next_retry_at": row["next_retry_at"],
+        }
 
     def find_active_memory_by_content(self, content: str, scope: str) -> Optional[Dict[str, Any]]:
         row = self.conn.execute(

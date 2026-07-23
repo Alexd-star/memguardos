@@ -91,6 +91,116 @@ class MemGuardService:
             scan_limit,
         )
 
+    def embedding_cache_status(self) -> Dict[str, object]:
+        status = self.meta.embedding_cache_status(
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+        )
+        return {
+            "backend": self.EMBEDDING_BACKEND,
+            "model_revision": self.EMBEDDING_MODEL_REVISION,
+            **status,
+        }
+
+    def backfill_embeddings(
+        self,
+        limit: int = 100,
+        timeout_seconds: float = 30.0,
+    ) -> Dict[str, object]:
+        started = perf_counter()
+        deadline = started + max(0.05, float(timeout_seconds))
+        effective_limit = max(1, min(int(limit), 1000))
+        scan_report = self.meta.enqueue_missing_embedding_jobs(
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+            effective_limit,
+        )
+        rows = self.meta.list_pending_embeddings(
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+            effective_limit,
+        )
+        provider = self.retriever.kylin_provider
+        ready = 0
+        failed = 0
+        memory_ids: List[str] = []
+        failures: List[Dict[str, str]] = []
+
+        for row in rows:
+            remaining = deadline - perf_counter()
+            if remaining <= 0:
+                break
+            text = "%s\n%s" % (row["summary"], row["content"])
+            vector = None
+            failure_reason = "Kylin SDK 未在时间预算内返回有效向量"
+            if provider is None:
+                failure_reason = "Kylin SDK 向量提供器未启用"
+            else:
+                try:
+                    vector = provider.vector(text, timeout_seconds=remaining)
+                except Exception as exc:  # SDK boundary: isolate one failed job.
+                    failure_reason = "Kylin SDK 回填失败：%s" % str(exc)[:240]
+
+            completed = False
+            if vector:
+                try:
+                    completed = self.meta.complete_memory_embedding(
+                        row["memory_id"],
+                        row["content_hash"],
+                        self.EMBEDDING_BACKEND,
+                        self.EMBEDDING_MODEL_REVISION,
+                        vector,
+                        expected_attempt_count=row["attempt_count"],
+                        expected_job_token=row["job_token"],
+                    )
+                except (TypeError, ValueError) as exc:
+                    failure_reason = "Kylin SDK 返回非法向量：%s" % str(exc)[:240]
+            if completed:
+                ready += 1
+                memory_ids.append(row["memory_id"])
+                continue
+
+            marked_failed = self.meta.mark_embedding_failed(
+                row["memory_id"],
+                row["content_hash"],
+                self.EMBEDDING_BACKEND,
+                self.EMBEDDING_MODEL_REVISION,
+                failure_reason,
+                expected_attempt_count=row["attempt_count"],
+                expected_job_token=row["job_token"],
+            )
+            if marked_failed:
+                failed += 1
+                failures.append(
+                    {
+                        "memory_id": row["memory_id"],
+                        "reason": failure_reason,
+                    }
+                )
+
+        status = self.embedding_cache_status()
+        queue_remaining = int(status["pending"]) + int(status["failed"])
+        due_remaining = int(status["due"])
+        scan_complete = bool(scan_report["wrapped"])
+        return {
+            "backend": self.EMBEDDING_BACKEND,
+            "model_revision": self.EMBEDDING_MODEL_REVISION,
+            "processed": ready + failed,
+            "ready": ready,
+            "failed": failed,
+            "queue_remaining": queue_remaining,
+            "due_remaining": due_remaining,
+            "retry_deferred": int(status["retry_deferred"]),
+            "next_retry_at": status["next_retry_at"],
+            "scan_complete": scan_complete,
+            "remaining": queue_remaining if scan_complete else None,
+            "has_more": (not scan_complete) or due_remaining > 0,
+            "scan": scan_report,
+            "elapsed_ms": round((perf_counter() - started) * 1000.0, 3),
+            "memory_ids": memory_ids,
+            "failures": failures,
+        }
+
     def ingest_text(self, text: str, source_kind: str = "manual", source_uri: str = "", tier: Optional[str] = None) -> Dict[str, object]:
         clean_text, quality = assess_text_quality(text, source_kind=source_kind)
         if not quality.accepted:
@@ -1832,7 +1942,23 @@ class MemGuardService:
             return results
 
         candidates = self._search_candidates(query, limit=max(limit * 8, 64))
-        ranked = self.retriever.rank(query, candidates, limit=max(limit * 3, limit))
+        memory_hashes = {
+            str(item["memory_id"]): vector_content_hash(
+                str(item.get("summary") or ""), str(item.get("content") or "")
+            )
+            for item in candidates
+        }
+        persisted_vectors = self.meta.get_memory_embeddings(
+            memory_hashes,
+            self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+        )
+        ranked = self.retriever.rank(
+            query,
+            candidates,
+            limit=max(limit * 3, limit),
+            persisted_vectors=persisted_vectors,
+        )
         results = []
         seen = set()
         for score, record in ranked:

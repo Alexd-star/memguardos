@@ -276,6 +276,8 @@ class HybridRetriever:
         self.kylin_provider = KylinEmbeddingProvider(timeout_seconds=_configured_timeout()) if backend in {"auto", "kylin", "kylin_sdk"} else None
         self.kylin_rerank_budget_ms = _configured_rerank_budget_ms()
         self.last_backend_used = "hash"
+        self.persisted_vector_hits = 0
+        self.persisted_vector_misses = 0
 
     def status(self) -> Dict[str, object]:
         return {
@@ -284,6 +286,8 @@ class HybridRetriever:
             "hash": self.hash_provider.status(),
             "kylin": self.kylin_provider.status() if self.kylin_provider else {"enabled": False},
             "kylin_rerank_budget_ms": self.kylin_rerank_budget_ms,
+            "persisted_vector_hits": self.persisted_vector_hits,
+            "persisted_vector_misses": self.persisted_vector_misses,
         }
 
     def _score_with_vectors(self, query: str, record: Dict[str, str], query_vector: List[float], text_vector: List[float]) -> float:
@@ -389,7 +393,13 @@ class HybridRetriever:
         text = "%s %s %s" % (record.get("type", ""), record.get("summary", ""), record.get("content", ""))
         return self._score_with_vectors(query, record, self.hash_provider.vector(query), self.hash_provider.vector(text))
 
-    def rank(self, query: str, records: Iterable[Dict[str, str]], limit: int = 10) -> List[Tuple[float, Dict[str, str]]]:
+    def rank(
+        self,
+        query: str,
+        records: Iterable[Dict[str, str]],
+        limit: int = 10,
+        persisted_vectors: Optional[Dict[str, List[float]]] = None,
+    ) -> List[Tuple[float, Dict[str, str]]]:
         records = list(records)
         expanded_info = expand_query_aliases(query)
         expanded_query = str(expanded_info["expanded_query"])
@@ -433,23 +443,36 @@ class HybridRetriever:
         if self._kylin_budget_exceeded(sdk_started):
             return self._tag_backend(scored[:limit], "hash")
 
+        vectors = persisted_vectors or {}
         rerank_pool = semantic_pool[: max(30, limit * 6)]
         reranked = []
-        for _, record in rerank_pool:
-            text = "%s %s %s" % (record.get("type", ""), record.get("summary", ""), record.get("content", ""))
-            if self._kylin_budget_exceeded(sdk_started):
-                return self._tag_backend(scored[:limit], "hash")
-            candidate_timeout = self._remaining_kylin_timeout(sdk_started)
-            if candidate_timeout == 0.0:
-                return self._tag_backend(scored[:limit], "hash")
-            kylin_text_vector = self.kylin_provider.vector(text, timeout_seconds=candidate_timeout)
-            if kylin_text_vector is None or len(kylin_text_vector) != len(kylin_query_vector):
-                return self._tag_backend(scored[:limit], "hash")
-            breakdown = self.lightweight_score_breakdown(query, record)
-            reranked.append((self._score_with_vectors(expanded_query, record, kylin_query_vector, kylin_text_vector) + float(breakdown["total"]), record))
-        reranked.sort(key=lambda item: item[0], reverse=True)
-        self.last_backend_used = "kylin_sdk"
-        return self._tag_backend(reranked[:limit], "kylin_sdk")
+        hit_count = 0
+        for base_score, record in rerank_pool:
+            item = dict(record)
+            memory_id = str(item.get("memory_id") or "")
+            candidate_vector = vectors.get(memory_id)
+            if candidate_vector and len(candidate_vector) == len(kylin_query_vector):
+                kylin_score = self._score_with_vectors(
+                    expanded_query, item, kylin_query_vector, candidate_vector
+                )
+                item["_kylin_score"] = round(kylin_score, 6)
+                item["_vector_backend"] = "kylin_sdk_persisted"
+                reranked.append((base_score + kylin_score, item))
+                self.persisted_vector_hits += 1
+                hit_count += 1
+            else:
+                item["_kylin_score"] = 0.0
+                item["_vector_backend"] = "hash"
+                reranked.append((base_score, item))
+                self.persisted_vector_misses += 1
+        reranked.sort(
+            key=lambda pair: (-pair[0], str(pair[1].get("memory_id") or ""))
+        )
+        if hit_count:
+            self.last_backend_used = "kylin_sdk_persisted"
+            return reranked[:limit]
+        self.last_backend_used = "hash"
+        return reranked[:limit]
 
     @staticmethod
     def _hash_evidence_is_sufficient(breakdown: Dict[str, float | dict]) -> bool:

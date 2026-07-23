@@ -260,6 +260,9 @@ def test_forget_removes_from_search_and_marks_deleted(tmp_path):
             "pending": 0,
             "ready": 0,
             "failed": 0,
+            "due": 0,
+            "retry_deferred": 0,
+            "next_retry_at": None,
         }
 
         hits = service.search("HuggingFace token 偏好")
@@ -1158,11 +1161,22 @@ def test_auto_retrieval_can_use_successful_kylin_embedding_probe(monkeypatch):
             "content": "审计敏感路径访问",
         },
     ]
-    ranked = retriever.rank("systemd memory", records, limit=2)
+    ranked = retriever.rank(
+        "systemd memory",
+        records,
+        limit=2,
+        persisted_vectors={
+            "m1": [1.0, 0.0, 0.0],
+            "m2": [0.0, 1.0, 0.0],
+        },
+    )
     assert ranked
     assert ranked[0][1]["memory_id"] == "m1"
-    assert all(record["_vector_backend"] == "kylin_sdk" for _, record in ranked)
-    assert retriever.status()["last_backend_used"] == "kylin_sdk"
+    assert all(
+        record["_vector_backend"] == "kylin_sdk_persisted"
+        for _, record in ranked
+    )
+    assert retriever.status()["last_backend_used"] == "kylin_sdk_persisted"
 
 
 def test_auto_retrieval_passes_remaining_latency_budget_to_kylin(monkeypatch):

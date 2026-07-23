@@ -483,6 +483,9 @@ def test_embedding_status_counts_and_delete_lifecycle(tmp_path):
             "pending": 0,
             "ready": 0,
             "failed": 0,
+            "due": 0,
+            "retry_deferred": 0,
+            "next_retry_at": None,
         }
         hashes = {
             memory_id: add_eligible_memory(store, memory_id, "status-" + memory_id)
@@ -502,6 +505,9 @@ def test_embedding_status_counts_and_delete_lifecycle(tmp_path):
             "pending": 1,
             "ready": 1,
             "failed": 1,
+            "due": 2,
+            "retry_deferred": 0,
+            "next_retry_at": None,
         }
         assert store.delete_memory_embeddings("m1") == 1
         assert store.delete_memory_embeddings("missing") == 0
@@ -509,6 +515,9 @@ def test_embedding_status_counts_and_delete_lifecycle(tmp_path):
             "pending": 1,
             "ready": 0,
             "failed": 1,
+            "due": 2,
+            "retry_deferred": 0,
+            "next_retry_at": None,
         }
     finally:
         store.close()
@@ -598,6 +607,9 @@ def test_pending_embedding_queue_filters_governance_and_retries_failures(
             "pending": 2,
             "ready": 0,
             "failed": 1,
+            "due": 3,
+            "retry_deferred": 0,
+            "next_retry_at": None,
         }
 
         assert not store.enqueue_memory_embedding(
@@ -1446,6 +1458,9 @@ def test_stale_embeddings_do_not_block_queue_status_or_reopen_cleanup(
             "pending": 1,
             "ready": 1,
             "failed": 1,
+            "due": 2,
+            "retry_deferred": 0,
+            "next_retry_at": None,
         }
         assert (
             store.get_memory_embedding(
@@ -1492,7 +1507,14 @@ def test_stale_embeddings_do_not_block_queue_status_or_reopen_cleanup(
                 expected_job_token=item["token"],
             )
         final_status = reopened.embedding_cache_status("kylin", "v1")
-        assert final_status == {"pending": 0, "ready": 3, "failed": 0}
+        assert final_status == {
+            "pending": 0,
+            "ready": 3,
+            "failed": 0,
+            "due": 0,
+            "retry_deferred": 0,
+            "next_retry_at": None,
+        }
         assert final_status["pending"] + final_status["failed"] == 0
     finally:
         reopened.close()
