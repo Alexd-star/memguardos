@@ -15,6 +15,7 @@ output/
 .tmp_cli_home/
 .tmp/
 local_notes/
+artifacts/
 docs/evidence/openkylin_*/
 docs/evidence/kylin_embedding_diag_*/
 docs/eval_result_ci.json
