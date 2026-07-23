@@ -34,7 +34,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地当前工作树全量测试 | 635 passed, 14 skipped |
+| 本地当前工作树全量测试 | 636 passed, 14 skipped |
 | openKylin 最近已归档证据 | 上一次实机快照已归档；本轮将在最终源代码 HEAD 下重采并以 `source_revision.json` 固化 |
 | openKylin systemd 服务重启 | 873 ms（服务恢复后为 active/running） |
 | openKylin 真实 Agent | OpenHands 1.28.1；原 12 组真实会话 12/12，新增 R13-R20 扩展 8/8，新增 holdout 留出盲测 8/8；合计 28 组均有证据 |
@@ -44,6 +44,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | openKylin 10k 负载 P99 | 75.255 ms |
 | openKylin 10k RSS | 130444 KB |
 | openKylin 6 线程并发检索 | 三轮最差 P95 54.381 ms；完整 10k 评测内 P95 139.264 ms |
+| openKylin 持久化向量检索 v2 | 三轮 Kylin Recall@5 均为 1.0000；Kylin 最差 P99 279.931 ms；1k/6 worker 稳定路径最差 P99 357.559 ms |
 | Recall@5 / 跨语言 Recall@5 | 1.0000 / 1.0000 |
 | 敏感阻断 F1 / 脱敏 F1 / 标签 F1 | 1.0000 / 1.0000 / 1.0000 |
 | 精准遗忘候选精确率 / 召回率 | 1.0000 / 1.0000 |
@@ -55,7 +56,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 真实 Agent 场景库已从 12 组扩展到 28 组，新增覆盖偏好冲突覆盖、失败修复轨迹、高风险确认、跨会话 runbook 复用、精准遗忘边界和 holdout 留出盲测。新增 R13-R20 已在 openKylin 上完成独立复跑，证据位于 [docs/evidence/real_agent_extension_r13_r20_latest/](docs/evidence/real_agent_extension_r13_r20_latest/)；新增 8 组 holdout 留出盲测证据位于 [docs/evidence/real_agent_holdout_latest/](docs/evidence/real_agent_holdout_latest/)；原 12 组仍保留在 [docs/evidence/memory_value_latest/](docs/evidence/memory_value_latest/) 中，三者共同构成 28 组真实 OpenHands 证据。
 
-通用 openKylin 证据位于 [docs/evidence/latest/](docs/evidence/latest/)，真实 Agent 专项证据位于 [docs/evidence/agent_latest/](docs/evidence/agent_latest/)，记忆价值双层评测证据位于 [docs/evidence/memory_value_latest/](docs/evidence/memory_value_latest/)，并发优化与消融证据位于 [docs/evidence/performance_latest/](docs/evidence/performance_latest/)。评测汇总见 [docs/测试报告.md](docs/测试报告.md)、[docs/真实Agent闭环测试报告.md](docs/真实Agent闭环测试报告.md)、[docs/真实Agent记忆价值评测报告.md](docs/真实Agent记忆价值评测报告.md) 和 [docs/评委证据包索引.md](docs/评委证据包索引.md)。
+通用 openKylin 证据位于 [docs/evidence/latest/](docs/evidence/latest/)，真实 Agent 专项证据位于 [docs/evidence/agent_latest/](docs/evidence/agent_latest/)，记忆价值双层评测证据位于 [docs/evidence/memory_value_latest/](docs/evidence/memory_value_latest/)，并发优化与消融证据位于 [docs/evidence/performance_latest/](docs/evidence/performance_latest/)，持久化 Kylin 向量三轮原始结果位于 [docs/evidence/retrieval_v2_openkylin.json](docs/evidence/retrieval_v2_openkylin.json)。评测汇总见 [docs/测试报告.md](docs/测试报告.md)、[docs/真实Agent闭环测试报告.md](docs/真实Agent闭环测试报告.md)、[docs/真实Agent记忆价值评测报告.md](docs/真实Agent记忆价值评测报告.md) 和 [docs/评委证据包索引.md](docs/评委证据包索引.md)。
 
 ## 核心能力
 
@@ -67,7 +68,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | 数据质量治理 | Unicode 标准化、空输入拒绝、低质量提示、结构化字段校验、质量分入审计 | `memguard/ingestion/quality.py` |
 | 轻量化存储 | mmap 追加式段文件、SQLite 元数据与脱敏检索副本、FTS、图谱边、审计哈希链 | `memguard/store/` |
 | 时间有效性 | `valid_from/valid_to/superseded_by` 描述事实生效窗口，更新、提升、回滚和遗忘都会关闭旧版本窗口 | `memctl temporal-status`、`memctl versions` |
-| 混合检索 | SQLite FTS、稳定 hash-vector、图谱关联、跨语言技术词扩展、冲突处理；摘要层、实体关系层、原文 chunk 层的层次图谱检索 | `memguard/retrieval/`、`memctl hierarchical-graph-search` |
+| 混合检索 | SQLite FTS、稳定 hash-vector、持久化 Kylin 768 维候选向量、意图路由与 RRF、图谱关联、跨语言技术词扩展、冲突处理；摘要层、实体关系层、原文 chunk 层的层次图谱检索 | `memguard/retrieval/`、`memctl embedding-cache`、`memctl hierarchical-graph-search` |
 | RAG 上下文 | 检索、脱敏、排序、token 预算估算、上下文包、来源分布、选择轨迹、过滤策略和 provider-neutral prompt | `memctl build-context`、`memctl build-prompt` |
 | 精准遗忘 | 自然语言候选、按 Agent/会话/轮次/主题/时间范围定位、dry-run、确认删除、事件载荷清理、tombstone、FTS/图谱清理、compact、明文探针验证 | `memctl forget`、`memctl agent forget`、`verify-forget` |
 | 来源信誉治理 | 外部网页、远程抓取和提示注入类内容默认进入隔离区；审批通过后才进入检索、图谱和 RAG 上下文；拒绝会写 tombstone 和审计 | `memctl governance`、`memguard/governance/trust.py` |
@@ -399,6 +400,5 @@ dist/memguardos_full_repository_<时间戳>_manifest.json
 ## 许可证
 
 MemGuardOS 使用 MIT License，见 [LICENSE](LICENSE)。
-
 
 

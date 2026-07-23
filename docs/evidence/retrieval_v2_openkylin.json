@@ -1,0 +1,1378 @@
+{
+  "schema_version": "retrieval-evidence-v2",
+  "git_head": "bd99a74744447c0fd84ba4a811366614f290c9bf",
+  "datasets": {
+    "seed": {
+      "path": "/home/luo/memguardos-final-bd99a74/data/benchmarks/memory_seed.jsonl",
+      "sha256": "38b5c9c42f63788b3eec4a81b4491b6922cda5c39f5eae45178cf875b1d4e325"
+    },
+    "query": {
+      "path": "/home/luo/memguardos-final-bd99a74/data/benchmarks/retrieval.jsonl",
+      "sha256": "37247169f39d70707f82b98afd87fa258e6357332ca1c76b86cae017a58675a6"
+    }
+  },
+  "protocol": {
+    "rounds": 3,
+    "memory_count": 1000,
+    "queries_per_round": 120,
+    "workers": 6,
+    "reporting": "all raw rounds plus worst-case gate",
+    "concurrent_load_backend": "hash",
+    "quality_backend": "kylin_persisted when available, otherwise rrf_selective_graph"
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "started_at_epoch": 1784804719.6157143,
+      "gate_metrics": {
+        "variant": "kylin_persisted",
+        "recall_at_5": 1.0,
+        "quality_p95_latency_ms": 140.456,
+        "quality_p99_latency_ms": 146.262,
+        "p95_latency_ms": 277.075,
+        "p99_latency_ms": 323.503,
+        "concurrent_load_backend": "hash",
+        "ok": true
+      },
+      "ablation": {
+        "protocol": {
+          "same_dataset_for_all_variants": true,
+          "same_query_order_for_all_variants": true,
+          "top_k": 5,
+          "repetitions": 1,
+          "latency_clock": "time.perf_counter",
+          "backend_isolation": {
+            "baseline_variants": "hash",
+            "kylin_persisted": "kylin_sdk_with_persisted_candidate_vectors"
+          },
+          "cache_policy": {
+            "text_only": "no_application_result_cache",
+            "hybrid_no_graph": "no_application_result_cache",
+            "full_no_cache": "clear_before_each_query",
+            "full_warm_cache": "one_prime_then_timed_hit",
+            "full_kylin_sdk": "clear_before_each_query"
+          }
+        },
+        "environment": {
+          "python": "3.12.2",
+          "platform": "Linux-6.6.0-19-generic-x86_64-with-glibc2.38",
+          "machine": "x86_64"
+        },
+        "dataset": {
+          "seed_count": 59,
+          "stored_seed_count": 59,
+          "query_count": 54,
+          "seed_sha256": "38b5c9c42f63788b3eec4a81b4491b6922cda5c39f5eae45178cf875b1d4e325",
+          "query_sha256": "37247169f39d70707f82b98afd87fa258e6357332ca1c76b86cae017a58675a6"
+        },
+        "variants": {
+          "text_only": {
+            "name": "text_only",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 0.8426,
+            "p50_latency_ms": 0.193,
+            "p95_latency_ms": 0.343,
+            "p99_latency_ms": 0.523,
+            "qps": 4528.467,
+            "candidate_count": {
+              "mean": 3.907,
+              "max": 5
+            },
+            "miss_count": 9,
+            "misses": [
+              {
+                "query": "openKylin 怎么限制服务内存？",
+                "expected": [
+                  "knowledge_systemd_memory_en",
+                  "knowledge_openkylin_service_zh"
+                ],
+                "actual": [
+                  "pref_real_openkylin_video_short_path",
+                  "knowledge_openkylin_service_zh",
+                  "knowledge_ukui_notification",
+                  "knowledge_embedding_sdk_zh",
+                  "knowledge_kylin_auto_retrieval"
+                ]
+              },
+              {
+                "query": "精准遗忘需要哪些步骤？",
+                "expected": [
+                  "knowledge_forget_workflow_zh"
+                ],
+                "actual": []
+              },
+              {
+                "query": "代码搜索应该优先用什么工具？",
+                "expected": [
+                  "pref_tool_rg_first"
+                ],
+                "actual": []
+              },
+              {
+                "query": "删除文件或导出密钥前要不要确认？",
+                "expected": [
+                  "pref_security_confirm_delete"
+                ],
+                "actual": []
+              },
+              {
+                "query": "用户用自然语言描述工号格式时，敏感规则怎么落库？",
+                "expected": [
+                  "knowledge_natural_sensitive_pattern"
+                ],
+                "actual": []
+              },
+              {
+                "query": "答辩里哪些 OS 或大模型能力不能夸大？",
+                "expected": [
+                  "pref_answer_no_exaggeration"
+                ],
+                "actual": [
+                  "knowledge_kube_aws_sensitive_paths",
+                  "knowledge_fanotify_sensitive_dir",
+                  "knowledge_real_auditd_shadow_log",
+                  "knowledge_socket_local_api",
+                  "knowledge_real_audit_log_shadow"
+                ]
+              },
+              {
+                "query": "benchmark 如何证明不是只用 toy demo 过拟合？",
+                "expected": [
+                  "knowledge_benchmark_realism"
+                ],
+                "actual": [
+                  "knowledge_linux_smoke_portability"
+                ]
+              },
+              {
+                "query": "SDK 推理超时后应该检查哪些运行时组件？",
+                "expected": [
+                  "knowledge_real_sdk_recovery_runbook"
+                ],
+                "actual": [
+                  "knowledge_kylin_auto_retrieval",
+                  "pref_real_answer_evidence_first",
+                  "knowledge_embedding_sdk_zh",
+                  "knowledge_real_submission_package_audit",
+                  "knowledge_real_video_smoke_order"
+                ]
+              },
+              {
+                "query": "演示视频最好按什么顺序展示？",
+                "expected": [
+                  "knowledge_real_video_smoke_order"
+                ],
+                "actual": []
+              }
+            ]
+          },
+          "hybrid_no_graph": {
+            "name": "hybrid_no_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 15.463,
+            "p95_latency_ms": 20.716,
+            "p99_latency_ms": 26.309,
+            "qps": 61.28,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": []
+          },
+          "rrf_no_graph": {
+            "name": "rrf_no_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 17.538,
+            "p95_latency_ms": 23.633,
+            "p99_latency_ms": 28.022,
+            "qps": 54.878,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": []
+          },
+          "full_no_cache": {
+            "name": "full_no_cache",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 17.411,
+            "p95_latency_ms": 27.094,
+            "p99_latency_ms": 46.162,
+            "qps": 53.658,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": []
+          },
+          "rrf_selective_graph": {
+            "name": "rrf_selective_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 17.411,
+            "p95_latency_ms": 27.094,
+            "p99_latency_ms": 46.162,
+            "qps": 53.658,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": []
+          },
+          "full_warm_cache": {
+            "name": "full_warm_cache",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 0.088,
+            "p95_latency_ms": 0.211,
+            "p99_latency_ms": 0.258,
+            "qps": 55.786,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": []
+          },
+          "kylin_persisted": {
+            "name": "kylin_persisted",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 127.953,
+            "p95_latency_ms": 140.456,
+            "p99_latency_ms": 146.262,
+            "qps": 7.896,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": [],
+            "embedding_backfill": {
+              "backend": "kylin_sdk",
+              "model_revision": "kylin-sdk-v1",
+              "processed": 57,
+              "ready": 57,
+              "failed": 0,
+              "queue_remaining": 0,
+              "due_remaining": 0,
+              "retry_deferred": 0,
+              "next_retry_at": null,
+              "scan_complete": true,
+              "remaining": 0,
+              "has_more": false,
+              "scan": {
+                "scanned": 57,
+                "enqueued": 0,
+                "next_cursor": "",
+                "wrapped": true
+              },
+              "elapsed_ms": 7797.995,
+              "memory_ids": [
+                "mem_e1e239dbc6c340fd",
+                "mem_bdbff8f5659a4b8e",
+                "mem_41d17c42245644f6",
+                "mem_6d547f02aeca4148",
+                "mem_1d58617fb6124ff5",
+                "mem_470d170b87a74360",
+                "mem_2d6b1bb5d5b84f15",
+                "mem_4e8ac589ff3c4971",
+                "mem_4d71b01d3cd148e1",
+                "mem_96fc6d2708454ea7",
+                "mem_0e847c7970004a47",
+                "mem_b40220d2e96744f8",
+                "mem_c6d9015526374e5b",
+                "mem_4ee745916fb645ca",
+                "mem_251ca46c6a064918",
+                "mem_43180bd555554893",
+                "mem_4ae2ceaec1514edf",
+                "mem_7c966190e8b14735",
+                "mem_59450356ab7d4ba4",
+                "mem_f0f0c67f95b246ef",
+                "mem_1c26b3c0627b4a28",
+                "mem_9da90b17c47b47ce",
+                "mem_d77bf272a05e4575",
+                "mem_5cf4add0c93d47c9",
+                "mem_9b22672777af4236",
+                "mem_5e7f9b95ecb6400e",
+                "mem_ec0725697fb74d99",
+                "mem_0732aa9bb6c8406c",
+                "mem_b26bda234e1d4337",
+                "mem_24ecc3f4ccf24a62",
+                "mem_dfc3bcd90b4447aa",
+                "mem_486cd16669994a03",
+                "mem_d0e8b6a5b61b40c2",
+                "mem_51c4bc010d4c4933",
+                "mem_aa26b644d34e4f17",
+                "mem_9cae0741b9734dfe",
+                "mem_c76b792937aa4444",
+                "mem_7c27bb9f86e749db",
+                "mem_641f8419506f448e",
+                "mem_8d8c76cff762410a",
+                "mem_994cb094549048ca",
+                "mem_9fd09e6c55374b11",
+                "mem_058a5dce62a14698",
+                "mem_37867212275a43dc",
+                "mem_1af0c48aa2144ae1",
+                "mem_2e4f1c986992482b",
+                "mem_f41607f3916245f0",
+                "mem_a4b71d3dcb5d4c15",
+                "mem_086e6a12230c4f90",
+                "mem_d688f1be7adf4328",
+                "mem_49f426a18a634b21",
+                "mem_faae8cbf88554cd1",
+                "mem_b3c4cf61dab348ea",
+                "mem_94f729dfd4a940e7",
+                "mem_e0aeceb6c1a44b1b",
+                "mem_c43e9065ad2142d2",
+                "mem_c7d258f7e2614de8"
+              ],
+              "failures": []
+            }
+          },
+          "full_kylin_sdk": {
+            "name": "full_kylin_sdk",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 127.953,
+            "p95_latency_ms": 140.456,
+            "p99_latency_ms": 146.262,
+            "qps": 7.896,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": [],
+            "embedding_backfill": {
+              "backend": "kylin_sdk",
+              "model_revision": "kylin-sdk-v1",
+              "processed": 57,
+              "ready": 57,
+              "failed": 0,
+              "queue_remaining": 0,
+              "due_remaining": 0,
+              "retry_deferred": 0,
+              "next_retry_at": null,
+              "scan_complete": true,
+              "remaining": 0,
+              "has_more": false,
+              "scan": {
+                "scanned": 57,
+                "enqueued": 0,
+                "next_cursor": "",
+                "wrapped": true
+              },
+              "elapsed_ms": 7797.995,
+              "memory_ids": [
+                "mem_e1e239dbc6c340fd",
+                "mem_bdbff8f5659a4b8e",
+                "mem_41d17c42245644f6",
+                "mem_6d547f02aeca4148",
+                "mem_1d58617fb6124ff5",
+                "mem_470d170b87a74360",
+                "mem_2d6b1bb5d5b84f15",
+                "mem_4e8ac589ff3c4971",
+                "mem_4d71b01d3cd148e1",
+                "mem_96fc6d2708454ea7",
+                "mem_0e847c7970004a47",
+                "mem_b40220d2e96744f8",
+                "mem_c6d9015526374e5b",
+                "mem_4ee745916fb645ca",
+                "mem_251ca46c6a064918",
+                "mem_43180bd555554893",
+                "mem_4ae2ceaec1514edf",
+                "mem_7c966190e8b14735",
+                "mem_59450356ab7d4ba4",
+                "mem_f0f0c67f95b246ef",
+                "mem_1c26b3c0627b4a28",
+                "mem_9da90b17c47b47ce",
+                "mem_d77bf272a05e4575",
+                "mem_5cf4add0c93d47c9",
+                "mem_9b22672777af4236",
+                "mem_5e7f9b95ecb6400e",
+                "mem_ec0725697fb74d99",
+                "mem_0732aa9bb6c8406c",
+                "mem_b26bda234e1d4337",
+                "mem_24ecc3f4ccf24a62",
+                "mem_dfc3bcd90b4447aa",
+                "mem_486cd16669994a03",
+                "mem_d0e8b6a5b61b40c2",
+                "mem_51c4bc010d4c4933",
+                "mem_aa26b644d34e4f17",
+                "mem_9cae0741b9734dfe",
+                "mem_c76b792937aa4444",
+                "mem_7c27bb9f86e749db",
+                "mem_641f8419506f448e",
+                "mem_8d8c76cff762410a",
+                "mem_994cb094549048ca",
+                "mem_9fd09e6c55374b11",
+                "mem_058a5dce62a14698",
+                "mem_37867212275a43dc",
+                "mem_1af0c48aa2144ae1",
+                "mem_2e4f1c986992482b",
+                "mem_f41607f3916245f0",
+                "mem_a4b71d3dcb5d4c15",
+                "mem_086e6a12230c4f90",
+                "mem_d688f1be7adf4328",
+                "mem_49f426a18a634b21",
+                "mem_faae8cbf88554cd1",
+                "mem_b3c4cf61dab348ea",
+                "mem_94f729dfd4a940e7",
+                "mem_e0aeceb6c1a44b1b",
+                "mem_c43e9065ad2142d2",
+                "mem_c7d258f7e2614de8"
+              ],
+              "failures": []
+            }
+          }
+        },
+        "startup_and_cache": {
+          "measurement_scope": "process_cold_vs_process_warm",
+          "service_startup_ms": 4.114,
+          "first_query_ms": 17.872,
+          "warm_query_ms": 0.18,
+          "warm_speedup": 99.374,
+          "os_page_cache_claimed": false,
+          "note": "该测量比较新服务实例首次查询与同进程重复查询，不等同于清空 Linux 内核页缓存。"
+        }
+      },
+      "concurrent": {
+        "memory_count": 1000,
+        "query_count": 120,
+        "workers": 6,
+        "embedding_backend": "hash",
+        "read_path_audit": "disabled_for_latency_measurement",
+        "errors": [],
+        "ok": true,
+        "p50_latency_ms": 1.175,
+        "p95_latency_ms": 277.075,
+        "p99_latency_ms": 323.503,
+        "audit_chain_ok": true,
+        "audit_events_checked": 1000,
+        "policy_eviction_candidates": 5
+      }
+    },
+    {
+      "round": 2,
+      "started_at_epoch": 1784804752.7668543,
+      "gate_metrics": {
+        "variant": "kylin_persisted",
+        "recall_at_5": 1.0,
+        "quality_p95_latency_ms": 198.728,
+        "quality_p99_latency_ms": 226.132,
+        "p95_latency_ms": 286.477,
+        "p99_latency_ms": 357.559,
+        "concurrent_load_backend": "hash",
+        "ok": true
+      },
+      "ablation": {
+        "protocol": {
+          "same_dataset_for_all_variants": true,
+          "same_query_order_for_all_variants": true,
+          "top_k": 5,
+          "repetitions": 1,
+          "latency_clock": "time.perf_counter",
+          "backend_isolation": {
+            "baseline_variants": "hash",
+            "kylin_persisted": "kylin_sdk_with_persisted_candidate_vectors"
+          },
+          "cache_policy": {
+            "text_only": "no_application_result_cache",
+            "hybrid_no_graph": "no_application_result_cache",
+            "full_no_cache": "clear_before_each_query",
+            "full_warm_cache": "one_prime_then_timed_hit",
+            "full_kylin_sdk": "clear_before_each_query"
+          }
+        },
+        "environment": {
+          "python": "3.12.2",
+          "platform": "Linux-6.6.0-19-generic-x86_64-with-glibc2.38",
+          "machine": "x86_64"
+        },
+        "dataset": {
+          "seed_count": 59,
+          "stored_seed_count": 59,
+          "query_count": 54,
+          "seed_sha256": "38b5c9c42f63788b3eec4a81b4491b6922cda5c39f5eae45178cf875b1d4e325",
+          "query_sha256": "37247169f39d70707f82b98afd87fa258e6357332ca1c76b86cae017a58675a6"
+        },
+        "variants": {
+          "text_only": {
+            "name": "text_only",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 0.8426,
+            "p50_latency_ms": 0.223,
+            "p95_latency_ms": 0.56,
+            "p99_latency_ms": 0.664,
+            "qps": 3529.057,
+            "candidate_count": {
+              "mean": 3.907,
+              "max": 5
+            },
+            "miss_count": 9,
+            "misses": [
+              {
+                "query": "openKylin 怎么限制服务内存？",
+                "expected": [
+                  "knowledge_systemd_memory_en",
+                  "knowledge_openkylin_service_zh"
+                ],
+                "actual": [
+                  "pref_real_openkylin_video_short_path",
+                  "knowledge_openkylin_service_zh",
+                  "knowledge_ukui_notification",
+                  "knowledge_embedding_sdk_zh",
+                  "knowledge_kylin_auto_retrieval"
+                ]
+              },
+              {
+                "query": "精准遗忘需要哪些步骤？",
+                "expected": [
+                  "knowledge_forget_workflow_zh"
+                ],
+                "actual": []
+              },
+              {
+                "query": "代码搜索应该优先用什么工具？",
+                "expected": [
+                  "pref_tool_rg_first"
+                ],
+                "actual": []
+              },
+              {
+                "query": "删除文件或导出密钥前要不要确认？",
+                "expected": [
+                  "pref_security_confirm_delete"
+                ],
+                "actual": []
+              },
+              {
+                "query": "用户用自然语言描述工号格式时，敏感规则怎么落库？",
+                "expected": [
+                  "knowledge_natural_sensitive_pattern"
+                ],
+                "actual": []
+              },
+              {
+                "query": "答辩里哪些 OS 或大模型能力不能夸大？",
+                "expected": [
+                  "pref_answer_no_exaggeration"
+                ],
+                "actual": [
+                  "knowledge_kube_aws_sensitive_paths",
+                  "knowledge_fanotify_sensitive_dir",
+                  "knowledge_real_auditd_shadow_log",
+                  "knowledge_socket_local_api",
+                  "knowledge_real_audit_log_shadow"
+                ]
+              },
+              {
+                "query": "benchmark 如何证明不是只用 toy demo 过拟合？",
+                "expected": [
+                  "knowledge_benchmark_realism"
+                ],
+                "actual": [
+                  "knowledge_linux_smoke_portability"
+                ]
+              },
+              {
+                "query": "SDK 推理超时后应该检查哪些运行时组件？",
+                "expected": [
+                  "knowledge_real_sdk_recovery_runbook"
+                ],
+                "actual": [
+                  "knowledge_kylin_auto_retrieval",
+                  "pref_real_answer_evidence_first",
+                  "knowledge_embedding_sdk_zh",
+                  "knowledge_real_submission_package_audit",
+                  "knowledge_real_video_smoke_order"
+                ]
+              },
+              {
+                "query": "演示视频最好按什么顺序展示？",
+                "expected": [
+                  "knowledge_real_video_smoke_order"
+                ],
+                "actual": []
+              }
+            ]
+          },
+          "hybrid_no_graph": {
+            "name": "hybrid_no_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 15.325,
+            "p95_latency_ms": 19.188,
+            "p99_latency_ms": 22.016,
+            "qps": 63.576,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": []
+          },
+          "rrf_no_graph": {
+            "name": "rrf_no_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 16.724,
+            "p95_latency_ms": 19.84,
+            "p99_latency_ms": 21.883,
+            "qps": 59.843,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": []
+          },
+          "full_no_cache": {
+            "name": "full_no_cache",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 16.591,
+            "p95_latency_ms": 27.252,
+            "p99_latency_ms": 35.738,
+            "qps": 55.514,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": []
+          },
+          "rrf_selective_graph": {
+            "name": "rrf_selective_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 16.591,
+            "p95_latency_ms": 27.252,
+            "p99_latency_ms": 35.738,
+            "qps": 55.514,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": []
+          },
+          "full_warm_cache": {
+            "name": "full_warm_cache",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 0.092,
+            "p95_latency_ms": 0.228,
+            "p99_latency_ms": 0.277,
+            "qps": 57.768,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": []
+          },
+          "kylin_persisted": {
+            "name": "kylin_persisted",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 143.49,
+            "p95_latency_ms": 198.728,
+            "p99_latency_ms": 226.132,
+            "qps": 6.739,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": [],
+            "embedding_backfill": {
+              "backend": "kylin_sdk",
+              "model_revision": "kylin-sdk-v1",
+              "processed": 57,
+              "ready": 57,
+              "failed": 0,
+              "queue_remaining": 0,
+              "due_remaining": 0,
+              "retry_deferred": 0,
+              "next_retry_at": null,
+              "scan_complete": true,
+              "remaining": 0,
+              "has_more": false,
+              "scan": {
+                "scanned": 57,
+                "enqueued": 0,
+                "next_cursor": "",
+                "wrapped": true
+              },
+              "elapsed_ms": 8827.182,
+              "memory_ids": [
+                "mem_ea2e0b6bbb0b4963",
+                "mem_e5c26ee17dce450b",
+                "mem_464ae63d56914c4e",
+                "mem_ee268be5a4ad41dd",
+                "mem_d605e2db5dfa4858",
+                "mem_c0b3d2719bc14cf0",
+                "mem_a6813a63c196414a",
+                "mem_de78e3471cc24d66",
+                "mem_deede9f583724b2e",
+                "mem_009389347d2d41b0",
+                "mem_bda78d54c4e74044",
+                "mem_1d7099e2b1f942f0",
+                "mem_84ec60e2e034456d",
+                "mem_bfe0be440b034197",
+                "mem_dff18d7c89aa44b5",
+                "mem_791f4985dfba4edb",
+                "mem_e0140b1fa965487c",
+                "mem_76fa4e0571364d19",
+                "mem_eff85b5cc5a84023",
+                "mem_053646c726574d59",
+                "mem_61b11ff05f4b4c3b",
+                "mem_a7e3088b3ae541ab",
+                "mem_518b9ba9265e49d6",
+                "mem_69a10038995942ae",
+                "mem_f9bb7bd960154124",
+                "mem_2cf0de1a418e44ea",
+                "mem_10072c3f66f8423d",
+                "mem_75e4f99c0bb546a1",
+                "mem_6d2546ca0d5f4617",
+                "mem_eee5e4e5019c4611",
+                "mem_6b10b29922484eb7",
+                "mem_4faa0374489f46ed",
+                "mem_9cfa7a2b7e264e80",
+                "mem_df8ca2df7ef2401b",
+                "mem_88ae8aaf362742ad",
+                "mem_30fd4a36750f4e8e",
+                "mem_1fc6ff10f61f42fb",
+                "mem_b69b4cd7d95448c6",
+                "mem_b63e79185fb94af9",
+                "mem_30efc95a3baf483e",
+                "mem_f30a6cfb697b4c32",
+                "mem_f15e10f4928542ed",
+                "mem_28f9ca3cd89a474f",
+                "mem_ea0fa0bc41094b36",
+                "mem_728ae5eeec364463",
+                "mem_221e81ba10af4898",
+                "mem_4d835acec3cb47c6",
+                "mem_7945f70da4ff4277",
+                "mem_bf4a191d6dbc4746",
+                "mem_3eaafa0a85e8453c",
+                "mem_93ccd807739c488a",
+                "mem_f6e8f9b04d7e4a57",
+                "mem_8607e394f0904558",
+                "mem_ba6884a8d2a14e2b",
+                "mem_d2d56286d1ef405f",
+                "mem_e59d850e9b634a7b",
+                "mem_8409862adf544dab"
+              ],
+              "failures": []
+            }
+          },
+          "full_kylin_sdk": {
+            "name": "full_kylin_sdk",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 143.49,
+            "p95_latency_ms": 198.728,
+            "p99_latency_ms": 226.132,
+            "qps": 6.739,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": [],
+            "embedding_backfill": {
+              "backend": "kylin_sdk",
+              "model_revision": "kylin-sdk-v1",
+              "processed": 57,
+              "ready": 57,
+              "failed": 0,
+              "queue_remaining": 0,
+              "due_remaining": 0,
+              "retry_deferred": 0,
+              "next_retry_at": null,
+              "scan_complete": true,
+              "remaining": 0,
+              "has_more": false,
+              "scan": {
+                "scanned": 57,
+                "enqueued": 0,
+                "next_cursor": "",
+                "wrapped": true
+              },
+              "elapsed_ms": 8827.182,
+              "memory_ids": [
+                "mem_ea2e0b6bbb0b4963",
+                "mem_e5c26ee17dce450b",
+                "mem_464ae63d56914c4e",
+                "mem_ee268be5a4ad41dd",
+                "mem_d605e2db5dfa4858",
+                "mem_c0b3d2719bc14cf0",
+                "mem_a6813a63c196414a",
+                "mem_de78e3471cc24d66",
+                "mem_deede9f583724b2e",
+                "mem_009389347d2d41b0",
+                "mem_bda78d54c4e74044",
+                "mem_1d7099e2b1f942f0",
+                "mem_84ec60e2e034456d",
+                "mem_bfe0be440b034197",
+                "mem_dff18d7c89aa44b5",
+                "mem_791f4985dfba4edb",
+                "mem_e0140b1fa965487c",
+                "mem_76fa4e0571364d19",
+                "mem_eff85b5cc5a84023",
+                "mem_053646c726574d59",
+                "mem_61b11ff05f4b4c3b",
+                "mem_a7e3088b3ae541ab",
+                "mem_518b9ba9265e49d6",
+                "mem_69a10038995942ae",
+                "mem_f9bb7bd960154124",
+                "mem_2cf0de1a418e44ea",
+                "mem_10072c3f66f8423d",
+                "mem_75e4f99c0bb546a1",
+                "mem_6d2546ca0d5f4617",
+                "mem_eee5e4e5019c4611",
+                "mem_6b10b29922484eb7",
+                "mem_4faa0374489f46ed",
+                "mem_9cfa7a2b7e264e80",
+                "mem_df8ca2df7ef2401b",
+                "mem_88ae8aaf362742ad",
+                "mem_30fd4a36750f4e8e",
+                "mem_1fc6ff10f61f42fb",
+                "mem_b69b4cd7d95448c6",
+                "mem_b63e79185fb94af9",
+                "mem_30efc95a3baf483e",
+                "mem_f30a6cfb697b4c32",
+                "mem_f15e10f4928542ed",
+                "mem_28f9ca3cd89a474f",
+                "mem_ea0fa0bc41094b36",
+                "mem_728ae5eeec364463",
+                "mem_221e81ba10af4898",
+                "mem_4d835acec3cb47c6",
+                "mem_7945f70da4ff4277",
+                "mem_bf4a191d6dbc4746",
+                "mem_3eaafa0a85e8453c",
+                "mem_93ccd807739c488a",
+                "mem_f6e8f9b04d7e4a57",
+                "mem_8607e394f0904558",
+                "mem_ba6884a8d2a14e2b",
+                "mem_d2d56286d1ef405f",
+                "mem_e59d850e9b634a7b",
+                "mem_8409862adf544dab"
+              ],
+              "failures": []
+            }
+          }
+        },
+        "startup_and_cache": {
+          "measurement_scope": "process_cold_vs_process_warm",
+          "service_startup_ms": 2.961,
+          "first_query_ms": 18.687,
+          "warm_query_ms": 0.106,
+          "warm_speedup": 176.791,
+          "os_page_cache_claimed": false,
+          "note": "该测量比较新服务实例首次查询与同进程重复查询，不等同于清空 Linux 内核页缓存。"
+        }
+      },
+      "concurrent": {
+        "memory_count": 1000,
+        "query_count": 120,
+        "workers": 6,
+        "embedding_backend": "hash",
+        "read_path_audit": "disabled_for_latency_measurement",
+        "errors": [],
+        "ok": true,
+        "p50_latency_ms": 2.093,
+        "p95_latency_ms": 286.477,
+        "p99_latency_ms": 357.559,
+        "audit_chain_ok": true,
+        "audit_events_checked": 1000,
+        "policy_eviction_candidates": 5
+      }
+    },
+    {
+      "round": 3,
+      "started_at_epoch": 1784804789.9403083,
+      "gate_metrics": {
+        "variant": "kylin_persisted",
+        "recall_at_5": 1.0,
+        "quality_p95_latency_ms": 201.08,
+        "quality_p99_latency_ms": 279.931,
+        "p95_latency_ms": 265.76,
+        "p99_latency_ms": 326.386,
+        "concurrent_load_backend": "hash",
+        "ok": true
+      },
+      "ablation": {
+        "protocol": {
+          "same_dataset_for_all_variants": true,
+          "same_query_order_for_all_variants": true,
+          "top_k": 5,
+          "repetitions": 1,
+          "latency_clock": "time.perf_counter",
+          "backend_isolation": {
+            "baseline_variants": "hash",
+            "kylin_persisted": "kylin_sdk_with_persisted_candidate_vectors"
+          },
+          "cache_policy": {
+            "text_only": "no_application_result_cache",
+            "hybrid_no_graph": "no_application_result_cache",
+            "full_no_cache": "clear_before_each_query",
+            "full_warm_cache": "one_prime_then_timed_hit",
+            "full_kylin_sdk": "clear_before_each_query"
+          }
+        },
+        "environment": {
+          "python": "3.12.2",
+          "platform": "Linux-6.6.0-19-generic-x86_64-with-glibc2.38",
+          "machine": "x86_64"
+        },
+        "dataset": {
+          "seed_count": 59,
+          "stored_seed_count": 59,
+          "query_count": 54,
+          "seed_sha256": "38b5c9c42f63788b3eec4a81b4491b6922cda5c39f5eae45178cf875b1d4e325",
+          "query_sha256": "37247169f39d70707f82b98afd87fa258e6357332ca1c76b86cae017a58675a6"
+        },
+        "variants": {
+          "text_only": {
+            "name": "text_only",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 0.8426,
+            "p50_latency_ms": 0.2,
+            "p95_latency_ms": 0.396,
+            "p99_latency_ms": 0.548,
+            "qps": 4298.936,
+            "candidate_count": {
+              "mean": 3.907,
+              "max": 5
+            },
+            "miss_count": 9,
+            "misses": [
+              {
+                "query": "openKylin 怎么限制服务内存？",
+                "expected": [
+                  "knowledge_systemd_memory_en",
+                  "knowledge_openkylin_service_zh"
+                ],
+                "actual": [
+                  "pref_real_openkylin_video_short_path",
+                  "knowledge_openkylin_service_zh",
+                  "knowledge_ukui_notification",
+                  "knowledge_embedding_sdk_zh",
+                  "knowledge_kylin_auto_retrieval"
+                ]
+              },
+              {
+                "query": "精准遗忘需要哪些步骤？",
+                "expected": [
+                  "knowledge_forget_workflow_zh"
+                ],
+                "actual": []
+              },
+              {
+                "query": "代码搜索应该优先用什么工具？",
+                "expected": [
+                  "pref_tool_rg_first"
+                ],
+                "actual": []
+              },
+              {
+                "query": "删除文件或导出密钥前要不要确认？",
+                "expected": [
+                  "pref_security_confirm_delete"
+                ],
+                "actual": []
+              },
+              {
+                "query": "用户用自然语言描述工号格式时，敏感规则怎么落库？",
+                "expected": [
+                  "knowledge_natural_sensitive_pattern"
+                ],
+                "actual": []
+              },
+              {
+                "query": "答辩里哪些 OS 或大模型能力不能夸大？",
+                "expected": [
+                  "pref_answer_no_exaggeration"
+                ],
+                "actual": [
+                  "knowledge_kube_aws_sensitive_paths",
+                  "knowledge_fanotify_sensitive_dir",
+                  "knowledge_real_auditd_shadow_log",
+                  "knowledge_socket_local_api",
+                  "knowledge_real_audit_log_shadow"
+                ]
+              },
+              {
+                "query": "benchmark 如何证明不是只用 toy demo 过拟合？",
+                "expected": [
+                  "knowledge_benchmark_realism"
+                ],
+                "actual": [
+                  "knowledge_linux_smoke_portability"
+                ]
+              },
+              {
+                "query": "SDK 推理超时后应该检查哪些运行时组件？",
+                "expected": [
+                  "knowledge_real_sdk_recovery_runbook"
+                ],
+                "actual": [
+                  "knowledge_kylin_auto_retrieval",
+                  "pref_real_answer_evidence_first",
+                  "knowledge_embedding_sdk_zh",
+                  "knowledge_real_submission_package_audit",
+                  "knowledge_real_video_smoke_order"
+                ]
+              },
+              {
+                "query": "演示视频最好按什么顺序展示？",
+                "expected": [
+                  "knowledge_real_video_smoke_order"
+                ],
+                "actual": []
+              }
+            ]
+          },
+          "hybrid_no_graph": {
+            "name": "hybrid_no_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 15.672,
+            "p95_latency_ms": 18.658,
+            "p99_latency_ms": 19.223,
+            "qps": 63.265,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": []
+          },
+          "rrf_no_graph": {
+            "name": "rrf_no_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 16.239,
+            "p95_latency_ms": 19.82,
+            "p99_latency_ms": 22.982,
+            "qps": 59.989,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": []
+          },
+          "full_no_cache": {
+            "name": "full_no_cache",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 17.153,
+            "p95_latency_ms": 26.946,
+            "p99_latency_ms": 33.305,
+            "qps": 55.401,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": []
+          },
+          "rrf_selective_graph": {
+            "name": "rrf_selective_graph",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 17.153,
+            "p95_latency_ms": 26.946,
+            "p99_latency_ms": 33.305,
+            "qps": 55.401,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": []
+          },
+          "full_warm_cache": {
+            "name": "full_warm_cache",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 0.099,
+            "p95_latency_ms": 0.239,
+            "p99_latency_ms": 0.286,
+            "qps": 57.0,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": []
+          },
+          "kylin_persisted": {
+            "name": "kylin_persisted",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 140.874,
+            "p95_latency_ms": 201.08,
+            "p99_latency_ms": 279.931,
+            "qps": 6.606,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": [],
+            "embedding_backfill": {
+              "backend": "kylin_sdk",
+              "model_revision": "kylin-sdk-v1",
+              "processed": 57,
+              "ready": 57,
+              "failed": 0,
+              "queue_remaining": 0,
+              "due_remaining": 0,
+              "retry_deferred": 0,
+              "next_retry_at": null,
+              "scan_complete": true,
+              "remaining": 0,
+              "has_more": false,
+              "scan": {
+                "scanned": 57,
+                "enqueued": 0,
+                "next_cursor": "",
+                "wrapped": true
+              },
+              "elapsed_ms": 8472.51,
+              "memory_ids": [
+                "mem_04db01a47feb425b",
+                "mem_2ec9a7b187194c68",
+                "mem_fd8c5574fdc7421b",
+                "mem_b254495c653a4acc",
+                "mem_221ad463f422422d",
+                "mem_975e211c0e3e4f41",
+                "mem_7b882197d39d4f68",
+                "mem_4eec9a508dc44551",
+                "mem_8984a566b7f34f64",
+                "mem_5f7e91eb27aa4e0b",
+                "mem_b7b6ab96d0d34049",
+                "mem_6052a98015614fae",
+                "mem_9c281dcceed1441f",
+                "mem_143ec78a666c4152",
+                "mem_1a41d77a015c43a5",
+                "mem_b8c5605b9f034366",
+                "mem_e97870651d844f10",
+                "mem_a07d5f1a69c24ea9",
+                "mem_2460e864cbc0437b",
+                "mem_470bccf7a9f84a4f",
+                "mem_5368d6a557be4415",
+                "mem_4cbb33b79c82495f",
+                "mem_870ffe055b464ee6",
+                "mem_bc99d908aff2414d",
+                "mem_1252df78011044b0",
+                "mem_23b7b1481c8e4d35",
+                "mem_dc9f94403629455f",
+                "mem_75b1673bc94d4c5b",
+                "mem_7654d51803e94461",
+                "mem_9dd7454d735f4c10",
+                "mem_aea536c443f14cef",
+                "mem_0b9d065f244e4697",
+                "mem_3212ebeba33e4e6d",
+                "mem_05683ce0f42b4e39",
+                "mem_d857491ae9414d67",
+                "mem_0de23fc124fd48eb",
+                "mem_bf7894dc2718438f",
+                "mem_bd03d027a9e64132",
+                "mem_0f6542fb73084fe0",
+                "mem_cb41621fdd5743ed",
+                "mem_52d98058eb4d4fd4",
+                "mem_40b77dd1e29a4240",
+                "mem_d4ccc16d9bea4743",
+                "mem_d177668d89cb4551",
+                "mem_a25d829cca094a83",
+                "mem_fefa347c9db24a59",
+                "mem_91fd7f79221048dd",
+                "mem_664ee620d1a84881",
+                "mem_93158772d0734124",
+                "mem_7703f35a5ab8415b",
+                "mem_9f53b542d287434f",
+                "mem_a632335195b74de6",
+                "mem_5dd78e73d85744b2",
+                "mem_f73ac05880ab4398",
+                "mem_a0e991f3187c4cfa",
+                "mem_eddda14fb1e44df2",
+                "mem_686d7c9e8e9a45d5"
+              ],
+              "failures": []
+            }
+          },
+          "full_kylin_sdk": {
+            "name": "full_kylin_sdk",
+            "status": "completed",
+            "query_count": 54,
+            "recall_at_5": 1.0,
+            "p50_latency_ms": 140.874,
+            "p95_latency_ms": 201.08,
+            "p99_latency_ms": 279.931,
+            "qps": 6.606,
+            "candidate_count": {
+              "mean": 59.0,
+              "max": 59
+            },
+            "miss_count": 0,
+            "misses": [],
+            "embedding_backfill": {
+              "backend": "kylin_sdk",
+              "model_revision": "kylin-sdk-v1",
+              "processed": 57,
+              "ready": 57,
+              "failed": 0,
+              "queue_remaining": 0,
+              "due_remaining": 0,
+              "retry_deferred": 0,
+              "next_retry_at": null,
+              "scan_complete": true,
+              "remaining": 0,
+              "has_more": false,
+              "scan": {
+                "scanned": 57,
+                "enqueued": 0,
+                "next_cursor": "",
+                "wrapped": true
+              },
+              "elapsed_ms": 8472.51,
+              "memory_ids": [
+                "mem_04db01a47feb425b",
+                "mem_2ec9a7b187194c68",
+                "mem_fd8c5574fdc7421b",
+                "mem_b254495c653a4acc",
+                "mem_221ad463f422422d",
+                "mem_975e211c0e3e4f41",
+                "mem_7b882197d39d4f68",
+                "mem_4eec9a508dc44551",
+                "mem_8984a566b7f34f64",
+                "mem_5f7e91eb27aa4e0b",
+                "mem_b7b6ab96d0d34049",
+                "mem_6052a98015614fae",
+                "mem_9c281dcceed1441f",
+                "mem_143ec78a666c4152",
+                "mem_1a41d77a015c43a5",
+                "mem_b8c5605b9f034366",
+                "mem_e97870651d844f10",
+                "mem_a07d5f1a69c24ea9",
+                "mem_2460e864cbc0437b",
+                "mem_470bccf7a9f84a4f",
+                "mem_5368d6a557be4415",
+                "mem_4cbb33b79c82495f",
+                "mem_870ffe055b464ee6",
+                "mem_bc99d908aff2414d",
+                "mem_1252df78011044b0",
+                "mem_23b7b1481c8e4d35",
+                "mem_dc9f94403629455f",
+                "mem_75b1673bc94d4c5b",
+                "mem_7654d51803e94461",
+                "mem_9dd7454d735f4c10",
+                "mem_aea536c443f14cef",
+                "mem_0b9d065f244e4697",
+                "mem_3212ebeba33e4e6d",
+                "mem_05683ce0f42b4e39",
+                "mem_d857491ae9414d67",
+                "mem_0de23fc124fd48eb",
+                "mem_bf7894dc2718438f",
+                "mem_bd03d027a9e64132",
+                "mem_0f6542fb73084fe0",
+                "mem_cb41621fdd5743ed",
+                "mem_52d98058eb4d4fd4",
+                "mem_40b77dd1e29a4240",
+                "mem_d4ccc16d9bea4743",
+                "mem_d177668d89cb4551",
+                "mem_a25d829cca094a83",
+                "mem_fefa347c9db24a59",
+                "mem_91fd7f79221048dd",
+                "mem_664ee620d1a84881",
+                "mem_93158772d0734124",
+                "mem_7703f35a5ab8415b",
+                "mem_9f53b542d287434f",
+                "mem_a632335195b74de6",
+                "mem_5dd78e73d85744b2",
+                "mem_f73ac05880ab4398",
+                "mem_a0e991f3187c4cfa",
+                "mem_eddda14fb1e44df2",
+                "mem_686d7c9e8e9a45d5"
+              ],
+              "failures": []
+            }
+          }
+        },
+        "startup_and_cache": {
+          "measurement_scope": "process_cold_vs_process_warm",
+          "service_startup_ms": 4.215,
+          "first_query_ms": 20.596,
+          "warm_query_ms": 0.083,
+          "warm_speedup": 247.595,
+          "os_page_cache_claimed": false,
+          "note": "该测量比较新服务实例首次查询与同进程重复查询，不等同于清空 Linux 内核页缓存。"
+        }
+      },
+      "concurrent": {
+        "memory_count": 1000,
+        "query_count": 120,
+        "workers": 6,
+        "embedding_backend": "hash",
+        "read_path_audit": "disabled_for_latency_measurement",
+        "errors": [],
+        "ok": true,
+        "p50_latency_ms": 1.346,
+        "p95_latency_ms": 265.76,
+        "p99_latency_ms": 326.386,
+        "audit_chain_ok": true,
+        "audit_events_checked": 1000,
+        "policy_eviction_candidates": 5
+      }
+    }
+  ],
+  "gate": {
+    "pass": true,
+    "failures": [],
+    "required_rounds": 3,
+    "evaluated_rounds": 3,
+    "thresholds": {
+      "recall_at_5": 1.0,
+      "p95_latency_ms_exclusive_upper": 500.0,
+      "p99_latency_ms_exclusive_upper": 500.0,
+      "quality_p99_latency_ms_exclusive_upper": 500.0
+    }
+  }
+}
