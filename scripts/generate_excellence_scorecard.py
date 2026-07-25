@@ -8,7 +8,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-LOCAL_PYTEST_CURRENT = "341 passed, 3 skipped"
+LOCAL_PYTEST_PATH = ROOT / "docs/evidence/submission_latest/pytest_windows.txt"
 OPENKYLIN_PYTEST_PATH = ROOT / "docs/evidence/openkylin_native_latest/pytest_openkylin.txt"
 SCORECARD_PATH = ROOT / "docs/超标准交付评分矩阵.md"
 
@@ -61,7 +61,8 @@ def build_scorecard() -> str:
     )
     remote_cases = _case_count(remote_api)
     readiness_summary = readiness.get("summary", {}) if isinstance(readiness, dict) else {}
-    openkylin_pytest = _parse_pytest_line(OPENKYLIN_PYTEST_PATH)
+    local_pytest = _parse_pytest_line(LOCAL_PYTEST_PATH, "Windows 提交包 pytest")
+    openkylin_pytest = _parse_pytest_line(OPENKYLIN_PYTEST_PATH, "openKylin pytest")
     dataset_total = sum(int(v) for v in eval_result.get("dataset", {}).values())
     agent_case_count = int(agent_metrics.get("case_count", 0))
     prompt_reduction = float(deterministic_deltas.get("prompt_token_reduction_ratio", 0.0))
@@ -89,7 +90,13 @@ def build_scorecard() -> str:
         "",
         "| 赛题/交付维度 | 基准或最低要求 | 当前证据 | 超标准余量 | 证据位置 |",
         "|---|---:|---:|---:|---|",
-        _row("本地自动化测试", "全量通过", LOCAL_PYTEST_CURRENT, "持续回归", "`python -m pytest -q`"),
+        _row(
+            "Windows 提交包自动化测试",
+            "全量通过",
+            local_pytest,
+            "从最终源码包解压后独立复验",
+            "`docs/evidence/submission_latest/pytest_windows.txt`",
+        ),
         _row("openKylin 自动化测试", "全量通过", openkylin_pytest, "目标系统复验", "`docs/evidence/openkylin_native_latest/pytest_openkylin.txt`"),
         _row("就绪门禁", "0 个 P0 失败", f"{readiness_summary.get('passed', 0)}/{readiness_summary.get('total', 0)} 通过，{readiness_summary.get('warnings', 0)} 警告", "竞赛提交前门禁", "`docs/竞赛就绪自检报告.md`"),
         _row("10k 负载 P95 延迟", "≤ 500 ms", f"{p95:.3f} ms", f"{headroom:.2f}x 余量", "`docs/evidence/performance_latest/eval_result_openkylin_10k_optimized.json`"),
@@ -183,15 +190,14 @@ def _completed_count(metrics: dict[str, Any]) -> int:
     return int(metrics.get("completed_case_count", 0)) if isinstance(metrics, dict) else 0
 
 
-def _parse_pytest_line(path: Path) -> str:
+def _parse_pytest_line(path: Path, label: str) -> str:
     text = path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
     match = re.search(r"(\d+\s+passed(?:,\s*\d+\s+skipped)?)", text)
-    return match.group(1) if match else "缺少 openKylin pytest 证据"
+    return match.group(1) if match else f"缺少 {label} 证据"
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
 
 
 

@@ -37,7 +37,7 @@ def test_competition_ready_hygiene_ignores_local_output_workspaces():
 
 def test_formal_doc_consistency_rejects_previously_current_test_counts(monkeypatch, tmp_path):
     (tmp_path / "README.md").write_text(
-        "历史口径包括 341 passed、344 passed 和 527 passed。\n",
+        "历史口径包括 341 passed、344 passed、527 passed 和 636 passed。\n",
         encoding="utf-8",
     )
     monkeypatch.setattr(readiness, "ROOT", tmp_path)
@@ -49,6 +49,7 @@ def test_formal_doc_consistency_rejects_previously_current_test_counts(monkeypat
     assert "README.md:341 passed" in result.detail
     assert "README.md:344 passed" in result.detail
     assert "README.md:527 passed" in result.detail
+    assert "README.md:636 passed" in result.detail
 
 
 def test_formal_doc_consistency_does_not_hardcode_current_test_counts(monkeypatch, tmp_path):

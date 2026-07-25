@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 from pathlib import Path
 
 
@@ -53,7 +54,12 @@ def test_excellence_scorecard_is_generated_from_current_evidence(tmp_path: Path)
 
     text = output.read_text(encoding="utf-8")
     assert "MemGuardOS 超标准交付评分矩阵" in text
-    assert "341 passed, 3 skipped" in text
+    local_pytest = module._parse_pytest_line(module.LOCAL_PYTEST_PATH, "Windows 提交包 pytest")
+    assert re.fullmatch(r"\d+ passed(?:, \d+ skipped)?", local_pytest)
+    assert local_pytest in text
+    assert "341 passed, 3 skipped" not in text
+    assert "Windows 提交包自动化测试" in text
+    assert "docs/evidence/submission_latest/pytest_windows.txt" in text
     assert "openKylin 自动化测试" in text
     assert "passed" in text
     assert "49.48x" in text
@@ -77,7 +83,9 @@ def test_formal_docs_do_not_keep_stale_test_counts() -> None:
         "296 passed",
         "338 passed",
         "340 passed",
+        "341 passed",
         "343 passed",
+        "636 passed",
     ]
     offenders: list[str] = []
     for rel in FORMAL_DOCS:
@@ -103,8 +111,5 @@ def test_openkylin_product_docs_use_mature_user_language() -> None:
             if token in text:
                 offenders.append(f"{rel}: {token}")
     assert offenders == []
-
-
-
 
 
