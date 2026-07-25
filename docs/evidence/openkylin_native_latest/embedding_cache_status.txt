@@ -1,4 +1,4 @@
-$ /home/luo/memguardos-final-6146f43/.venv/bin/python -m memguard.cli.memctl embedding-cache status
+$ /home/luo/memguardos/.venv/bin/python -m memguard.cli.memctl embedding-cache status
 {
   "backend": "kylin_sdk",
   "model_revision": "kylin-sdk-v1",
