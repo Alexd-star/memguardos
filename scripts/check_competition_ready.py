@@ -421,6 +421,7 @@ def check_formal_doc_consistency() -> List[Check]:
             "343 passed",
             "344 passed",
             "527 passed",
+            "636 passed",
         ):
             if token in text:
                 stale_test_hits.append(f"{rel}:{token}")
@@ -1601,7 +1602,6 @@ def _sha256_file(path: Path) -> str:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
 
 
 

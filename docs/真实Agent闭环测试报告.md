@@ -110,7 +110,7 @@ Agent 交互记忆专项 benchmark 共 200 条，组成如下：
 
 ## 6. 自动化测试
 
-新增记忆价值配对评测、真实行为判定、偏好合规守卫和程序性记忆自动沉淀后，本地工作树全量测试为 `636 passed, 14 skipped`；最终源修订 `6146f43` 的 openKylin 原生全量测试为：
+新增记忆价值配对评测、真实行为判定、偏好合规守卫和程序性记忆自动沉淀后，本地工作树全量测试为 `641 passed, 14 skipped`；最终源修订 `6146f43` 的 openKylin 原生全量测试为：
 
 ```text
 649 passed, 1 skipped；`source_revision.json`、manifest 和 SHA256 已绑定版本。
