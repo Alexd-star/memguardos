@@ -4,7 +4,7 @@ MemGuardOS 是面向 **研究生操作系统开源创新大赛赛题 3：面向 
 
 它提供一条本地可运行、可测试、可审计、可在 openKylin 复验的链路：从用户与 Agent 的消息、反馈、工具调用、工具结果及补充 OS 数据中提取偏好记忆与知识记忆，经过敏感治理和轻量化存储后，为真实 OpenHands Agent 构建分阶段 RAG 上下文，并支持自然语言级精准遗忘。
 
-`Python 3.9+` · `Linux/openKylin` · `mmap + SQLite FTS` · `CLI + daemon + Unix socket API` · `MIT License`
+`Python 3.10+` · `Linux/openKylin` · `mmap + SQLite FTS` · `CLI + daemon + Unix socket API` · `MIT License`
 
 ## 目录
 

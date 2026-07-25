@@ -6,7 +6,7 @@
 
 **Architecture:** 不推翻现有 CLI、daemon、UKUI/Peony、Kylin SDK 和 `.deb` 架构，而是在现有边界内增加可测试的本机体验层。核心 Python 层输出结构化诊断和扫描报告；UKUI/Peony 插件消费这些 CLI 能力；脚本层提供预热、授权和证据采集；文档层只描述已实现能力和准确边界。
 
-**Tech Stack:** Python 3.9+、argparse、systemd、cgroup v2、auditd/journald、Kylin AI SDK 探测、Qt5/UKUI/Peony 插件、freedesktop notification、Polkit policy、Debian packaging。
+**Tech Stack:** Python 3.10+、argparse、systemd、cgroup v2、auditd/journald、Kylin AI SDK 探测、Qt5/UKUI/Peony 插件、freedesktop notification、Polkit policy、Debian packaging。
 
 ---
 

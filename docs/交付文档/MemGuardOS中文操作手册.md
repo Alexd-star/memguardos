@@ -159,7 +159,7 @@ MemGuardOS 默认不需要 GPU。普通 x86_64 开发机或 openKylin 虚拟机�
 | 环境项 | 要求或建议 |
 |---|---|
 | 操作系统 | Windows 本机开发、Linux、openKylin；正式复验建议 openKylin |
-| Python | Python 3.9 或以上 |
+| Python | Python 3.10 或以上 |
 | Python 包 | 通过 `pip install -e ".[dev]"` 安装开发依赖 |
 | systemd | openKylin/Linux 服务部署需要 |
 | auditd | 敏感路径审计验证需要 |
@@ -1490,7 +1490,6 @@ bash scripts/collect_openkylin_evidence.sh --with-10k
 - 未编造账号、密码、公网地址、外部 API 购买要求或未确认企业能力。
 - 对 BPF LSM、Kylin SDK、Peony/UKUI、Web 控制台等能力均保持准确边界。
 - Markdown 源文档可转换为 Word、PDF 或在线帮助中心。
-
 
 
 

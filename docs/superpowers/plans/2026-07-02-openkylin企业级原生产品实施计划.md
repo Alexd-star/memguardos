@@ -6,7 +6,7 @@
 
 **Architecture:** 采用薄 Qt 原生客户端与稳定 JSON 契约，核心治理逻辑保留在 Python 服务层；特权操作通过最小权限 Polkit helper；Debian 包按核心、桌面、Agent 和文档职责拆分。所有任务以失败测试开始，并以 openKylin 实机证据结束。
 
-**Tech Stack:** Python 3.9+、pytest、Qt5 Widgets、Peony/UKCC 插件接口、systemd、cgroup v2、Polkit、Kylin AI SDK、Debian `dpkg-deb`。
+**Tech Stack:** Python 3.10+、pytest、Qt5 Widgets、Peony/UKCC 插件接口、systemd、cgroup v2、Polkit、Kylin AI SDK、Debian `dpkg-deb`。
 
 ---
 
