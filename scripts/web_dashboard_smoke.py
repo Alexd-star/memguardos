@@ -129,9 +129,11 @@ def main() -> int:
             "memory_value_visual_ok": "agentMetrics" in page
             and "交互记录" in page
             and "三阶段上下文对比" in page,
-            "forget_confirmation_copy_ok": "遗忘二次确认" in page and "影响范围预览" in page,
+            "forget_confirmation_copy_ok": "遗忘二次确认" in page
+            and "预览影响" in page
+            and "自动复检" in page,
             "competition_copy_absent": "benchmark 用例/种子" not in page and "能力证据总览" not in page and "演示" not in page,
-            "acceptance_review_ok": "复核中心" in page
+            "acceptance_review_ok": "系统检查" in page
             and "acceptanceList" in page
             and acceptance_plan.get("ok") is True
             and acceptance_plan.get("result", {}).get("summary", {}).get("manual", 0) >= 1
@@ -139,8 +141,8 @@ def main() -> int:
             and acceptance_run.get("result", {}).get("status") == "passed",
             "operation_feedback_ok": "operationStatus" in page
             and "AbortController" in page
-            and "跳转处理" in page
-            and "处理建议" in page
+            and 'data-action="notification-target"' in page
+            and "正在处理：" in page
             and "最后刷新" not in page
             and "toLocaleTimeString" not in page,
             "traffic_light_status_ok": "overview-status-banner.warn" in page
