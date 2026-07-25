@@ -1,8 +1,8 @@
 {
   "ok": true,
   "summary": {
-    "total": 241,
-    "passed": 241,
+    "total": 242,
+    "passed": 242,
     "failed": 0,
     "warnings": 0
   },
@@ -11,7 +11,7 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 4614",
+      "detail": "中文字符数 4642",
       "severity": "P0"
     },
     {
@@ -151,14 +151,14 @@
       "category": "中文文档",
       "name": "docs/最终提交说明.md",
       "ok": true,
-      "detail": "中文字符数 3683",
+      "detail": "中文字符数 3686",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/平台摘要.md",
       "ok": true,
-      "detail": "中文字符数 2708",
+      "detail": "中文字符数 2710",
       "severity": "P0"
     },
     {
@@ -228,14 +228,14 @@
       "category": "中文文档",
       "name": "docs/用户手册.md",
       "ok": true,
-      "detail": "中文字符数 1642",
+      "detail": "中文字符数 1975",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 4139",
+      "detail": "中文字符数 4499",
       "severity": "P0"
     },
     {
@@ -249,21 +249,21 @@
       "category": "中文文档",
       "name": "docs/真实Agent闭环测试报告.md",
       "ok": true,
-      "detail": "中文字符数 1627",
+      "detail": "中文字符数 1593",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/真实Agent记忆价值评测报告.md",
       "ok": true,
-      "detail": "中文字符数 3318",
+      "detail": "中文字符数 3307",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/赛题符合性说明.md",
       "ok": true,
-      "detail": "中文字符数 1163",
+      "detail": "中文字符数 1152",
       "severity": "P0"
     },
     {
@@ -277,14 +277,14 @@
       "category": "中文文档",
       "name": "docs/评委证据包索引.md",
       "ok": true,
-      "detail": "中文字符数 2174",
+      "detail": "中文字符数 2160",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/答辩提纲.md",
       "ok": true,
-      "detail": "中文字符数 1331",
+      "detail": "中文字符数 1315",
       "severity": "P0"
     },
     {
@@ -305,14 +305,14 @@
       "category": "中文文档",
       "name": "docs/超标准交付评分矩阵.md",
       "ok": true,
-      "detail": "中文字符数 1281",
+      "detail": "中文字符数 1278",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/供应链与SBOM说明.md",
       "ok": true,
-      "detail": "中文字符数 363",
+      "detail": "中文字符数 364",
       "severity": "P0"
     },
     {
@@ -465,6 +465,13 @@
     {
       "category": "源码与脚本",
       "name": "scripts/collect_openkylin_evidence.sh",
+      "ok": true,
+      "detail": "存在",
+      "severity": "P0"
+    },
+    {
+      "category": "源码与脚本",
+      "name": "scripts/verify_deb_package_set.sh",
       "ok": true,
       "detail": "存在",
       "severity": "P0"
@@ -1194,14 +1201,14 @@
       "category": "openKylin证据",
       "name": "manifest 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 71 个证据文件",
+      "detail": "覆盖 73 个证据文件",
       "severity": "P0"
     },
     {
       "category": "openKylin证据",
       "name": "SHA256SUMS 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 71 个证据文件",
+      "detail": "覆盖 73 个证据文件",
       "severity": "P0"
     },
     {
@@ -1341,14 +1348,14 @@
       "category": "openKylin原生证据",
       "name": "证据对应当前 Git HEAD",
       "ok": true,
-      "detail": "44462f0dbf049fa3f02178f5de350e1089901ebb",
+      "detail": "source=80963d01d2da9af2ef20936f06d40795fcc382ec；当前 HEAD 仅追加/更新原生证据文件 37 个",
       "severity": "P0"
     },
     {
       "category": "openKylin原生证据",
       "name": "systemd 服务重启响应时间",
       "ok": true,
-      "detail": "restart_ms=71",
+      "detail": "restart_ms=371",
       "severity": "P0"
     },
     {
@@ -1432,14 +1439,14 @@
       "category": "openKylin证据",
       "name": "manifest 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 26 个证据文件",
+      "detail": "覆盖 24 个证据文件",
       "severity": "P0"
     },
     {
       "category": "openKylin证据",
       "name": "SHA256SUMS 覆盖全部证据文件",
       "ok": true,
-      "detail": "覆盖 26 个证据文件",
+      "detail": "覆盖 24 个证据文件",
       "severity": "P0"
     },
     {

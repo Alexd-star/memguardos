@@ -1,11 +1,11 @@
 {
   "schema": "memguardos-desktop-scan-manifest-v1",
   "ok": true,
-  "manifest_id": "f61cedc6-1562-40cb-ac9d-f0aa9ebd7949",
-  "nonce": "B_BYJ0EnL5e6fDX3e50GFRJBKnHfUSaF",
+  "manifest_id": "43b192e5-3aec-48e3-a116-f53b36612db5",
+  "nonce": "0nJZKcuJ8s0Gio5wdqF_3DChihA4LuCn",
   "namespace": "default",
-  "created_at": 1784805760.587592,
-  "expires_at": 1784806060.587592,
+  "created_at": 1785022778.7773716,
+  "expires_at": 1785023078.7773716,
   "used": false,
   "limits": {
     "max_files": 100,
@@ -16,7 +16,7 @@
   "items": [
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.KnUoy2StCT/peony_preference.md",
+      "path": "/var/tmp/tmp.LxiPYHku1G/peony_preference.md",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 57,
@@ -50,15 +50,15 @@
       "fingerprint": {
         "exists": true,
         "device": 2053,
-        "inode": 1861622,
+        "inode": 1861538,
         "size": 57,
-        "mtime_ns": 1784805760436687841,
+        "mtime_ns": 1785022778665071595,
         "mode": 33204
       }
     },
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.KnUoy2StCT/peony_knowledge.txt",
+      "path": "/var/tmp/tmp.LxiPYHku1G/peony_knowledge.txt",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 61,
@@ -92,13 +92,13 @@
       "fingerprint": {
         "exists": true,
         "device": 2053,
-        "inode": 1861623,
+        "inode": 1861539,
         "size": 61,
-        "mtime_ns": 1784805760437687858,
+        "mtime_ns": 1785022778665071595,
         "mode": 33204
       }
     }
   ],
-  "signature": "fad3ec25f113af96b8945fef160410ae983f1e559df3d8f913aa0f5cb5764dfa",
-  "manifest_path": "/var/tmp/memguardos-native-home.iybTxl/desktop-scans/f61cedc6-1562-40cb-ac9d-f0aa9ebd7949.json"
+  "signature": "a813935d2bd41b452ab88250c62191c91d87b4da121ee71a16653932149d98f2",
+  "manifest_path": "/var/tmp/memguardos-native-home.npbHzm/desktop-scans/43b192e5-3aec-48e3-a116-f53b36612db5.json"
 }
