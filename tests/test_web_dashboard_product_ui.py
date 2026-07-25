@@ -16,7 +16,7 @@ def test_dashboard_uses_role_oriented_product_navigation_without_contest_copy():
     assert "普通用户" in page
     assert "系统维护" in page
     assert "管理员视图" in page
-    assert "复核中心" in page
+    assert "系统检查" in page
     assert "详细记录" in page
     assert "MemGuardOS 控制台" not in page
     assert "一键验收路径" not in page
@@ -67,8 +67,8 @@ def test_dashboard_operations_have_user_feedback_without_debug_timestamps():
     assert "AbortController" in page
     assert "timeoutMs" in page
     assert "refreshWarnings" in page
-    assert "处理建议" in page
-    assert "跳转处理" in page
+    assert "需要关注" in page
+    assert "立即校验" in page
     assert "最后刷新" not in page
     assert "toLocaleTimeString" not in page
     assert "new Date()" not in page
@@ -79,7 +79,8 @@ def test_dashboard_initial_load_is_lightweight_and_tab_data_is_lazy_loaded():
     page = _dashboard_html()
 
     assert "loadTabData" in page
-    assert "loadedTabs" in page
+    assert "tabLoadedAt" in page
+    assert "dynamicTabTtlMs" in page
     assert "loadSessionCapabilities().then(payload => refreshForSession(payload)).catch(handleInitialLoadFailure);" in page
     assert "refresh(); audit(null)" not in page
     assert "audit(null); loadAgentOverview(null)" not in page
@@ -182,10 +183,13 @@ def test_dashboard_adapts_status_grids_before_labels_wrap_vertically():
     assert ".grid.four, .health-matrix { grid-template-columns:repeat(2,minmax(0,1fr)); }" in page
     assert ".health-tile .health-title > span:not(.status-dot) { white-space:nowrap; }" in page
     assert "@media (max-width: 760px)" in page
-    assert "nav { display:grid; grid-template-columns:repeat(3,minmax(0,1fr));" in page
+    assert "nav { position:sticky; top:0; z-index:10; display:flex;" in page
+    assert "overflow-x:auto" in page
+    assert "min-width:max-content" in page
     assert "@media (max-width: 480px)" in page
-    assert ".nav-group { display:block; grid-column:1 / -1;" in page
-    assert "nav button { width:100%; min-height:44px;" in page
+    assert ".nav-group { display:none; }" in page
+    assert "nav button { width:auto; min-width:max-content; min-height:42px;" in page
+    assert ".status-row > .muted { grid-column:1 / -1; grid-row:2; }" in page
 
 
 def test_dashboard_password_field_is_grouped_in_a_non_submitting_form():
@@ -193,7 +197,8 @@ def test_dashboard_password_field_is_grouped_in_a_non_submitting_form():
     diagnostics = re.search(r'<section id="diagnostics"[^>]*>(?P<section>[\s\S]*?)</section>', page)
 
     assert diagnostics is not None
-    assert '<form id="dashboardAuthForm" onsubmit="event.preventDefault()">' in diagnostics.group("section")
+    assert '<form id="dashboardAuthForm" class="overview-more-body" onsubmit="event.preventDefault()">' in diagnostics.group("section")
+    assert '<details class="auth-settings"><summary>访问设置</summary>' in diagnostics.group("section")
     assert diagnostics.group("section").index('<form id="dashboardAuthForm"') < diagnostics.group("section").index('id="apiToken"')
     assert diagnostics.group("section").index('id="apiToken"') < diagnostics.group("section").index("</form>")
 
@@ -250,7 +255,8 @@ def test_dashboard_request_failures_are_local_to_each_operation():
     assert "let requestFailure" not in page
     assert "requestFailure =" not in page
     assert "function requestError" in page
-    assert "throw requestError(message);" in page
+    assert "throw requestError(message, data);" in page
+    assert "throw requestError(message, payload);" in page
     assert "return {ok:false, error:String(err)};" not in page
     assert "loadSessionCapabilities().then(payload => refreshForSession(payload)).catch(handleInitialLoadFailure);" in page
 
@@ -265,22 +271,23 @@ def test_dashboard_labels_are_associated_with_form_controls():
         assert f'id="{target}"' in page
 
 
-def test_dashboard_risk_advice_only_lists_unresolved_checks():
+def test_dashboard_system_warnings_offer_direct_actions_without_fake_readiness_score():
     page = _dashboard_html()
 
-    assert "checks.filter(item => !item.ok).concat(" not in page
-    assert "当前没有需要立即处理的风险" in page
-    assert "所有基础检查均已满足" in page
+    assert "renderDeliveryReadiness" not in page
+    assert "readinessProgress" not in page
+    assert "立即校验" in page
+    assert "检查检索方式" in page
 
 
 def test_dashboard_all_tab_entry_points_share_retryable_lazy_loading():
     page = _dashboard_html()
 
-    assert "async function openTab(tab)" in page
-    assert "await loadTabData(tab, null);" in page
-    assert "async function loadTabData(tab, event)" in page
-    assert "loadedTabs.add(tab);" in page
-    assert "const result = await loader(event);\n      if (result !== null)\n        loadedTabs.add(tab);" in page
+    assert "async function openTab(tab, options)" in page
+    assert "await loadTabData(tab, null, {force:Boolean(settings.force)});" in page
+    assert "async function loadTabData(tab, event, options)" in page
+    assert "tabLoadedAt.set(tab, Date.now());" in page
+    assert "const result = await loader(event);\n      if (result !== null)\n        tabLoadedAt.set(tab, Date.now());" in page
     assert "openTab(btn.dataset.tab);\n      loadTabData(btn.dataset.tab, null);" not in page
 
 
@@ -293,7 +300,7 @@ def test_dashboard_refresh_renders_partial_results_and_preserves_mutation_succes
     assert "refreshAfterMutation" in page
     assert "保存已经完成" in page
     assert "遗忘已经完成" in page
-    assert "校验已经完成" in page
+    assert "操作记录校验通过" in page
     assert "，但部分概览暂未更新。" in page
 
 
@@ -306,7 +313,7 @@ def test_dashboard_operation_feedback_is_sequenced_and_supports_noop_results():
     assert "function operationFeedback" in page
     assert "if (!id) {" in page
     assert "请先选择一条记忆。" in page
-    assert page.index("if (!id) {") < page.index("await withBusy(event, async () => {", page.index("async function loadMemoryDetail"))
+    assert page.index("if (!id) {") < page.index("return withBusy(event, async () => {", page.index("async function loadMemoryDetail"))
 
 
 def test_dashboard_error_feedback_uses_one_visible_status_surface():
@@ -454,7 +461,7 @@ def test_dashboard_uses_consolidated_memory_security_navigation():
         'data-tab="forget">精准遗忘</button>',
         'data-tab="evidence" data-min-role="admin">审计与证据</button>',
         'data-tab="diagnostics" data-min-role="admin">系统维护</button>',
-        'data-tab="acceptance" data-min-role="admin">本机验收</button>',
+        'data-tab="acceptance" data-min-role="admin">系统检查</button>',
     ]
     for marker in expected:
         assert marker in page
@@ -488,3 +495,23 @@ def test_dashboard_clears_contextual_operation_feedback_when_switching_pages():
     open_tab = page[page.index("async function openTab") : page.index("async function loadTabData")]
 
     assert "setOperationStatus('', '');" in open_tab
+def test_dashboard_uses_offline_icons_and_safe_dynamic_action_delegation():
+    page = _dashboard_html()
+
+    assert "Paths are from Lucide" in page
+    assert "const navIcons" in page
+    assert "button[data-action]" in page
+    assert 'data-action="open-memory-detail"' in page
+    assert 'data-action="copy-memory-id"' in page
+    assert 'data-action="notification-target"' in page
+
+
+def test_forgetting_preview_hides_internal_step_names_and_refreshes_verification_after_commit():
+    page = _dashboard_html()
+
+    assert "main_record:'主记忆记录'" in page
+    assert "确认后自动复检" in page
+    assert "await loadRecentForgetting(null, true);" in page
+    assert "遗忘已经完成，验证结果已更新" in page
+    assert "button.dataset.preserveBusyState === 'true'" in page
+    assert "forgetConfirmButton.dataset.preserveBusyState = 'true'" in page

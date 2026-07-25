@@ -537,7 +537,7 @@ def _notification_mapping(event_type: str) -> tuple[str, str, str, str] | None:
         "interaction_ingest": ("info", "agent_activity", "Agent 记忆更新", "查看 Agent 工作台"),
         "interaction_preference_extract": ("info", "agent_activity", "Agent 偏好已更新", "查看 Agent 工作台"),
         "agent_task_completed": ("info", "agent_activity", "Agent 任务已完成", "查看 Agent 工作台"),
-        "sensitive_block": ("critical", "sensitive_block", "敏感内容已保护", "查看操作记录"),
+        "sensitive_block": ("critical", "sensitive_block", "敏感内容已保护", "查看内容保护"),
         "tool_policy_block": ("critical", "tool_block", "高风险操作已拦截", "查看操作记录"),
         "policy_block": ("critical", "tool_block", "高风险操作已拦截", "查看操作记录"),
         "forget": ("info", "forget", "遗忘已完成", "查看遗忘验证"),

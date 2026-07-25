@@ -78,17 +78,22 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         task = _string_param(request, "task", "验证这条记忆的适用范围", max_chars=4096)
         agent_name = _string_param(request, "agent_name", "openhands", max_chars=128)
         session_id = _string_param(request, "session_id", "detail-preview", max_chars=256)
-        return {
-            "ok": True,
-            "result": _jsonable(
-                service.memory_detail(
-                    memory_id,
-                    task=task,
-                    agent_name=agent_name,
-                    session_id=session_id,
-                )
-            ),
-        }
+        result = service.memory_detail(
+            memory_id,
+            task=task,
+            agent_name=agent_name,
+            session_id=session_id,
+        )
+        found = bool(result.get("found"))
+        response = {"ok": found, "result": _jsonable(result)}
+        if not found:
+            response.update(
+                {
+                    "error": "memory_not_found",
+                    "message": "这条记忆已不存在、已完成遗忘，或不属于当前记忆空间。",
+                }
+            )
+        return response
     if command == "preference_effect_proof":
         memory_id = _string_param(request, "memory_id", "", max_chars=128)
         task = _string_param(request, "task", "验证当前偏好是否生效", max_chars=4096)

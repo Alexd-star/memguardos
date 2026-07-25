@@ -179,6 +179,23 @@ void applyGridRhythm(QGridLayout *layout)
     layout->setColumnStretch(1, 1);
 }
 
+void revealSection(QWidget *root, const QString &objectName)
+{
+    if (!root)
+        return;
+    QWidget *target = root->findChild<QWidget *>(objectName);
+    if (!target)
+        return;
+    const QList<QScrollArea *> scrollAreas = root->findChildren<QScrollArea *>();
+    for (QScrollArea *area : scrollAreas) {
+        if (area->widget() && (area->widget() == target || area->widget()->isAncestorOf(target))) {
+            area->ensureWidgetVisible(target, 0, 24);
+            break;
+        }
+    }
+    target->setFocus(Qt::OtherFocusReason);
+}
+
 QLabel *makeMutedLabel(const QString &text);
 
 QWidget *makeSectionHeader(const QString &iconName, const QString &title, const QString &description)
@@ -590,25 +607,8 @@ QWidget *MemGuardUkccPlugin::pluginUi()
     summaryTitle_->setFont(summaryFont);
     summaryDescription_ = new QLabel(QStringLiteral("正在读取服务、操作记录、本机智能检索和桌面入口状态。"));
     summaryDescription_->setWordWrap(true);
-    readinessBar_ = new QProgressBar;
-    readinessBar_->setRange(0, 100);
-    readinessBar_->setValue(0);
-    readinessBar_->setMaximumWidth(420);
-    readinessBar_->setTextVisible(false);
-    readinessBar_->setAccessibleName(QStringLiteral("MemGuardOS 本机健康度"));
-    readinessValueLabel_ = new QLabel(QStringLiteral("0%"));
-    readinessValueLabel_->setMinimumWidth(48);
-    readinessValueLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    readinessValueLabel_->setAccessibleName(QStringLiteral("MemGuardOS 本机健康度百分比"));
-    auto *readinessRow = new QHBoxLayout;
-    auto *readinessLabel = new QLabel(QStringLiteral("健康度"));
-    readinessLabel->setMinimumWidth(52);
-    readinessRow->addWidget(readinessLabel);
-    readinessRow->addWidget(readinessBar_, 1);
-    readinessRow->addWidget(readinessValueLabel_);
     summaryText->addWidget(summaryTitle_);
     summaryText->addWidget(summaryDescription_);
-    summaryText->addLayout(readinessRow);
     resultSummary_ = new QLabel(QStringLiteral("最近操作：等待状态检查。"));
     resultSummary_->setObjectName(QStringLiteral("feedbackBar"));
     resultSummary_->setWordWrap(true);
@@ -616,7 +616,7 @@ QWidget *MemGuardUkccPlugin::pluginUi()
     summaryText->addWidget(resultSummary_);
     operationGuide_ = makeMutedLabel(QStringLiteral("没有正在处理的后台操作。"));
     operationGuide_->setAccessibleName(QStringLiteral("操作进度和结果位置说明"));
-    operationGuide_->setToolTip(QStringLiteral("处理进度：显示当前后台任务。结果位置：详细输出位于【系统维护】>【维护结果】。"));
+    operationGuide_->setToolTip(QStringLiteral("处理进度：显示当前后台操作；完成后会说明结果所在的页面区域。"));
     summaryText->addWidget(operationGuide_);
     auto *refresh = makeOperationButton(QStringLiteral("view-refresh"), QStringLiteral("重新检查状态"), QStringLiteral("重新检查 MemGuardOS 状态"));
     refresh->setAccessibleName(QStringLiteral("重新检查 MemGuardOS 状态"));
@@ -637,6 +637,14 @@ QWidget *MemGuardUkccPlugin::pluginUi()
     diagnosticsTabIndex_ = tabs_->addTab(buildDiagnosticsTab(), themedIcon(QStringLiteral("preferences-system"), QStyle::SP_FileDialogDetailedView), QStringLiteral("系统维护"));
     layout->addWidget(tabs_, 1);
     applyNavigationTarget(takeNavigationTarget());
+    navigationTargetTimer_ = new QTimer(page_);
+    navigationTargetTimer_->setInterval(300);
+    connect(navigationTargetTimer_, &QTimer::timeout, this, [this]() {
+        const QString target = takeNavigationTarget();
+        if (!target.isEmpty())
+            applyNavigationTarget(target);
+    });
+    navigationTargetTimer_->start();
 
     connect(refresh, &QPushButton::clicked, this, &MemGuardUkccPlugin::refreshStatus);
     connect(cancelOperationButton_, &QPushButton::clicked, this, [this]() {
@@ -703,18 +711,6 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     behaviorSummary_->setAccessibleName(QStringLiteral("最近记忆行为摘要"));
     behaviorLayout->addWidget(behaviorSummary_);
 
-    auto *behaviorActions = new QGridLayout;
-    applyGridRhythm(behaviorActions);
-    recentMemoryButton_ = makeOperationButton(QStringLiteral("view-list-details"), QStringLiteral("最近新增记忆"), QStringLiteral("打开记忆中心查看最近新增内容"));
-    recentPreferenceButton_ = makeOperationButton(QStringLiteral("preferences-system"), QStringLiteral("最近生效偏好"), QStringLiteral("打开偏好与策略查看当前生效偏好"));
-    recentSensitiveButton_ = makeOperationButton(QStringLiteral("security-high"), QStringLiteral("最近已保护内容"), QStringLiteral("打开敏感保护查看最近保护结果"));
-    recentForgetButton_ = makeOperationButton(QStringLiteral("edit-delete"), QStringLiteral("最近遗忘验证"), QStringLiteral("打开精准遗忘查看最近验证结果"));
-    behaviorActions->addWidget(recentMemoryButton_, 0, 0);
-    behaviorActions->addWidget(recentPreferenceButton_, 0, 1);
-    behaviorActions->addWidget(recentSensitiveButton_, 1, 0);
-    behaviorActions->addWidget(recentForgetButton_, 1, 1);
-    behaviorLayout->addLayout(behaviorActions);
-
     behaviorTimeline_ = new QTreeWidget;
     behaviorTimeline_->setColumnCount(3);
     behaviorTimeline_->setHeaderLabels({QStringLiteral("类型"), QStringLiteral("摘要"), QStringLiteral("状态")});
@@ -729,8 +725,15 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     behaviorTimeline_->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     behaviorLayout->addWidget(behaviorTimeline_);
 
-    auto *refreshBehavior = makeOperationButton(QStringLiteral("view-refresh"), QStringLiteral("查看最近变化"), QStringLiteral("查看最近新增记忆、Agent 偏好和风险处理结果"));
-    behaviorLayout->addWidget(refreshBehavior);
+    auto *behaviorButtons = new QHBoxLayout;
+    behaviorButtons->setContentsMargins(0, 0, 0, 0);
+    behaviorButtons->setSpacing(10);
+    auto *refreshBehavior = makeOperationButton(QStringLiteral("view-refresh"), QStringLiteral("刷新最近变化"), QStringLiteral("刷新最近新增记忆、Agent 偏好和风险处理结果"));
+    auto *runJourney = makeOperationButton(QStringLiteral("media-playback-start"), QStringLiteral("验证记忆效果"), QStringLiteral("运行一次可复现的记忆使用验证并在当前页面显示结果"));
+    behaviorButtons->addWidget(refreshBehavior);
+    behaviorButtons->addWidget(runJourney);
+    behaviorButtons->addStretch(1);
+    behaviorLayout->addLayout(behaviorButtons);
     layout->addWidget(behaviorBox);
 
     auto *taskBox = new QGroupBox(QStringLiteral("我的记忆"));
@@ -748,19 +751,16 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     auto *forgetEntry = makeOperationButton(QStringLiteral("edit-delete"), QStringLiteral("精准遗忘"), QStringLiteral("打开精准遗忘并先预览影响范围"));
     auto *openFiles = makeOperationButton(QStringLiteral("system-file-manager"), QStringLiteral("从文件导入"), QStringLiteral("打开文件管理器后右键扫描文件"));
     auto *openAgent = makeOperationButton(QStringLiteral("system-run"), QStringLiteral("Agent 工作台"), QStringLiteral("查看 Agent 交互和偏好生效"));
-    auto *runJourney = makeOperationButton(QStringLiteral("media-playback-start"), QStringLiteral("验证记忆效果"), QStringLiteral("运行一次可复现的记忆使用验证"));
     emphasizePrimaryAction(openConsole);
     softenSecondaryAction(refreshNow);
     softenSecondaryAction(forgetEntry);
     softenSecondaryAction(openFiles);
     softenSecondaryAction(openAgent);
-    softenSecondaryAction(runJourney);
     taskLayout->addWidget(openConsole, 1, 0);
     taskLayout->addWidget(refreshNow, 1, 1);
     taskLayout->addWidget(forgetEntry, 2, 0);
     taskLayout->addWidget(openFiles, 2, 1);
     taskLayout->addWidget(openAgent, 3, 0);
-    taskLayout->addWidget(runJourney, 3, 1);
     layout->insertWidget(1, taskBox);
     auto *recommendationBox = new QGroupBox(QStringLiteral("处理建议"));
     auto *recommendationLayout = new QVBoxLayout(recommendationBox);
@@ -806,6 +806,7 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     applyGridRhythm(detailGrid);
 
     auto *resourceBox = new QGroupBox(QStringLiteral("资源快照"));
+    resourceBox->setObjectName(QStringLiteral("resourcesSection"));
     auto *resourceLayout = new QVBoxLayout(resourceBox);
     applyPanelSpacing(resourceLayout);
     resourceSnapshot_ = new QTreeWidget;
@@ -840,8 +841,7 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     detailsPanelLayout->addWidget(hint);
     moreLayout->addWidget(overviewDetailsPanel_);
     layout->addWidget(moreBox);
-    actionButtons_ << openConsole << openAgent << runJourney << openFiles << forgetEntry << refreshNow << refreshBehavior
-                   << recentMemoryButton_ << recentPreferenceButton_ << recentSensitiveButton_ << recentForgetButton_;
+    actionButtons_ << openConsole << openAgent << runJourney << openFiles << forgetEntry << refreshNow << refreshBehavior;
     connect(overviewDetailsToggle_, &QToolButton::toggled, this, [this](bool checked) {
         overviewDetailsToggle_->setArrowType(checked ? Qt::DownArrow : Qt::RightArrow);
         overviewDetailsPanel_->setVisible(checked);
@@ -858,10 +858,6 @@ QWidget *MemGuardUkccPlugin::buildOverviewTab()
     connect(refreshBehavior, &QPushButton::clicked, this, [this]() {
         runMemctl({QStringLiteral("feedback-home"), QStringLiteral("--limit"), QStringLiteral("6")}, QStringLiteral("feedback"));
     });
-    connect(recentMemoryButton_, &QPushButton::clicked, this, [this]() { openDashboardTarget(QStringLiteral("#memory")); });
-    connect(recentPreferenceButton_, &QPushButton::clicked, this, [this]() { openDashboardTarget(QStringLiteral("#preferences")); });
-    connect(recentSensitiveButton_, &QPushButton::clicked, this, [this]() { openDashboardTarget(QStringLiteral("#sensitive")); });
-    connect(recentForgetButton_, &QPushButton::clicked, this, [this]() { openDashboardTarget(QStringLiteral("#forget")); });
     scroll->setWidget(tab);
     return scroll;
 }
@@ -883,6 +879,7 @@ QWidget *MemGuardUkccPlugin::buildServiceTab()
     applyGridRhythm(adminGrid);
 
     auto *serviceBox = new QGroupBox(QStringLiteral("管理员工具：服务控制"));
+    serviceBox->setObjectName(QStringLiteral("serviceSection"));
     auto *serviceLayout = new QVBoxLayout(serviceBox);
     applyPanelSpacing(serviceLayout);
     serviceLayout->addWidget(makeMutedLabel(QStringLiteral("管理记忆后台服务。日常使用时保持服务运行；维护前可查看日志，确认问题后再重启。")));
@@ -907,6 +904,7 @@ QWidget *MemGuardUkccPlugin::buildServiceTab()
     adminGrid->addWidget(serviceBox, 0, 0);
 
     auto *sdkBox = new QGroupBox(QStringLiteral("管理员工具：本机智能检索"));
+    sdkBox->setObjectName(QStringLiteral("sdkSection"));
     auto *sdkLayout = new QVBoxLayout(sdkBox);
     applyPanelSpacing(sdkLayout);
     sdkLayout->addWidget(makeMutedLabel(QStringLiteral("检查系统自带 AI 检索能力和本地模型状态。该能力未就绪时，系统会自动使用备用检索，不影响普通记忆检索。")));
@@ -925,6 +923,7 @@ QWidget *MemGuardUkccPlugin::buildServiceTab()
     adminGrid->addWidget(sdkBox, 0, 1);
 
     auto *securityBox = new QGroupBox(QStringLiteral("管理员工具：安全审计"));
+    securityBox->setObjectName(QStringLiteral("auditSection"));
     auto *securityLayout = new QVBoxLayout(securityBox);
     applyPanelSpacing(securityLayout);
     securityLayout->addWidget(makeMutedLabel(QStringLiteral("校验操作记录完整性、安装本机记录规则，并检查可选内核保护路径。高风险操作需要管理员授权。")));
@@ -1166,6 +1165,9 @@ void MemGuardUkccPlugin::runProgram(const QString &program, const QStringList &a
                 QTimer::singleShot(0, this, &MemGuardUkccPlugin::refreshStatus);
             } else if (purpose == QStringLiteral("feedback") && exitCode == 0) {
                 renderFeedbackSummary(output);
+            } else if (purpose == QStringLiteral("demo") && exitCode == 0 && !payload.isEmpty()) {
+                renderUserJourney(payload);
+                summaryMessage = QStringLiteral("记忆使用、敏感保护、精准遗忘和操作记录已完成验证");
             } else if (exitCode != 0) {
                 showDetailsOutput(output, summaryMessage);
                 showError(QStringLiteral("操作失败"), output);
@@ -1212,8 +1214,8 @@ QString MemGuardUkccPlugin::operationStartMessage(const QStringList &arguments, 
         return QStringLiteral("正在快速刷新本机状态。");
     if (joined.contains(QStringLiteral("feedback-home")))
         return QStringLiteral("正在读取最近的记忆变化。");
-    if (joined.contains(QStringLiteral(" demo")) || joined == QStringLiteral("demo"))
-        return QStringLiteral("正在运行本地可复现体验流程，结果会显示在【系统维护】。");
+    if (joined.contains(QStringLiteral(" demo")) || joined == QStringLiteral("demo") || joined.startsWith(QStringLiteral("demo ")))
+        return QStringLiteral("正在验证记忆使用、敏感保护和精准遗忘，结果会显示在当前页面。");
     if (purpose == QStringLiteral("details"))
         return QStringLiteral("正在读取详情，结果会显示在【系统维护】。");
     return QStringLiteral("正在处理本次操作，窗口可保持打开。");
@@ -1239,8 +1241,8 @@ QString MemGuardUkccPlugin::operationCompleteMessage(const QStringList &argument
         return QStringLiteral("状态刷新已完成，可以继续操作。");
     if (purpose == QStringLiteral("feedback"))
         return QStringLiteral("最近的记忆变化已更新，可以继续操作。");
-    if (joined.contains(QStringLiteral(" demo")) || joined == QStringLiteral("demo"))
-        return QStringLiteral("体验流程已完成，结果已显示在【系统维护】>【维护结果】。");
+    if (joined.contains(QStringLiteral(" demo")) || joined == QStringLiteral("demo") || joined.startsWith(QStringLiteral("demo ")))
+        return QStringLiteral("记忆效果验证已完成，结果已显示在【日常使用】>【最近记忆行为】。");
     if (purpose == QStringLiteral("action"))
         return QStringLiteral("系统操作已完成，正在刷新状态。");
     if (purpose == QStringLiteral("details"))
@@ -1335,6 +1337,76 @@ void MemGuardUkccPlugin::renderFeedbackSummary(const QString &text)
         row->setText(2, status);
         row->setIcon(2, levelIcon(level == QStringLiteral("critical") ? QStringLiteral("red") : (level == QStringLiteral("warning") ? QStringLiteral("yellow") : QStringLiteral("green"))));
     }
+}
+
+void MemGuardUkccPlugin::renderUserJourney(const QJsonObject &payload)
+{
+    if (!behaviorSummary_ || !behaviorTimeline_)
+        return;
+
+    const QJsonObject replay = payload.value(QStringLiteral("replay")).toObject();
+    const QJsonObject context = replay.value(QStringLiteral("context")).toObject();
+    const QJsonObject toolContext = context.value(QStringLiteral("tool_selection")).toObject();
+    const int memoryCount = toolContext.value(QStringLiteral("memories")).toArray().size();
+    const QJsonArray proofs = replay.value(QStringLiteral("preference_effect_proofs")).toArray();
+    int passedProofs = 0;
+    for (const QJsonValue &value : proofs) {
+        if (value.toObject().value(QStringLiteral("compliance")).toString() == QStringLiteral("passed"))
+            ++passedProofs;
+    }
+    const QJsonObject sensitive = payload.value(QStringLiteral("sensitive_notice")).toObject();
+    const QJsonObject forgetResult = payload.value(QStringLiteral("forget_result")).toObject();
+    const QJsonObject report = forgetResult.value(QStringLiteral("verification_report")).toObject();
+    const QJsonArray verificationSteps = report.value(QStringLiteral("verification_steps")).toArray();
+    int passedSteps = 0;
+    for (const QJsonValue &value : verificationSteps) {
+        if (value.toObject().value(QStringLiteral("status")).toString() == QStringLiteral("passed"))
+            ++passedSteps;
+    }
+    const bool auditOk = payload.value(QStringLiteral("audit")).toObject().value(QStringLiteral("ok")).toBool();
+
+    behaviorSummary_->setText(QStringLiteral("验证完成：任务使用了 %1 条相关记忆；偏好核验通过 %2 项；遗忘复检通过 %3/%4 项。")
+        .arg(memoryCount)
+        .arg(passedProofs)
+        .arg(passedSteps)
+        .arg(verificationSteps.size()));
+    behaviorTimeline_->clear();
+    behaviorTimeline_->setVisible(true);
+
+    auto addStep = [this](const QString &title, const QString &summary, bool ok) {
+        auto *row = new QTreeWidgetItem(behaviorTimeline_);
+        row->setText(0, title);
+        row->setText(1, summary);
+        row->setText(2, ok ? QStringLiteral("已通过") : QStringLiteral("需要确认"));
+        row->setIcon(2, levelIcon(ok ? QStringLiteral("green") : QStringLiteral("yellow")));
+    };
+    addStep(
+        QStringLiteral("记忆用于任务"),
+        memoryCount > 0 ? QStringLiteral("已为工具选择阶段提供 %1 条相关记忆。 ").arg(memoryCount) : QStringLiteral("本次任务没有匹配到可用记忆。"),
+        memoryCount > 0);
+    addStep(
+        QStringLiteral("偏好作用检查"),
+        proofs.isEmpty() ? QStringLiteral("本次没有可核验的稳定偏好。") : QStringLiteral("%1/%2 项偏好观察到实际遵循结果。").arg(passedProofs).arg(proofs.size()),
+        proofs.isEmpty() || passedProofs == proofs.size());
+    addStep(
+        QStringLiteral("敏感内容保护"),
+        sensitive.value(QStringLiteral("user_summary")).toString(QStringLiteral("敏感内容检查已完成。")),
+        sensitive.value(QStringLiteral("action")).toString() == QStringLiteral("blocked"));
+    addStep(
+        QStringLiteral("精准遗忘复检"),
+        report.value(QStringLiteral("user_summary")).toString(QStringLiteral("受管记录和检索路径已完成复检。")),
+        !verificationSteps.isEmpty() && passedSteps == verificationSteps.size());
+    addStep(
+        QStringLiteral("操作记录"),
+        auditOk ? QStringLiteral("本次流程可追溯，操作记录完整。") : QStringLiteral("操作记录需要管理员进一步校验。"),
+        auditOk);
+
+    if (tabs_)
+        tabs_->setCurrentIndex(overviewTabIndex_);
+    if (overviewDetailsToggle_)
+        overviewDetailsToggle_->setChecked(false);
+    if (overviewDetailsPanel_)
+        overviewDetailsPanel_->setVisible(false);
 }
 
 void MemGuardUkccPlugin::updateOperationGuide(const QString &message, bool busy)
@@ -1599,21 +1671,27 @@ void MemGuardUkccPlugin::applyNavigationTarget(const QString &target)
         return;
     if (target == QStringLiteral("sdk")) {
         tabs_->setCurrentIndex(serviceTabIndex_);
+        QTimer::singleShot(0, this, [this]() { revealSection(page_, QStringLiteral("sdkSection")); });
         appendHistory(QStringLiteral("托盘跳转"), true, QStringLiteral("已定位到【管理员】>【本机智能检索】，可检查或预热本机智能检索。"));
         return;
     }
     if (target == QStringLiteral("audit")) {
         tabs_->setCurrentIndex(serviceTabIndex_);
+        QTimer::singleShot(0, this, [this]() { revealSection(page_, QStringLiteral("auditSection")); });
         appendHistory(QStringLiteral("托盘跳转"), true, QStringLiteral("已定位到【管理员】>【安全审计】，可校验操作记录或查看记录规则。"));
         return;
     }
     if (target == QStringLiteral("service")) {
         tabs_->setCurrentIndex(serviceTabIndex_);
+        QTimer::singleShot(0, this, [this]() { revealSection(page_, QStringLiteral("serviceSection")); });
         appendHistory(QStringLiteral("托盘跳转"), true, QStringLiteral("已定位到【管理员】>【服务控制】，可查看服务状态和日志。"));
         return;
     }
     if (target == QStringLiteral("resources")) {
         tabs_->setCurrentIndex(overviewTabIndex_);
+        if (overviewDetailsToggle_)
+            overviewDetailsToggle_->setChecked(true);
+        QTimer::singleShot(0, this, [this]() { revealSection(page_, QStringLiteral("resourcesSection")); });
         appendHistory(QStringLiteral("托盘跳转"), true, QStringLiteral("已定位到【日常使用】>【资源快照】，可查看服务资源占用。"));
         return;
     }
@@ -1743,7 +1821,7 @@ void MemGuardUkccPlugin::runUserJourney()
     QStringList arguments;
     if (program == QStringLiteral("python3"))
         arguments << QStringLiteral("-m") << QStringLiteral("memguard.cli.memguard");
-    arguments << QStringLiteral("demo");
+    arguments << QStringLiteral("demo") << QStringLiteral("--json");
     runProgram(program, arguments, QStringLiteral("demo"));
 }
 

@@ -17,6 +17,7 @@ class QProcess;
 class QTextEdit;
 class QToolButton;
 class QTreeWidget;
+class QTimer;
 
 class MemGuardUkccPlugin : public QObject, public CommonInterface
 {
@@ -73,6 +74,7 @@ private:
     QToolButton *detailsToggle_ = nullptr;
     QToolButton *overviewDetailsToggle_ = nullptr;
     QWidget *overviewDetailsPanel_ = nullptr;
+    QTimer *navigationTargetTimer_ = nullptr;
     QPointer<QProcess> currentProcess_;
     QList<QPushButton *> actionButtons_;
 
@@ -92,6 +94,7 @@ private:
     int operationTimeoutMs(const QStringList &arguments, const QString &purpose) const;
     void showDetailsOutput(const QString &text, const QString &summary);
     void renderFeedbackSummary(const QString &text);
+    void renderUserJourney(const QJsonObject &payload);
     void updateOperationGuide(const QString &message, bool busy);
     void setStatusBadge(QLabel *icon, QLabel *label, const QString &level, const QString &text);
     void appendHistory(const QString &operation, bool ok, const QString &message);
