@@ -761,7 +761,7 @@ def test_peony_plugin_uses_preview_confirmation_contract():
     assert "forget-import" in source
     assert "--memory-id" in source
     assert "遗忘本次导入内容" in source
-    assert "openLocalConsole(QStringLiteral(\"#audit\"))" in source
+    assert "openLocalConsole(QStringLiteral(\"#sensitive\"))" in source
     assert "[this, progress, process]" in source
 
 
@@ -796,10 +796,9 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "查看组件、资源和操作历史" in source
     assert "overviewDetailsToggle_" in source
     assert "overviewDetailsPanel_->setVisible(false)" in source
-    assert "QProgressBar" in source
     assert "QScrollArea" in source
-    assert "setTextVisible(false)" in source
-    assert "readinessValueLabel_" in source
+    assert "setTextVisible(false)" not in source
+    assert "健康度百分比" not in source
     assert "日常使用" in source
     assert "管理员" in source
     assert "打开文件管理器" in source
@@ -1145,7 +1144,9 @@ def test_ukui_tray_follows_system_theme_and_deduplicates_notifications():
     assert "showMessage" in source
     assert "openControlCenter(QStringLiteral(\"sdk\"))" in source
     assert "openControlCenter(QStringLiteral(\"audit\"))" in source
-    assert "openDashboard(QStringLiteral(\"#audit\"))" in source
+    assert "openDashboard(QStringLiteral(\"#sensitive\"))" in source
+    assert 'QStringLiteral("-m"), QStringLiteral("memguardos-memory-security")' in source
+    assert 'QStringLiteral("#memory")' in source
     assert "connect(openDashboardAction, &QAction::triggered, this, [this]() { openDashboard(); });" in source
     assert "查看已保护内容" in source
     assert "setStyleSheet" not in source
@@ -1167,7 +1168,8 @@ def test_ukui_daily_page_uses_task_first_memory_actions():
     assert "精准遗忘" in source
     assert "日常使用只保留最常用的记忆操作" in source
     assert "softenSecondaryAction" in source
-    assert "readinessBar_->setMaximumWidth(420)" in source
+    assert "readinessBar_->setMaximumWidth(420)" not in source
+    assert "健康度百分比" not in source
     assert source.count("emphasizePrimaryAction(") == 2
     assert "button->setFlat(true)" in source
     assert "behaviorTimeline_->setVisible(false)" in source
@@ -1369,3 +1371,12 @@ def test_ukui_control_center_has_actionable_recent_behavior_and_preflight_review
     assert "导出 openKylin 证据" in source
     assert "打开 Web 验收中心" in source
     assert "报告默认不包含记忆正文" in source
+def test_ukui_memory_effect_validation_stays_on_daily_page_with_structured_json():
+    source = Path("native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
+    header = Path("native/ukui/ukcc-memguard/memguard_ukcc_plugin.h").read_text(encoding="utf-8")
+
+    assert 'QStringLiteral("demo") << QStringLiteral("--json")' in source
+    assert "renderUserJourney(payload);" in source
+    assert "void MemGuardUkccPlugin::renderUserJourney" in source
+    assert "记忆效果验证已完成，结果已显示在【日常使用】" in source
+    assert "void renderUserJourney(const QJsonObject &payload);" in header

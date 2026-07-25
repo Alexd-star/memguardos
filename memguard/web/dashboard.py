@@ -975,11 +975,12 @@ def _dashboard_html() -> str:
     header h1 { margin:0; font-size:19px; font-weight:700; color:#204f82; }
     header .subtitle { margin-top:4px; font-size:12px; color:var(--muted); }
     header .meta { font-size:12px; color:var(--muted); }
-    main { display:grid; grid-template-columns:232px minmax(0,1fr); min-height:calc(100vh - 68px); }
-    nav { border-right:1px solid var(--line); background:#f7f9fb; padding:18px 12px; }
+    main { display:grid; grid-template-columns:224px minmax(0,1fr); min-height:calc(100vh - 68px); }
+    nav { position:sticky; top:0; align-self:start; min-height:calc(100vh - 68px); border-right:1px solid var(--line); background:#f7f9fb; padding:18px 12px; }
+    .shell-content { min-width:0; }
     .nav-group { margin:4px 0 8px; padding:0 2px; color:var(--muted); font-size:12px; font-weight:700; }
     .nav-group + button { margin-top:0; }
-    nav button { width:100%; min-height:42px; margin:0 0 4px; text-align:left; border:1px solid transparent; background:transparent; color:var(--ink); padding:9px 12px; border-radius:6px; cursor:pointer; font-weight:600; }
+    nav button { width:100%; min-height:42px; margin:0 0 4px; display:flex; align-items:center; gap:10px; text-align:left; border:1px solid transparent; background:transparent; color:var(--ink); padding:9px 12px; border-radius:6px; cursor:pointer; font-weight:600; }
     nav button.active { border-color:#bed4e8; background:#eaf2fa; color:#174f84; }
     nav button:hover:not(.active) { background:#eef2f6; }
     section { display:none; padding:24px 28px 36px; }
@@ -990,7 +991,8 @@ def _dashboard_html() -> str:
     .grid.two { grid-template-columns:repeat(2,minmax(0,1fr)); }
     .grid.three { grid-template-columns:repeat(3,minmax(0,1fr)); }
     .grid.four { grid-template-columns:repeat(4,minmax(0,1fr)); }
-    .panel { min-width:0; overflow:hidden; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px; }
+    .panel { min-width:0; overflow:hidden; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; }
+    .panel .list > .item { border-left:0; border-right:0; border-top:0; border-radius:0; padding-left:0; padding-right:0; }
     .panel.emphasis { border-color:#b7d5ed; background:#f8fbfe; }
     .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0; }
     label { display:block; font-size:13px; color:var(--muted); margin:10px 0 5px; }
@@ -1000,7 +1002,7 @@ def _dashboard_html() -> str:
     button.primary { border:0; background:var(--accent); color:white; border-radius:6px; padding:9px 12px; cursor:pointer; min-height:36px; }
     button.secondary { border:1px solid var(--line); background:white; color:var(--ink); border-radius:6px; padding:9px 12px; cursor:pointer; min-height:36px; }
     button.danger { border:0; background:#b42318; color:white; border-radius:6px; padding:9px 12px; cursor:pointer; min-height:36px; }
-    button:disabled { opacity:.55; cursor:progress; }
+    button:disabled { opacity:.55; cursor:not-allowed; }
     pre { white-space:pre-wrap; word-break:break-word; background:#0b1220; color:#d1e9ff; border-radius:8px; padding:12px; min-height:200px; overflow:auto; }
     .metric { font-size:26px; font-weight:750; color:var(--accent); margin-top:4px; }
     .metric.compact { font-size:18px; line-height:1.4; }
@@ -1015,6 +1017,8 @@ def _dashboard_html() -> str:
     .health strong { font-size:15px; }
     .list { display:grid; gap:8px; }
     .item { border:1px solid var(--line); border-radius:8px; padding:10px 12px; background:#fff; }
+    .list-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:12px 0; border-bottom:1px solid var(--line); }
+    .list-row:last-child { border-bottom:0; }
     .item-title { font-weight:700; margin-bottom:4px; }
     .quick-actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:14px 0; padding:12px; border:1px solid var(--line); border-radius:8px; background:#fff; }
     .quick-actions .label { color:var(--muted); font-weight:700; margin-right:4px; }
@@ -1055,7 +1059,7 @@ def _dashboard_html() -> str:
     .advanced-output { margin:0; border-radius:0 0 8px 8px; min-height:140px; }
     .overview-more > summary { padding:12px 14px; }
     .overview-more-body { padding:0 12px 12px; }
-    .operation-status { display:none; margin:12px 24px 0; border:1px solid #b7d5ed; background:#eef7ff; color:#185a91; border-radius:6px; padding:10px 12px; font-size:13px; }
+    .operation-status { display:none; position:relative; margin:12px 24px 0; border:1px solid #b7d5ed; background:#eef7ff; color:#185a91; border-radius:6px; padding:10px 12px; font-size:13px; }
     .operation-status.ok { border-color:#bbf7d0; background:#f0fdf4; color:#166534; }
     .operation-status.warn { border-color:#fde68a; background:#fffbeb; color:#92400e; }
     .operation-status.bad { border-color:#fecaca; background:#fef2f2; color:#991b1b; }
@@ -1069,18 +1073,34 @@ def _dashboard_html() -> str:
     .metric { overflow-wrap:anywhere; }
     .page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-bottom:18px; }
     .page-header .lead { margin-bottom:0; max-width:760px; }
-    .overview-status-banner { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:14px; align-items:center; padding:17px 18px; border:1px solid #bcd6cb; border-left:4px solid var(--ok); border-radius:7px; background:#f8fcfa; }
-    .overview-status-banner.warn { border-color:#ead3a8; border-left-color:var(--warn); background:#fffaf1; }
-    .overview-status-banner.bad { border-color:#ebc2bd; border-left-color:var(--bad); background:#fff8f7; }
+    .overview-status-banner { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:14px; align-items:center; padding:17px 18px; border:1px solid #bcd6cb; border-radius:7px; background:#f8fcfa; }
+    .overview-status-banner.warn { border-color:#ead3a8; background:#fffaf1; }
+    .overview-status-banner.bad { border-color:#ebc2bd; background:#fff8f7; }
     .status-mark { width:34px; height:34px; display:grid; place-items:center; border-radius:50%; background:#dff4eb; color:var(--ok); font-weight:800; }
     .overview-status-banner.warn .status-mark { background:#fff0cf; color:var(--warn); }
     .overview-status-banner.bad .status-mark { background:#fde7e4; color:var(--bad); }
     .status-copy strong { display:block; font-size:16px; margin-bottom:3px; }
     .overview-primary-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:14px 0 18px; }
-    .task-action { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:66px; padding:13px 14px; border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--ink); cursor:pointer; text-align:left; }
+    .task-action { display:grid; grid-template-columns:36px minmax(0,1fr) auto; align-items:center; gap:12px; min-height:68px; padding:12px 14px; border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--ink); cursor:pointer; text-align:left; }
     .task-action:hover { border-color:#a9c8e2; background:#f8fbfe; }
     .task-action strong { display:block; margin-bottom:3px; }
     .task-action span { color:var(--muted); font-size:12px; line-height:1.4; }
+    .ui-icon { width:19px; height:19px; flex:none; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+    .task-icon { width:34px; height:34px; display:grid; place-items:center; border-radius:7px; background:#edf4fb; color:#245f98; }
+    .task-icon .ui-icon { width:20px; height:20px; }
+    .linear-list { border-top:1px solid var(--line); margin-top:10px; }
+    .linear-list .list-row { min-height:58px; padding:12px 0; }
+    .linear-list .list-row:last-child { border-bottom:0; }
+    .notification-list { display:block; }
+    .notification-list .list-row { min-height:72px; }
+    .notification-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:8px; }
+    .result-section { border:1px solid var(--line); border-radius:7px; background:#fff; overflow:hidden; }
+    .result-section > .section-block-header { background:var(--surface-subtle, #f8fafc); }
+    .workflow-steps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0; margin:16px 0; padding:0; list-style:none; border-block:1px solid var(--line); background:#fff; }
+    .workflow-steps li { display:grid; grid-template-columns:28px minmax(0,1fr); gap:10px; padding:13px 16px; border-right:1px solid var(--line); }
+    .workflow-steps li:last-child { border-right:0; }
+    .workflow-step-number { width:24px; height:24px; display:grid; place-items:center; border-radius:50%; background:#eaf2fa; color:#174f84; font-size:12px; font-weight:750; }
+    .workflow-steps strong { display:block; margin-bottom:3px; }
     .metric-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border:1px solid var(--line); border-radius:7px; background:#fff; overflow:hidden; margin-bottom:18px; }
     .metric-strip > div { padding:14px 16px; border-right:1px solid var(--line); }
     .metric-strip > div:last-child { border-right:0; }
@@ -1103,7 +1123,12 @@ def _dashboard_html() -> str:
     .result-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:7px; }
     .result-actions button { min-height:34px; }
     .more-results { margin-top:0; }
-    .empty-state { padding:30px 20px; text-align:center; color:var(--muted); }
+    .empty-state { display:flex; flex-direction:column; align-items:center; gap:7px; padding:30px 20px; text-align:center; color:var(--muted); }
+    .empty-state strong { color:var(--ink); font-size:14px; }
+    .empty-state button { margin-top:5px; }
+    .status-list { border:1px solid var(--line); border-radius:7px; background:#fff; overflow:hidden; }
+    .status-row { display:grid; grid-template-columns:minmax(160px,.8fr) minmax(0,1.2fr) auto; gap:14px; align-items:center; min-height:54px; padding:10px 14px; border-bottom:1px solid var(--line); }
+    .status-row:last-child { border-bottom:0; }
     .skeleton { min-height:78px; background:linear-gradient(90deg,#f2f5f8 25%,#fafcfd 45%,#f2f5f8 65%); background-size:240% 100%; animation:skeleton 1.2s ease-in-out infinite; }
     .spinner { width:14px; height:14px; display:inline-block; margin-right:7px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:spin .7s linear infinite; vertical-align:-2px; }
     @keyframes spin { to { transform:rotate(360deg); } }
@@ -1122,10 +1147,10 @@ def _dashboard_html() -> str:
       header { align-items:flex-start; padding:14px 16px; }
       header .meta { display:none; }
       main { grid-template-columns: 1fr; }
-      nav { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); overflow:visible; border-right:0; border-bottom:1px solid var(--line); gap:6px; padding:10px 12px 12px; }
-      .nav-group { display:block; grid-column:1 / -1; margin:4px 2px 0; }
-      nav button { width:100%; min-height:44px; margin:0; white-space:normal; text-align:center; }
-      section { padding:16px 14px 24px; }
+      nav { position:sticky; top:0; z-index:10; display:flex; align-items:center; min-height:auto; overflow-x:auto; border-right:0; border-bottom:1px solid var(--line); gap:4px; padding:8px 12px; }
+      .nav-group { display:none; }
+      nav button { width:auto; min-width:max-content; min-height:42px; margin:0; flex:0 0 auto; justify-content:center; white-space:nowrap; text-align:center; }
+      section { padding:16px 14px 24px; scroll-margin-top:72px; }
       .grid, .grid.two, .grid.three, .grid.four, .trace, .stage-columns, .health-matrix, .lifecycle { grid-template-columns: 1fr; }
       .lifecycle-step { border-right:0; border-bottom:1px solid var(--line); }
       .lifecycle-step:last-child { border-bottom:0; }
@@ -1142,10 +1167,13 @@ def _dashboard_html() -> str:
       .search-toolbar { grid-template-columns:1fr; }
       .memory-result-row { grid-template-columns:1fr; }
       .result-actions { grid-column:auto; justify-content:flex-start; }
+      .workflow-steps { grid-template-columns:1fr; }
+      .workflow-steps li { border-right:0; border-bottom:1px solid var(--line); }
+      .workflow-steps li:last-child { border-bottom:0; }
+      .status-row { grid-template-columns:minmax(0,1fr) auto; gap:5px 10px; align-items:center; }
+      .status-row > .muted { grid-column:1 / -1; grid-row:2; }
     }
-    @media (max-width: 480px) {
-      nav { grid-template-columns:repeat(2,minmax(0,1fr)); }
-    }
+    @media (max-width: 480px) { nav button { padding-inline:10px; } }
   </style>
 </head>
 <body>
@@ -1167,9 +1195,9 @@ def _dashboard_html() -> str:
       <div class="nav-group" data-min-role="admin">管理员视图</div>
       <button data-tab="diagnostics" data-min-role="admin">系统维护</button>
       <button data-tab="evidence" data-min-role="admin">审计与证据</button>
-      <button data-tab="acceptance" data-min-role="admin">本机验收</button>
+      <button data-tab="acceptance" data-min-role="admin">系统检查</button>
     </nav>
-    <div>
+    <div class="shell-content">
       <div id="errorBox" class="error"></div>
       <div id="operationStatus" class="operation-status" role="status" aria-live="polite"></div>
       <section id="overview" class="active">
@@ -1183,9 +1211,9 @@ def _dashboard_html() -> str:
           <button class="secondary" data-min-role="admin" onclick="openTab('diagnostics')">系统维护</button>
         </div>
         <div id="overview-primary-actions" class="overview-primary-actions">
-          <button class="task-action" onclick="openTab('memory')"><span><strong>查看记忆</strong>浏览编号、来源、范围和状态</span><b>查看</b></button>
-          <button class="task-action" onclick="openMemorySearch()"><span><strong>搜索记忆</strong>按相关度查找并查看命中原因</span><b>搜索</b></button>
-          <button class="task-action" onclick="openTab('forget')"><span><strong>精准遗忘</strong>先预览影响，再确认执行</span><b>预览</b></button>
+          <button class="task-action" onclick="openTab('memory')"><i class="task-icon" data-lucide="database" aria-hidden="true"></i><span><strong>查看记忆</strong>浏览编号、来源、范围和状态</span><b>查看</b></button>
+          <button class="task-action" onclick="openMemorySearch()"><i class="task-icon" data-lucide="search" aria-hidden="true"></i><span><strong>搜索记忆</strong>按相关度查找并查看命中原因</span><b>搜索</b></button>
+          <button class="task-action" onclick="openTab('forget')"><i class="task-icon" data-lucide="trash" aria-hidden="true"></i><span><strong>精准遗忘</strong>先预览影响，再确认执行</span><b>预览</b></button>
         </div>
         <div class="metric-strip" aria-label="记忆状态摘要">
           <div><div class="muted">当前记忆</div><div class="metric" id="liveCount">-</div></div>
@@ -1299,7 +1327,7 @@ def _dashboard_html() -> str:
         <details><summary>详细记录：偏好证明</summary><pre id="preferenceOut" class="advanced-output"></pre></details>
       </section>
       <section id="memory-detail">
-        <div class="page-header"><div><h2>记忆详情</h2><p class="lead">核对编号、摘要、来源事件、作用范围、版本和最近使用证据。</p></div><button class="secondary" onclick="openTab('memory')">返回记忆中心</button></div>
+        <div class="page-header"><div><h2>记忆详情</h2><p class="lead">核对编号、摘要、来源事件、作用范围、版本和最近使用证据。</p></div><button class="secondary" onclick="returnFromMemoryDetail()">返回上一页</button></div>
         <div class="panel">
           <label for="memoryDetailId">记忆编号</label><input id="memoryDetailId" placeholder="从最近学到的内容或检索结果中选择">
           <div class="actions"><button class="primary" onclick="loadMemoryDetail(event)">查看详情</button><button class="danger" data-min-role="admin" onclick="forgetMemoryFromDetail(event)">遗忘这条记忆</button></div>
@@ -1352,12 +1380,16 @@ def _dashboard_html() -> str:
           <div class="actions"><button class="secondary" data-min-role="operator" onclick="forget(event, false)">预览影响</button><button id="forgetConfirmButton" class="danger" data-min-role="admin" onclick="forget(event, true)" disabled>确认遗忘并整理存储</button></div>
           <p class="warning">确认后，相关内容将不能再被 Agent 查询。此操作不能在页面中直接撤销。</p>
         </div>
-        <div class="grid three" style="margin-top:12px">
-          <div class="item"><div class="item-title">影响范围预览</div><div class="muted">展示候选编号、匹配依据和作用范围，帮助判断是否选对内容。</div></div>
-          <div class="item"><div class="item-title">确认后执行</div><div class="muted">确认后移除选中的记忆，页面会再次提示影响数量。</div></div>
-          <div class="item"><div class="item-title">遗忘后复检</div><div class="muted">系统会复查搜索结果和操作记录，确认相关内容已不可查询。</div></div>
-        </div>
+        <ol class="workflow-steps" aria-label="精准遗忘步骤">
+          <li><span class="workflow-step-number">1</span><div><strong>预览影响</strong><span class="muted">核对候选编号和匹配依据。</span></div></li>
+          <li><span class="workflow-step-number">2</span><div><strong>确认遗忘</strong><span class="muted">确认后移除选中的受管记忆。</span></div></li>
+          <li><span class="workflow-step-number">3</span><div><strong>自动复检</strong><span class="muted">复查检索、存储和操作记录。</span></div></li>
+        </ol>
         <div id="forgetCards" class="list" style="margin-top:12px"></div>
+        <div class="section-block" style="margin-top:16px">
+          <div class="section-block-header"><strong>最近遗忘验证</strong><button class="secondary" onclick="loadRecentForgetting(event, true)">刷新</button></div>
+          <div id="recentForgetList" class="section-block-body"><div class="empty-state">正在读取最近验证结果…</div></div>
+        </div>
         <details><summary>详细记录：操作回执</summary><pre id="forgetOut" class="advanced-output"></pre></details>
       </section>
       <section id="evidence" data-min-role="admin">
@@ -1399,25 +1431,34 @@ def _dashboard_html() -> str:
             <button class="secondary" data-min-role="admin" onclick="exportDiagnostics(event)">导出系统报告</button>
           </div>
           <p class="muted">维护结果用于定位操作记录、检索和记忆分层问题。导出前会按保护规则处理敏感内容。</p>
-          <form id="dashboardAuthForm" onsubmit="event.preventDefault()">
+          <details class="auth-settings"><summary>访问设置</summary><form id="dashboardAuthForm" class="overview-more-body" onsubmit="event.preventDefault()">
             <label for="apiToken">访问凭证（仅在启用本地权限时需要）</label>
             <input id="apiToken" type="password" placeholder="输入管理员提供的访问凭证" autocomplete="off" spellcheck="false">
-          </form>
+          </form></details>
         </div>
-        <div class="panel" style="margin-top:12px">
-          <div class="item-title">系统报告内容清单</div>
-          <div class="grid four">
-            <div class="item"><div class="item-title">本机检查</div><div class="muted">记忆空间、运行方式和基础服务状态。</div></div>
-            <div class="item"><div class="item-title">检索与策略</div><div class="muted">检索方式、记忆策略、有效期和冷热分层状态。</div></div>
-            <div class="item"><div class="item-title">资源与本机 AI</div><div class="muted">资源限制、Kylin AI 能力和自动降级状态。</div></div>
-            <div class="item"><div class="item-title">操作记录</div><div class="muted">完整性校验结果和最近关键事件，便于管理员复核。</div></div>
+        <div class="status-list" style="margin-top:14px" aria-label="系统组件状态">
+          <div class="status-row"><div class="health-title"><span id="auditDot" class="status-dot"></span><span>操作记录</span></div><span class="muted">写入、遗忘和安全操作是否可追溯</span><span id="auditBadge" class="badge">待检查</span></div>
+          <div class="status-row"><div class="health-title"><span id="retrievalDot" class="status-dot"></span><span>记忆检索</span></div><span class="muted">当前使用本机增强或稳定基础检索</span><span id="retrievalBadge" class="badge">待检查</span></div>
+          <div class="status-row"><div class="health-title"><span id="sdkDot" class="status-dot"></span><span>本机智能检索</span></div><span class="muted">Kylin AI 能力不可用时自动降级</span><span id="sdkBadge" class="badge">待检查</span></div>
+          <div class="status-row"><div class="health-title"><span id="osDot" class="status-dot"></span><span>系统资源</span></div><span class="muted">服务资源限制和运行环境状态</span><span id="osBadge" class="badge">待检查</span></div>
+        </div>
+        <div id="refreshWarnings" class="list" style="display:none;margin-top:14px"></div>
+        <div class="result-section" style="margin-top:12px">
+          <div class="section-block-header"><strong>系统报告包含的内容</strong><span class="muted">不包含记忆正文</span></div>
+          <div class="section-block-body">
+          <div class="linear-list">
+            <div class="list-row"><div><div class="item-title">本机运行状态</div><div class="muted">记忆空间、后台服务和运行方式。</div></div><span class="badge">基础信息</span></div>
+            <div class="list-row"><div><div class="item-title">检索与记忆策略</div><div class="muted">当前检索方式、有效期和冷热分层状态。</div></div><span class="badge">策略信息</span></div>
+            <div class="list-row"><div><div class="item-title">资源与本机智能检索</div><div class="muted">资源限制、Kylin AI 能力和自动降级状态。</div></div><span class="badge">运行信息</span></div>
+            <div class="list-row"><div><div class="item-title">操作记录</div><div class="muted">完整性校验和最近关键事件，便于管理员复核。</div></div><span class="badge">安全信息</span></div>
+          </div>
           </div>
         </div>
         <details><summary>详细记录：操作回执</summary><pre id="diagnosticsOut" class="advanced-output"></pre></details>
       </section>
       <section id="acceptance" data-min-role="admin">
-        <h2>本机验收复核</h2>
-        <p class="lead">复核中心把环境、记忆、安全、桌面集成、测试和证据目录整理成可点击步骤。自动项目由本地白名单检查执行，桌面菜单和弹窗类项目保留人工截图确认，便于管理员按同一顺序完成最终复核。</p>
+        <h2>系统检查</h2>
+        <p class="lead">按顺序检查运行环境、记忆流程、安全保护和桌面集成。自动项目由本机白名单执行；需要观察桌面菜单或弹窗的项目会明确标记为人工确认。</p>
         <div class="grid three">
           <div class="panel emphasis">
             <div class="item-title">复核进度</div>
@@ -1460,31 +1501,78 @@ def _dashboard_html() -> str:
   <script>
     const pretty = obj => JSON.stringify(obj, null, 2);
     const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const loadedTabs = new Set(['overview']);
+    // Paths are from Lucide and are embedded so the local console works offline.
+    const lucidePaths = {
+      home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10.5V20h14v-9.5"/><path d="M9 20v-6h6v6"/>',
+      bot:'<rect width="16" height="12" x="4" y="8" rx="2"/><path d="M9 12h.01M15 12h.01M9 16h6M12 4v4"/>',
+      database:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
+      sliders:'<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
+      shield:'<path d="M20 13c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V5l8-3 8 3v8Z"/><path d="m9 12 2 2 4-4"/>',
+      trash:'<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/>',
+      wrench:'<path d="M14.7 6.3a4 4 0 0 0-5-5l2.1 2.1-2.4 2.4-2.1-2.1a4 4 0 0 0 5 5L20 16.4a2.1 2.1 0 0 1-3 3l-7.7-7.7"/>',
+      evidence:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 15l2 2 4-4"/>',
+      clipboard:'<rect width="14" height="18" x="5" y="4" rx="2"/><path d="M9 4V2h6v2M9 12l2 2 4-4"/>',
+      search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>'
+    };
+    function lucideIcon(name) {
+      return '<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">' + (lucidePaths[name] || lucidePaths.home) + '</svg>';
+    }
+    const navIcons = {overview:'home', agent:'bot', memory:'database', preferences:'sliders', sensitive:'shield', forget:'trash', diagnostics:'wrench', evidence:'evidence', acceptance:'clipboard'};
+    document.querySelectorAll('nav button[data-tab]').forEach(button => {
+      button.insertAdjacentHTML('afterbegin', lucideIcon(navIcons[button.dataset.tab] || 'home'));
+    });
+    document.querySelectorAll('[data-lucide]').forEach(node => {
+      node.innerHTML = lucideIcon(node.dataset.lucide);
+    });
+    const tabLoadedAt = new Map([['overview', Date.now()]]);
+    const dynamicTabTtlMs = 5000;
+    let activeTab = 'overview';
+    let memoryDetailReturnTab = 'memory';
     document.querySelectorAll('nav button').forEach(btn => btn.addEventListener('click', () => {
-      openTab(btn.dataset.tab);
+      openTab(btn.dataset.tab, {force:btn.dataset.tab === activeTab});
     }));
-    async function openTab(tab) {
+    document.addEventListener('click', event => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const action = button.dataset.action;
+      const actionEvent = {currentTarget:button};
+      if (action === 'open-tab') openTab(button.dataset.tabTarget || 'overview');
+      else if (action === 'open-memory-detail') openMemoryDetail(button.dataset.memoryId || '');
+      else if (action === 'copy-memory-id') copyMemoryId(button.dataset.memoryId || '');
+      else if (action === 'preference-proof') loadPreferenceProof(actionEvent, button.dataset.memoryId || '');
+      else if (action === 'preference-evidence') loadPreferenceEvidence(actionEvent, button.dataset.memoryId || '');
+      else if (action === 'notification-target') openNotificationTarget(button.dataset.notificationAction || '');
+      else if (action === 'diagnostic-warning') runDiagnosticWarning(actionEvent, button.dataset.warningAction || '');
+      else if (action === 'return-memory-detail') returnFromMemoryDetail();
+    });
+    async function openTab(tab, options) {
+      const settings = options || {};
       const requestedButton = Array.from(document.querySelectorAll('nav button'))
         .find(item => item.dataset.tab === tab);
       const requestedSection = document.getElementById(tab);
       if ((requestedButton && requestedButton.hidden) || (requestedSection && requestedSection.hidden)) {
         operationFeedback('当前访问权限不足，已返回个人工作台。', 'warn');
         if (tab !== 'overview')
-          return openTab('overview');
+          return openTab('overview', {history:'replace'});
         return;
       }
       setOperationStatus('', '');
       document.querySelectorAll('nav button').forEach(item => item.classList.toggle('active', item.dataset.tab === tab));
       document.querySelectorAll('section').forEach(item => item.classList.toggle('active', item.id === tab));
+      activeTab = tab;
       if (requestedButton) requestedButton.scrollIntoView({block:'nearest', inline:'nearest'});
-      const section = requestedSection;
-      if (section) section.scrollIntoView({block:'start'});
-      if (window.location.hash !== '#' + tab) window.history.replaceState(null, '', '#' + tab);
-      await loadTabData(tab, null);
+      window.scrollTo({top:0, behavior:'auto'});
+      if (settings.history !== 'none' && window.location.hash !== '#' + tab) {
+        const method = settings.history === 'replace' ? 'replaceState' : 'pushState';
+        window.history[method]({tab:tab}, '', '#' + tab);
+      }
+      await loadTabData(tab, null, {force:Boolean(settings.force)});
     }
-    async function loadTabData(tab, event) {
-      if (!tab || loadedTabs.has(tab)) return;
+    async function loadTabData(tab, event, options) {
+      if (!tab) return;
+      const settings = options || {};
+      const lastLoaded = Number(tabLoadedAt.get(tab) || 0);
+      if (!settings.force && lastLoaded && Date.now() - lastLoaded < dynamicTabTtlMs) return;
       const loaders = {
         audit: audit,
         agent: loadAgentOverview,
@@ -1494,20 +1582,22 @@ def _dashboard_html() -> str:
         evidence: loadEvidenceHub,
         notifications: loadNotifications,
         acceptance: loadAcceptancePlan,
+        forget: loadRecentForgetting,
+        diagnostics: diagnostics,
       };
       const loader = loaders[tab];
       if (!loader) {
-        loadedTabs.add(tab);
+        tabLoadedAt.set(tab, Date.now());
         return;
       }
       const result = await loader(event);
       if (result !== null)
-        loadedTabs.add(tab);
+        tabLoadedAt.set(tab, Date.now());
     }
     function openHashTab() {
       const tab = window.location.hash.replace(/^#/, '');
       if (!tab || !document.getElementById(tab)) return;
-      openTab(tab);
+      openTab(tab, {history:'none', force:true});
     }
     const bootstrapParams = new URLSearchParams(window.location.hash.slice(1));
     const bootstrapToken = bootstrapParams.get('token') || '';
@@ -1524,8 +1614,8 @@ def _dashboard_html() -> str:
     tokenInput.value = sessionStorage.getItem('memguardos_api_token') || '';
     tokenInput.addEventListener('change', async () => {
       sessionStorage.setItem('memguardos_api_token', tokenInput.value);
-      loadedTabs.clear();
-      loadedTabs.add('overview');
+      tabLoadedAt.clear();
+      tabLoadedAt.set('overview', Date.now());
       try {
         const capabilities = await loadSessionCapabilities();
         await refreshForSession(capabilities);
@@ -1555,9 +1645,10 @@ def _dashboard_html() -> str:
     function buttonText(button) {
       return button ? button.textContent.replace(/\\s+/g, ' ').trim() : '操作';
     }
-    function requestError(message) {
+    function requestError(message, payload) {
       const error = new Error(String(message || '请求没有完成，请重试。'));
       error.userMessage = error.message;
+      error.payload = payload || null;
       return error;
     }
     let operationSequence = 0;
@@ -1567,8 +1658,8 @@ def _dashboard_html() -> str:
     function privilegedActionMarkup(label, tab) {
       if (currentRoleRank < roleRanks.admin)
         return '<div class="muted">此操作需要管理员处理。</div>';
-      return '<div class="mini-actions"><button class="secondary" onclick="openTab(\\''
-        + esc(tab) + '\\')">' + esc(label) + '</button></div>';
+      return '<div class="mini-actions"><button class="secondary" data-action="open-tab" data-tab-target="'
+        + esc(tab) + '">' + esc(label) + '</button></div>';
     }
     function operationFeedback(message, state) {
       return {operationFeedback:{message:String(message || ''), state:state || 'ok'}};
@@ -1577,6 +1668,7 @@ def _dashboard_html() -> str:
       const operationId = ++operationSequence;
       const button = event && event.currentTarget ? event.currentTarget : null;
       const label = button ? button.textContent : '';
+      const wasDisabled = button ? button.disabled : false;
       showError('');
       if (button) {
         button.disabled = true;
@@ -1605,9 +1697,13 @@ def _dashboard_html() -> str:
         return null;
       } finally {
         if (button) {
-          button.disabled = false;
+          const preserveState = button.dataset.preserveBusyState === 'true';
+          delete button.dataset.preserveBusyState;
           button.removeAttribute('aria-busy');
-          button.textContent = label;
+          if (!preserveState) {
+            button.disabled = wasDisabled;
+            button.textContent = label;
+          }
         }
       }
     }
@@ -1643,14 +1739,14 @@ def _dashboard_html() -> str:
     }
     async function getJson(url, timeoutMs) {
       try {
-        const r = await fetchWithTimeout(url, {headers: authHeaders()}, timeoutMs || 30000);
+        const r = await fetchWithTimeout(url, {headers: authHeaders()}, timeoutMs || 8000);
         const data = await r.json();
         if (!data || typeof data !== 'object') {
           throw requestError('本地服务返回内容格式异常。请稍后重试，或进入系统维护导出报告。');
         }
         if (!r.ok || data.ok === false) {
           const message = userErrorMessage(data, '请求没有完成。');
-          throw requestError(message);
+          throw requestError(message, data);
         }
         return data;
       } catch (err) {
@@ -1672,7 +1768,7 @@ def _dashboard_html() -> str:
         }
         if (!r.ok || payload.ok === false) {
           const message = userErrorMessage(payload, '请求没有完成。');
-          throw requestError(message);
+          throw requestError(message, payload);
         }
         return payload;
       } catch (err) {
@@ -1702,6 +1798,7 @@ def _dashboard_html() -> str:
         invalid_json:'请求内容格式不正确。请刷新页面后重试。',
         payload_too_large:'提交内容过大，请缩短内容或拆分后重试。',
         not_found:'没有找到请求的内容，请返回上一步重新选择。',
+        memory_not_found:'这条记忆已不存在、已完成遗忘，或不属于当前记忆空间。请返回原列表重新选择。',
         method_not_allowed:'当前操作不可用，请刷新页面后重试。'
       };
       return messages[code] || fallback || '操作没有完成，请重试。';
@@ -1754,7 +1851,7 @@ def _dashboard_html() -> str:
         user_behavior:'用户与 Agent 交互',
         agent_interaction:'用户与 Agent 交互',
         agent:'Agent 自动形成',
-        dashboard_acceptance:'本机验收',
+        dashboard_acceptance:'系统检查',
         os_event:'系统事件',
         web_replay:'Agent 任务回放',
         agent_event:'Agent 交互',
@@ -1931,7 +2028,7 @@ def _dashboard_html() -> str:
         + '<div><div class="memory-summary">' + esc(memorySummaryLabel(item)) + '</div>'
         + '<div class="result-meta"><span>' + esc(memoryTypeLabel(item.type || 'memory')) + '</span><span>' + esc(source) + '</span><span>' + esc(scopeLabel(item.scope || item.preference_scope || 'default')) + '</span><span>' + esc(tierLabel(item.tier || '')) + '</span><span>' + esc(sensitivityLabel(sens)) + '</span>' + duplicateBadge + '</div>'
         + '<div class="result-reason">命中原因：' + esc(reason) + '</div></div>'
-        + '<div class="result-actions"><button class="secondary" onclick="openMemoryDetail(\\'' + esc(memoryId) + '\\')">查看详情</button><button class="secondary" onclick="copyMemoryId(\\'' + esc(memoryId) + '\\')">复制编号</button></div></div>';
+        + '<div class="result-actions"><button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(memoryId) + '">查看详情</button><button class="secondary" data-action="copy-memory-id" data-memory-id="' + esc(memoryId) + '">复制编号</button></div></div>';
     }
     function renderMemoryWorkspaceRows(rows, mode) {
       const all = Array.isArray(rows) ? rows : [];
@@ -2056,11 +2153,15 @@ def _dashboard_html() -> str:
       forgetPreview = null;
       forgetConfirmButton.disabled = true;
       forgetConfirmButton.textContent = '确认遗忘并整理存储';
+      if (forgetConfirmButton.getAttribute('aria-busy') === 'true')
+        forgetConfirmButton.dataset.preserveBusyState = 'true';
     }
     function invalidateAgentForgetPreview() {
       agentForgetPreview = null;
       agentForgetConfirmButton.disabled = true;
       agentForgetConfirmButton.textContent = '确认遗忘';
+      if (agentForgetConfirmButton.getAttribute('aria-busy') === 'true')
+        agentForgetConfirmButton.dataset.preserveBusyState = 'true';
     }
     function agentForgetIdentity() {
       return JSON.stringify({
@@ -2178,8 +2279,8 @@ def _dashboard_html() -> str:
         + '<div class="memory-id" title="' + esc(item.memory_id || '') + '">记忆编号 ' + esc(shortMemoryId(item.memory_id || '')) + '</div>'
         + '<div class="muted">' + esc(item.summary || item.memory_id) + '</div>'
         + '<div class="muted">匹配依据：' + esc((item.matched_keywords || []).join(', ') || '语义和作用域匹配') + '</div>'
-        + '<div class="mini-actions"><button class="secondary" onclick="openMemoryDetail(\\'' + esc(item.memory_id || '') + '\\')">查看记忆</button></div></div>'
-      ).join('') : '<div class="item"><div class="item-title">' + (confirmed ? '已执行' : '未发现候选') + '</div><div class="muted">请展开详细记录查看操作回执。</div></div>';
+        + '<div class="mini-actions"><button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(item.memory_id || '') + '">查看记忆</button></div></div>'
+      ).join('') : (confirmed ? '' : '<div class="empty-state"><strong>未发现候选</strong><span>可以换用更具体的主题、项目名称或时间范围。</span></div>');
       document.getElementById('forgetCards').innerHTML = candidateHtml + renderVerificationReport(plan.verification_report);
     }
     function renderVerificationReport(report) {
@@ -2187,10 +2288,18 @@ def _dashboard_html() -> str:
       const steps = report.verification_steps || [];
       const statusText = {passed:'已通过', failed:'需要处理', skipped:'未执行'};
       const statusClass = {passed:'ok', failed:'bad', skipped:'warn'};
-      return '<div class="panel" style="margin-top:12px"><div class="item-title">遗忘验证链</div>'
-        + '<p class="muted">' + esc(report.user_summary || '') + '</p>'
-        + '<div class="list">' + steps.map(step => '<div class="item"><div class="health"><span>' + esc(step.name) + '</span><span class="badge ' + (statusClass[step.status] || 'warn') + '">' + esc(statusText[step.status] || step.status) + '</span></div><div class="muted">' + esc(step.detail || '') + '</div></div>').join('') + '</div>'
-        + '<div class="item" style="margin-top:10px"><div class="item-title">外部边界</div><div class="muted">OpenHands 原始日志、模型服务日志、shell history、虚拟机快照和文件备份不属于 MemGuardOS 受管范围，需要按各自系统单独清理。</div></div></div>';
+      const allSkipped = steps.length > 0 && steps.every(step => step.status === 'skipped');
+      const labels = {
+        main_record:'主记忆记录', agent_event_payload:'Agent 交互记录', sqlite_fts:'文本检索索引',
+        graph_relations:'关联关系', search_cache:'检索缓存', mmap_segment_compact:'本机存储文件',
+        plaintext_probe:'原文残留检查', agent_context_absence:'Agent 上下文复检', audit_chain:'操作记录完整性'
+      };
+      const body = allSkipped
+        ? '<div class="list-row"><div><div class="item-title">确认后自动复检</div><div class="muted">将检查记忆记录、检索索引、关联关系、缓存、上下文和操作记录。</div></div><span class="badge">' + esc(steps.length) + ' 项</span></div>'
+        : '<div class="linear-list">' + steps.map(step => '<div class="list-row"><div><div class="item-title">' + esc(labels[step.name] || '受管数据复检') + '</div><div class="muted">' + esc(step.detail || '') + '</div></div><span class="badge ' + (statusClass[step.status] || 'warn') + '">' + esc(statusText[step.status] || step.status) + '</span></div>').join('') + '</div>';
+      return '<div class="result-section" style="margin-top:12px"><div class="section-block-header"><strong>遗忘复检</strong><span class="badge ' + (allSkipped ? 'warn' : 'ok') + '">' + (allSkipped ? '等待确认' : '已执行') + '</span></div>'
+        + '<div class="section-block-body"><p class="muted">' + esc(report.user_summary || '') + '</p>' + body
+        + '<details><summary>查看管理范围说明</summary><div class="overview-more-body muted">OpenHands 原始日志、模型服务日志、shell history、虚拟机快照和文件备份不属于 MemGuardOS 受管范围，需要按各自系统单独清理。</div></details></div></div>';
     }
     function renderAgentOverview(payload) {
       const result = payload.result || {};
@@ -2219,7 +2328,7 @@ def _dashboard_html() -> str:
       document.getElementById('agentPreferences').innerHTML = preferences.length ? preferences.map(item =>
         '<div class="item"><div class="item-title">' + esc(topicLabel(item.topic)) + '：' + esc(item.value) + '</div>'
         + '<div class="muted">适用范围：' + esc(scopeLabel(item.preference_scope)) + ' · 依据 ' + esc(item.evidence_count) + ' 条 · 来自 ' + esc(item.distinct_sessions) + ' 个会话 · ' + (item.stable ? '已稳定' : '待观察') + '</div>'
-        + (item.promoted_memory_id ? '<div class="actions"><button class="secondary" onclick="loadPreferenceEvidence(event,\\'' + esc(item.promoted_memory_id) + '\\')">查看依据</button></div>' : '')
+        + (item.promoted_memory_id ? '<div class="actions"><button class="secondary" data-action="preference-evidence" data-memory-id="' + esc(item.promoted_memory_id) + '">查看依据</button></div>' : '')
         + '</div>'
       ).join('') : '<div class="muted">尚未形成偏好候选。</div>';
       const labels = {planning:'规划', tool_selection:'工具选择', response_generation:'回答生成'};
@@ -2304,7 +2413,7 @@ def _dashboard_html() -> str:
       const work = async () => {
         const main = document.getElementById('memoryWorkspaceResults');
         if (main) main.innerHTML = '<div class="skeleton" aria-label="正在读取记忆"></div><div class="skeleton" aria-hidden="true"></div>';
-        const payload = await getJson('/api/feedback-home?limit=30', 12000);
+        const payload = await getJson('/api/feedback-home?limit=30', 5000);
         const memories = (payload.result || {}).recent_memories || [];
         renderMemoryWorkspaceRows(memories, 'recent');
         const summary = document.getElementById('memorySearchSummary');
@@ -2328,7 +2437,7 @@ def _dashboard_html() -> str:
         const limit = Number(document.getElementById('memorySearchLimit').value || 5);
         const main = document.getElementById('memoryWorkspaceResults');
         main.innerHTML = '<div class="skeleton" aria-label="正在搜索记忆"></div><div class="skeleton" aria-hidden="true"></div>';
-        const payload = await getJson('/api/search?q=' + encodeURIComponent(query) + '&top_k=' + encodeURIComponent(limit), 12000);
+        const payload = await getJson('/api/search?q=' + encodeURIComponent(query) + '&top_k=' + encodeURIComponent(limit), 5000);
         const rows = payload.result || [];
         renderMemoryWorkspaceRows(rows, 'search');
         document.getElementById('memorySearchSummary').textContent = rows.length
@@ -2346,8 +2455,9 @@ def _dashboard_html() -> str:
     function renderNotifications(items, targetId) {
       const box = document.getElementById(targetId || 'notificationList');
       if (!box) return;
+      box.classList.add('notification-list');
       if (!items.length) {
-        box.innerHTML = '<div class="item"><div class="item-title">暂无需要关注的变化</div><div class="muted">重要记忆变化、风险阻断和遗忘结果会显示在这里。</div></div>';
+        box.innerHTML = '<div class="empty-state"><strong>暂无需要关注的变化</strong><span>重要记忆变化、风险阻断和遗忘结果会显示在这里。</span></div>';
         return;
       }
       const labels = {critical:'需要处理', warning:'建议确认', info:'已完成'};
@@ -2357,18 +2467,19 @@ def _dashboard_html() -> str:
         const targetRequiresAdmin = action.indexOf('记录') >= 0
           || (!action.includes('记忆') && !action.includes('Agent') && !action.includes('遗忘'));
         const actionMarkup = targetRequiresAdmin && currentRoleRank < roleRanks.admin
-          ? '<div class="muted">此操作需要管理员处理。</div>'
-          : '<div class="mini-actions"><button class="secondary" onclick="openNotificationTarget(\\''
-            + esc(action) + '\\')">查看处理</button></div>';
-        return '<div class="item"><div class="health"><div class="item-title">' + esc(item.title || '')
-          + '</div><span class="badge ' + (classes[item.level] || '') + '">' + esc(labels[item.level] || item.level)
-          + '</span></div><div class="muted">' + esc(item.summary || '') + '</div>' + actionMarkup + '</div>';
+          ? '<span class="muted">需要管理员处理</span>'
+          : '<button class="secondary" data-action="notification-target" data-notification-action="'
+            + esc(action) + '">查看处理</button>';
+        return '<div class="list-row"><div><div class="item-title">' + esc(item.title || '')
+          + '</div><div class="muted">' + esc(item.summary || '') + '</div></div><div class="notification-actions"><span class="badge '
+          + (classes[item.level] || '') + '">' + esc(labels[item.level] || item.level) + '</span>' + actionMarkup + '</div></div>';
       }).join('');
     }
     function openNotificationTarget(action) {
-      if (action.indexOf('记忆') >= 0) openTab('memory-detail');
+      if (action.indexOf('内容保护') >= 0) openTab('sensitive', {force:true});
+      else if (action.indexOf('记忆') >= 0) openTab('memory', {force:true});
       else if (action.indexOf('Agent') >= 0) openTab('agent');
-      else if (action.indexOf('遗忘') >= 0) openTab('forget');
+      else if (action.indexOf('遗忘') >= 0) openTab('forget', {force:true});
       else if (action.indexOf('记录') >= 0) openTab('audit');
       else openTab('diagnostics');
     }
@@ -2393,6 +2504,25 @@ def _dashboard_html() -> str:
         document.getElementById('sensitiveOut').textContent = pretty(payload);
         return operationFeedback('敏感保护状态已更新。', 'ok');
       };
+      return event ? withBusy(event, work) : work();
+    }
+    async function loadRecentForgetting(event, force) {
+      const work = async () => {
+        const box = document.getElementById('recentForgetList');
+        if (box) box.innerHTML = '<div class="skeleton" aria-label="正在读取最近遗忘验证"></div>';
+        const payload = await getJson('/api/feedback-home?limit=30', 8000);
+        const items = (payload.result || {}).recent_forgetting || [];
+        if (box) {
+          box.innerHTML = items.length ? items.map(item =>
+            '<div class="list-row"><div><div class="item-title">' + esc(item.title || '遗忘验证已完成')
+            + '</div><div class="muted">' + esc(item.summary || '受管记录和检索路径已完成复核。')
+            + '</div></div><span class="badge ' + (item.level === 'critical' ? 'bad' : 'ok') + '">'
+            + (item.level === 'critical' ? '需要处理' : '已验证') + '</span></div>'
+          ).join('') : '<div class="empty-state"><strong>还没有遗忘记录</strong><span>完成一次精准遗忘后，受管记录、索引和上下文复检结果会显示在这里。</span></div>';
+        }
+        return operationFeedback(items.length ? '最近遗忘验证已更新。' : '当前没有遗忘记录。', items.length ? 'ok' : 'warn');
+      };
+      if (force) tabLoadedAt.delete('forget');
       return event ? withBusy(event, work) : work();
     }
     async function testSensitiveText(event) {
@@ -2477,7 +2607,7 @@ def _dashboard_html() -> str:
           + (item.memory_id ? '<div class="memory-id" title="' + esc(item.memory_id) + '">记忆编号 ' + esc(shortMemoryId(item.memory_id)) + '</div>' : '')
           + '<div class="muted">适用范围：' + esc(scopeLabel(item.scope || 'global')) + '</div><div class="mini-actions">'
           + (item.memory_id
-            ? '<button class="secondary" onclick="loadPreferenceProof(event,\\'' + esc(item.memory_id) + '\\')">查看生效证明</button><button class="secondary" onclick="openMemoryDetail(\\'' + esc(item.memory_id) + '\\')">查看记忆</button><button class="secondary" onclick="copyMemoryId(\\'' + esc(item.memory_id) + '\\')">复制编号</button>'
+            ? '<button class="secondary" data-action="preference-proof" data-memory-id="' + esc(item.memory_id) + '">查看生效证明</button><button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(item.memory_id) + '">查看记忆</button><button class="secondary" data-action="copy-memory-id" data-memory-id="' + esc(item.memory_id) + '">复制编号</button>'
             : '<span class="muted">暂无对应记忆编号</span>')
           + '</div></div>'
         ).join('') : '<div class="item"><div class="item-title">暂无稳定偏好</div><div class="muted">通过 Agent 工作台运行任务后，这里会显示可复用偏好。</div></div>';
@@ -2494,10 +2624,14 @@ def _dashboard_html() -> str:
         openTab('agent');
       });
     }
-    function openMemoryDetail(memoryId) {
+    async function openMemoryDetail(memoryId, returnTab) {
+      memoryDetailReturnTab = returnTab || (activeTab === 'memory-detail' ? memoryDetailReturnTab : activeTab) || 'memory';
       document.getElementById('memoryDetailId').value = memoryId || '';
-      openTab('memory-detail');
-      loadMemoryDetail(null);
+      await openTab('memory-detail', {force:true});
+      return loadMemoryDetail(null);
+    }
+    function returnFromMemoryDetail() {
+      return openTab(memoryDetailReturnTab || 'memory', {force:true});
     }
     async function loadMemoryDetail(event) {
       const id = document.getElementById('memoryDetailId').value.trim();
@@ -2505,8 +2639,19 @@ def _dashboard_html() -> str:
         setOperationStatus('请先选择一条记忆。', 'warn');
         return null;
       }
-      await withBusy(event, async () => {
-        const payload = await getJson('/api/memory-detail?memory_id=' + encodeURIComponent(id));
+      return withBusy(event, async () => {
+        let payload;
+        try {
+          payload = await getJson('/api/memory-detail?memory_id=' + encodeURIComponent(id), 8000);
+        } catch (err) {
+          const errorCode = String(((err || {}).payload || {}).error || '');
+          if (errorCode !== 'memory_not_found') throw err;
+          document.getElementById('memoryDetailCards').innerHTML = '<div class="empty-state"><strong>这条记忆当前不可查看</strong><span>'
+            + esc(err.userMessage || '它可能已完成遗忘，或不属于当前记忆空间。')
+            + '</span><button class="secondary" data-action="return-memory-detail">返回原列表</button></div>';
+          document.getElementById('memoryDetailOut').textContent = pretty((err || {}).payload || {});
+          return operationFeedback('没有找到这条记忆，请返回原列表重新选择。', 'warn');
+        }
         const result = payload.result || {};
         const memory = result.memory || {};
         document.getElementById('memoryDetailCards').innerHTML = result.found ? '<div class="item"><div class="health"><div><div class="item-title">' + esc(memorySummaryLabel(memory)) + '</div><div class="memory-id">完整编号 ' + esc(memory.memory_id || id) + '</div></div><button class="secondary" onclick="copyMemoryId(\\'' + esc(memory.memory_id || id) + '\\')">复制编号</button></div><div class="muted">' + esc(memoryTypeLabel(memory.type || 'memory')) + ' · ' + esc(memorySubtypeLabel(memory.subtype || memory.type)) + ' · ' + esc(tierLabel(memory.tier || '')) + '</div><div class="muted">适用范围：' + esc(scopeLabel(memory.preference_scope || memory.scope || '')) + ' · 来源：' + esc(sourceLabel(memory.source_kind || (memory.source || {}).kind || '')) + '</div></div><div class="grid two"><div class="panel"><div class="item-title">来源与版本</div><div class="muted">来源事件 ' + esc((result.source_events || []).length) + ' 条 · 版本 ' + esc((result.versions || []).length) + ' 个</div><div class="muted">最近使用阶段：' + esc(stageLabel((result.agent_usage || {}).last_stage || '')) + '</div></div><div class="panel"><div class="item-title">关联信息</div><div class="muted">实体 ' + esc(((result.graph || {}).entities || []).length) + ' 个 · 关系 ' + esc(((result.graph || {}).relations || []).length) + ' 条</div></div></div>' : '<div class="item"><div class="item-title">没有找到这条记忆</div><div class="muted">请从记忆中心重新选择。</div></div>';
@@ -2600,7 +2745,6 @@ def _dashboard_html() -> str:
       const runtime = diag.runtime_status || {};
       badge('osBadge', runtime.cgroup_v2 ? 'ok' : 'warn', runtime.cgroup_v2 ? '资源限制正常' : '部分可用');
       dot('osDot', runtime.cgroup_v2 ? 'ok' : 'warn');
-      renderDeliveryReadiness(diag, retrieval, runtime, sdkAvailable);
       renderStatusSummary(status || {ok:true, result:{}}, diag);
       renderRefreshWarnings(diag, retrieval, runtime, sdkAvailable);
     }
@@ -2608,7 +2752,7 @@ def _dashboard_html() -> str:
       if (event) return withBusy(event, async () => refresh(null, options));
       const settings = options || {};
       const settled = await Promise.allSettled([
-        getJson('/api/status', 12000),
+        getJson('/api/status', 5000),
         loadFeedbackHome(null),
       ]);
       const statusResult = settled[0];
@@ -2643,9 +2787,9 @@ def _dashboard_html() -> str:
     }
     function renderRefreshWarnings(diag, retrieval, runtime, sdkAvailable) {
       const warnings = [];
-      if (!(diag.audit_chain && diag.audit_chain.ok)) warnings.push('操作记录完整性需要复核。');
-      if (!(retrieval.requested_backend || retrieval.last_backend_used)) warnings.push('检索方式尚未确认。');
-      if (!sdkAvailable) warnings.push('本机智能检索当前使用稳定降级，不影响基础检索。');
+      if (!(diag.audit_chain && diag.audit_chain.ok)) warnings.push({text:'操作记录完整性需要复核。', label:'立即校验', action:'audit'});
+      if (!(retrieval.requested_backend || retrieval.last_backend_used)) warnings.push({text:'检索方式尚未确认。', label:'检查检索方式', action:'retrieval'});
+      if (!sdkAvailable) warnings.push({text:'本机智能检索当前使用稳定降级，不影响基础检索。', label:'查看降级状态', action:'retrieval'});
       const box = document.getElementById('refreshWarnings');
       if (!warnings.length) {
         box.style.display = 'none';
@@ -2654,35 +2798,12 @@ def _dashboard_html() -> str:
       }
       box.style.display = 'block';
       box.innerHTML = '<div class="item-title">需要关注</div>'
-        + warnings.map(item => '<div class="item"><div class="muted">' + esc(item) + '</div>'
-          + privilegedActionMarkup('跳转处理', 'diagnostics') + '</div>').join('');
+        + warnings.map(item => '<div class="list-row"><div class="muted">' + esc(item.text) + '</div>'
+          + '<button class="secondary" data-action="diagnostic-warning" data-warning-action="' + esc(item.action) + '">' + esc(item.label) + '</button></div>').join('');
     }
-    function renderDeliveryReadiness(diag, retrieval, runtime, sdkAvailable) {
-      const checks = [
-        {name:'操作记录完整性', ok: Boolean(diag.audit_chain && diag.audit_chain.ok), advice:'先进入系统维护，点击“校验操作记录”；仍异常时导出系统报告交给管理员。', tab:'diagnostics', label:'跳转处理'},
-        {name:'检索方式', ok: Boolean(retrieval.requested_backend || retrieval.last_backend_used), advice:'进入系统维护点击“检查检索方式”，确认当前使用本机检索或自动降级。', tab:'diagnostics', label:'跳转处理'},
-        {name:'OS 资源', ok: Boolean(runtime.platform || runtime.cgroup_v2), advice:'进入系统维护查看聚合系统状态；如果只在普通桌面使用，部分资源信息不可见不影响基础记忆功能。', tab:'diagnostics', label:'跳转处理'},
-        {name:'系统报告', ok: true, advice:'需要交付或排障时进入系统维护导出系统报告。', tab:'diagnostics', label:'跳转处理'}
-      ];
-      if (!sdkAvailable) {
-        checks.push({name:'本机智能检索', ok:true, advice:'本机智能检索不可用时会稳定使用基础检索；openKylin 上可在系统维护中重新检查。', tab:'diagnostics', label:'跳转处理'});
-      }
-      const passed = checks.filter(item => item.ok).length;
-      const score = Math.round((passed / checks.length) * 100);
-      document.getElementById('readinessProgress').style.width = score + '%';
-      document.getElementById('readinessText').textContent = '当前就绪度 ' + score + '% · ' + passed + '/' + checks.length + ' 项满足';
-      const advice = checks.filter(item => !item.ok);
-      if (!advice.length) {
-        document.getElementById('riskAdvice').innerHTML =
-          '<div class="item"><div class="item-title">当前没有需要立即处理的风险</div>'
-          + '<div class="muted">所有基础检查均已满足。需要交付或排障时，可从系统维护导出系统报告。</div></div>';
-        return;
-      }
-      document.getElementById('riskAdvice').innerHTML = advice.map(item =>
-        '<div class="item"><div class="item-title">处理建议 · ' + esc(item.name)
-        + '</div><div class="muted">' + esc(item.advice) + '</div>'
-        + privilegedActionMarkup(item.label || '跳转处理', item.tab || 'diagnostics') + '</div>'
-      ).join('');
+    function runDiagnosticWarning(event, action) {
+      if (action === 'audit') return verifyAudit(event);
+      return retrievalStatus(event);
     }
     async function ingest(event) {
       return withMutation(event, '保存记忆', async () => {
@@ -2710,7 +2831,7 @@ def _dashboard_html() -> str:
         const memoryId = result.record.memory_id || '';
         box.innerHTML = '<div class="item"><div class="health"><div class="item-title">相同记忆已经存在</div><span class="badge warn">未重复保存</span></div>'
           + '<div class="muted">系统继续使用原有记忆编号 ' + esc(shortMemoryId(memoryId)) + '，不会产生新的重复记录。</div>'
-          + '<div class="mini-actions"><button class="secondary" onclick="openMemoryDetail(\\'' + esc(memoryId) + '\\')">查看原记忆</button><button class="secondary" onclick="copyMemoryId(\\'' + esc(memoryId) + '\\')">复制编号</button></div></div>';
+          + '<div class="mini-actions"><button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(memoryId) + '">查看原记忆</button><button class="secondary" data-action="copy-memory-id" data-memory-id="' + esc(memoryId) + '">复制编号</button></div></div>';
         return;
       }
       const item = (feedback.new_memories || [])[0] || (feedback.updated_memories || [])[0];
@@ -2718,7 +2839,7 @@ def _dashboard_html() -> str:
         box.innerHTML = '<div class="item"><div class="item-title">本次没有形成可保存记忆</div><div class="muted">' + esc(((feedback.skipped_items || [])[0] || {}).summary_for_user || '请检查输入内容和保存策略。') + '</div></div>';
         return;
       }
-      box.innerHTML = '<div class="item"><div class="health"><div class="item-title">已学到：' + esc(item.summary_for_user) + '</div><span class="badge ok">已保存</span></div><div class="muted">为什么保存：' + esc(item.why_extracted) + '</div><div class="muted">适用范围：' + esc((item.where_it_will_apply || []).join('、')) + '</div><div class="mini-actions"><button class="secondary" onclick="openMemoryDetail(\\'' + esc(item.memory_id || '') + '\\')">查看详情</button><button class="secondary" onclick="loadPreferenceProof(event,\\'' + esc(item.memory_id || '') + '\\')">测试生效</button></div></div>';
+      box.innerHTML = '<div class="item"><div class="health"><div class="item-title">已学到：' + esc(item.summary_for_user) + '</div><span class="badge ok">已保存</span></div><div class="muted">为什么保存：' + esc(item.why_extracted) + '</div><div class="muted">适用范围：' + esc((item.where_it_will_apply || []).join('、')) + '</div><div class="mini-actions"><button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(item.memory_id || '') + '">查看详情</button><button class="secondary" data-action="preference-proof" data-memory-id="' + esc(item.memory_id || '') + '">测试生效</button></div></div>';
     }
     async function explainExtraction(event) {
       await withBusy(event, async () => {
@@ -2770,7 +2891,9 @@ def _dashboard_html() -> str:
         forgetOut.textContent = pretty(payload);
         if (confirmForget) {
           invalidateForgetPreview();
-          return refreshAfterMutation('遗忘已经完成');
+          tabLoadedAt.delete('memory');
+          await loadRecentForgetting(null, true);
+          return refreshAfterMutation('遗忘已经完成，验证结果已更新');
         }
         rememberForgetPreview(payload);
         return operationFeedback('遗忘范围预览已生成。', 'ok');
@@ -2781,20 +2904,33 @@ def _dashboard_html() -> str:
     }
     async function verifyAudit(event) {
       await withBusy(event, async () => {
-        diagnosticsOut.textContent = pretty(await getJson('/api/verify-audit'));
-        return refreshAfterMutation('校验已经完成');
+        const payload = await getJson('/api/verify-audit');
+        diagnosticsOut.textContent = pretty(payload);
+        const ok = Boolean((payload.result || {}).ok);
+        badge('auditBadge', ok ? 'ok' : 'bad', ok ? '通过' : '异常');
+        dot('auditDot', ok ? 'ok' : 'bad');
+        return operationFeedback(ok ? '操作记录校验通过。' : '操作记录存在异常，请导出系统报告。', ok ? 'ok' : 'bad');
       });
     }
     async function retrievalStatus(event) {
-      await withBusy(event, async () => { diagnosticsOut.textContent = pretty(await getJson('/api/retrieval-status')); return operationFeedback('检索方式检查已完成。', 'ok'); });
+      await withBusy(event, async () => {
+        const payload = await getJson('/api/retrieval-status');
+        diagnosticsOut.textContent = pretty(payload);
+        const retrieval = payload.result || {};
+        const ready = Boolean(retrieval.requested_backend || retrieval.last_backend_used);
+        badge('retrievalBadge', ready ? 'ok' : 'warn', retrievalModeLabel(retrieval.last_backend_used || retrieval.requested_backend));
+        dot('retrievalDot', ready ? 'ok' : 'warn');
+        return operationFeedback(ready ? '检索方式检查已完成。' : '检索方式尚未确认，请重新检查服务。', ready ? 'ok' : 'warn');
+      });
     }
     async function memoryPolicy(event) {
       await withBusy(event, async () => { diagnosticsOut.textContent = pretty(await getJson('/api/memory-policy')); return operationFeedback('记忆策略已加载。', 'ok'); });
     }
     async function diagnostics(event) {
-      await withBusy(event, async () => {
+      return withBusy(event, async () => {
         const payload = await getJson('/api/diagnostics');
         diagnosticsOut.textContent = pretty(payload);
+        renderDiagnosticsPayload(payload, {ok:payload.ok, result:{namespace:(payload.result || {}).namespace}});
         return operationFeedback('系统状态检查已完成。', 'ok');
       });
     }

@@ -278,3 +278,44 @@ def test_dashboard_exposes_feedback_surfaces_and_safe_navigation():
         "hashchange",
     ):
         assert marker in page
+
+
+
+
+def test_forget_preview_candidate_resolves_to_memory_detail(tmp_path):
+    service = MemGuardService(
+        store_path=tmp_path / "memory.segment",
+        db_path=tmp_path / "memguard.sqlite3",
+    )
+    try:
+        stored = service.ingest_text(
+            "临时项目代号 blue-river 的部署偏好需要在任务结束后遗忘。",
+            source_kind="manual",
+            source_uri="feedback-contract",
+        )
+        memory_id = stored["record"].memory_id
+        preview = handle_request(service, {"command": "forget", "request": "忘掉 blue-river"})
+        candidate_ids = [item["memory_id"] for item in preview["result"]["candidates"]]
+        detail = handle_request(service, {"command": "memory_detail", "memory_id": memory_id})
+    finally:
+        service.close()
+
+    assert memory_id in candidate_ids
+    assert detail["ok"] is True
+    assert detail["result"]["found"] is True
+    assert detail["result"]["memory"]["memory_id"] == memory_id
+
+
+def test_missing_memory_detail_returns_explicit_product_error(tmp_path):
+    service = MemGuardService(
+        store_path=tmp_path / "memory.segment",
+        db_path=tmp_path / "memguard.sqlite3",
+    )
+    try:
+        detail = handle_request(service, {"command": "memory_detail", "memory_id": "missing-memory"})
+    finally:
+        service.close()
+
+    assert detail["ok"] is False
+    assert detail["error"] == "memory_not_found"
+    assert detail["result"]["found"] is False

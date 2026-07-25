@@ -627,7 +627,7 @@ void MemGuardPeonyPlugin::runForgetImport(const QStringList &memoryIds)
                 box.addButton(QStringLiteral("关闭"), QMessageBox::RejectRole);
                 box.exec();
                 if (box.clickedButton() == view)
-                    openLocalConsole(QStringLiteral("#audit"));
+                    openLocalConsole(QStringLiteral("#sensitive"));
             }
             progress->deleteLater();
             process->deleteLater();

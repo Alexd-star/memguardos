@@ -132,8 +132,8 @@ public:
         connect(openCenter, &QAction::triggered, this, [this]() { openControlCenter(); });
         connect(openSdk, &QAction::triggered, this, [this]() { openControlCenter(QStringLiteral("sdk")); });
         connect(openAudit, &QAction::triggered, this, [this]() { openControlCenter(QStringLiteral("audit")); });
-        connect(openSensitive, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#audit")); });
-        connect(openRecentMemory, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#overview")); });
+        connect(openSensitive, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#sensitive")); });
+        connect(openRecentMemory, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#memory")); });
         connect(openRecentPreference, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#preferences")); });
         connect(openRecentAgent, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#agent")); });
         connect(openRecentForget, &QAction::triggered, this, [this]() { openDashboard(QStringLiteral("#forget")); });
@@ -152,7 +152,7 @@ public:
         connect(&tray_, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
             if (reason == QSystemTrayIcon::Trigger) {
                 if (lastTarget_ == QStringLiteral("sensitive"))
-                    openDashboard(QStringLiteral("#audit"));
+                    openDashboard(QStringLiteral("#sensitive"));
                 else
                     openControlCenter(lastTarget_);
             }
@@ -353,13 +353,18 @@ private:
 
     void openControlCenter()
     {
-        openControlCenter(QString());
+        openControlCenter(QStringLiteral("overview"));
     }
 
     void openControlCenter(const QString &target)
     {
-        writeNavigationTarget(target.isEmpty() ? lastTarget_ : target);
-        QProcess::startDetached(QStringLiteral("ukui-control-center"), {});
+        const QString destination = target.isEmpty()
+            ? (lastTarget_.isEmpty() ? QStringLiteral("overview") : lastTarget_)
+            : target;
+        writeNavigationTarget(destination);
+        QProcess::startDetached(
+            QStringLiteral("ukui-control-center"),
+            {QStringLiteral("-m"), QStringLiteral("memguardos-memory-security")});
     }
 
     void openDashboard()
