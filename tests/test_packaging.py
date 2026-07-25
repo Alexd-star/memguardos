@@ -35,6 +35,11 @@ def test_competition_ready_hygiene_ignores_local_output_workspaces():
     assert "outputs" in IGNORED_HYGIENE_PARTS
 
 
+def test_project_metadata_matches_supported_python_matrix():
+    metadata = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'requires-python = ">=3.10"' in metadata
+
+
 def test_formal_doc_consistency_rejects_previously_current_test_counts(monkeypatch, tmp_path):
     (tmp_path / "README.md").write_text(
         "历史口径包括 341 passed、344 passed、527 passed 和 636 passed。\n",
