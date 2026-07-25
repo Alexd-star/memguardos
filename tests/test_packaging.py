@@ -33,9 +33,6 @@ from scripts.build_deb_packages import (
 
 def test_competition_ready_hygiene_ignores_local_output_workspaces():
     assert "outputs" in IGNORED_HYGIENE_PARTS
-
-
-def test_project_metadata_matches_supported_python_matrix():
     metadata = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     assert 'requires-python = ">=3.10"' in metadata
 
