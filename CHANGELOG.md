@@ -2,6 +2,14 @@
 
 本文记录 MemGuardOS 的主要版本和能力变化。
 
+## v0.1.0-multidistro-evidence - 2026-07-26
+
+- 新增多发行版复验证据 `docs/evidence/multi_distro_latest/`：GitHub Actions Ubuntu 三版本（3.10/3.11/3.12）矩阵 13 步门禁全绿；Debian 13 容器全量测试 `654 passed, 1 skipped`，与 openKylin 原生计数一致；赛题逐句核查 R5 由“部分满足”升级为“已满足/鼓励项”。
+- Dockerfile 对齐当前仓库结构：完整仓库内容进入镜像并由 `.dockerignore` 治理排除本地材料与运行时产物；安装 `git` 以支持证据导出测试在容器内复验。
+- 新增科研图风格答辩图包生成工具 `scripts/generate_plottie_publication_figures.py`、`scripts/generate_figures4papers_style_figures.py`、`scripts/plottie_figures/` 与规范文档 `docs/科研期刊绘图规范与图包重构依据.md`；20 张方法示意/定量/截图图版可从最新证据 JSON 一键再生成，产物输出到本地 `outputs/` 不入库。
+- 新增工业系统对标研究文档 `docs/research/对标借鉴与提升路线2026-07.md`，覆盖 Mem0、Zep/Graphiti、Letta、HippoRAG 2、MemOS 与端侧向量索引生态的对标矩阵、可借鉴项评估与指标提升路线。
+- 修复答辩演示文稿脚本的 2 处 ruff 违例（E731、F541），仓库 lint 恢复全绿。
+
 ## v0.1.0-agent-adherence - 2026-06-20
 
 - OpenHands PreToolUse Hook 增加工具偏好执行策略，能够在用户已选择 `rg` 时拒绝明显改用 `grep` 的代码搜索命令，并把偏好拒绝与高风险拒绝分开审计。

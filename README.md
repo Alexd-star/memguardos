@@ -36,6 +36,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 |---|---:|
 | 本地当前工作树全量测试 | 641 passed, 14 skipped |
 | openKylin 最终 HEAD 原生证据 | 源修订 `80963d0`；`654 passed, 1 skipped`；manifest 24 个文件并附 SHA256 |
+| 多发行版复验（Ubuntu CI / Debian 13 容器） | CI 三版本矩阵 13 步门禁全绿；容器全量 654 passed, 1 skipped |
 | openKylin systemd 服务重启 | 873 ms（服务恢复后为 active/running） |
 | openKylin 真实 Agent | OpenHands 1.28.1；原 12 组真实会话 12/12，新增 R13-R20 扩展 8/8，新增 holdout 留出盲测 8/8；合计 28 组均有证据 |
 | 本地 1k 负载 P95 | 0.429 ms |
@@ -56,7 +57,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 真实 Agent 场景库已从 12 组扩展到 28 组，新增覆盖偏好冲突覆盖、失败修复轨迹、高风险确认、跨会话 runbook 复用、精准遗忘边界和 holdout 留出盲测。新增 R13-R20 已在 openKylin 上完成独立复跑，证据位于 [docs/evidence/real_agent_extension_r13_r20_latest/](docs/evidence/real_agent_extension_r13_r20_latest/)；新增 8 组 holdout 留出盲测证据位于 [docs/evidence/real_agent_holdout_latest/](docs/evidence/real_agent_holdout_latest/)；原 12 组仍保留在 [docs/evidence/memory_value_latest/](docs/evidence/memory_value_latest/) 中，三者共同构成 28 组真实 OpenHands 证据。
 
-通用 openKylin 证据位于 [docs/evidence/latest/](docs/evidence/latest/)，真实 Agent 专项证据位于 [docs/evidence/agent_latest/](docs/evidence/agent_latest/)，记忆价值双层评测证据位于 [docs/evidence/memory_value_latest/](docs/evidence/memory_value_latest/)，并发优化与消融证据位于 [docs/evidence/performance_latest/](docs/evidence/performance_latest/)，持久化 Kylin 向量三轮原始结果位于 [docs/evidence/retrieval_v2_openkylin.json](docs/evidence/retrieval_v2_openkylin.json)。评测汇总见 [docs/测试报告.md](docs/测试报告.md)、[docs/真实Agent闭环测试报告.md](docs/真实Agent闭环测试报告.md)、[docs/真实Agent记忆价值评测报告.md](docs/真实Agent记忆价值评测报告.md) 和 [docs/评委证据包索引.md](docs/评委证据包索引.md)。
+通用 openKylin 证据位于 [docs/evidence/latest/](docs/evidence/latest/)，真实 Agent 专项证据位于 [docs/evidence/agent_latest/](docs/evidence/agent_latest/)，记忆价值双层评测证据位于 [docs/evidence/memory_value_latest/](docs/evidence/memory_value_latest/)，并发优化与消融证据位于 [docs/evidence/performance_latest/](docs/evidence/performance_latest/)，持久化 Kylin 向量三轮原始结果位于 [docs/evidence/retrieval_v2_openkylin.json](docs/evidence/retrieval_v2_openkylin.json)，Ubuntu CI 与 Debian 容器多发行版复验证据位于 [docs/evidence/multi_distro_latest/](docs/evidence/multi_distro_latest/)。评测汇总见 [docs/测试报告.md](docs/测试报告.md)、[docs/真实Agent闭环测试报告.md](docs/真实Agent闭环测试报告.md)、[docs/真实Agent记忆价值评测报告.md](docs/真实Agent记忆价值评测报告.md) 和 [docs/评委证据包索引.md](docs/评委证据包索引.md)。
 
 ## 核心能力
 

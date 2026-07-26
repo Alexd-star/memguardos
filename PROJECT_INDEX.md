@@ -96,7 +96,7 @@ MemGuardOS 是面向 Linux/openKylin 的智能体记忆提取与精准遗忘系�
 
 ## 9. 最新版本文件说明
 
-最新代码以当前 Git 分支为准。最新正式证据入口是 `docs/evidence/latest/`。最新项目说明优先阅读 `README.md`、`PROJECT_INDEX.md`、`docs/01_项目简介.md` 和 `项目全流程导师资料包/README.md`。正式竞赛提交说明优先阅读 `docs/最终提交说明.md`、`docs/平台摘要.md` 和 `docs/正式提交材料说明.md`。
+最新代码以当前 Git 分支为准。最新正式证据入口是 `docs/evidence/latest/`，多发行版复验证据位于 `docs/evidence/multi_distro_latest/`。最新项目说明优先阅读 `README.md`、`PROJECT_INDEX.md`、`docs/01_项目简介.md` 和 `项目全流程导师资料包/README.md`。正式竞赛提交说明优先阅读 `docs/最终提交说明.md`、`docs/平台摘要.md` 和 `docs/正式提交材料说明.md`。需要制作技术报告或答辩 PPT 图表时，运行 `scripts/generate_plottie_publication_figures.py` 从最新证据 JSON 再生成图包（产物输出到本地 `outputs/`，绘图规范见 `docs/科研期刊绘图规范与图包重构依据.md`）。
 
 ## 10. 不建议删除的文件
 

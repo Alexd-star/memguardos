@@ -1,7 +1,12 @@
 .git/
 .github/
 .venv/
+.worktrees/
 dist/
+outputs/
+local_notes/
+external_references/
+可视化证据包/
 *.egg-info/
 __pycache__/
 .pytest_cache/
@@ -10,4 +15,3 @@ __pycache__/
 *.pyo
 *.sqlite3
 *.segment
-docs/evidence/

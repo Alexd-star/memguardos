@@ -1,0 +1,43 @@
+# GitHub Actions CI - Ubuntu matrix evidence
+captured_at: 2026-07-26T07:20:36Z
+repo: Alexd-star/memguardos
+branch: main
+head_commit: 78e48b4ee444811749e12430037771daae02a341
+
+
+✓ main CI · 30180185387
+Triggered via push about 7 hours ago
+
+JOBS
+✓ Python 3.12 in 2m52s (ID 89735316513)
+✓ Python 3.11 in 2m17s (ID 89735316547)
+✓ Python 3.10 in 2m21s (ID 89735316559)
+
+For more information about a job, try: gh run view --job=<job-id>
+View this run on GitHub: https://github.com/Alexd-star/memguardos/actions/runs/30180185387
+
+== job detail: Python 3.12 (ubuntu-latest) ==
+
+✓ main CI · 30180185387
+Triggered via push about 7 hours ago
+
+✓ Python 3.12 in 2m52s (ID 89735316513)
+  ✓ Set up job
+  ✓ Checkout
+  ✓ Set up Python
+  ✓ Install package and dev dependencies
+  ✓ Lint
+  ✓ Test
+  ✓ Docs link check
+  ✓ Web dashboard smoke
+  ✓ Evaluation smoke
+  ✓ Competition readiness smoke
+  ✓ Submission package smoke
+  ✓ Submission package audit
+  ✓ Submission archive smoke
+  ✓ Post Set up Python
+  ✓ Post Checkout
+  ✓ Complete job
+
+To see the full job log, try: gh run view --log --job=89735316513
+View this run on GitHub: https://github.com/Alexd-star/memguardos/actions/runs/30180185387

@@ -1,0 +1,18 @@
+=== container ===
+image: python:3.12-slim (Debian)
+PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+6.6.114.1-microsoft-standard-WSL2
+=== python ===
+Python 3.12.13
+=== git ===
+git version 2.47.3
+=== ruff ===
+All checks passed!
+ruff-clean
+=== compileall ===
+compileall-ok
+=== pytest full suite ===
+........................................................................ [ 87%]
+...........................s............................................ [ 98%]
+.......                                                                  [100%]
+654 passed, 1 skipped in 113.55s (0:01:53)
