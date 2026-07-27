@@ -24,7 +24,7 @@ MemGuardOS 不修改 OpenHands 核心源码。适配层位于 `memguard/integrat
 源码部署或比赛演示环境中，推荐直接运行：
 
 ```bash
-cd /home/luo/memguardos
+cd "$HOME/memguardos"
 bash scripts/memguard-agent-showcase.sh
 ```
 
