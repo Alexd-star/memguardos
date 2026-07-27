@@ -137,6 +137,7 @@ assert sensitive["items"][0]["selectable"] is False
 PY
 
 run_required_capture desktop_build.txt bash scripts/build_ukui_plugins.sh
+run_required_capture peony_dialog_smoke.txt bash scripts/smoke_peony_file_scan.sh
 run_required_capture tray_assets.txt bash -c 'file native/ukui/build/tray/memguardos-tray; ldd native/ukui/build/tray/memguardos-tray; test -f packaging/desktop/memguardos-tray.desktop; grep -E "^(Exec|OnlyShowIn)=" packaging/desktop/memguardos-tray.desktop'
 run_required_capture desktop_plugins.txt bash -c 'file native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so; ldd native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so; ldd native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so'
 run_required_capture polkit_assets.txt bash -c 'set -e

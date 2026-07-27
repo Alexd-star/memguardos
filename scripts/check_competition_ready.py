@@ -590,6 +590,7 @@ def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, 
         "polkit_assets.txt",
         "tray_assets.txt",
         "desktop_build.txt",
+        "peony_dialog_smoke.txt",
         "debian_packages.txt",
         "deb_lifecycle.txt",
         "pytest_openkylin.txt",
@@ -695,11 +696,14 @@ def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, 
     apply_ok = bool(peony_apply and peony_apply.get("ok") and stored_count_numeric >= 2 and _nested_get(peony_apply, ["audit_chain", "ok"]) is True)
     sensitive_items = peony_sensitive.get("items", []) if peony_sensitive else []
     sensitive_ok = bool(sensitive_items and sensitive_items[0].get("recommended_action") == "block_sensitive" and sensitive_items[0].get("selectable") is False)
+    peony_dialog_smoke = _read_text_if_exists(evidence_dir / "peony_dialog_smoke.txt")
+    dialog_smoke_ok = "peony_file_scan_dialog=visible" in peony_dialog_smoke and re.search(r"preview_rows=[1-9][0-9]*", peony_dialog_smoke) is not None
     checks.extend(
         [
             Check("openKylin原生证据", "Peony 批量预览确认契约", preview_ok, "批量预览可选择安全项" if preview_ok else "批量预览证据不足", severity=severity),
             Check("openKylin原生证据", "Peony 确认导入与审计链", apply_ok, "stored>=2 audit_chain=true" if apply_ok else "确认导入或审计链证据不足", severity=severity),
             Check("openKylin原生证据", "Peony 敏感文件阻断", sensitive_ok, "block_sensitive selectable=false" if sensitive_ok else "敏感阻断证据不足", severity=severity),
+            Check("openKylin原生证据", "Peony 结果窗口可见", dialog_smoke_ok, "plugin_loaded=true dialog=visible preview_rows>=1" if dialog_smoke_ok else "缺少真实插件加载或结果窗口可见证据", severity=severity),
         ]
     )
     tray_text = _read_text_if_exists(evidence_dir / "tray_assets.txt")
@@ -1633,5 +1637,4 @@ def _sha256_file(path: Path) -> str:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
 

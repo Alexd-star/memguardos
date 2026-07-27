@@ -1068,6 +1068,7 @@ def test_native_evidence_readiness_parses_polkit_result_lines_not_command_echoes
         "service_restart.txt",
         "tray_assets.txt",
         "desktop_build.txt",
+        "peony_dialog_smoke.txt",
         "debian_packages.txt",
         "deb_lifecycle.txt",
         "pytest_openkylin.txt",
@@ -1112,6 +1113,10 @@ def test_native_evidence_readiness_parses_polkit_result_lines_not_command_echoes
     )
     (evidence / "storage_permissions.txt").write_text(
         "permissions_ok=true\nservice_user=memguard\nservice_group=memguard\n",
+        encoding="utf-8",
+    )
+    (evidence / "peony_dialog_smoke.txt").write_text(
+        "peony_file_scan_dialog=visible\npreview_rows=1\n",
         encoding="utf-8",
     )
 
