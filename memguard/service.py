@@ -3186,6 +3186,11 @@ class MemGuardService:
             forgotten.append(memory_id)
         if compact:
             self.store.compact()
+        deleted_preference_observations = (
+            self.meta.delete_preference_observations_for_memories(forgotten)
+            if forgotten
+            else 0
+        )
         audit_payloads_redacted = self.meta.redact_audit_payloads(
             forgotten,
             list(probes.values()),
@@ -3205,6 +3210,7 @@ class MemGuardService:
             {
                 **_forget_audit_detail(plan, candidate_count=len(candidates)),
                 "forgotten": forgotten,
+                "deleted_preference_observation_count": deleted_preference_observations,
                 "compact": compact,
             },
         )
@@ -3213,6 +3219,7 @@ class MemGuardService:
             "request": plan.source_text,
             "erasure_plan": plan.as_dict(),
             "forgotten": forgotten,
+            "deleted_preference_observation_count": deleted_preference_observations,
             "time_window": time_window,
             "external_residue": external_residue,
             "compact": compact,
@@ -3301,6 +3308,11 @@ class MemGuardService:
 
         if compact and forgotten:
             self.store.compact()
+        deleted_preference_observations = (
+            self.meta.delete_preference_observations_for_memories(forgotten)
+            if forgotten
+            else 0
+        )
         audit_payloads_redacted = self.meta.redact_audit_payloads(
             forgotten,
             list(probe_texts.values()),
@@ -3330,6 +3342,7 @@ class MemGuardService:
                 "compact": compact,
             },
             "verification": verification,
+            "deleted_preference_observation_count": deleted_preference_observations,
             "storage_cleanup": storage_cleanup,
             "audit_payloads_redacted": audit_payloads_redacted,
             "search_cache_entries_dropped": cache_entries_dropped,

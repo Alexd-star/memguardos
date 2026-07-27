@@ -7,6 +7,7 @@ from memguard.integrations.openhands_runner import (
     _execution_trace,
     _runtime_preference_effect_proofs,
 )
+from memguard.service import MemGuardService
 
 
 class _NoMemoryService:
@@ -200,3 +201,43 @@ def test_confirmed_forget_uses_readable_verification_summary(capsys):
     assert "检索结果复核：通过" in output
     assert "外部 Agent 日志" in output
     assert '"forgotten"' not in output
+
+
+def test_generic_forget_removes_target_preference_aggregate_only(tmp_path):
+    service = MemGuardService(
+        store_path=tmp_path / "memory.segment",
+        db_path=tmp_path / "memory.sqlite3",
+        namespace="forget-preference-test",
+    )
+    try:
+        service.ingest_interaction(
+            AgentInteractionEvent(
+                agent_name="openhands",
+                agent_version="test",
+                session_id="session-1",
+                turn_id="turn-1",
+                sequence=1,
+                event_type="user_message",
+                role="user",
+                content="以后搜索代码统一使用 grep，并且回答时先给命令再解释。",
+            )
+        )
+        before = {
+            item["topic"]
+            for item in service.interaction_status()["preference_aggregates"]
+            if item["stable"]
+        }
+        assert {"code_search_tool", "response_order"} <= before
+
+        result = service.forget("忘掉我关于代码搜索工具的偏好", confirm=True, compact=True)
+        after = {
+            item["topic"]
+            for item in service.interaction_status()["preference_aggregates"]
+            if item["stable"]
+        }
+
+        assert result["deleted_preference_observation_count"] == 1
+        assert "code_search_tool" not in after
+        assert "response_order" in after
+    finally:
+        service.close()

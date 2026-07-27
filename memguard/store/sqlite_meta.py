@@ -1469,6 +1469,22 @@ class SQLiteMetaStore:
         self.conn.commit()
         return int(cursor.rowcount)
 
+    def delete_preference_observations_for_memories(
+        self,
+        memory_ids: List[str],
+    ) -> int:
+        clean_ids = [str(memory_id).strip() for memory_id in memory_ids if str(memory_id).strip()]
+        if not clean_ids:
+            return 0
+        placeholders = ",".join("?" for _ in clean_ids)
+        cursor = self.conn.execute(
+            "DELETE FROM preference_observations WHERE promoted_memory_id IN (%s)"
+            % placeholders,  # nosec B608 - only parameter placeholders are interpolated
+            clean_ids,
+        )
+        self.conn.commit()
+        return int(cursor.rowcount)
+
     def link_memory_event(self, memory_id: str, event_id: str, relation: str) -> Dict[str, Any]:
         memory = self.conn.execute(
             "SELECT memory_id FROM memory WHERE memory_id = ?",
