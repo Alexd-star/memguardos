@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from memguard.cli.memguard import _friendly_agent_error, _memory_mode
+from memguard.cli.memguard import _friendly_agent_error, _memory_mode, _user_setting
 from memguard.integrations.events import AgentInteractionEvent
 from memguard.integrations.openhands_runner import OpenHandsMemoryRunner, _execution_trace
 
@@ -94,3 +94,19 @@ def test_cli_can_explicitly_allow_current_project_workspace(tmp_path, monkeypatc
 
     runner._validate_workspace()
     assert "响应超时" in _friendly_agent_error(TimeoutError("request timed out"))
+
+
+def test_user_setting_prefers_environment_and_reads_local_config(tmp_path, monkeypatch):
+    config = tmp_path / ".config" / "memguardos"
+    config.mkdir(parents=True)
+    (config / "openhands_model").write_text("openai/example-model\n", encoding="utf-8")
+
+    monkeypatch.delenv("MEMGUARD_OPENHANDS_MODEL", raising=False)
+    assert _user_setting(
+        "MEMGUARD_OPENHANDS_MODEL", "openhands_model", home=tmp_path
+    ) == "openai/example-model"
+
+    monkeypatch.setenv("MEMGUARD_OPENHANDS_MODEL", "openai/env-model")
+    assert _user_setting(
+        "MEMGUARD_OPENHANDS_MODEL", "openhands_model", home=tmp_path
+    ) == "openai/env-model"

@@ -18,7 +18,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--store", default="", help="测试或演示用段文件路径。")
     parser.add_argument("--db", default="", help="测试或演示用 SQLite 路径。")
     parser.add_argument("--workspace", default=os.getcwd(), help="Agent 工作区；默认使用当前目录。")
-    parser.add_argument("--model", default=os.environ.get("MEMGUARD_OPENHANDS_MODEL", ""), help="真实 Agent 模型名称（可选）。")
+    parser.add_argument(
+        "--model",
+        default=_user_setting("MEMGUARD_OPENHANDS_MODEL", "openhands_model"),
+        help="真实 Agent 模型名称（可选）。",
+    )
     parser.add_argument("--json", action="store_true", help="输出机器可读 JSON；默认输出适合用户阅读的摘要。")
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -517,7 +521,7 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
     if not model or model == "未配置":
         print("尚未设置模型：请先输入 `/model 模型名称`，再运行 `/run 任务`。")
         return 0
-    api_key = os.environ.get("OPENHANDS_API_KEY", "")
+    api_key = _user_setting("OPENHANDS_API_KEY", "openhands_api_key", secret=True)
     if not api_key:
         print("[未开始] 尚未配置模型访问凭据。")
         print("处理方法：从权限受限的本地配置文件加载 OPENHANDS_API_KEY 后重试。")
@@ -539,7 +543,7 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
         state_dir=state_dir,
         model=model,
         api_key=api_key,
-        base_url=os.environ.get("OPENHANDS_BASE_URL", ""),
+        base_url=_user_setting("OPENHANDS_BASE_URL", "openhands_base_url"),
         memory_enabled=memory_enabled,
         allow_in_place_workspace=True,
     )
@@ -652,6 +656,27 @@ def _friendly_agent_error(exc: Exception) -> str:
     if any(marker in lowered for marker in ("404", "model not found")):
         return "模型名称或服务地址不正确。"
     return message[:240] or "运行环境返回了未知错误。"
+
+
+def _user_setting(
+    env_name: str,
+    file_name: str,
+    *,
+    secret: bool = False,
+    home: Path | None = None,
+) -> str:
+    value = str(os.environ.get(env_name) or "").strip()
+    if value:
+        return value
+    path = (home or Path.home()) / ".config" / "memguardos" / file_name
+    try:
+        if not path.is_file():
+            return ""
+        if secret and os.name == "posix" and path.stat().st_mode & 0o077:
+            return ""
+        return path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
 
 
 def _section(title: str) -> None:
