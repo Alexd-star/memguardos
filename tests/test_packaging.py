@@ -140,6 +140,13 @@ def test_debian_packages_apply_openkylin_native_install_lifecycle():
     assert "Categories=Settings;Security;" in menu
 
 
+def test_agent_showcase_prefers_current_user_source_tree_over_installed_copy():
+    launcher = (ROOT / "scripts/memguard-agent-showcase.sh").read_text(encoding="utf-8")
+    assert 'for candidate in "${HOME}/memguardos" /opt/memguardos' in launcher
+    assert "OPENHANDS_SUPPRESS_BANNER=1" in launcher
+    assert "LITELLM_LOCAL_MODEL_COST_MAP=True" in launcher
+
+
 def test_agent_bridge_package_migrates_only_the_known_legacy_systemd_copy(tmp_path):
     builder = DebianPackageBuilder(
         root=ROOT,

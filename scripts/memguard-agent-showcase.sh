@@ -23,7 +23,7 @@ fi
 
 SOURCE_ROOT="${MEMGUARD_SOURCE_ROOT:-}"
 if [ -z "${SOURCE_ROOT}" ]; then
-  for candidate in /opt/memguardos "${HOME}/memguardos"
+  for candidate in "${HOME}/memguardos" /opt/memguardos
   do
     if [ -d "${candidate}/memguard" ]; then
       SOURCE_ROOT="${candidate}"
