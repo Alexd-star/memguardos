@@ -508,6 +508,9 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
     if not task:
         print("用法：/run 任务描述")
         return 0
+    os.environ.setdefault("OPENHANDS_SUPPRESS_BANNER", "1")
+    os.environ.setdefault("LOG_LEVEL", "WARNING")
+    os.environ.setdefault("LITELLM_LOCAL_MODEL_COST_MAP", "True")
     from memguard.integrations.openhands_adapter import detect_openhands_runtime
 
     runtime = detect_openhands_runtime()

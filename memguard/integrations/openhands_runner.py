@@ -12,7 +12,7 @@ import sys
 from time import perf_counter
 
 from memguard.ingestion.tool_result import ToolResult
-from memguard.feedback import merge_memory_change_summaries
+from memguard.feedback import build_preference_effect_proof, merge_memory_change_summaries
 from memguard.integrations.adherence import (
     build_adherence_repair_message,
     command_executable,
@@ -307,6 +307,13 @@ class OpenHandsMemoryRunner:
             project_root=self.project_root,
             task_type=self.task_type,
         )
+        runtime_effect_proofs = _runtime_preference_effect_proofs(
+            context_bundle["stages"],
+            self._live_events,
+            task=str(task).strip(),
+            agent_name="openhands",
+            session_id=self.session_id,
+        )
         return {
             "ok": (
                 blocked == 0
@@ -354,7 +361,10 @@ class OpenHandsMemoryRunner:
                 for item in self._event_results
                 if item.get("sensitive_notice")
             ],
-            "preference_effect_proofs": feedback_snapshot.get("preference_effect_proofs", []),
+            "preference_effect_proofs": runtime_effect_proofs,
+            "dashboard_preference_effect_proofs": feedback_snapshot.get(
+                "preference_effect_proofs", []
+            ),
         }
 
     def _reset_run_state(self) -> None:
@@ -687,6 +697,76 @@ def _execution_trace(events: list[Dict[str, object]]) -> list[Dict[str, object]]
         elif event_type in {"task_complete", "task_error"}:
             trace.append({"event_type": event_type})
     return trace
+
+
+def _runtime_preference_effect_proofs(
+    stages: Dict[str, object],
+    events: list[Dict[str, object]],
+    *,
+    task: str,
+    agent_name: str,
+    session_id: str,
+) -> list[Dict[str, object]]:
+    stage_topics = {
+        "tool_selection": {
+            "code_search_tool",
+            "test_runner_command",
+            "service_log_tool",
+            "high_risk_confirmation",
+        },
+        "response_generation": {
+            "response_order",
+            "response_language",
+            "response_verbosity",
+        },
+    }
+    terminal_command = ""
+    final_response = ""
+    for event in events:
+        event_type = str(event.get("event_type") or "")
+        args = event.get("tool_args") if isinstance(event.get("tool_args"), dict) else {}
+        if event_type == "tool_call" and not terminal_command:
+            terminal_command = str(args.get("command") or "")
+        if event_type == "tool_call" and str(event.get("tool_name") or "") == "finish":
+            final_response = str(args.get("message") or args.get("summary") or "")
+
+    proofs = []
+    seen = set()
+    for stage, supported_topics in stage_topics.items():
+        result = dict(stages.get(stage) or {})
+        for memory in result.get("memories") or []:
+            topic = str(memory.get("preference_topic") or "")
+            if topic not in supported_topics:
+                continue
+            key = (str(memory.get("memory_id") or ""), stage, topic)
+            if key in seen:
+                continue
+            seen.add(key)
+            if stage == "tool_selection":
+                actual = {"command": terminal_command} if terminal_command else {}
+            else:
+                actual = {
+                    "response": final_response,
+                    "command_first": _response_starts_with_command_or_conclusion(
+                        final_response
+                    ),
+                } if final_response else {}
+            proof = build_preference_effect_proof(
+                task=task,
+                agent_name=agent_name,
+                session_id=session_id,
+                stage=stage,
+                preference=memory,
+                actual_behavior=actual,
+                source_event_ids=memory.get("source_event_ids", []),
+            )
+            proofs.append(proof.to_dict())
+    return proofs
+
+
+def _response_starts_with_command_or_conclusion(response: str) -> bool:
+    clean = str(response or "").lstrip()
+    return clean.startswith(("命令", "结论", "`", "$", "Command", "Conclusion"))
 
 
 def _redact_command(command: str) -> str:

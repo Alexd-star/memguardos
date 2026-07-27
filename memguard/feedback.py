@@ -254,13 +254,13 @@ def build_preference_effect_proof(
 
     topic = normalized_preference["topic"]
     value = normalized_preference["value"]
-    if topic == "code_search_tool" and value == "rg":
+    if topic == "code_search_tool" and value:
         command = str(actual.get("command") or "")
-        if re.search(r"(?:^|\s|[|;&])rg(?:\s|$)", command):
+        if re.search(r"(?:^|\s|[|;&])%s(?:\s|$)" % re.escape(value), command):
             proof.compliance = "passed"
         else:
             proof.compliance = "failed"
-            proof.failure_reason = "实际工具命令没有使用 rg。"
+            proof.failure_reason = "实际工具命令没有使用 %s。" % value
     elif topic == "response_order" and value == "command_then_explanation":
         observed = str(actual.get("response_style_observed") or actual.get("response") or "")
         if actual.get("command_first") is True or observed == "command_then_explanation":

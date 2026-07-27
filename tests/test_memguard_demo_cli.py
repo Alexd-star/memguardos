@@ -2,7 +2,11 @@ from pathlib import Path
 
 from memguard.cli.memguard import _friendly_agent_error, _memory_mode, _user_setting
 from memguard.integrations.events import AgentInteractionEvent
-from memguard.integrations.openhands_runner import OpenHandsMemoryRunner, _execution_trace
+from memguard.integrations.openhands_runner import (
+    OpenHandsMemoryRunner,
+    _execution_trace,
+    _runtime_preference_effect_proofs,
+)
 
 
 class _NoMemoryService:
@@ -116,3 +120,52 @@ def test_user_setting_prefers_environment_and_reads_local_config(tmp_path, monke
     assert _user_setting(
         "MEMGUARD_OPENHANDS_MODEL", "openhands_model", home=tmp_path
     ) == "openai/env-model"
+
+
+def test_runtime_proofs_use_only_preselected_memories_and_real_finish_message():
+    stages = {
+        "planning": {"memories": []},
+        "tool_selection": {
+            "memories": [
+                {
+                    "memory_id": "mem-tool",
+                    "preference_topic": "code_search_tool",
+                    "preference_value": "grep",
+                }
+            ]
+        },
+        "response_generation": {
+            "memories": [
+                {
+                    "memory_id": "mem-order",
+                    "preference_topic": "response_order",
+                    "preference_value": "command_then_explanation",
+                }
+            ]
+        },
+    }
+    events = [
+        {
+            "event_type": "tool_call",
+            "tool_name": "terminal",
+            "tool_args": {"command": "grep -RIn target memguard"},
+        },
+        {
+            "event_type": "tool_call",
+            "tool_name": "finish",
+            "tool_args": {"message": "命令：grep -RIn target memguard\n说明：已找到。"},
+        },
+    ]
+
+    proofs = _runtime_preference_effect_proofs(
+        stages,
+        events,
+        task="查找 target",
+        agent_name="openhands",
+        session_id="session-demo",
+    )
+
+    assert [(item["preference"]["topic"], item["compliance"]) for item in proofs] == [
+        ("code_search_tool", "passed"),
+        ("response_order", "passed"),
+    ]
