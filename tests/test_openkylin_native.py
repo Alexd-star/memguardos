@@ -504,12 +504,17 @@ def test_openkylin_native_packaging_assets_exist():
 def test_kylin_warmup_runs_only_for_graphical_sessions_without_invalid_documentation_url():
     root = Path(__file__).resolve().parents[1]
     unit = (root / "scripts" / "memguard-kylin-warmup.service").read_text(encoding="utf-8")
+    warmup = (root / "scripts" / "warmup_kylin_sdk.sh").read_text(encoding="utf-8")
 
     assert "Documentation=file:/opt/memguardos/README.md" in unit
     assert "PartOf=graphical-session.target" in unit
     assert "WantedBy=graphical-session.target" in unit
     assert "WantedBy=default.target" not in unit
     assert "麒麟SDK集成证据.md" not in unit
+    assert "/tmp/.kylin-ai-runtime-unix/$(id -u)" in warmup
+    assert 'stat -c %u "${RUNTIME_DIR}"' in warmup
+    assert 'chmod 0700 "${RUNTIME_DIR}"' in warmup
+    assert "runtime_directory_hardened" in warmup
 
 
 def test_service_resource_status_reads_systemd_control_group(monkeypatch, tmp_path):

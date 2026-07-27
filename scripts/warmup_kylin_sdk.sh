@@ -3,6 +3,17 @@ set -euo pipefail
 
 TIMEOUT="${MEMGUARD_KYLIN_WARMUP_TIMEOUT:-90}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
+RUNTIME_DIR="${MEMGUARD_KYLIN_RUNTIME_DIR:-/tmp/.kylin-ai-runtime-unix/$(id -u)}"
+
+# openKylin Kylin AI runtime may create the per-user socket directory as 0777.
+# Tighten only the directory owned by the current user; never chmod another
+# user's runtime path or the shared parent directory.
+RUNTIME_HARDENED=false
+if [ -d "${RUNTIME_DIR}" ] && [ "$(stat -c %u "${RUNTIME_DIR}")" = "$(id -u)" ]; then
+  chmod 0700 "${RUNTIME_DIR}"
+  RUNTIME_HARDENED=true
+fi
+export MEMGUARD_KYLIN_RUNTIME_HARDENED="${RUNTIME_HARDENED}"
 
 if command -v memctl >/dev/null 2>&1; then
   MEMCTL=(memctl)
@@ -23,6 +34,7 @@ payload = {
     "ok": False,
     "inference_ready": False,
     "fallback": "hash_embedding",
+    "runtime_directory_hardened": os.environ.get("MEMGUARD_KYLIN_RUNTIME_HARDENED") == "true",
     "error": sys.argv[1][-2000:],
     "recommendation": "保留 MemGuardOS 稳定 fallback，并检查 kylin-ai-runtime、kytensor.service 和模型仓库。",
     "completed_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
@@ -57,6 +69,7 @@ payload = {
     "model": (embedding.get("model_info") or {}).get("name", ""),
     "dim": (embedding.get("model_info") or {}).get("dim") or probe.get("dim"),
     "fallback": embedding.get("fallback", "hash_embedding"),
+    "runtime_directory_hardened": os.environ.get("MEMGUARD_KYLIN_RUNTIME_HARDENED") == "true",
     "recommendation": (
         "Kylin embedding SDK 已预热，可作为端侧检索增强。"
         if ready else

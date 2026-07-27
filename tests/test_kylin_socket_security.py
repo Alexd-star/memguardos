@@ -204,6 +204,14 @@ def test_openkylin_root_owned_tmp_symlink_to_sticky_var_tmp_is_allowed(monkeypat
     assert unsafe_parent is None
     assert parent_error is None
 
+    immediate, unsafe_parent, parent_error = unix_socket_trust._parent_stats(
+        "/tmp/kylin-ai-vector-engine-1000.sock"
+    )
+    assert immediate is not None
+    assert immediate.st_mode & stat.S_ISVTX
+    assert unsafe_parent is None
+    assert parent_error is None
+
 
 @pytest.mark.skipif(not HAS_UNIX_PEERCRED, reason="需要 Linux AF_UNIX SO_PEERCRED")
 def test_wrong_socket_owner_is_rejected_before_connect(monkeypatch, tmp_path):

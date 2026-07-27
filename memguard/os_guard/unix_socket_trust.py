@@ -149,6 +149,11 @@ def _parent_stats(path: str) -> tuple[Optional[os.stat_result], Optional[str], O
             immediate = parent_stat
         if stat.S_ISLNK(parent_stat.st_mode):
             if _trusted_openkylin_tmp_symlink(parent, parent_stat):
+                if index == 0:
+                    try:
+                        immediate = os.lstat(Path(os.path.realpath(parent)))
+                    except OSError as exc:
+                        return None, str(parent), str(exc)
                 continue
             return immediate, str(parent), "symlink"
     return immediate, None, None

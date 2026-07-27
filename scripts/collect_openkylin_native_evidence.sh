@@ -107,9 +107,9 @@ print(json.dumps({
 PY
 
 run_required_capture environment.txt bash -c 'cat /etc/os-release; uname -a; python3 --version; printf "desktop=%s\nsession=%s\n" "${XDG_CURRENT_DESKTOP:-}" "${DESKTOP_SESSION:-}"'
+run_required_capture kylin_warmup.txt bash scripts/warmup_kylin_sdk.sh
 run_required_capture openkylin_status.txt python3 -m memguard.cli.memctl openkylin-status
 run_required_capture openkylin_status_probe_sdk.txt python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
-run_required_capture kylin_warmup.txt bash scripts/warmup_kylin_sdk.sh
 run_required_capture user_cli.txt python3 -m memguard.cli.memguard demo --task "查找精准遗忘的实现位置"
 
 TMP_SAMPLE_DIR="$(mktemp -d)"
