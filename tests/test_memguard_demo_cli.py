@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from memguard.cli.memguard import _friendly_agent_error, _memory_mode, _user_setting
+from memguard.cli.memguard import _forget, _friendly_agent_error, _memory_mode, _user_setting
 from memguard.integrations.events import AgentInteractionEvent
 from memguard.integrations.openhands_runner import (
     OpenHandsMemoryRunner,
@@ -17,6 +17,23 @@ class _NoMemoryService:
 
     def ingest_interaction(self, event):
         raise AssertionError("memory-off run must not persist interaction events")
+
+
+class _ForgetService:
+    def forget(self, request, confirm=False, compact=False):
+        assert request == "忘掉代码搜索工具偏好"
+        assert confirm is True
+        assert compact is True
+        return {
+            "forgotten": ["mem-tool"],
+            "verification_report": {
+                "verification_steps": [
+                    {"name": "检索结果复核", "status": "passed"},
+                    {"name": "审计链复核", "status": "passed"},
+                ],
+                "user_summary": "目标记忆已从受管检索链路移除。",
+            },
+        }
 
 
 def _event(event_type, *, sequence=1, tool_args=None, exit_code=None):
@@ -169,3 +186,17 @@ def test_runtime_proofs_use_only_preselected_memories_and_real_finish_message():
         ("code_search_tool", "passed"),
         ("response_order", "passed"),
     ]
+
+
+def test_confirmed_forget_uses_readable_verification_summary(capsys):
+    assert _forget(
+        _ForgetService(),
+        "忘掉代码搜索工具偏好",
+        confirm=True,
+        compact=True,
+    ) == 0
+    output = capsys.readouterr().out
+    assert "已遗忘 1 条目标记忆" in output
+    assert "检索结果复核：通过" in output
+    assert "外部 Agent 日志" in output
+    assert '"forgotten"' not in output

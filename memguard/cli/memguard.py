@@ -196,9 +196,27 @@ def _forget(service: MemGuardService, request: str, confirm: bool = False, compa
     result = service.forget(request, confirm=confirm, compact=compact or confirm)
     _section("精准遗忘")
     if confirm:
-        print("已执行遗忘。")
-        print("影响摘要：%s" % _compact_json(result.get("summary", result)))
-        print("建议：执行后可用 `memguard search 关键词` 和 `memguard evidence` 复核。")
+        forgotten = list(
+            result.get("forgotten") or result.get("forgotten_memory_ids") or []
+        )
+        if forgotten:
+            print("[已完成] 已遗忘 %d 条目标记忆。" % len(forgotten))
+        else:
+            print("[未变更] 没有找到需要遗忘的目标记忆。")
+        report = result.get("verification_report") or {}
+        steps = list(report.get("verification_steps") or [])
+        if steps:
+            print("验证结果")
+            labels = {"passed": "通过", "failed": "需检查", "skipped": "未执行"}
+            for step in steps:
+                print("- %s：%s" % (
+                    step.get("name", "验证项"),
+                    labels.get(step.get("status"), step.get("status", "未知")),
+                ))
+        if report.get("user_summary"):
+            print("结论：%s" % report.get("user_summary"))
+        print("边界说明：只清理 MemGuardOS 受管数据；外部 Agent 日志和备份需在对应系统中另行处理。")
+        print("下一步：输入 /preferences 查看保留偏好，或 /search 关键词复核目标内容已不可检索。")
         return 0
     print("影响范围预览")
     candidates = result.get("candidates", [])
