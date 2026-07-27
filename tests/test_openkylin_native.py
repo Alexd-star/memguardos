@@ -1254,6 +1254,92 @@ def test_peony_preview_uses_theme_fallback_and_a_dedicated_location_column():
     assert "dialog.setMinimumSize" in source
 
 
+def test_peony_file_scan_captures_each_menu_selection_and_surfaces_windows():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
+    header = (root / "native/ukui/peony-memguard/memguard_peony_plugin.h").read_text(encoding="utf-8")
+
+    # Peony may ask for menu actions more than once before the user clicks.  The
+    # action must retain the selection from the menu instance that was clicked.
+    assert "capturedSelection = selectionUris" in source
+    assert "capturedPrimaryUri = uri" in source
+    assert "sendSelectionToMemGuard(capturedSelection, capturedPrimaryUri)" in source
+    assert "lastSelection_" not in source
+    assert "primaryUri_" not in source
+    assert "lastSelection_" not in header
+    assert "primaryUri_" not in header
+
+    # A desktop extension has no reliable parent window.  Dialogs must attach to
+    # an available UKUI window or explicitly raise themselves when parentless.
+    assert "QWidget *dialogParent()" in source
+    assert "Qt::WindowStaysOnTopHint" in source
+    assert "window->raise()" in source
+    assert "window->activateWindow()" in source
+    assert "presentWindow(progress)" in source
+    assert "QDialog dialog(dialogParent())" in source
+
+
+def test_peony_file_scan_keeps_async_work_alive_and_records_privacy_safe_stages():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
+
+    assert source.count("new QProcess(QCoreApplication::instance())") == 3
+    assert 'QStringLiteral(".cache/memguardos")' in source
+    assert 'QStringLiteral("peony-plugin.log")' in source
+    assert "QFileDevice::ReadOwner | QFileDevice::WriteOwner" in source
+    assert "action-triggered" in source
+    assert "preview-start" in source
+    assert "preview-ready" in source
+    assert "apply-complete" in source
+    assert "forget-complete" in source
+    # Stage logging records counts and status only; file paths and scanned text
+    # must not be written to the troubleshooting log.
+    for line in source.splitlines():
+        if "writePluginLog(" in line and not line.lstrip().startswith("void writePluginLog"):
+            assert "path=" not in line
+            assert "preview=" not in line
+
+
+def test_peony_finished_handlers_do_not_turn_success_into_cancellation():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
+    function_starts = [
+        source.index("void MemGuardPeonyPlugin::runPreview"),
+        source.index("void MemGuardPeonyPlugin::runApply"),
+        source.index("void MemGuardPeonyPlugin::runForgetImport"),
+    ]
+    function_ends = function_starts[1:] + [len(source)]
+
+    for start, end in zip(function_starts, function_ends):
+        body = source[start:end]
+        finished = body[body.index("QProcess::finished") :]
+        handled = finished.index('process->setProperty("handled", true)')
+        close_after_handled = finished.index("progress->close();", handled)
+        # QProgressDialog::close() emits canceled().  The handled guard must be
+        # set before the normal close path, otherwise successful work vanishes.
+        assert handled < close_after_handled
+
+
+def test_peony_file_scan_has_a_real_plugin_loading_smoke_test():
+    root = Path(__file__).resolve().parents[1]
+    smoke_source = (root / "native/ukui/tests/peony_file_scan_smoke.cpp").read_text(encoding="utf-8")
+    smoke_script = (root / "scripts/smoke_peony_file_scan.sh").read_text(encoding="utf-8")
+    refresh_script = (root / "scripts/refresh_ukui_desktop.sh").read_text(encoding="utf-8")
+
+    assert "QPluginLoader" in smoke_source
+    assert "plugin->menuActions" in smoke_source
+    assert "QAction::trigger" in smoke_source
+    assert 'windowTitle() != QStringLiteral("检查记忆内容")' in smoke_source
+    assert "table->rowCount() < 1" in smoke_source
+    assert "peony_file_scan_dialog=visible" in smoke_source
+    assert "preview_rows=" in smoke_source
+    assert "smoke_peony_file_scan" not in smoke_script  # no recursive self-invocation
+    assert "QT_QPA_PLATFORM=offscreen" in smoke_script
+    assert "pkill -x peony-qt-desktop" not in refresh_script
+    assert "pgrep -f" in refresh_script
+    assert "peony-qt-desktop -w -d" in refresh_script
+
+
 def test_tray_background_processes_timeout_and_recover_without_stalling_future_refreshes():
     root = Path(__file__).resolve().parents[1]
     source = (root / "native/ukui/tray/memguard_tray.cpp").read_text(encoding="utf-8")

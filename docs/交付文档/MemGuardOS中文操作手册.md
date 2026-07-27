@@ -756,16 +756,14 @@ bash scripts/install_ukui_plugins.sh --no-build
 bash scripts/verify_ukui_plugins.sh
 ```
 
-安装后重启 Peony：
+安装后刷新 Peony、控制中心和托盘。脚本会自动识别当前桌面的实际显示号，不需要手工写死 `DISPLAY=:0`：
 
 ```bash
-export DISPLAY=:0
-export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
-pkill -x peony 2>/dev/null || true
-pkill -x peony-qt-desktop 2>/dev/null || true
-nohup peony-qt-desktop -w -d >/tmp/peony_desktop_memguardos.log 2>&1 &
-nohup peony "$(xdg-user-dir DESKTOP)" >/tmp/peony_window_memguardos.log 2>&1 &
+bash scripts/refresh_ukui_desktop.sh
+bash scripts/smoke_peony_file_scan.sh
 ```
+
+若烟测输出 `peony_file_scan_dialog=visible` 和 `preview_rows=1`（或更大数值），说明插件已实际加载，文件扫描完成后能够显示预览窗口。烟测只检查并关闭预览，不会导入内容。
 
 预期结果：
 

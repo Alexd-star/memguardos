@@ -499,21 +499,12 @@ bash scripts/verify_ukui_plugins.sh
 ### 9.2 刷新桌面进程
 
 ```bash
-export DISPLAY=:0
-export XDG_RUNTIME_DIR=/run/user/1000
-export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
-
-peony -q 2>/dev/null || killall peony 2>/dev/null || true
-pkill -f '^/usr/bin/ukui-control-center( |$)' || true
-pkill -x memguardos-tray || true
-
-nohup peony >/tmp/peony-memguardos.log 2>&1 &
-nohup /usr/bin/memguardos-tray >/tmp/memguardos-tray.log 2>&1 &
-sleep 3
+bash scripts/refresh_ukui_desktop.sh
+bash scripts/smoke_peony_file_scan.sh
 pgrep -af 'peony|memguardos-tray'
 ```
 
-UKUI 控制中心无需后台强制启动，用户重新打开“设置”即可加载新插件。若使用 SSH 启动 GUI 后没有显示，优先检查 `DISPLAY`、DBus 和桌面用户是否为 `luo`，不要反复启动多个托盘实例。
+刷新脚本先从当前 Peony 桌面进程读取 `DISPLAY`，再重载桌面插件与托盘，避免 `pkill -x peony-qt-desktop` 因 Linux 进程名长度限制失效。烟测应输出 `peony_file_scan_dialog=visible` 和至少一行预览结果。UKUI 控制中心无需后台强制启动，用户重新打开“设置”即可加载新插件。
 
 ### 9.3 人工界面核验
 

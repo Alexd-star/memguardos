@@ -24,9 +24,7 @@ public:
 
 private:
     bool enabled_ = true;
-    QStringList lastSelection_;
-    QString primaryUri_;
-    void sendSelectionToMemGuard();
+    void sendSelectionToMemGuard(const QStringList &selectionUris, const QString &primaryUri);
     void runPreview(const QStringList &arguments);
     void showPreviewDialog(const QJsonObject &preview);
     void runApply(const QStringList &arguments);

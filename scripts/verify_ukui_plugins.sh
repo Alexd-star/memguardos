@@ -35,11 +35,12 @@ echo
 
 echo "## manual visible checks"
 cat <<'EOF'
-1. Run: peony -q 2>/dev/null || killall peony
+1. Run: bash scripts/refresh_ukui_desktop.sh
 2. Open Peony file manager and right-click a local file.
 3. Confirm the menu item "使用 MemGuardOS 检查记忆内容" is visible.
-4. Click the menu item, review the file preview dialog, select safe text files, and confirm the result dialog.
-5. Open UKUI control center, security category, and confirm "MemGuardOS 记忆安全" is visible.
-6. Confirm the tabs "日常使用", "管理员", and "系统维护" are visible. Use "重新检查状态", "校验操作记录", "检查本机智能检索", and "导出系统报告"; confirm the operation history and "维护结果" area update.
-7. Click "打开本地控制台"; confirm http://127.0.0.1:8765 opens.
+4. Run: bash scripts/smoke_peony_file_scan.sh; confirm peony_file_scan_dialog=visible and preview_rows is at least 1.
+5. Click the menu item, review the file preview dialog, select safe text files, and confirm the result dialog.
+6. Open UKUI control center, security category, and confirm "MemGuardOS 记忆安全" is visible.
+7. Confirm the tabs "日常使用", "管理员", and "系统维护" are visible. Use "重新检查状态", "校验操作记录", "检查本机智能检索", and "导出系统报告"; confirm the operation history and "维护结果" area update.
+8. Click "打开本地控制台"; confirm the authenticated local console opens.
 EOF
