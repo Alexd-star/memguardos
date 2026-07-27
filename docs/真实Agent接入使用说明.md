@@ -19,6 +19,23 @@
 
 MemGuardOS 不修改 OpenHands 核心源码。适配层位于 `memguard/integrations/`，通过公开的会话事件和 Hook 接口完成上下文注入与执行结果回收，因此 Agent 升级与记忆系统升级可以分别进行。
 
+## 1.1 一键进入真实 Agent 记忆工作台
+
+源码部署或比赛演示环境中，推荐直接运行：
+
+```bash
+cd /home/luo/memguardos
+bash scripts/memguard-agent-showcase.sh
+```
+
+五包安装后的对应入口为：
+
+```bash
+memguard-agent-showcase
+```
+
+启动器会优先使用当前用户目录中的 MemGuardOS 源码和 `.venv-agent`，没有开发目录时再使用 `/opt/memguardos` 安装副本；它会自动读取 `~/.config/memguardos/` 下权限为 `600` 的模型配置，关闭 OpenHands 调试横幅，并进入带 `/guide`、`/memory on|off`、`/run` 和 `/forget` 的中文工作台。模型凭据不会写入项目目录、Git 或演示输出。
+
 ## 2. 主要组件
 
 | 组件 | 作用 |
