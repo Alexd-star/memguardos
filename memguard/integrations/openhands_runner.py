@@ -54,6 +54,8 @@ class OpenHandsMemoryRunner:
         context_token_budget_per_stage: int = 512,
         max_iterations: int = 8,
         tool_profile: str = "default",
+        memory_enabled: bool = True,
+        allow_in_place_workspace: bool = False,
         conversation_factory: Optional[ConversationFactory] = None,
         structured_intent_executor: Optional[Callable[..., Any]] = None,
     ):
@@ -75,6 +77,8 @@ class OpenHandsMemoryRunner:
         if tool_profile not in {"default", "terminal"}:
             raise ValueError("tool_profile must be default or terminal")
         self.tool_profile = tool_profile
+        self.memory_enabled = bool(memory_enabled)
+        self.allow_in_place_workspace = bool(allow_in_place_workspace)
         self.conversation_factory = conversation_factory or create_openhands_conversation
         self.structured_intent_executor = (
             structured_intent_executor or subprocess.run
@@ -99,15 +103,24 @@ class OpenHandsMemoryRunner:
         trace_id = new_id("ctx")
         stages = {}
         for stage in ("planning", "tool_selection", "response_generation"):
-            stages[stage] = self.service.build_agent_context(
-                task=clean_task,
-                stage=stage,
-                agent_name="openhands",
-                session_id=self.session_id,
-                project_root=self.project_root,
-                task_type=self.task_type,
-                token_budget=self.context_token_budget_per_stage,
-            )
+            if self.memory_enabled:
+                stages[stage] = self.service.build_agent_context(
+                    task=clean_task,
+                    stage=stage,
+                    agent_name="openhands",
+                    session_id=self.session_id,
+                    project_root=self.project_root,
+                    task_type=self.task_type,
+                    token_budget=self.context_token_budget_per_stage,
+                )
+            else:
+                stages[stage] = {
+                    "stage": stage,
+                    "context": "",
+                    "memories": [],
+                    "budget": {"selected_count": 0, "token_budget": 0},
+                    "memory_enabled": False,
+                }
         payload = {
             "schema_version": "1.0",
             "trace_id": trace_id,
@@ -139,17 +152,19 @@ class OpenHandsMemoryRunner:
         self._ingest_event(event)
 
     def _ingest_event(self, event: AgentInteractionEvent) -> None:
-        result = self.service.ingest_interaction(event)
         self._live_events.append(event.to_dict())
-        self._event_results.append(result)
         self._event_types[event.event_type] += 1
-        if not result.get("stored"):
-            return
         if event.event_type == "tool_call":
             command = str(event.tool_args.get("command") or "").strip()
             if command:
                 self._tool_commands[event.turn_id] = command
-        elif event.event_type == "tool_result":
+        if not self.memory_enabled:
+            return
+        result = self.service.ingest_interaction(event)
+        self._event_results.append(result)
+        if not result.get("stored"):
+            return
+        if event.event_type == "tool_result":
             command = self._tool_commands.get(event.turn_id, "")
             if command:
                 memory_result = self.service.ingest_tool_result(
@@ -302,7 +317,9 @@ class OpenHandsMemoryRunner:
             "trace_id": context_bundle["trace_id"],
             "context_file": context_bundle["context_file"],
             "duration_ms": round((perf_counter() - started) * 1000.0, 3),
+            "memory_enabled": self.memory_enabled,
             "context": context_summary,
+            "execution_trace": _execution_trace(self._live_events),
             "structured_intent_recovery": structured_recovery,
             "natural_high_risk_block": natural_high_risk_block,
             "procedural_memory_fallback": procedural_fallback,
@@ -627,14 +644,61 @@ class OpenHandsMemoryRunner:
 
     def _validate_workspace(self) -> None:
         forbidden = {
-            Path.cwd().resolve(),
             Path.home().resolve(),
             self.state_dir.parent.resolve(),
         }
+        if not self.allow_in_place_workspace:
+            forbidden.add(Path.cwd().resolve())
         if self.workspace in forbidden:
             raise ValueError("OpenHands requires a dedicated workspace directory")
         if self.state_dir == self.workspace or self.state_dir.is_relative_to(self.workspace):
             raise ValueError("state_dir must be outside the dedicated workspace")
+
+
+def _execution_trace(events: list[Dict[str, object]]) -> list[Dict[str, object]]:
+    """Return a compact user-facing trace without tool output or message bodies."""
+
+    trace = []
+    for event in events:
+        event_type = str(event.get("event_type") or "")
+        if event_type == "tool_call":
+            args = event.get("tool_args") if isinstance(event.get("tool_args"), dict) else {}
+            command = _redact_command(" ".join(str(args.get("command") or "").split()))
+            trace.append(
+                {
+                    "event_type": event_type,
+                    "tool_name": str(event.get("tool_name") or ""),
+                    "command": command[:240],
+                }
+            )
+        elif event_type == "tool_result":
+            trace.append(
+                {
+                    "event_type": event_type,
+                    "tool_name": str(event.get("tool_name") or ""),
+                    "exit_code": event.get("exit_code"),
+                    "outcome": "success" if int(event.get("exit_code") or 0) == 0 else "failure",
+                }
+            )
+        elif event_type in {"task_complete", "task_error"}:
+            trace.append({"event_type": event_type})
+    return trace
+
+
+def _redact_command(command: str) -> str:
+    value = str(command or "")
+    value = re.sub(r"\bsk-[A-Za-z0-9_-]{8,}\b", "[已隐藏凭据]", value)
+    value = re.sub(
+        r"(?i)(authorization\s*:\s*bearer\s+)[^\s'\"]+",
+        r"\1[已隐藏凭据]",
+        value,
+    )
+    value = re.sub(
+        r"(?i)\b(api[_-]?key|token|password)(\s*[=:]\s*)[^\s'\"]+",
+        r"\1\2[已隐藏凭据]",
+        value,
+    )
+    return value
 
 
 def format_agent_context(trace_id: str, stages: Dict[str, object]) -> str:

@@ -401,15 +401,20 @@ def _json_default(value: object) -> object:
 
 
 SHELL_COMMANDS = (
-    "/status /memory /preferences /search 关键词 /context 任务 /forget 请求 [--yes] "
-    "/run 任务 /audit /evidence /demo /model /workspace /exit"
+    "/guide /status /memory /memory on|off /preferences /search 关键词 "
+    "/context 任务 /forget 请求 [--yes] /run 任务 /audit /evidence /demo /model /workspace /exit"
 )
 
 
 def _shell(service: MemGuardService, prompt: str, workspace: str = "", model: str = "") -> int:
     _section("MemGuardOS 记忆工作台")
-    state = {"workspace": str(Path(workspace or Path.cwd()).expanduser()), "model": str(model or "未配置")}
-    print("输入自然语言会写入记忆；内置命令：/help " + SHELL_COMMANDS)
+    state = {
+        "workspace": str(Path(workspace or Path.cwd()).expanduser()),
+        "model": str(model or "未配置"),
+        "memory_enabled": True,
+    }
+    print("用于体验 Agent 学习、复用和遗忘。输入 /guide 查看四步演示流程。")
+    print("当前记忆辅助：[开启]  输入 /help 查看全部操作。")
     while True:
         try:
             line = input(prompt).strip()
@@ -422,7 +427,11 @@ def _shell(service: MemGuardService, prompt: str, workspace: str = "", model: st
             return 0
         if line == "/help":
             print("可用操作：" + SHELL_COMMANDS)
-            print("说明：/forget 请求 --yes 会在预览后直接确认执行；/run 任务 会用当前模型和工作区运行真实 Agent。")
+            print("说明：/run 只运行真实 Agent；/demo 是明确标注的本地事件回放。")
+            print("遗忘先用 /forget 请求预览，确认无误后再追加 --yes。")
+            continue
+        if line == "/guide":
+            _shell_guide(state)
             continue
         if line == "/model":
             print("当前模型：%s" % state["model"])
@@ -449,6 +458,8 @@ def _shell(service: MemGuardService, prompt: str, workspace: str = "", model: st
 
 
 def _dispatch_shell_line(service: MemGuardService, line: str, state: dict) -> int:
+    if line in {"/memory on", "/memory off", "/memory status"}:
+        return _memory_mode(line, state)
     if line == "/preferences":
         return _preferences(service)
     if line == "/audit":
@@ -488,7 +499,7 @@ def _run_shell_line(service: MemGuardService, line: str) -> int:
 
 
 def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
-    """Run a real OpenHands task from the workspace, with an explicit downgrade path."""
+    """Run a real OpenHands task and present a concise, user-facing result."""
 
     if not task:
         print("用法：/run 任务描述")
@@ -498,12 +509,9 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
     runtime = detect_openhands_runtime()
     _section("真实 Agent 运行")
     if not runtime.get("available"):
-        print("真实 OpenHands 运行环境不可用：Python %s，已安装：%s。" % (
-            runtime.get("python_version", "-"),
-            "是" if runtime.get("installed") else "否",
-        ))
-        print("已改为本地事件回放，用于复核记忆链路；这不是真实模型运行结果。")
-        return _demo(service, task)
+        print("[未开始] 当前环境不能运行 OpenHands。")
+        print("处理方法：安装 Agent 桥接依赖后重试；仅验证机制可单独输入 /demo。")
+        return 2
 
     model = str(state.get("model") or "").strip()
     if not model or model == "未配置":
@@ -511,30 +519,85 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
         return 0
     api_key = os.environ.get("OPENHANDS_API_KEY", "")
     if not api_key:
-        print("未找到 OPENHANDS_API_KEY 环境变量，无法向模型发起真实请求。")
-        print("已改为本地事件回放，用于复核记忆链路；这不是真实模型运行结果。")
-        return _demo(service, task)
+        print("[未开始] 尚未配置模型访问凭据。")
+        print("处理方法：从权限受限的本地配置文件加载 OPENHANDS_API_KEY 后重试。")
+        return 2
 
     from memguard.integrations.openhands_runner import OpenHandsMemoryRunner
 
     workspace = Path(str(state.get("workspace") or Path.cwd())).expanduser().resolve()
     session_id = "shell-%s" % os.urandom(4).hex()
+    state_root = Path(
+        os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local" / "state"))
+    ).expanduser()
+    state_dir = state_root / "memguardos" / "agent-shell" / session_id
+    memory_enabled = bool(state.get("memory_enabled", True))
     runner = OpenHandsMemoryRunner(
         service=service,
         session_id=session_id,
         workspace=workspace,
-        state_dir=workspace / ".memguardos-agent",
+        state_dir=state_dir,
         model=model,
         api_key=api_key,
         base_url=os.environ.get("OPENHANDS_BASE_URL", ""),
+        memory_enabled=memory_enabled,
+        allow_in_place_workspace=True,
     )
-    print("模型：%s ｜ 工作区：%s ｜ 会话：%s" % (model, workspace, session_id))
-    print("正在运行真实 Agent，请稍候…")
-    result = runner.run(task)
-    print("执行模式：真实 OpenHands")
-    events = result.get("events") or []
-    print("交互事件：%d 条" % len(events))
-    for proof in result.get("preference_effect_proofs", []) or []:
+    print("任务：%s" % task)
+    print("记忆辅助：%s" % ("开启（会检索并学习）" if memory_enabled else "关闭（本次不读取或写入记忆）"))
+    print("工作区：%s" % workspace)
+    print("[1/3] 正在准备 Agent 和记忆上下文…")
+    print("[2/3] Agent 正在执行自然语言任务…")
+    try:
+        result = runner.run(task)
+    except Exception as exc:
+        print("[未完成] Agent 运行失败：%s" % _friendly_agent_error(exc))
+        print("工作台仍可继续使用。检查网络、模型名称和工作区后重新运行 /run。")
+        return 2
+
+    print("[3/3] 已完成运行并整理结果。")
+    context = result.get("context") or {}
+    selected_ids = {
+        memory_id
+        for rows in (context.get("selected_memory_ids") or {}).values()
+        for memory_id in rows
+        if memory_id
+    }
+    summary = result.get("event_summary") or {}
+    print("\n结果概览")
+    print("- 任务状态：%s" % ("完成" if result.get("ok") else "完成，但有项目需要检查"))
+    print("- 采用记忆：%d 条" % len(selected_ids))
+    print("- 工具调用：%d 次；成功返回：%d 次" % (
+        summary.get("tool_calls", 0),
+        summary.get("tool_results", 0) - summary.get("task_errors", 0),
+    ))
+    trace = result.get("execution_trace") or []
+    commands = [item for item in trace if item.get("event_type") == "tool_call"]
+    if commands:
+        print("\nAgent 实际操作")
+        for index, item in enumerate(commands[:6], 1):
+            command = item.get("command") or "（%s 工具调用）" % (item.get("tool_name") or "未知")
+            print("%d. %s" % (index, command))
+        if len(commands) > 6:
+            print("   另有 %d 次工具调用已折叠，可在审计记录中查看。" % (len(commands) - 6))
+
+    changes = result.get("memory_change_summary") or {}
+    learned = list(changes.get("new_memories") or []) + list(changes.get("updated_memories") or [])
+    if memory_enabled:
+        print("\n本次记忆变化")
+        if learned:
+            for item in learned[:5]:
+                print("- %s" % (item.get("summary_for_user") or item.get("summary") or item.get("memory_id")))
+        else:
+            print("- 没有形成新的长期记忆；已有记忆仍可继续使用。")
+    else:
+        print("\n本次记忆变化")
+        print("- 记忆辅助已关闭，本次运行没有读取或写入长期记忆。")
+
+    proofs = result.get("preference_effect_proofs", []) or []
+    if proofs:
+        print("\n偏好作用验证")
+    for proof in proofs:
         preference = proof.get("preference", {})
         print("- 偏好 %s = %s：%s" % (
             preference.get("topic", ""),
@@ -543,12 +606,58 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
                 proof.get("compliance"), proof.get("compliance")
             ),
         ))
-    print("下一步：输入 /preferences 查看形成的偏好，或 /audit 查看操作记录。")
+    print("\n下一步")
+    if memory_enabled:
+        print("- 输入 /preferences 查看已形成的偏好。")
+        print("- 开启新一轮 /run 且不重复偏好要求，观察 Agent 是否自动遵循。")
+    else:
+        print("- 输入 /memory on 后运行同一任务，可直观看到记忆辅助前后差异。")
+    print("- 输入 /audit 查看本次记忆操作记录。")
     return 0
 
 
+def _memory_mode(line: str, state: dict) -> int:
+    action = line.split()[-1]
+    if action == "on":
+        state["memory_enabled"] = True
+        print("记忆辅助已开启：后续 /run 会检索相关记忆，并沉淀新的有效经验。")
+    elif action == "off":
+        state["memory_enabled"] = False
+        print("记忆辅助已关闭：后续 /run 不读取或写入长期记忆，适合录制对照组。")
+    else:
+        print("当前记忆辅助：%s" % ("开启" if state.get("memory_enabled", True) else "关闭"))
+    return 0
+
+
+def _shell_guide(state: dict) -> None:
+    _section("四步效果演示")
+    print("1. 基线：/memory off，然后 /run 一个自然语言任务。")
+    print("2. 学习：/memory on，再通过正常交互纠正工具或回答格式。")
+    print("3. 复用：开启新一轮 /run，不重复偏好要求，观察 Agent 自动遵循。")
+    print("4. 遗忘：先 /forget 请求预览，再追加 --yes，随后重新运行任务。")
+    print("当前模型：%s" % state.get("model", "未配置"))
+    print("当前工作区：%s" % state.get("workspace", ""))
+    print("当前记忆辅助：%s" % ("开启" if state.get("memory_enabled", True) else "关闭"))
+
+
+def _friendly_agent_error(exc: Exception) -> str:
+    message = " ".join(str(exc).split())
+    lowered = message.lower()
+    if "workspace" in lowered:
+        return "工作区不可用，请用 /workspace 设置一个存在且可访问的项目目录。"
+    if any(marker in lowered for marker in ("timeout", "timed out")):
+        return "模型服务响应超时，请检查网络后重试。"
+    if any(marker in lowered for marker in ("401", "unauthorized", "api key")):
+        return "模型访问凭据无效或已失效。"
+    if any(marker in lowered for marker in ("404", "model not found")):
+        return "模型名称或服务地址不正确。"
+    return message[:240] or "运行环境返回了未知错误。"
+
+
 def _section(title: str) -> None:
-    print("\n## %s" % title)
+    print("\n%s" % ("─" * 54))
+    print(title)
+    print("%s" % ("─" * 54))
 
 
 def _compact_json(value: object) -> str:
