@@ -1,7 +1,7 @@
 {
   "schema": "memguardos-desktop-scan-apply-v1",
   "ok": true,
-  "manifest_id": "43b192e5-3aec-48e3-a116-f53b36612db5",
+  "manifest_id": "d37e3907-2971-4840-b603-e8371d11fd20",
   "summary": {
     "selected": 2,
     "stored": 2,
@@ -12,7 +12,7 @@
   "results": [
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.LxiPYHku1G/peony_preference.md",
+      "path": "/var/tmp/tmp.dMU6sOiUnR/peony_preference.md",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 57,
@@ -43,11 +43,11 @@
         "feedback": {
           "schema": "memguardos-memory-change-summary-v1",
           "namespace": "default",
-          "session_id": "/var/tmp/tmp.LxiPYHku1G/peony_preference.md",
+          "session_id": "/var/tmp/tmp.dMU6sOiUnR/peony_preference.md",
           "source": "peony_file",
           "new_memories": [
             {
-              "memory_id": "mem_fd735b5f1b43449b",
+              "memory_id": "mem_01ae1b9191b44e44",
               "type": "preference",
               "subtype": "tool_preference",
               "tier": "long_term",
@@ -78,12 +78,12 @@
             "forget"
           ],
           "audit_event_ids": [
-            "audit-24"
+            "audit-26"
           ]
         },
         "sensitive_notice": null,
-        "audit_event_id": "audit-24",
-        "memory_id": "mem_fd735b5f1b43449b",
+        "audit_event_id": "audit-26",
+        "memory_id": "mem_01ae1b9191b44e44",
         "type": "preference",
         "subtype": "tool_preference",
         "tier": "long_term"
@@ -94,7 +94,7 @@
     },
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.LxiPYHku1G/peony_knowledge.txt",
+      "path": "/var/tmp/tmp.dMU6sOiUnR/peony_knowledge.txt",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 61,
@@ -125,11 +125,11 @@
         "feedback": {
           "schema": "memguardos-memory-change-summary-v1",
           "namespace": "default",
-          "session_id": "/var/tmp/tmp.LxiPYHku1G/peony_knowledge.txt",
+          "session_id": "/var/tmp/tmp.dMU6sOiUnR/peony_knowledge.txt",
           "source": "peony_file",
           "new_memories": [
             {
-              "memory_id": "mem_7054c733367346ea",
+              "memory_id": "mem_3ab35043240e44d6",
               "type": "knowledge",
               "subtype": "fact",
               "tier": "long_term",
@@ -160,12 +160,12 @@
             "forget"
           ],
           "audit_event_ids": [
-            "audit-27"
+            "audit-29"
           ]
         },
         "sensitive_notice": null,
-        "audit_event_id": "audit-27",
-        "memory_id": "mem_7054c733367346ea",
+        "audit_event_id": "audit-29",
+        "memory_id": "mem_3ab35043240e44d6",
         "type": "knowledge",
         "subtype": "fact",
         "tier": "long_term"
@@ -178,11 +178,11 @@
   "memory_change_summary": {
     "schema": "memguardos-memory-change-summary-v1",
     "namespace": "default",
-    "session_id": "43b192e5-3aec-48e3-a116-f53b36612db5",
+    "session_id": "d37e3907-2971-4840-b603-e8371d11fd20",
     "source": "peony",
     "new_memories": [
       {
-        "memory_id": "mem_fd735b5f1b43449b",
+        "memory_id": "mem_01ae1b9191b44e44",
         "type": "preference",
         "subtype": "tool_preference",
         "tier": "long_term",
@@ -201,7 +201,7 @@
         ]
       },
       {
-        "memory_id": "mem_7054c733367346ea",
+        "memory_id": "mem_3ab35043240e44d6",
         "type": "knowledge",
         "subtype": "fact",
         "tier": "long_term",
@@ -232,15 +232,15 @@
       "forget"
     ],
     "audit_event_ids": [
-      "audit-24",
-      "audit-27",
-      "30"
+      "audit-26",
+      "audit-29",
+      "32"
     ]
   },
   "audit_chain": {
     "ok": true,
-    "checked": 30,
-    "head_hash": "dfe1fbd5de06f2ab6d5b15cba551c32c548458345899f2a8bb9f96350e7ab26c"
+    "checked": 32,
+    "head_hash": "47eac819f1f728719695be5f69ff327565865d1a28dce8773d61b9f08fa53f60"
   },
-  "audit_event_id": "30"
+  "audit_event_id": "32"
 }

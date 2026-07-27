@@ -35,9 +35,9 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | 类别 | 当前结果 |
 |---|---:|
 | 本地当前工作树全量测试 | 675 passed, 16 skipped |
-| openKylin 最终 HEAD 原生证据 | 源修订 `80963d0`；`654 passed, 1 skipped`；manifest 24 个文件并附 SHA256 |
+| openKylin 最终 HEAD 原生证据 | 源修订 `ceb4069`；`690 passed, 1 skipped`；manifest 覆盖 26 个证据文件并附 SHA256 |
 | 多发行版复验（Ubuntu CI / Debian 13 容器） | CI 三版本矩阵 13 步门禁全绿；容器全量 654 passed, 1 skipped |
-| openKylin systemd 服务重启 | 873 ms（服务恢复后为 active/running） |
+| openKylin systemd 服务重启 | 138 ms（服务恢复后为 active/running） |
 | openKylin 真实 Agent | OpenHands 1.28.1；原 12 组真实会话 12/12，新增 R13-R20 扩展 8/8，新增 holdout 留出盲测 8/8；合计 28 组均有证据 |
 | 本地 1k 负载 P95 | 0.429 ms |
 | openKylin 1k 负载 P95 | 8.904 ms |
@@ -263,7 +263,7 @@ memctl doctor
 sudo systemctl start memguardd
 ```
 
-`build_deb.sh` 生成五个职责独立的包：`memguardos-core` 提供 CLI、daemon、systemd、Polkit 和 BPF 安全验证资产；`memguardos-ukui` 提供 Peony、UKUI 控制中心和系统托盘；`memguardos-agent-bridge` 提供 OpenHands/Agent 桥接；`memguardos-doc` 提供中文文档；`memguardos` 是完整安装元包。分包构建会检查文件所有权冲突，`verify_deb_lifecycle.sh` 会验证离线安装、桌面包移除与重装以及用户数据保护。旧版单包的维护模式安装证据继续保留；新版五包需在最终 HEAD 下刷新一次维护模式 `apt install` 证据。
+`build_deb.sh` 生成五个职责独立的包：`memguardos-core` 提供 CLI、daemon、systemd、Polkit 和 BPF 安全验证资产；`memguardos-ukui` 提供 Peony、UKUI 控制中心和系统托盘；`memguardos-agent-bridge` 提供 OpenHands/Agent 桥接；`memguardos-doc` 提供中文文档；`memguardos` 是完整安装元包。分包构建会检查文件所有权冲突，`verify_deb_lifecycle.sh` 会验证离线安装、桌面包移除与重装以及用户数据保护。最终源修订 `ceb4069` 已在 openKylin 维护模式下完成五包重新构建、安装、生命周期和用户数据保护验证，结果收录于原生证据包。
 
 ## 评测与证据
 

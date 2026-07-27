@@ -1,5 +1,5 @@
-$ bash -lc find\ /usr/lib\ -path\ \"\*peony-extensions\*memguardos\*.so\"\ -o\ -path\ \"\*ukui-control-center\*memguardos\*.so\"\ 2\>/dev/null\ \|\|\ true\;\ command\ -v\ memguardos-tray\ \|\|\ true\;\ pgrep\ -a\ memguardos-tray\ \|\|\ true
+$ bash -c find\ /usr/lib\ -path\ \"\*peony-extensions\*memguardos\*.so\"\ -o\ -path\ \"\*ukui-control-center\*memguardos\*.so\"\ 2\>/dev/null\ \|\|\ true\;\ command\ -v\ memguardos-tray\ \|\|\ true\;\ pgrep\ -a\ memguardos-tray\ \|\|\ true
 /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
 /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
 /usr/bin/memguardos-tray
-16946 /usr/bin/memguardos-tray
+38090 /usr/bin/memguardos-tray

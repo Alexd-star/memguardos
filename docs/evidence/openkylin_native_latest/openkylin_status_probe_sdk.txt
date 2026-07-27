@@ -1,5 +1,5 @@
 $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
-[1785022777720] [32minfo [0m Proxy init engine sessionId:1534629319.
+[1785151687119] [32minfo [0m Proxy init engine sessionId:1801217272.
 {
   "schema": "memguardos-openkylin-native-status-v1",
   "system": {
@@ -73,7 +73,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
             "exists": true,
             "trusted": true,
             "socket_ready": true,
-            "reason": "Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit",
+            "reason": "Unix socket 可信：类型、所有者、连接与 SO_PEERCRED 校验通过",
             "socket": {
               "owner": 1000,
               "mode": "0o775",
@@ -82,20 +82,20 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
               "is_symlink": false,
               "is_socket": true,
               "device": 2053,
-              "inode": 245
+              "inode": 349
             },
             "parent_directory": {
               "owner": 1000,
-              "mode": "0o777",
-              "world_writable": true,
+              "mode": "0o700",
+              "world_writable": false,
               "sticky": false,
               "is_symlink": false,
               "is_socket": false,
               "device": 2053,
-              "inode": 45,
+              "inode": 49,
               "path": "/tmp/.kylin-ai-runtime-unix/1000"
             },
-            "parent_directory_warning": true,
+            "parent_directory_warning": false,
             "connection": {
               "attempted": true,
               "connected": true,
@@ -105,7 +105,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
             "peer_credentials": {
               "supported": true,
               "verified": true,
-              "pid": 16899,
+              "pid": 10684,
               "uid": 1000,
               "gid": 1000
             },
@@ -121,7 +121,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
             "exists": true,
             "trusted": true,
             "socket_ready": true,
-            "reason": "Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit",
+            "reason": "Unix socket 可信：类型、所有者、连接与 SO_PEERCRED 校验通过",
             "socket": {
               "owner": 1000,
               "mode": "0o775",
@@ -130,20 +130,20 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
               "is_symlink": false,
               "is_socket": true,
               "device": 2053,
-              "inode": 240
+              "inode": 329
             },
             "parent_directory": {
               "owner": 1000,
-              "mode": "0o777",
-              "world_writable": true,
+              "mode": "0o700",
+              "world_writable": false,
               "sticky": false,
               "is_symlink": false,
               "is_socket": false,
               "device": 2053,
-              "inode": 45,
+              "inode": 49,
               "path": "/tmp/.kylin-ai-runtime-unix/1000"
             },
-            "parent_directory_warning": true,
+            "parent_directory_warning": false,
             "connection": {
               "attempted": true,
               "connected": true,
@@ -153,7 +153,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
             "peer_credentials": {
               "supported": true,
               "verified": true,
-              "pid": 16899,
+              "pid": 10684,
               "uid": 1000,
               "gid": 1000
             },
@@ -166,8 +166,8 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
           }
         },
         "trusted": true,
-        "reason": "core-textembedding.sock: Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit; config.sock: Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit",
-        "parent_directory_warning": true,
+        "reason": "Kylin runtime Unix socket 全部可信",
+        "parent_directory_warning": false,
         "session_bus": true,
         "xdg_runtime_dir": "/run/user/1000"
       },
@@ -347,7 +347,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
           0.011692
         ],
         "subprocess_returncode": 0,
-        "stderr_tail": "[1785022777783] \u001b[32minfo \u001b[0m Proxy init engine sessionId:1165392658."
+        "stderr_tail": "[1785151687274] \u001b[32minfo \u001b[0m Proxy init engine sessionId:917340113."
       },
       "available": true,
       "inference_ready": true,
@@ -366,7 +366,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
       "product_state": {
         "installed": true,
         "last_probe_success": true,
-        "last_success_at": "2026-07-26T06:59:42+08:00",
+        "last_success_at": "2026-07-27T19:28:05+08:00",
         "last_success_dim": 768,
         "last_success_model": "ensemble-embd_gte-base_uint8-text",
         "last_failure_at": "",
@@ -394,13 +394,13 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
       "socket_exists": true,
       "socket_ready": true,
       "trusted": true,
-      "reason": "Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit",
+      "reason": "Unix socket 可信：类型、所有者、连接与 SO_PEERCRED 校验通过",
       "socket_trust": {
         "path": "/tmp/kylin-ai-vector-engine-1000.sock",
         "exists": true,
         "trusted": true,
         "socket_ready": true,
-        "reason": "Unix socket 可信；核心 owner 与 SO_PEERCRED 校验通过，但父目录 world-writable 且未设置 sticky bit",
+        "reason": "Unix socket 可信：类型、所有者、连接与 SO_PEERCRED 校验通过",
         "socket": {
           "owner": 1000,
           "mode": "0o775",
@@ -409,20 +409,20 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
           "is_symlink": false,
           "is_socket": true,
           "device": 2053,
-          "inode": 1859365
+          "inode": 1859352
         },
         "parent_directory": {
           "owner": 0,
-          "mode": "0o777",
+          "mode": "0o1777",
           "world_writable": true,
-          "sticky": false,
-          "is_symlink": true,
+          "sticky": true,
+          "is_symlink": false,
           "is_socket": false,
           "device": 2053,
-          "inode": 1653155,
+          "inode": 1853797,
           "path": "/tmp"
         },
-        "parent_directory_warning": true,
+        "parent_directory_warning": false,
         "connection": {
           "attempted": true,
           "connected": true,
@@ -432,7 +432,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
         "peer_credentials": {
           "supported": true,
           "verified": true,
-          "pid": 15903,
+          "pid": 9560,
           "uid": 1000,
           "gid": 1000
         },
@@ -443,7 +443,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
           "explicit_opt_in": false
         }
       },
-      "parent_directory_warning": true,
+      "parent_directory_warning": false,
       "available": true,
       "fallback": "sqlite_fts_hash_vector",
       "capability_state": "socket_ready",
@@ -453,7 +453,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
     }
   },
   "desktop": {
-    "session_desktop": "",
+    "session_desktop": "UKUI",
     "desktop_session": "",
     "peony": {
       "available": true,
@@ -492,21 +492,21 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
     "diagnosis_code": "ready",
     "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": "23015424",
+      "cgroup_memory_current": "22798336",
       "cgroup_memory_max": "536870912"
     },
     "cpu": {
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 310989,
-        "user_usec": 196827,
-        "system_usec": 114162,
+        "usage_usec": 359727,
+        "user_usec": 271667,
+        "system_usec": 88059,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 31,
-        "nr_throttled": 5,
-        "throttled_usec": 224727,
+        "nr_periods": 13,
+        "nr_throttled": 7,
+        "throttled_usec": 404573,
         "nr_bursts": 0,
         "burst_usec": 0
       }
@@ -516,13 +516,13 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
   "namespace": {
     "namespace": "default",
     "is_default": true,
-    "home": "/var/tmp/memguardos-native-home.npbHzm",
+    "home": "/var/tmp/memguardos-native-home.Hn0ktX",
     "home_exists": true,
-    "namespace_home": "/var/tmp/memguardos-native-home.npbHzm",
+    "namespace_home": "/var/tmp/memguardos-native-home.Hn0ktX",
     "namespace_home_exists": true,
-    "store_path": "/var/tmp/memguardos-native-home.npbHzm/memory.segment",
-    "db_path": "/var/tmp/memguardos-native-home.npbHzm/memguard.sqlite3",
-    "custom_patterns_path": "/var/tmp/memguardos-native-home.npbHzm/sensitive_patterns.json",
+    "store_path": "/var/tmp/memguardos-native-home.Hn0ktX/memory.segment",
+    "db_path": "/var/tmp/memguardos-native-home.Hn0ktX/memguard.sqlite3",
+    "custom_patterns_path": "/var/tmp/memguardos-native-home.Hn0ktX/sensitive_patterns.json",
     "store_exists": false,
     "db_exists": false,
     "custom_patterns_exists": false,

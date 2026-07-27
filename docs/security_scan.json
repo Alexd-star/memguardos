@@ -1,7 +1,7 @@
 {
   "schema": "memguardos-security-scan-v1",
   "ok": true,
-  "elapsed_s": 4.775,
+  "elapsed_s": 4.001,
   "policy": {
     "bandit_high_severity_allowed": 0,
     "bandit_medium_severity_allowed": 0,

@@ -1,0 +1,11 @@
+$ bash -c $'\nrun_root() { if [ "$(id -u)" -eq 0 ]; then "$@"; else sudo -n "$@"; fi; }\nservice_user=$(systemctl show memguardd.service -p User --value)\nservice_group=$(systemctl show memguardd.service -p Group --value)\nstate_mode=$(run_root stat -c %a /var/lib/memguardos)\ndb_mode=$(run_root stat -c %a /var/lib/memguardos/memguard.sqlite3)\nsegment_mode=$(run_root stat -c %a /var/lib/memguardos/memory.segment)\nruntime_mode=$(run_root stat -c %a /run/memguardos)\nsocket_mode=$(run_root stat -c %a /run/memguardos/memguard.sock)\nstate_owner=$(run_root stat -c %U:%G /var/lib/memguardos)\ndb_owner=$(run_root stat -c %U:%G /var/lib/memguardos/memguard.sqlite3)\nprintf "service_user=%s\\nservice_group=%s\\n" "$service_user" "$service_group"\nprintf "state_mode=%s\\ndb_mode=%s\\nsegment_mode=%s\\nruntime_mode=%s\\nsocket_mode=%s\\n" "$state_mode" "$db_mode" "$segment_mode" "$runtime_mode" "$socket_mode"\nprintf "state_owner=%s\\ndb_owner=%s\\n" "$state_owner" "$db_owner"\ntest "$service_user" = memguard\ntest "$service_group" = memguard\ntest "$state_mode" = 700\ntest "$db_mode" = 600\ntest "$segment_mode" = 600\ntest "$runtime_mode" = 750\ntest "$socket_mode" = 660\ntest "$state_owner" = memguard:memguard\ntest "$db_owner" = memguard:memguard\necho permissions_ok=true'
+service_user=memguard
+service_group=memguard
+state_mode=700
+db_mode=600
+segment_mode=600
+runtime_mode=750
+socket_mode=660
+state_owner=memguard:memguard
+db_owner=memguard:memguard
+permissions_ok=true

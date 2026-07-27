@@ -1,4 +1,4 @@
-$ /home/luo/memguardos/.venv/bin/python scripts/evaluate_retrieval_v2.py --rounds 3 --size 1000 --queries 120 --workers 6 --output output/final-openkylin-80963d0/native-evidence/retrieval_v2.json
+$ /home/luo/memguardos/.venv/bin/python scripts/evaluate_retrieval_v2.py --rounds 3 --size 1000 --queries 120 --workers 6 --output docs/evidence/openkylin_native_latest/retrieval_v2.json
 {
   "pass": true,
   "failures": [],

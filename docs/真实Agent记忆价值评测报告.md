@@ -137,7 +137,7 @@ Runner 会检查已选择偏好是否转化为成功工具调用和最终回答�
 openKylin 当前 Git HEAD 的全量测试结果为：
 
 ```text
-654 passed, 1 skipped（openKylin，源修订 80963d0）
+690 passed, 1 skipped（openKylin，最终源修订 ceb4069）
 ```
 
 隔离审计链验证为 `ok=true`。`docs/evidence/memory_value_latest/` 仍保留采集当时的 `223 passed` 历史快照；最新同 HEAD 复跑结果用于最终提交口径。证据目录经 SHA-256 清单校验，运行时 workspace、SQLite、段文件和 Python 缓存已从正式证据中清理，只保留结果、上下文快照、环境、日志、报告和前后文件清单。
@@ -182,7 +182,7 @@ bash scripts/collect_memory_value_evidence.sh \
 | `docs/evidence/memory_value_latest/real_agent/cases/` | 逐案例事件、上下文和判定 |
 | `docs/evidence/real_agent_extension_r13_r20_latest/metrics.json` | 新增 R13-R20 真实 Agent 扩展聚合指标，8/8 通过 |
 | `docs/evidence/real_agent_extension_r13_r20_latest/cases/` | 新增 R13-R20 逐案例事件、上下文和判定 |
-| `docs/evidence/memory_value_latest/pytest_openkylin.txt` | 采集时历史 pytest 快照；本轮最终源代码 HEAD 的 openKylin 结果将在原生证据目录重新采集 |
+| `docs/evidence/memory_value_latest/pytest_openkylin.txt` | 采集时历史 pytest 快照；最终源修订的 `690 passed, 1 skipped` 结果见 `docs/evidence/openkylin_native_latest/pytest_openkylin.txt` |
 | `docs/evidence/memory_value_latest/audit_verify.txt` | 隔离审计链验证 |
 | `docs/evidence/memory_value_latest/SHA256SUMS.txt` | 文件校验和 |
 
@@ -191,7 +191,6 @@ bash scripts/collect_memory_value_evidence.sh \
 新增评测证明 MemGuardOS 不只能够“检索出一条相关记忆”。在固定可复现实验中，结构化记忆提高了任务完成和工具选择表现，减少了交互轮数、错误命令和完整历史回放的上下文成本；在当前已归档的真实 openKylin/OpenHands 会话中，原 R01-R12、扩展 R13-R20 与 holdout 留出盲测 R01-R08 合计 28 组全部通过，记忆系统层和完整 Agent 行为层均为 28/28。扩展后的 28 组场景库进一步提高了偏好冲突、失败修复、跨会话经验和遗忘边界的覆盖度。
 
 项目不会把适配层修复包装成模型原生能力，也不会把 16 组固定配对结果冒充模型自主实验。准确结论是：MemGuardOS 能够向真实现有 Agent 提供正确、可解释、可遗忘的记忆，并通过可审计 Hook、有界修复和严格只读恢复把小参数模型的部分格式与工具规划偏差收敛为可靠行为。该结论仅适用于当前公开数据集、模型版本和 openKylin 环境，仍需在更多 Agent、模型和真实业务任务中持续验证。
-
 
 
 

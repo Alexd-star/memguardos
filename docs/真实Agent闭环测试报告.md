@@ -110,10 +110,10 @@ Agent 交互记忆专项 benchmark 共 200 条，组成如下：
 
 ## 6. 自动化测试
 
-新增记忆价值配对评测、真实行为判定、偏好合规守卫和程序性记忆自动沉淀后，本地工作树全量测试为 `675 passed, 16 skipped`；最终源修订 `80963d0` 的 openKylin 原生全量测试为：
+新增记忆价值配对评测、真实行为判定、偏好合规守卫和程序性记忆自动沉淀后，Windows 全量测试为 `675 passed, 16 skipped`；最终源修订 `ceb4069` 的 openKylin 原生全量测试为：
 
 ```text
-654 passed, 1 skipped；`source_revision.json`、manifest 和 SHA256 已绑定版本。
+690 passed, 1 skipped；`source_revision.json`、26 项 manifest 和 SHA256 已绑定版本。
 ```
 
 其中新增测试覆盖：
@@ -157,7 +157,6 @@ openKylin 已完成真实 runner、systemd bridge、专项 benchmark、精准遗
 本轮实证已经补齐老师问答指出的关键缺口：项目不再只提供抽象 Agent API，而是接入了现有 OpenHands Agent；“用户操作习惯”不再依赖 shell history 推断，而是从用户消息、纠正反馈、工具调用和工具结果中自动提取；记忆也已经在后续会话的规划、工具选择和结果生成上下文中被实际调用。
 
 仍需准确说明两个边界。第一，本地小模型能够完成真实 Agent 与终端调用证明，但复杂命令成功率受模型能力和工具环境影响。第二，MemGuardOS 的精准遗忘保证其管理的事件、记忆、索引、图谱和段文件边界，不保证自动清除 OpenHands、终端、模型服务或备份系统中的外部副本。
-
 
 
 

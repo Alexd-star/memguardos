@@ -1,5 +1,5 @@
-MemGuardOS Windows 提交包独立复验
-验证方式：在独立最终交付工作树使用 Python 3.11 运行 py -3.11 -m pytest -q
-结果来源：2026-07-26 实际命令输出
+MemGuardOS Windows 最终源码全量复验
+验证方式：使用受支持的 Python 3.11 运行 py -3.11 -m pytest -q
+结果来源：2026-07-27 实际命令输出
 
-641 passed, 14 skipped in 152.76s (0:02:32)
+675 passed, 16 skipped in 192.21s (0:03:12)
