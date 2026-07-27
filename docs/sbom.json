@@ -2,7 +2,7 @@
   "schema": "memguardos-sbom-v1",
   "name": "memguardos",
   "version": "0.1.0",
-  "generated_at": "2026-07-27T10:25:57+00:00",
+  "generated_at": "2026-07-27T10:49:54+00:00",
   "source": {
     "root": "project-root",
     "license": "MIT License",
@@ -43,7 +43,7 @@
     {
       "path": "README.md",
       "present": true,
-      "sha256": "fbfaec7d5e967f169e516a3c217876a79a2b036a75b24f9fb4f1541fc4983abe",
+      "sha256": "c4cf1daf52a5bf1942a39a1d1fc89223c6a563aa2b0b4feb3650a11a890710f8",
       "bytes": 28506
     },
     {

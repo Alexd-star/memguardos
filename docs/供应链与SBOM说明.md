@@ -10,7 +10,7 @@
 | 版本 | 0.1.0 |
 | Python 版本要求 | >=3.10 |
 | 许可证 | MIT License |
-| 生成时间 | 2026-07-27T10:25:57+00:00 |
+| 生成时间 | 2026-07-27T10:49:54+00:00 |
 
 ## 依赖分组
 
@@ -41,7 +41,7 @@
 |---|---:|---:|---|
 | `pyproject.toml` | 是 | 817 | `aef749ac94189d8477db1ea6327c7877d703845a7356247a2c35a319a90b698c` |
 | `LICENSE` | 是 | 1080 | `3319059b1763624558499140d670dd98b2260aba3654bd19af2838b76c4d4261` |
-| `README.md` | 是 | 28506 | `fbfaec7d5e967f169e516a3c217876a79a2b036a75b24f9fb4f1541fc4983abe` |
+| `README.md` | 是 | 28506 | `c4cf1daf52a5bf1942a39a1d1fc89223c6a563aa2b0b4feb3650a11a890710f8` |
 | `memguard/service.py` | 是 | 184303 | `2a1e4540937fec701858acebe45718390076dfaa937b95ff76ec9da31a390ef5` |
 | `memguard/api/server.py` | 是 | 21369 | `73a1d03ff5048ad2ba39d09eeb649a191478ab6770b963cbd6668ae661c8031b` |
 | `memguard/web/dashboard.py` | 是 | 212376 | `64dfc0ab2e2f74a310f4376f276972a62db43e22451f245a1b8a3376df37329b` |

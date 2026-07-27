@@ -182,8 +182,16 @@ def test_core_package_removes_only_known_unowned_legacy_runtime_scripts(tmp_path
     assert 'rm -f -- "$legacy_path"' in postinst
     assert "rm -rf" not in postinst
     assert "install -d -o memguard -g memguard -m 0700 /var/lib/memguardos" in postinst
+    assert "/etc/systemd/system/memguardd.service" in postinst
+    assert "/etc/systemd/system/memguardd@.service" in postinst
+    assert "memguardd.service.memguardos-legacy" in postinst
+    assert "memguardd@.service.memguardos-legacy" in postinst
+    assert 'grep -Fqx "$legacy_exec" "$legacy_unit"' in postinst
+    assert '! grep -Eq "^User=" "$legacy_unit"' in postinst
     assert "rm -rf /var/lib/memguardos" not in postinst
-    assert ".memguardos" not in postinst
+    assert "~/.memguardos" not in postinst
+    assert "/root/.memguardos" not in postinst
+    assert "rm -rf /home" not in postinst
 
 
 def test_debian_staging_permissions_are_normalized_to_policy(monkeypatch, tmp_path):
