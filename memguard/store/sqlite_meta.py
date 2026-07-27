@@ -1586,7 +1586,12 @@ class SQLiteMetaStore:
                 MAX(promoted_memory_id) AS promoted_memory_id,
                 MIN(created_at) AS first_seen_at,
                 MAX(created_at) AS last_seen_at
-            FROM preference_observations
+            FROM preference_observations AS po
+            WHERE po.promoted_memory_id IS NULL
+               OR EXISTS (
+                    SELECT 1 FROM memory AS m
+                    WHERE m.memory_id = po.promoted_memory_id AND m.deleted = 0
+               )
             GROUP BY topic, value, preference_scope, project_root, task_type, scope_agent_name, scope_session_id
             ORDER BY topic, value, preference_scope, project_root, task_type, scope_agent_name, scope_session_id
             """
@@ -1604,6 +1609,13 @@ class SQLiteMetaStore:
                   AND task_type = ?
                   AND scope_agent_name = ?
                   AND scope_session_id = ?
+                  AND (
+                        promoted_memory_id IS NULL
+                        OR EXISTS (
+                            SELECT 1 FROM memory AS m
+                            WHERE m.memory_id = promoted_memory_id AND m.deleted = 0
+                        )
+                  )
                 """,
                 (
                     item["topic"],

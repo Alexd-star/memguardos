@@ -241,3 +241,35 @@ def test_generic_forget_removes_target_preference_aggregate_only(tmp_path):
         assert "response_order" in after
     finally:
         service.close()
+
+
+def test_preference_status_hides_legacy_aggregate_linked_to_deleted_memory(tmp_path):
+    service = MemGuardService(
+        store_path=tmp_path / "memory.segment",
+        db_path=tmp_path / "memory.sqlite3",
+        namespace="legacy-forget-test",
+    )
+    try:
+        result = service.ingest_interaction(
+            AgentInteractionEvent(
+                agent_name="openhands",
+                agent_version="test",
+                session_id="session-1",
+                turn_id="turn-1",
+                sequence=1,
+                event_type="user_message",
+                role="user",
+                content="以后搜索代码统一使用 grep。",
+            )
+        )
+        memory_id = result["memory_ids"][0]
+        service.meta.mark_deleted(memory_id)
+
+        stable_topics = {
+            item["topic"]
+            for item in service.interaction_status()["preference_aggregates"]
+            if item["stable"]
+        }
+        assert "code_search_tool" not in stable_topics
+    finally:
+        service.close()
