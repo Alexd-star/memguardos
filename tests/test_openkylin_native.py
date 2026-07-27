@@ -1037,6 +1037,12 @@ def test_native_evidence_collector_installs_and_records_polkit_assets():
     assert 'if run_root "${HELPER_TO_TEST}" unsupported-action' in collector
     assert "Polkit policy 交付状态" in readiness
     assert "Polkit helper 交付状态" in readiness
+    assert "systemd_security.txt" in collector
+    assert "overall_exposure" in collector
+    assert "storage_permissions.txt" in collector
+    assert "permissions_ok=true" in collector
+    assert "systemd 安全暴露评分" in readiness
+    assert "受管存储权限策略" in readiness
 
 
 def test_native_evidence_readiness_parses_polkit_result_lines_not_command_echoes(tmp_path):
@@ -1051,6 +1057,8 @@ def test_native_evidence_readiness_parses_polkit_result_lines_not_command_echoes
         "peony_batch_apply.json",
         "peony_sensitive_preview.json",
         "systemd_cgroup.txt",
+        "systemd_security.txt",
+        "storage_permissions.txt",
         "service_restart.txt",
         "tray_assets.txt",
         "desktop_build.txt",
@@ -1092,6 +1100,14 @@ def test_native_evidence_readiness_parses_polkit_result_lines_not_command_echoes
         "restart_rc=0\nrestart_ms=1037\nActiveState=active\nSubState=running\n",
         encoding="utf-8",
     )
+    (evidence / "systemd_security.txt").write_text(
+        "overall_exposure=1.0\nsecurity_gate=passed\n",
+        encoding="utf-8",
+    )
+    (evidence / "storage_permissions.txt").write_text(
+        "permissions_ok=true\nservice_user=memguard\nservice_group=memguard\n",
+        encoding="utf-8",
+    )
 
     checks = check_native_openkylin_evidence(evidence, expected_revision="abc123", severity="P0")
     by_name = {check.name: check for check in checks}
@@ -1102,6 +1118,9 @@ def test_native_evidence_readiness_parses_polkit_result_lines_not_command_echoes
     assert by_name["Polkit helper 交付状态"].detail == "readonly /usr with staged helper"
     assert by_name["systemd 服务重启响应时间"].ok is True
     assert by_name["systemd 服务重启响应时间"].detail == "restart_ms=1037"
+    assert by_name["systemd 安全暴露评分"].ok is True
+    assert by_name["systemd 安全暴露评分"].detail == "overall_exposure=1.0"
+    assert by_name["受管存储权限策略"].ok is True
 
 
 def test_privileged_action_rejects_unknown_action_without_execution(monkeypatch):

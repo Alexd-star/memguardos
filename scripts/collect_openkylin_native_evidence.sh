@@ -193,6 +193,43 @@ test -s "${POLICY_TARGET}" && echo policy_installed=true || echo policy_installe
 test -x "${HELPER_TARGET}" && echo helper_installed=true || echo helper_installed=false
 ls -l "${POLICY_TARGET}" "${HELPER_TARGET}" "${STAGED_POLICY}" "${STAGED_HELPER}" 2>/dev/null || true'
 run_required_capture systemd_cgroup.txt bash -lc 'systemctl show memguardd.service --property=LoadState,ActiveState,SubState,ControlGroup,MemoryMax,CPUQuotaPerSecUSec --no-pager; CG=$(systemctl show memguardd.service -p ControlGroup --value); test -n "$CG"; for f in memory.current memory.max cpu.max cpu.stat; do printf "%s\n" "--- ${f} ---"; cat "/sys/fs/cgroup${CG}/${f}" 2>/dev/null || true; done'
+run_required_capture systemd_security.txt bash -lc '
+REPORT=$(systemd-analyze security memguardd.service --no-pager)
+printf "%s\n" "$REPORT"
+SCORE=$(printf "%s\n" "$REPORT" | sed -n "s/.*Overall exposure level.*: \([0-9][0-9.]*\).*/\1/p" | tail -n 1)
+test -n "$SCORE"
+python3 - "$SCORE" <<"PY"
+import sys
+score = float(sys.argv[1])
+if score > 3.0:
+    raise SystemExit("systemd exposure score exceeds 3.0: %s" % score)
+print("overall_exposure=%s" % score)
+print("security_gate=passed")
+PY'
+run_required_capture storage_permissions.txt bash -lc '
+run_root() { if [ "$(id -u)" -eq 0 ]; then "$@"; else sudo -n "$@"; fi; }
+service_user=$(systemctl show memguardd.service -p User --value)
+service_group=$(systemctl show memguardd.service -p Group --value)
+state_mode=$(run_root stat -c %a /var/lib/memguardos)
+db_mode=$(run_root stat -c %a /var/lib/memguardos/memguard.sqlite3)
+segment_mode=$(run_root stat -c %a /var/lib/memguardos/memory.segment)
+runtime_mode=$(run_root stat -c %a /run/memguardos)
+socket_mode=$(run_root stat -c %a /run/memguardos/memguard.sock)
+state_owner=$(run_root stat -c %U:%G /var/lib/memguardos)
+db_owner=$(run_root stat -c %U:%G /var/lib/memguardos/memguard.sqlite3)
+printf "service_user=%s\nservice_group=%s\n" "$service_user" "$service_group"
+printf "state_mode=%s\ndb_mode=%s\nsegment_mode=%s\nruntime_mode=%s\nsocket_mode=%s\n" "$state_mode" "$db_mode" "$segment_mode" "$runtime_mode" "$socket_mode"
+printf "state_owner=%s\ndb_owner=%s\n" "$state_owner" "$db_owner"
+test "$service_user" = memguard
+test "$service_group" = memguard
+test "$state_mode" = 700
+test "$db_mode" = 600
+test "$segment_mode" = 600
+test "$runtime_mode" = 750
+test "$socket_mode" = 660
+test "$state_owner" = memguard:memguard
+test "$db_owner" = memguard:memguard
+echo permissions_ok=true'
 run_required_capture service_restart.txt bash -lc '
 START_MS=$(date +%s%3N)
 if [ "$(id -u)" -eq 0 ]; then

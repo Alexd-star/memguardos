@@ -180,7 +180,7 @@ bash scripts/collect_openkylin_native_evidence.sh
 docs/evidence/openkylin_native_latest/
 ```
 
-关键文件包括 `source_revision.json`、`openkylin_status.txt`、`openkylin_status_probe_sdk.txt`、`peony_batch_preview.json`、`peony_batch_apply.json`、`peony_sensitive_preview.json`、`desktop_build.txt`、`tray_assets.txt`、`polkit_assets.txt`、`systemd_cgroup.txt`、`debian_packages.txt`、`deb_lifecycle.txt`、`pytest_openkylin.txt`、`manifest.json` 和 `SHA256SUMS.txt`。
+关键文件包括 `source_revision.json`、`openkylin_status.txt`、`openkylin_status_probe_sdk.txt`、`peony_batch_preview.json`、`peony_batch_apply.json`、`peony_sensitive_preview.json`、`desktop_build.txt`、`tray_assets.txt`、`polkit_assets.txt`、`systemd_cgroup.txt`、`systemd_security.txt`、`storage_permissions.txt`、`debian_packages.txt`、`deb_lifecycle.txt`、`pytest_openkylin.txt`、`manifest.json` 和 `SHA256SUMS.txt`。其中 systemd 安全评分必须不高于 3.0，受管状态目录、数据文件和本地 Socket 必须通过所有权与权限门禁。
 
 ## 9. 准确边界
 

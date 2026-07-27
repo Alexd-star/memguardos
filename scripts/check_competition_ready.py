@@ -584,6 +584,8 @@ def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, 
         "peony_batch_apply.json",
         "peony_sensitive_preview.json",
         "systemd_cgroup.txt",
+        "systemd_security.txt",
+        "storage_permissions.txt",
         "service_restart.txt",
         "polkit_assets.txt",
         "tray_assets.txt",
@@ -599,6 +601,32 @@ def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, 
         path = evidence_dir / name
         checks.append(Check("openKylin原生证据", name, path.exists() and path.stat().st_size > 0, "存在且非空" if path.exists() and path.stat().st_size > 0 else "缺失或为空", severity=severity))
     checks.append(check_native_evidence_revision(evidence_dir, expected_revision, severity=severity))
+    security_values = _parse_result_key_values(_read_text_if_exists(evidence_dir / "systemd_security.txt"))
+    try:
+        exposure = float(security_values.get("overall_exposure", ""))
+    except ValueError:
+        exposure = -1.0
+    security_ok = security_values.get("security_gate") == "passed" and 0.0 <= exposure <= 3.0
+    checks.append(
+        Check(
+            "openKylin原生证据",
+            "systemd 安全暴露评分",
+            security_ok,
+            "overall_exposure=%s" % exposure if security_ok else "缺少评分或评分高于 3.0",
+            severity=severity,
+        )
+    )
+    permission_values = _parse_result_key_values(_read_text_if_exists(evidence_dir / "storage_permissions.txt"))
+    permissions_ok = permission_values.get("permissions_ok") == "true"
+    checks.append(
+        Check(
+            "openKylin原生证据",
+            "受管存储权限策略",
+            permissions_ok,
+            "0700/0600 与 memguard 所有权已验证" if permissions_ok else "权限或所有权证据未通过",
+            severity=severity,
+        )
+    )
     restart_values = _parse_result_key_values(_read_text_if_exists(evidence_dir / "service_restart.txt"))
     try:
         restart_ms = int(restart_values.get("restart_ms", ""))
@@ -1605,6 +1633,5 @@ def _sha256_file(path: Path) -> str:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
 
 

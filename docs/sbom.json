@@ -2,7 +2,7 @@
   "schema": "memguardos-sbom-v1",
   "name": "memguardos",
   "version": "0.1.0",
-  "generated_at": "2026-07-27T10:49:54+00:00",
+  "generated_at": "2026-07-27T11:02:27+00:00",
   "source": {
     "root": "project-root",
     "license": "MIT License",
