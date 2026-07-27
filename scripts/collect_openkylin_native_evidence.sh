@@ -106,7 +106,7 @@ print(json.dumps({
 }, ensure_ascii=False, indent=2))
 PY
 
-run_required_capture environment.txt bash -lc 'cat /etc/os-release; uname -a; python3 --version; printf "desktop=%s\nsession=%s\n" "${XDG_CURRENT_DESKTOP:-}" "${DESKTOP_SESSION:-}"'
+run_required_capture environment.txt bash -c 'cat /etc/os-release; uname -a; python3 --version; printf "desktop=%s\nsession=%s\n" "${XDG_CURRENT_DESKTOP:-}" "${DESKTOP_SESSION:-}"'
 run_required_capture openkylin_status.txt python3 -m memguard.cli.memctl openkylin-status
 run_required_capture openkylin_status_probe_sdk.txt python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
 run_required_capture kylin_warmup.txt bash scripts/warmup_kylin_sdk.sh
@@ -137,9 +137,9 @@ assert sensitive["items"][0]["selectable"] is False
 PY
 
 run_required_capture desktop_build.txt bash scripts/build_ukui_plugins.sh
-run_required_capture tray_assets.txt bash -lc 'file native/ukui/build/tray/memguardos-tray; ldd native/ukui/build/tray/memguardos-tray; test -f packaging/desktop/memguardos-tray.desktop; grep -E "^(Exec|OnlyShowIn)=" packaging/desktop/memguardos-tray.desktop'
-run_required_capture desktop_plugins.txt bash -lc 'file native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so; ldd native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so; ldd native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so'
-run_required_capture polkit_assets.txt bash -lc 'set -e
+run_required_capture tray_assets.txt bash -c 'file native/ukui/build/tray/memguardos-tray; ldd native/ukui/build/tray/memguardos-tray; test -f packaging/desktop/memguardos-tray.desktop; grep -E "^(Exec|OnlyShowIn)=" packaging/desktop/memguardos-tray.desktop'
+run_required_capture desktop_plugins.txt bash -c 'file native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so; ldd native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so; ldd native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so'
+run_required_capture polkit_assets.txt bash -c 'set -e
 POLICY_TARGET=/usr/share/polkit-1/actions/org.memguardos.policy
 HELPER_TARGET=/usr/lib/memguardos/memguardos-native-helper.sh
 STAGING_ROOT=/var/tmp/memguardos-polkit-staging
@@ -192,8 +192,8 @@ if run_root "${HELPER_TO_TEST}" unsupported-action; then exit 3; else echo unkno
 test -s "${POLICY_TARGET}" && echo policy_installed=true || echo policy_installed=false
 test -x "${HELPER_TARGET}" && echo helper_installed=true || echo helper_installed=false
 ls -l "${POLICY_TARGET}" "${HELPER_TARGET}" "${STAGED_POLICY}" "${STAGED_HELPER}" 2>/dev/null || true'
-run_required_capture systemd_cgroup.txt bash -lc 'systemctl show memguardd.service --property=LoadState,ActiveState,SubState,ControlGroup,MemoryMax,CPUQuotaPerSecUSec --no-pager; CG=$(systemctl show memguardd.service -p ControlGroup --value); test -n "$CG"; for f in memory.current memory.max cpu.max cpu.stat; do printf "%s\n" "--- ${f} ---"; cat "/sys/fs/cgroup${CG}/${f}" 2>/dev/null || true; done'
-run_required_capture systemd_security.txt bash -lc '
+run_required_capture systemd_cgroup.txt bash -c 'systemctl show memguardd.service --property=LoadState,ActiveState,SubState,ControlGroup,MemoryMax,CPUQuotaPerSecUSec --no-pager; CG=$(systemctl show memguardd.service -p ControlGroup --value); test -n "$CG"; for f in memory.current memory.max cpu.max cpu.stat; do printf "%s\n" "--- ${f} ---"; cat "/sys/fs/cgroup${CG}/${f}" 2>/dev/null || true; done'
+run_required_capture systemd_security.txt bash -c '
 REPORT=$(systemd-analyze security memguardd.service --no-pager)
 printf "%s\n" "$REPORT"
 SCORE=$(printf "%s\n" "$REPORT" | sed -n "s/.*Overall exposure level.*: \([0-9][0-9.]*\).*/\1/p" | tail -n 1)
@@ -206,7 +206,7 @@ if score > 3.0:
 print("overall_exposure=%s" % score)
 print("security_gate=passed")
 PY'
-run_required_capture storage_permissions.txt bash -lc '
+run_required_capture storage_permissions.txt bash -c '
 run_root() { if [ "$(id -u)" -eq 0 ]; then "$@"; else sudo -n "$@"; fi; }
 service_user=$(systemctl show memguardd.service -p User --value)
 service_group=$(systemctl show memguardd.service -p Group --value)
@@ -230,7 +230,7 @@ test "$socket_mode" = 660
 test "$state_owner" = memguard:memguard
 test "$db_owner" = memguard:memguard
 echo permissions_ok=true'
-run_required_capture service_restart.txt bash -lc '
+run_required_capture service_restart.txt bash -c '
 START_MS=$(date +%s%3N)
 if [ "$(id -u)" -eq 0 ]; then
   systemctl restart memguardd.service
@@ -262,8 +262,8 @@ run_required_capture retrieval_v2.txt \
   --workers 6 \
   --output "${OUT_DIR}/retrieval_v2.json"
 
-run_capture installed_packages.txt bash -lc 'dpkg-query -W -f="\${Package} \${Version} \${Status}\n" "memguardos*" 2>/dev/null || true'
-run_capture installed_desktop.txt bash -lc 'find /usr/lib -path "*peony-extensions*memguardos*.so" -o -path "*ukui-control-center*memguardos*.so" 2>/dev/null || true; command -v memguardos-tray || true; pgrep -a memguardos-tray || true'
+run_capture installed_packages.txt bash -c 'dpkg-query -W -f="\${Package} \${Version} \${Status}\n" "memguardos*" 2>/dev/null || true'
+run_capture installed_desktop.txt bash -c 'find /usr/lib -path "*peony-extensions*memguardos*.so" -o -path "*ukui-control-center*memguardos*.so" 2>/dev/null || true; command -v memguardos-tray || true; pgrep -a memguardos-tray || true'
 
 python3 scripts/refresh_evidence_manifest.py "${OUT_DIR}" >"${OUT_DIR}/manifest_refresh.txt"
 python3 scripts/refresh_evidence_manifest.py "${OUT_DIR}" >/dev/null

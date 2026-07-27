@@ -1041,6 +1041,7 @@ def test_native_evidence_collector_installs_and_records_polkit_assets():
     assert "overall_exposure" in collector
     assert "storage_permissions.txt" in collector
     assert "permissions_ok=true" in collector
+    assert "bash -lc" not in collector
     assert "systemd 安全暴露评分" in readiness
     assert "受管存储权限策略" in readiness
 
