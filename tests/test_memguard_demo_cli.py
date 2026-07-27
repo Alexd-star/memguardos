@@ -72,6 +72,11 @@ def test_execution_trace_hides_credentials_and_keeps_command_evidence():
                 "tool_args": {"command": "curl -H 'Authorization: Bearer sk-example-secret-123456' /health"},
             },
             {"event_type": "tool_result", "tool_name": "terminal", "exit_code": 0},
+            {
+                "event_type": "tool_call",
+                "tool_name": "finish",
+                "tool_args": {"message": "memguard/service.py:2727"},
+            },
         ]
     )
 
@@ -79,6 +84,7 @@ def test_execution_trace_hides_credentials_and_keeps_command_evidence():
     assert "sk-example" not in trace[0]["command"]
     assert "[已隐藏凭据]" in trace[0]["command"]
     assert trace[1]["outcome"] == "success"
+    assert trace[2]["message"] == "memguard/service.py:2727"
 
 
 def test_cli_can_explicitly_allow_current_project_workspace(tmp_path, monkeypatch):

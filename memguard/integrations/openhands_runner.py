@@ -664,11 +664,15 @@ def _execution_trace(events: list[Dict[str, object]]) -> list[Dict[str, object]]
         if event_type == "tool_call":
             args = event.get("tool_args") if isinstance(event.get("tool_args"), dict) else {}
             command = _redact_command(" ".join(str(args.get("command") or "").split()))
+            message = _redact_command(
+                str(args.get("message") or args.get("summary") or "").strip()
+            )
             trace.append(
                 {
                     "event_type": event_type,
                     "tool_name": str(event.get("tool_name") or ""),
                     "command": command[:240],
+                    "message": message[:1200],
                 }
             )
         elif event_type == "tool_result":
@@ -857,6 +861,8 @@ def _direct_high_risk_command(events: list[Dict[str, object]]) -> str:
 def create_openhands_conversation(**kwargs: Any) -> Any:
     """Create the real SDK conversation without importing OpenHands at module load."""
 
+    os.environ.setdefault("OPENHANDS_SUPPRESS_BANNER", "1")
+    os.environ.setdefault("LOG_LEVEL", "WARNING")
     from openhands.sdk import Conversation, LLM
     from openhands.sdk.hooks.config import HookConfig, HookDefinition, HookMatcher
     from openhands.tools.preset.default import get_default_agent

@@ -573,10 +573,14 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
     print("- 采用记忆：%d 条" % len(selected_ids))
     print("- 工具调用：%d 次；成功返回：%d 次" % (
         summary.get("tool_calls", 0),
-        summary.get("tool_results", 0) - summary.get("task_errors", 0),
+        max(0, summary.get("tool_results", 0) - summary.get("task_errors", 0)),
     ))
     trace = result.get("execution_trace") or []
-    commands = [item for item in trace if item.get("event_type") == "tool_call"]
+    commands = [
+        item
+        for item in trace
+        if item.get("event_type") == "tool_call" and item.get("tool_name") != "finish"
+    ]
     if commands:
         print("\nAgent 实际操作")
         for index, item in enumerate(commands[:6], 1):
@@ -584,6 +588,15 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
             print("%d. %s" % (index, command))
         if len(commands) > 6:
             print("   另有 %d 次工具调用已折叠，可在审计记录中查看。" % (len(commands) - 6))
+    final_messages = [
+        str(item.get("message") or "").strip()
+        for item in trace
+        if item.get("event_type") == "tool_call" and item.get("tool_name") == "finish"
+    ]
+    final_messages = [message for message in final_messages if message]
+    if final_messages:
+        print("\nAgent 最终答复")
+        print(final_messages[-1])
 
     changes = result.get("memory_change_summary") or {}
     learned = list(changes.get("new_memories") or []) + list(changes.get("updated_memories") or [])
