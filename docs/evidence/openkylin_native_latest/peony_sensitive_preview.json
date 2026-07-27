@@ -1,11 +1,11 @@
 {
   "schema": "memguardos-desktop-scan-manifest-v1",
   "ok": true,
-  "manifest_id": "862f362f-37ae-4a7b-a3c3-c47966ab5deb",
-  "nonce": "0Efo1xZXpx_cYLtRe8V9OsNrME1mh3ss",
+  "manifest_id": "74f8c586-4d5b-49ca-ad12-db8a363668d0",
+  "nonce": "hJUWLJtwgXGcZ72DJxqYMhCssOLpYd5O",
   "namespace": "default",
-  "created_at": 1785151689.1326194,
-  "expires_at": 1785151989.1326194,
+  "created_at": 1785171943.6245036,
+  "expires_at": 1785172243.6245036,
   "used": false,
   "limits": {
     "max_files": 100,
@@ -16,7 +16,7 @@
   "items": [
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.dMU6sOiUnR/peony_secret.env",
+      "path": "/var/tmp/tmp.JeB51KFpvs/peony_secret.env",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 41,
@@ -60,13 +60,13 @@
       "fingerprint": {
         "exists": true,
         "device": 2053,
-        "inode": 675,
+        "inode": 1861620,
         "size": 41,
-        "mtime_ns": 1785151688421434400,
+        "mtime_ns": 1785171942820530605,
         "mode": 33204
       }
     }
   ],
-  "signature": "3d42ecc59cb88c8518c794569fd58ddceb07cc3495d7c5c3aeb5d4331b56ec33",
-  "manifest_path": "/var/tmp/memguardos-native-home.Hn0ktX/desktop-scans/862f362f-37ae-4a7b-a3c3-c47966ab5deb.json"
+  "signature": "b1a4b883b66fb7b2c49833aaa47b660590c4d4d7e2b6e64082f18701999084eb",
+  "manifest_path": "/var/tmp/memguardos-native-home.vkeWI1/desktop-scans/74f8c586-4d5b-49ca-ad12-db8a363668d0.json"
 }

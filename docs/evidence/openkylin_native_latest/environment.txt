@@ -11,5 +11,5 @@ VERSION_CODENAME=nile
 PRODUCT_FEATURES=3
 Linux luo-pc 6.6.0-19-generic #0ok4-KYLINOS SMP PREEMPT_DYNAMIC Fri Dec 19 07:42:23 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
 Python 3.12.2
-desktop=UKUI
+desktop=
 session=

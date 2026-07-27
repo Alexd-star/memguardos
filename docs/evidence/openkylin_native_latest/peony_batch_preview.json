@@ -1,11 +1,11 @@
 {
   "schema": "memguardos-desktop-scan-manifest-v1",
   "ok": true,
-  "manifest_id": "d37e3907-2971-4840-b603-e8371d11fd20",
-  "nonce": "3JM9705rpYlZYnb9RCmg5DEpLXDM18UG",
+  "manifest_id": "809ef58f-59e9-44dc-b5b7-fa55693d7ea4",
+  "nonce": "ffZTDy6O9QQOBhoPdpxy08ZQJ4yNMIqh",
   "namespace": "default",
-  "created_at": 1785151688.6547556,
-  "expires_at": 1785151988.6547556,
+  "created_at": 1785171943.0168786,
+  "expires_at": 1785172243.0168786,
   "used": false,
   "limits": {
     "max_files": 100,
@@ -16,7 +16,7 @@
   "items": [
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.dMU6sOiUnR/peony_preference.md",
+      "path": "/var/tmp/tmp.JeB51KFpvs/peony_preference.md",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 57,
@@ -50,15 +50,15 @@
       "fingerprint": {
         "exists": true,
         "device": 2053,
-        "inode": 668,
+        "inode": 1861613,
         "size": 57,
-        "mtime_ns": 1785151688420434392,
+        "mtime_ns": 1785171942820530605,
         "mode": 33204
       }
     },
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.dMU6sOiUnR/peony_knowledge.txt",
+      "path": "/var/tmp/tmp.JeB51KFpvs/peony_knowledge.txt",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 61,
@@ -92,13 +92,13 @@
       "fingerprint": {
         "exists": true,
         "device": 2053,
-        "inode": 669,
+        "inode": 1861614,
         "size": 61,
-        "mtime_ns": 1785151688420434392,
+        "mtime_ns": 1785171942820530605,
         "mode": 33204
       }
     }
   ],
-  "signature": "c7f427f79a585c310eee024c57c7ff5bcd6cdbb3406ced8bb5a7fe90e101c471",
-  "manifest_path": "/var/tmp/memguardos-native-home.Hn0ktX/desktop-scans/d37e3907-2971-4840-b603-e8371d11fd20.json"
+  "signature": "be7162faf22b3b46859dc94a6ec2e1672ad88333befe5f1bdcb15b11df9e4dba",
+  "manifest_path": "/var/tmp/memguardos-native-home.vkeWI1/desktop-scans/809ef58f-59e9-44dc-b5b7-fa55693d7ea4.json"
 }

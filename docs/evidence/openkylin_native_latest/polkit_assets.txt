@@ -5,5 +5,5 @@ Unsupported MemGuardOS native helper action: unsupported-action
 unknown_action_rejected=true
 policy_installed=true
 helper_installed=true
--rwxr-xr-x 1 root root 1801  7月27日 19:28 /usr/lib/memguardos/memguardos-native-helper.sh
--rw-r--r-- 1 root root 3627  7月27日 19:28 /usr/share/polkit-1/actions/org.memguardos.policy
+-rwxr-xr-x 1 root root 1801  7月28日 01:06 /usr/lib/memguardos/memguardos-native-helper.sh
+-rw-r--r-- 1 root root 3627  7月28日 01:06 /usr/share/polkit-1/actions/org.memguardos.policy
