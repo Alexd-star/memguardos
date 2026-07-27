@@ -16,6 +16,7 @@ REPLACEMENTS = {
     "149284": "130444",
     "133 passed": "140 passed",
     "通用评测与 Agent 专项": "通用评测、检索消融与 Agent 专项",
+    "673 passed": "675 passed",
 }
 
 

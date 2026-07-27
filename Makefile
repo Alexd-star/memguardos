@@ -27,6 +27,7 @@ coverage:
 
 docs-check:
 	python scripts/check_docs_links.py
+	python scripts/check_metric_consistency.py
 
 web-smoke:
 	python scripts/web_dashboard_smoke.py

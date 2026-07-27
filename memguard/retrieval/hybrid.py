@@ -564,9 +564,9 @@ def _query_routing_score(query: str, combined: str) -> Tuple[float, List[str]]:
     reasons: List[str] = []
     cjk_chars = len(re.findall(r"[\u4e00-\u9fff]", query))
     latin_words = re.findall(r"[A-Za-z][A-Za-z0-9_-]*", query)
-    if cjk_chars == 0 and len(latin_words) >= 3 and "跨语言术语记录" in combined:
-        score += 0.55
-        reasons.append("cross_language_source")
+    if cjk_chars == 0 and len(latin_words) >= 3 and _shares_latin_terms(latin_words, combined):
+        score += 0.35
+        reasons.append("cross_language_term_overlap")
 
     temporal_markers = ("本周", "上周", "昨天", "今天", "最新", "更新后")
     matched_temporal = [marker for marker in temporal_markers if marker in query]
@@ -653,14 +653,16 @@ def _subtype_score(query_lower: str, record_type: str, subtype: str, preference_
 
 
 def _hard_negative_penalty(query_lower: str, summary: str, content: str, source_kind: str, record: Dict[str, Any]) -> float:
+    """Penalise lexically-similar but semantically wrong hits.
+
+    Only content-derived signals are allowed here. Never inspect benchmark
+    bookkeeping such as dataset labels or generated id prefixes: doing so would
+    let the scorer recognise its own test set and make published metrics
+    meaningless.
+    """
+
     text = (summary + " " + content).strip()
     penalty = 0.0
-    if "hard_negative" in source_kind:
-        penalty += 0.65
-    if str(record.get("source_uri") or "").startswith("neg_"):
-        penalty += 0.50
-    if text.startswith(("不应召回", "不应遗忘", "不应阻断")):
-        penalty += 0.75
     if _contains_any(query_lower, ["token", "令牌", "凭据"]) and "token.service" in text:
         penalty += 0.50
     if _contains_any(query_lower, ["private key", "私钥"]) and "MAP_PRIVATE" in text:
@@ -678,3 +680,19 @@ def _scope_penalty(query_lower: str, combined_lower: str) -> float:
 
 def _contains_any(text: str, needles: Iterable[str]) -> bool:
     return any(needle.lower() in text for needle in needles)
+
+
+def _shares_latin_terms(latin_words: List[str], combined: str) -> bool:
+    """Latin query against a record that carries the same technical terms.
+
+    Used for cross-language routing: a English/pinyin query still matches a
+    Chinese record when both mention the same identifiers, without relying on
+    any dataset-specific marker text.
+    """
+
+    combined_lower = combined.lower()
+    meaningful = [word.lower() for word in latin_words if len(word) >= 3]
+    if not meaningful:
+        return False
+    hits = sum(1 for word in meaningful if word in combined_lower)
+    return hits >= 2 or (hits == 1 and len(meaningful) <= 2)

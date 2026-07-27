@@ -70,7 +70,13 @@ class ErasureIntentCompiler:
         unresolved_slots = []
         if not has_forget_verb:
             unresolved_slots.append("forget_verb")
-        if not topic and not sensitive_labels and memory_types == ["all"] and scope["level"] == "global":
+        if (
+            not topic
+            and not target_phrase
+            and not sensitive_labels
+            and memory_types == ["all"]
+            and scope["level"] == "global"
+        ):
             unresolved_slots.append("scope_or_topic")
 
         confidence = 0.34
@@ -147,7 +153,8 @@ class ErasureIntentCompiler:
 
     @staticmethod
     def _memory_types(text: str) -> List[str]:
-        target_text, _ = _split_retention_clause(text)
+        target_text, _ = _split_exception_clause(text)
+        target_text, _ = _split_retention_clause(target_text)
         selected: List[str] = []
         for memory_type, markers in MEMORY_TYPE_PATTERNS:
             if any(marker in target_text for marker in markers):
@@ -241,7 +248,9 @@ class ErasureIntentCompiler:
 
     @staticmethod
     def _target_phrase(text: str, topic: str) -> str:
-        target, _ = _split_retention_clause(text)
+        # 先剥离"除了 X 以外"，否则被排除的对象会混进打击目标。
+        target, _ = _split_exception_clause(text)
+        target, _ = _split_retention_clause(target)
         target = target.strip(" ，。,；;")
         target = re.sub(r"^(?:请\s*)?(?:帮我\s*)?(?:把\s*)?(?:忘记|忘掉|遗忘|删除|清除)\s*", "", target)
         if "关于" in target:
@@ -253,13 +262,16 @@ class ErasureIntentCompiler:
             "",
             target,
         ).strip(" ，。,；;")
+        target = re.sub(r"^(?:所有|全部)", "", target).strip()
+        target = re.sub(r"(?:相关|有关)$", "", target).strip()
         if topic and topic.lower() in target.lower():
             return topic
         return target or topic
 
     @staticmethod
     def _preference_topic(text: str, topic: str) -> str:
-        target_text, _ = _split_retention_clause(text)
+        target_text, _ = _split_exception_clause(text)
+        target_text, _ = _split_retention_clause(target_text)
         lowered = target_text.lower()
         if "回答风格" in target_text:
             return "回答风格"
@@ -345,6 +357,13 @@ class ErasureIntentCompiler:
         end: Optional[datetime] = None
         source = ""
         today = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+        content_reference = re.search(
+            r"(?:上周|本周|昨天|今天|(?:最近|近|过去)\s*\d{1,2}\s*天)"
+            r"\s*(?:记录|内容|文本|日志)(?:中|里)",
+            text,
+        )
+        if content_reference:
+            return {"start_time": "", "end_time": "", "source_text": ""}
         explicit = re.search(
             r"(20\d{2}-\d{1,2}-\d{1,2})\s*(?:到|至|-|~)\s*(20\d{2}-\d{1,2}-\d{1,2})",
             text,
@@ -397,10 +416,19 @@ class ErasureIntentCompiler:
 
     @staticmethod
     def _retention_constraints(text: str, topic: str) -> List[Dict[str, Any]]:
+        constraints: List[Dict[str, Any]] = []
+        _, exception_text = _split_exception_clause(text)
+        if exception_text:
+            # "除了 X 以外" 中的 X 是要保留的对象，不是打击目标。
+            constraint: Dict[str, Any] = {"terms": [exception_text]}
+            if "知识" in exception_text:
+                constraint["memory_types"] = ["knowledge"]
+            elif any(marker in exception_text for marker in ("安全", "策略", "偏好")):
+                constraint["memory_types"] = ["preference", "security_policy"]
+            constraints.append(constraint)
         _, keep_text = _split_retention_clause(text)
         if not keep_text:
-            return []
-        constraints: List[Dict[str, Any]] = []
+            return constraints
         if "知识" in keep_text:
             constraints.append({"memory_types": ["knowledge"], "topic": topic})
         if "今天" in keep_text:
@@ -420,3 +448,23 @@ def _split_retention_clause(text: str) -> tuple[str, str]:
     if not match:
         return text, ""
     return text[: match.start()], text[match.end() :]
+
+
+def _split_exception_clause(text: str) -> tuple[str, str]:
+    """Separate "除了 X 以外，忘掉 Y" into the delete target Y and the exception X.
+
+    Without this the whole sentence becomes the delete target, so the thing the
+    user explicitly excluded turns into what gets deleted.
+    """
+
+    match = re.search(
+        r"(?:除了|除去|除)\s*(?P<exception>[^，,；;]{1,40}?)\s*(?:以外|之外|外)\s*[，,；;]?\s*(?P<target>.*)",
+        text,
+    )
+    if not match:
+        return text, ""
+    target = match.group("target").strip()
+    exception = match.group("exception").strip()
+    if not target or not exception:
+        return text, ""
+    return target, exception

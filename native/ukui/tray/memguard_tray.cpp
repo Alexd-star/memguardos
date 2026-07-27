@@ -365,6 +365,14 @@ private:
         QProcess::startDetached(
             QStringLiteral("ukui-control-center"),
             {QStringLiteral("-m"), QStringLiteral("memguardos-memory-security")});
+        // 控制中心冷启动时第一次 -m 可能在插件注册完成前被消费，窗口停在设置首页；
+        // 延迟后向已运行的单实例重发一次模块跳转，并补写导航目标供插件轮询。
+        QTimer::singleShot(2200, this, [destination]() {
+            writeNavigationTarget(destination);
+            QProcess::startDetached(
+                QStringLiteral("ukui-control-center"),
+                {QStringLiteral("-m"), QStringLiteral("memguardos-memory-security")});
+        });
     }
 
     void openDashboard()

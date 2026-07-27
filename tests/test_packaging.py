@@ -23,6 +23,7 @@ from scripts.check_competition_ready import (
 )
 import scripts.check_competition_ready as readiness
 import scripts.build_deb_packages as deb_packages
+import scripts.package_submission as package_submission
 from scripts.generate_sbom import generate_sbom
 from scripts.build_deb_packages import (
     DebianPackageBuilder,
@@ -35,6 +36,31 @@ def test_competition_ready_hygiene_ignores_local_output_workspaces():
     assert "outputs" in IGNORED_HYGIENE_PARTS
     metadata = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     assert 'requires-python = ">=3.10"' in metadata
+
+
+def test_submission_packager_excludes_runtime_and_nested_worktree_outputs():
+    excluded = {
+        ".playwright-cli",
+        ".venv-agent",
+        ".worktrees",
+        "artifacts",
+        "build",
+        "node_modules",
+        "output",
+        "outputs",
+    }
+    assert excluded <= package_submission.EXCLUDED_DIRS
+    for directory in excluded:
+        candidate = package_submission.ROOT / directory / "runtime.bin"
+        assert package_submission.should_skip(candidate) is True
+
+
+def test_submission_packager_cli_can_build_only_the_competition_archive():
+    args = package_submission._parser().parse_args(
+        ["--kind", "competition", "--timestamp", "20260727_000000"]
+    )
+    assert args.kind == "competition"
+    assert args.timestamp == "20260727_000000"
 
 
 def test_formal_doc_consistency_rejects_previously_current_test_counts(monkeypatch, tmp_path):
@@ -155,7 +181,8 @@ def test_core_package_removes_only_known_unowned_legacy_runtime_scripts(tmp_path
     assert 'dpkg-query -S "$legacy_path"' in postinst
     assert 'rm -f -- "$legacy_path"' in postinst
     assert "rm -rf" not in postinst
-    assert "/var/lib/memguardos" not in postinst
+    assert "install -d -o memguard -g memguard -m 0700 /var/lib/memguardos" in postinst
+    assert "rm -rf /var/lib/memguardos" not in postinst
     assert ".memguardos" not in postinst
 
 

@@ -3,6 +3,8 @@ from typing import Dict, Optional
 import json
 import re
 
+from memguard.store.permissions import ensure_private_directory, ensure_private_file
+
 
 class PatternValidationError(ValueError):
     pass
@@ -22,19 +24,40 @@ _DEFAULT_PATTERN_NAMES = {
 }
 
 
-def load_patterns(path: Path) -> Dict[str, str]:
+VALID_LEVELS = ("high", "medium", "low")
+
+
+def load_patterns(path: Path) -> Dict[str, object]:
+    """Load custom patterns, keeping both the legacy string form and the {regex, level} form."""
+
     if not path.exists():
         return {}
     data = json.loads(path.read_text(encoding="utf-8"))
-    return {str(key): str(value) for key, value in data.items()}
+    patterns: Dict[str, object] = {}
+    for key, value in data.items():
+        if isinstance(value, dict):
+            regex = str(value.get("regex", ""))
+            level = str(value.get("level", "")).strip().lower()
+            patterns[str(key)] = {"regex": regex, "level": level} if level in VALID_LEVELS else regex
+        else:
+            patterns[str(key)] = str(value)
+    return patterns
 
 
-def save_pattern(path: Path, name: str, regex: str) -> Dict[str, str]:
+def pattern_regex(spec: object) -> str:
+    return str(spec.get("regex", "")) if isinstance(spec, dict) else str(spec)
+
+
+def save_pattern(path: Path, name: str, regex: str, level: str = "") -> Dict[str, object]:
     validate_pattern(name, regex)
+    normalized_level = str(level or "").strip().lower()
+    if normalized_level and normalized_level not in VALID_LEVELS:
+        raise PatternValidationError("pattern level must be one of: %s" % ", ".join(VALID_LEVELS))
     patterns = load_patterns(path)
-    patterns[name] = regex
-    path.parent.mkdir(parents=True, exist_ok=True)
+    patterns[name] = {"regex": regex, "level": normalized_level} if normalized_level else regex
+    ensure_private_directory(path.parent)
     path.write_text(json.dumps(patterns, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+    ensure_private_file(path)
     return patterns
 
 

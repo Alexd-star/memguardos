@@ -5,6 +5,8 @@ import sqlite3
 from datetime import datetime, timedelta
 
 from memguard.models import MemoryRecord, new_id, stable_hash, utc_now
+from memguard.forgetting.plan import ErasurePlan
+from memguard.store.permissions import ensure_private_directory, ensure_private_file
 from memguard.retrieval.vector_cache import (
     PersistedVector,
     decode_vector,
@@ -32,6 +34,8 @@ _ALLOWED_COLUMN_MIGRATIONS = {
     ("memory", "trust_score", "REAL NOT NULL DEFAULT 1.0"),
     ("memory", "governance_state", "TEXT NOT NULL DEFAULT 'active'"),
     ("memory", "governance_reason", "TEXT NOT NULL DEFAULT ''"),
+    ("memory", "hit_count", "INTEGER NOT NULL DEFAULT 0"),
+    ("memory", "last_hit_at", "TEXT NOT NULL DEFAULT ''"),
     ("audit", "prev_hash", "TEXT NOT NULL DEFAULT ''"),
     ("audit", "event_hash", "TEXT NOT NULL DEFAULT ''"),
     ("agent_events", "project_root", "TEXT NOT NULL DEFAULT ''"),
@@ -51,8 +55,14 @@ _ALLOWED_COLUMN_MIGRATIONS = {
 class SQLiteMetaStore:
     def __init__(self, path: Path):
         self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.permission_corrections = []
+        correction = ensure_private_directory(self.path.parent)
+        if correction:
+            self.permission_corrections.append(correction)
         self.conn = sqlite3.connect(str(self.path), timeout=30.0)
+        correction = ensure_private_file(self.path)
+        if correction:
+            self.permission_corrections.append(correction)
         self.conn.row_factory = sqlite3.Row
         self.conn.create_function(
             "memguard_content_hash", 2, vector_content_hash, deterministic=True
@@ -61,6 +71,7 @@ class SQLiteMetaStore:
         self.conn.execute("PRAGMA temp_store = MEMORY")
         self.conn.execute("PRAGMA cache_size = -32768")
         self.conn.execute("PRAGMA mmap_size = 268435456")
+        self.conn.execute("PRAGMA secure_delete = ON")
         try:
             self.conn.execute("PRAGMA journal_mode = WAL")
             self.conn.execute("PRAGMA synchronous = NORMAL")
@@ -124,6 +135,8 @@ class SQLiteMetaStore:
         self._ensure_column("memory", "trust_score", "REAL NOT NULL DEFAULT 1.0")
         self._ensure_column("memory", "governance_state", "TEXT NOT NULL DEFAULT 'active'")
         self._ensure_column("memory", "governance_reason", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory", "hit_count", "INTEGER NOT NULL DEFAULT 0")
+        self._ensure_column("memory", "last_hit_at", "TEXT NOT NULL DEFAULT ''")
         self.conn.execute(
             """
             CREATE TABLE IF NOT EXISTS audit (
@@ -441,7 +454,13 @@ class SQLiteMetaStore:
             self.conn.execute(
                 """
                 UPDATE memory
-                SET deleted = 1, content = '', summary = 'FORGOTTEN',
+                SET deleted = 1,
+                    content = '', summary = 'FORGOTTEN', source_kind = 'forgotten', source_uri = '',
+                    sensitivity_level = 'none', sensitivity_labels = '[]', sensitivity_redacted = 0,
+                    preference_topic = '', preference_value = '', preference_scope = 'global',
+                    preference_explicit = 0, agent_name = '', preference_session_id = '',
+                    project_root = '', task_type = '', governance_state = 'forgotten',
+                    governance_reason = '',
                     valid_to = ?, superseded_by = ?, updated_at = ?
                 WHERE memory_id = ?
                 """,
@@ -452,6 +471,142 @@ class SQLiteMetaStore:
             self.conn.execute("DELETE FROM memory_entity WHERE memory_id = ?", (memory_id,))
             self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (memory_id,))
             self.conn.execute("DELETE FROM memory_embedding WHERE memory_id = ?", (memory_id,))
+            self.conn.execute(
+                "DELETE FROM entity WHERE NOT EXISTS "
+                "(SELECT 1 FROM memory_entity WHERE memory_entity.entity = entity.entity)"
+            )
+
+    def select_forget_candidates(self, plan: ErasurePlan) -> List[Dict[str, Any]]:
+        """Apply non-negotiable erasure boundaries before semantic ranking."""
+
+        if plan.unresolved_scope:
+            return []
+
+        requested = set(plan.memory_types)
+        if requested and "all" not in requested:
+            supported_types = {"preference", "security_policy", "knowledge", "tool_trace"}
+            if not requested & supported_types:
+                return []
+
+        filter_types = bool(requested and "all" not in requested)
+        preference_types = bool(requested & {"preference", "security_policy"})
+        knowledge_type = "knowledge" in requested
+        tool_trace_type = "tool_trace" in requested
+        rows = self.conn.execute(
+            """
+            SELECT * FROM memory
+            WHERE deleted = 0 AND governance_state = 'active'
+              AND (
+                    ? = 0
+                    OR (? = 1 AND type IN ('preference', 'sensitive_policy'))
+                    OR (? = 1 AND type = 'knowledge')
+                    OR (
+                        ? = 1 AND type = 'knowledge'
+                        AND subtype IN ('tool_trace', 'procedural_trace', 'tool_failure_case')
+                    )
+                  )
+              AND (? = '' OR COALESCE(NULLIF(valid_from, ''), updated_at) >= ?)
+              AND (? = '' OR COALESCE(NULLIF(valid_from, ''), updated_at) <= ?)
+              AND (? != 'agent' OR agent_name = ?)
+              AND (? != 'session' OR preference_session_id = ?)
+              AND (? != 'session' OR ? = '' OR agent_name = ?)
+              AND (? != 'project' OR project_root = ?)
+            ORDER BY updated_at DESC
+            """,
+            (
+                int(filter_types),
+                int(preference_types),
+                int(knowledge_type),
+                int(tool_trace_type),
+                plan.start_time,
+                plan.start_time,
+                plan.end_time,
+                plan.end_time,
+                plan.scope_level,
+                plan.agent_name,
+                plan.scope_level,
+                plan.session_id,
+                plan.scope_level,
+                plan.agent_name,
+                plan.agent_name,
+                plan.scope_level,
+                plan.project_root,
+            ),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def secure_cleanup(self, vacuum: bool = False) -> Dict[str, Any]:
+        """Flush deleted plaintext from WAL; optionally rewrite free database pages."""
+
+        self.conn.commit()
+        checkpoint = list(self.conn.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone() or ())
+        if vacuum:
+            self.conn.execute("VACUUM")
+        ensure_private_file(self.path)
+        for suffix in ("-wal", "-shm"):
+            ensure_private_file(Path(str(self.path) + suffix))
+        return {"checkpoint": checkpoint, "vacuum": bool(vacuum)}
+
+    def redact_audit_payloads(
+        self,
+        memory_ids: List[str],
+        plaintexts: Optional[List[str]] = None,
+    ) -> int:
+        """Replace forgotten audit payloads with hashes and rebuild the chain."""
+
+        targets = {str(item) for item in memory_ids if str(item)}
+        probes = [str(item) for item in (plaintexts or []) if str(item)]
+        rows = self.conn.execute("SELECT * FROM audit ORDER BY audit_id ASC").fetchall()
+        redacted = 0
+        with self.conn:
+            for row in rows:
+                detail = str(row["detail"] or "")
+                matches = str(row["memory_id"] or "") in targets or any(
+                    probe in detail for probe in probes
+                )
+                if not matches:
+                    continue
+                try:
+                    existing = json.loads(detail)
+                except (TypeError, ValueError):
+                    existing = {}
+                if isinstance(existing, dict) and existing.get("redacted_for_forgetting"):
+                    continue
+                replacement = json.dumps(
+                    {
+                        "redacted_for_forgetting": True,
+                        "original_detail_hash": stable_hash(detail),
+                    },
+                    ensure_ascii=False,
+                    sort_keys=True,
+                )
+                self.conn.execute(
+                    "UPDATE audit SET detail = ? WHERE audit_id = ?",
+                    (replacement, row["audit_id"]),
+                )
+                redacted += 1
+
+            previous = ""
+            for row in self.conn.execute(
+                "SELECT * FROM audit ORDER BY audit_id ASC"
+            ).fetchall():
+                event_hash = stable_hash(
+                    "|".join(
+                        [
+                            previous,
+                            row["event_type"],
+                            row["memory_id"] or "",
+                            row["detail"],
+                            row["created_at"],
+                        ]
+                    )
+                )
+                self.conn.execute(
+                    "UPDATE audit SET prev_hash = ?, event_hash = ? WHERE audit_id = ?",
+                    (previous, event_hash, row["audit_id"]),
+                )
+                previous = event_hash
+        return redacted
 
     def list_memories(self, include_deleted: bool = False, tier: Optional[str] = None, limit: Optional[int] = None, governance_state: Optional[str] = "active") -> List[Dict[str, Any]]:
         sql = "SELECT * FROM memory"
@@ -592,11 +747,9 @@ class SQLiteMetaStore:
             return [dict(row) for row in rows]
 
         def select_rows(status: str, row_limit: int, offset: int = 0) -> List[Dict[str, Any]]:
-            due_clause = "" if status == "pending" else "AND (embedding.next_attempt_at = '' OR embedding.next_attempt_at <= ?)"
-            params: List[Any] = [backend, model_revision]
-            if status == "failed":
-                params.append(utc_now())
-            params.extend([row_limit, offset])
+            if status not in {"pending", "failed"}:
+                raise ValueError("unsupported embedding status")
+            now = utc_now()
             rows = self.conn.execute(
                 """
                 SELECT embedding.memory_id, embedding.content_hash,
@@ -609,8 +762,8 @@ class SQLiteMetaStore:
                 FROM memory_embedding AS embedding
                 JOIN memory ON memory.memory_id = embedding.memory_id
                 WHERE embedding.backend = ? AND embedding.model_revision = ?
-                  AND embedding.status = '%s'
-                  %s
+                  AND embedding.status = ?
+                  AND (? = 'pending' OR embedding.next_attempt_at = '' OR embedding.next_attempt_at <= ?)
                   AND memory.deleted = 0
                   AND memory.governance_state = 'active'
                   AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
@@ -618,8 +771,8 @@ class SQLiteMetaStore:
                       memguard_content_hash(memory.summary, memory.content)
                 ORDER BY embedding.updated_at, embedding.memory_id, embedding.content_hash
                 LIMIT ? OFFSET ?
-                """ % (status, due_clause),
-                params,
+                """,
+                (backend, model_revision, status, status, now, row_limit, offset),
             ).fetchall()
             return [dict(row) for row in rows]
 
@@ -964,15 +1117,17 @@ class SQLiteMetaStore:
         if not memory_hashes:
             return {}
         memory_ids = list(memory_hashes)
-        placeholders = ",".join("?" for _ in memory_ids)
         rows = self.conn.execute(
-            f"""
+            """
+            WITH requested(memory_id) AS (
+                SELECT CAST(value AS TEXT) FROM json_each(?)
+            )
             SELECT embedding.memory_id, embedding.content_hash,
                    embedding.dimension, embedding.vector_blob
             FROM memory_embedding AS embedding
+            JOIN requested ON requested.memory_id = embedding.memory_id
             JOIN memory ON memory.memory_id = embedding.memory_id
-            WHERE embedding.memory_id IN ({placeholders})
-              AND embedding.backend = ? AND embedding.model_revision = ?
+            WHERE embedding.backend = ? AND embedding.model_revision = ?
               AND embedding.status = 'ready' AND embedding.vector_blob IS NOT NULL
               AND memory.deleted = 0
               AND memory.governance_state = 'active'
@@ -980,7 +1135,7 @@ class SQLiteMetaStore:
               AND embedding.content_hash =
                   memguard_content_hash(memory.summary, memory.content)
             """,
-            [*memory_ids, backend, model_revision],
+            (json.dumps(memory_ids), backend, model_revision),
         ).fetchall()
         vectors: Dict[str, List[float]] = {}
         for row in rows:
@@ -1051,6 +1206,24 @@ class SQLiteMetaStore:
             (scope, content),
         ).fetchone()
         return dict(row) if row else None
+
+    def record_memory_hits(self, memory_ids: List[str]) -> int:
+        """Count retrieval hits so tier eviction can prefer cold memories.
+
+        Deliberately does not touch updated_at: a read must not look like an
+        edit, otherwise retrieval would keep resetting the freshness signal.
+        """
+
+        unique = [str(item).strip() for item in memory_ids if str(item).strip()]
+        if not unique:
+            return 0
+        now = utc_now()
+        self.conn.executemany(
+            "UPDATE memory SET hit_count = hit_count + 1, last_hit_at = ? WHERE memory_id = ?",
+            [(now, memory_id) for memory_id in unique],
+        )
+        self.conn.commit()
+        return len(unique)
 
     def set_governance_state(
         self,

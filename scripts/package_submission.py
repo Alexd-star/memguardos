@@ -4,6 +4,7 @@ from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
+import argparse
 import fnmatch
 import json
 
@@ -14,12 +15,20 @@ DIST = ROOT / "dist"
 EXCLUDED_DIRS = {
     ".git",
     ".mypy_cache",
+    ".playwright-cli",
     ".pytest_cache",
     ".ruff_cache",
     ".venv",
+    ".venv-agent",
+    ".worktrees",
     "__pycache__",
+    "artifacts",
+    "build",
     "dist",
     "local_notes",
+    "node_modules",
+    "output",
+    "outputs",
 }
 
 EXCLUDED_PATTERNS = [
@@ -274,25 +283,51 @@ def write_package(package_path: Path, manifest_path: Path, files: list[Path], pa
         print(f"- {role}: {count}")
 
 
-def main() -> int:
-    DIST.mkdir(exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Build reproducible MemGuardOS delivery archives")
+    parser.add_argument(
+        "--kind",
+        choices=("all", "competition", "full"),
+        default="all",
+        help="Archive type to build. Defaults to both competition and full repository archives.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=str(DIST),
+        help="Output directory. Defaults to the repository dist directory.",
+    )
+    parser.add_argument(
+        "--timestamp",
+        default="",
+        help="Optional filename timestamp for deterministic automation.",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = args.timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
     all_files = iter_files()
     competition_files = [path for path in all_files if classify_file(path) in COMPETITION_ROLES]
 
-    write_package(
-        DIST / f"memguardos_competition_submission_{timestamp}.zip",
-        DIST / f"memguardos_competition_submission_{timestamp}_manifest.json",
-        competition_files,
-        "竞赛提交包",
-    )
-    print()
-    write_package(
-        DIST / f"memguardos_full_repository_{timestamp}.zip",
-        DIST / f"memguardos_full_repository_{timestamp}_manifest.json",
-        all_files,
-        "完整开源仓库包",
-    )
+    if args.kind in {"all", "competition"}:
+        write_package(
+            output_dir / f"memguardos_competition_submission_{timestamp}.zip",
+            output_dir / f"memguardos_competition_submission_{timestamp}_manifest.json",
+            competition_files,
+            "竞赛提交包",
+        )
+    if args.kind == "all":
+        print()
+    if args.kind in {"all", "full"}:
+        write_package(
+            output_dir / f"memguardos_full_repository_{timestamp}.zip",
+            output_dir / f"memguardos_full_repository_{timestamp}_manifest.json",
+            all_files,
+            "完整开源仓库包",
+        )
     return 0
 
 

@@ -371,6 +371,25 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                 }
             )
             return
+        if parsed.path == "/api/value-evidence":
+            service = self._service()
+            try:
+                result = service.memory_value_evidence()
+            finally:
+                service.close()
+            self._send_json({"ok": True, "result": result})
+            return
+        if parsed.path == "/api/value-comparison":
+            params = parse_qs(parsed.query)
+            self._send_api(
+                {
+                    "command": "memory_value_comparison",
+                    "task": params.get("task", [""])[0],
+                    "agent_name": params.get("agent_name", ["openhands"])[0],
+                    "session_id": params.get("session_id", [""])[0],
+                }
+            )
+            return
         if parsed.path == "/api/memory-detail":
             params = parse_qs(parsed.query)
             self._send_api(
@@ -380,6 +399,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                     "task": params.get("task", ["验证这条记忆的适用范围"])[0],
                     "agent_name": params.get("agent_name", ["openhands"])[0],
                     "session_id": params.get("session_id", ["detail-preview"])[0],
+                    "light": params.get("light", ["0"])[0] in {"1", "true", "yes"},
                 }
             )
             return
@@ -966,199 +986,311 @@ def _dashboard_html() -> str:
   <style>
     :root {
       color-scheme: light;
-      --ink:#172033; --muted:#536174; --line:#d7e0e8; --accent:#2563b9; --accent-2:#315f8e;
-      --warn:#a76400; --bad:#b42318; --ok:#16815d; --bg:#f4f7fa; --panel:#ffffff; --soft:#f8fafc;
+      --bg:#eff2f7; --panel:#ffffff; --soft:#f6f8fb;
+      --ink:#1b2537; --muted:#5c6b80; --faint:#8494a8;
+      --line:#dfe5ee; --line-strong:#cbd5e3;
+      --accent:#2563c4; --accent-deep:#1b4c9c; --accent-soft:#e9f1fb; --accent-line:#bed6f2;
+      --ok:#177a53; --ok-soft:#e4f5ed; --ok-line:#b7e2ce;
+      --warn:#9a6200; --warn-soft:#fdf3dd; --warn-line:#ecd9a8;
+      --bad:#b3261e; --bad-soft:#fdecea; --bad-line:#f2c5c1;
+      --radius:10px; --radius-sm:8px;
+      --shadow:0 1px 2px rgba(21,32,52,.05), 0 2px 6px rgba(21,32,52,.06);
+      --shadow-raise:0 2px 4px rgba(21,32,52,.07), 0 6px 16px rgba(21,32,52,.08);
     }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family:system-ui,"Noto Sans CJK SC","Source Han Sans SC","Microsoft YaHei",sans-serif; color:var(--ink); background:var(--bg); letter-spacing:0; }
-    header { display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:68px; padding:14px 24px; background:#fff; color:var(--ink); border-bottom:1px solid var(--line); }
-    header h1 { margin:0; font-size:19px; font-weight:700; color:#204f82; }
-    header .subtitle { margin-top:4px; font-size:12px; color:var(--muted); }
-    header .meta { font-size:12px; color:var(--muted); }
-    main { display:grid; grid-template-columns:224px minmax(0,1fr); min-height:calc(100vh - 68px); }
-    nav { position:sticky; top:0; align-self:start; min-height:calc(100vh - 68px); border-right:1px solid var(--line); background:#f7f9fb; padding:18px 12px; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; font-family:system-ui,"Noto Sans CJK SC","Source Han Sans SC","Microsoft YaHei",sans-serif; font-size:14px; line-height:1.65; color:var(--ink); background:var(--bg); -webkit-font-smoothing:antialiased; }
+
+    /* ====== 顶栏 ====== */
+    header { display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:60px; padding:10px 24px; background:var(--panel); border-bottom:1px solid var(--line); position:relative; z-index:20; }
+    .brand { display:flex; align-items:center; gap:12px; min-width:0; }
+    .brand-mark { flex:none; width:36px; height:36px; display:grid; place-items:center; border-radius:9px; background:linear-gradient(160deg,#2f6fd0,#1b4c9c); color:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,.25); }
+    .brand-mark .ui-icon { width:20px; height:20px; }
+    header h1 { margin:0; font-size:16px; font-weight:700; letter-spacing:.2px; }
+    header .subtitle { margin-top:1px; font-size:12px; color:var(--muted); }
+    header .meta { flex:none; display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
+    .meta-chip { display:inline-flex; align-items:center; gap:7px; min-height:28px; padding:3px 12px; border:1px solid var(--line); border-radius:999px; background:var(--soft); white-space:nowrap; }
+    .meta-chip::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--ok); }
+
+    /* ====== 布局骨架 ====== */
+    main { display:grid; grid-template-columns:232px minmax(0,1fr); min-height:calc(100vh - 60px); }
+    nav { position:sticky; top:0; align-self:start; min-height:calc(100vh - 60px); padding:16px 12px 24px; background:#f7f9fc; border-right:1px solid var(--line); }
     .shell-content { min-width:0; }
-    .nav-group { margin:4px 0 8px; padding:0 2px; color:var(--muted); font-size:12px; font-weight:700; }
-    .nav-group + button { margin-top:0; }
-    nav button { width:100%; min-height:42px; margin:0 0 4px; display:flex; align-items:center; gap:10px; text-align:left; border:1px solid transparent; background:transparent; color:var(--ink); padding:9px 12px; border-radius:6px; cursor:pointer; font-weight:600; }
-    nav button.active { border-color:#bed4e8; background:#eaf2fa; color:#174f84; }
-    nav button:hover:not(.active) { background:#eef2f6; }
-    section { display:none; padding:24px 28px 36px; }
-    section.active { display:block; }
-    h2 { font-size:22px; margin:0 0 8px; }
-    .lead { color:var(--muted); margin:0 0 16px; max-width:900px; line-height:1.65; }
-    .grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    .nav-group { margin:14px 6px 6px; font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--faint); }
+    .nav-group:first-child { margin-top:2px; }
+    nav button { position:relative; width:100%; min-height:40px; margin:0 0 2px; display:flex; align-items:center; gap:10px; padding:8px 12px; border:0; border-radius:8px; background:transparent; color:var(--muted); font:inherit; font-weight:600; text-align:left; cursor:pointer; transition:background .15s ease, color .15s ease; }
+    nav button .ui-icon { width:17px; height:17px; flex:none; opacity:.85; }
+    nav button:hover:not(.active) { background:#eef2f8; color:var(--ink); }
+    nav button.active { background:var(--panel); color:var(--accent-deep); box-shadow:var(--shadow); }
+    nav button.active::before { content:""; position:absolute; left:0; top:9px; bottom:9px; width:3px; border-radius:3px; background:var(--accent); }
+
+    /* ====== 页面区块 ====== */
+    section { display:none; padding:22px 28px 40px; max-width:1180px; }
+    section.active { display:block; animation:pageIn .18s ease; }
+    @keyframes pageIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+    h2 { margin:0; font-size:20px; font-weight:700; letter-spacing:.2px; }
+    .lead { margin:4px 0 0; max-width:720px; font-size:13px; line-height:1.7; color:var(--muted); }
+    .page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-bottom:18px; }
+    .page-header .actions { margin-top:2px; flex:none; }
+    .crumbs { display:flex; align-items:center; gap:10px; margin:-4px 0 14px; font-size:13px; color:var(--muted); }
+    .crumbs .ghost { padding-left:8px; }
+    .crumbs-path { display:inline-flex; align-items:center; gap:6px; }
+    .crumbs-path b { color:var(--ink); font-weight:600; }
+
+    /* ====== 卡片与分区 ====== */
+    .panel { min-width:0; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px; }
+    .panel.emphasis { border-color:var(--accent-line); background:#f9fbfe; }
+    .panel + .panel { margin-top:14px; }
+    .section-block { min-width:0; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+    .section-block-header { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:48px; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel); }
+    .section-block-header strong { font-size:14px; }
+    .section-block-body { padding:10px 16px 14px; }
+    .result-section { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+    .result-section > .section-block-header { background:var(--soft); }
+    .grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
     .grid.two { grid-template-columns:repeat(2,minmax(0,1fr)); }
     .grid.three { grid-template-columns:repeat(3,minmax(0,1fr)); }
     .grid.four { grid-template-columns:repeat(4,minmax(0,1fr)); }
-    .panel { min-width:0; overflow:hidden; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; }
-    .panel .list > .item { border-left:0; border-right:0; border-top:0; border-radius:0; padding-left:0; padding-right:0; }
-    .panel.emphasis { border-color:#b7d5ed; background:#f8fbfe; }
-    .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0; }
-    label { display:block; font-size:13px; color:var(--muted); margin:10px 0 5px; }
-    textarea, input, select { width:100%; border:1px solid var(--line); border-radius:6px; padding:9px 10px; font:inherit; line-height:1.45; background:white; color:var(--ink); }
-    textarea { min-height:120px; resize:vertical; }
-    .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-    button.primary { border:0; background:var(--accent); color:white; border-radius:6px; padding:9px 12px; cursor:pointer; min-height:36px; }
-    button.secondary { border:1px solid var(--line); background:white; color:var(--ink); border-radius:6px; padding:9px 12px; cursor:pointer; min-height:36px; }
-    button.danger { border:0; background:#b42318; color:white; border-radius:6px; padding:9px 12px; cursor:pointer; min-height:36px; }
-    button:disabled { opacity:.55; cursor:not-allowed; }
-    pre { white-space:pre-wrap; word-break:break-word; background:#0b1220; color:#d1e9ff; border-radius:8px; padding:12px; min-height:200px; overflow:auto; }
-    .metric { font-size:26px; font-weight:750; color:var(--accent); margin-top:4px; }
-    .metric.compact { font-size:18px; line-height:1.4; }
+    .content-split { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(280px,.6fr); gap:14px; }
+
+    /* ====== 文字与状态 ====== */
     .muted { color:var(--muted); font-size:13px; }
-    .warning { color:var(--warn); font-weight:650; }
-    .statusline { display:flex; align-items:center; gap:10px; margin:0 0 14px; color:var(--muted); font-size:13px; }
-    .badge { display:inline-flex; align-items:center; min-height:24px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--muted); }
-    .badge.ok { border-color:#99f6e4; background:#ccfbf1; color:#115e59; }
-    .badge.warn { border-color:#fde68a; background:#fef3c7; color:#92400e; }
-    .badge.bad { border-color:#fecaca; background:#fee2e2; color:#991b1b; }
-    .health { display:flex; justify-content:space-between; gap:10px; align-items:center; }
-    .health strong { font-size:15px; }
+    .warning { color:var(--warn); font-size:13px; font-weight:600; }
+    .metric { margin-top:2px; font-size:24px; font-weight:750; color:var(--accent-deep); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+    .metric.compact { font-size:15px; line-height:1.5; font-weight:650; }
+    .badge { display:inline-flex; align-items:center; gap:5px; min-height:22px; padding:1px 9px; border-radius:999px; border:1px solid var(--line); background:var(--soft); color:var(--muted); font-size:12px; font-weight:600; white-space:nowrap; }
+    .badge.ok { border-color:var(--ok-line); background:var(--ok-soft); color:var(--ok); }
+    .badge.warn { border-color:var(--warn-line); background:var(--warn-soft); color:var(--warn); }
+    .badge.bad { border-color:var(--bad-line); background:var(--bad-soft); color:var(--bad); }
+    .status-dot { flex:none; width:9px; height:9px; border-radius:50%; background:var(--faint); box-shadow:0 0 0 3px rgba(132,148,168,.14); }
+    .status-dot.ok { background:var(--ok); box-shadow:0 0 0 3px rgba(23,122,83,.16); }
+    .status-dot.warn { background:var(--warn); box-shadow:0 0 0 3px rgba(154,98,0,.16); }
+    .status-dot.bad { background:var(--bad); box-shadow:0 0 0 3px rgba(179,38,30,.16); }
+    .health { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; }
+    .health > * { min-width:0; }
+    .health strong { font-size:14px; }
+    .health-title { display:flex; align-items:center; gap:8px; font-weight:700; min-width:0; }
+
+    /* ====== 列表 ====== */
     .list { display:grid; gap:8px; }
-    .item { border:1px solid var(--line); border-radius:8px; padding:10px 12px; background:#fff; }
-    .list-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:12px 0; border-bottom:1px solid var(--line); }
+    .item { border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--panel); padding:11px 13px; }
+    .item-title { font-weight:700; margin-bottom:3px; }
+    .list-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:11px 0; border-bottom:1px solid var(--line); }
     .list-row:last-child { border-bottom:0; }
-    .item-title { font-weight:700; margin-bottom:4px; }
-    .quick-actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:14px 0; padding:12px; border:1px solid var(--line); border-radius:8px; background:#fff; }
-    .quick-actions .label { color:var(--muted); font-weight:700; margin-right:4px; }
-    .health-matrix { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:12px; }
-    .health-tile { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:58px; border:1px solid var(--line); border-radius:8px; background:#fff; padding:12px 14px; }
-    .health-title { display:flex; align-items:center; gap:8px; font-weight:700; }
-    .health-tile .health-title > span:not(.status-dot) { white-space:nowrap; }
-    .status-dot { width:10px; height:10px; border-radius:50%; background:#94a3b8; box-shadow:0 0 0 3px #f1f5f9; flex:none; }
-    .status-dot.ok { background:var(--ok); box-shadow:0 0 0 3px #dcfce7; }
-    .status-dot.warn { background:var(--warn); box-shadow:0 0 0 3px #fef3c7; }
-    .status-dot.bad { background:var(--bad); box-shadow:0 0 0 3px #fee2e2; }
-    .lifecycle { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; margin-top:12px; border:1px solid var(--line); border-radius:8px; background:#fff; overflow:hidden; }
-    .lifecycle-step { position:relative; min-height:96px; padding:14px 14px 14px 18px; border-right:1px solid var(--line); }
-    .lifecycle-step:last-child { border-right:0; }
-    .lifecycle-step::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:#d0d5dd; }
-    .lifecycle-step.ready::before { background:var(--accent); }
-    .lifecycle-step strong { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-    .progress { height:8px; background:#e5e7eb; border-radius:999px; overflow:hidden; margin-top:8px; }
-    .progress span { display:block; height:100%; background:var(--accent); width:0%; }
-    .trace { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
-    .trace .step { border:1px solid var(--line); background:#fff; border-radius:8px; padding:10px; }
-    .step b { display:block; color:#145b92; margin-bottom:4px; }
+    .linear-list { margin-top:6px; }
+    .linear-list .list-row { min-height:54px; }
+    .panel .list > .item { border-left:0; border-right:0; border-top:0; border-radius:0; padding-left:0; padding-right:0; }
+    .notification-list { display:block; }
+    .notification-list .list-row { min-height:64px; align-items:center; }
+    .notification-actions { flex:none; display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:8px; }
+    .status-list { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+    .status-row { display:grid; grid-template-columns:minmax(150px,.8fr) minmax(0,1.2fr) auto; gap:14px; align-items:center; min-height:52px; padding:10px 16px; border-bottom:1px solid var(--line); }
+    .status-row:last-child { border-bottom:0; }
+    .empty-state { display:flex; flex-direction:column; align-items:center; gap:6px; padding:28px 20px; text-align:center; color:var(--muted); font-size:13px; }
+    .empty-state strong { color:var(--ink); font-size:14px; }
+    .empty-state button { margin-top:6px; }
+
+    /* ====== 表单 ====== */
+    label { display:block; margin:12px 0 5px; font-size:13px; font-weight:600; color:var(--ink); }
+    label:first-child { margin-top:0; }
+    .field-hint { margin:4px 0 0; font-size:12px; color:var(--faint); }
+    textarea, input, select { width:100%; padding:8px 11px; border:1px solid var(--line-strong); border-radius:var(--radius-sm); background:var(--panel); color:var(--ink); font:inherit; line-height:1.5; transition:border-color .15s ease, box-shadow .15s ease; }
+    textarea { min-height:104px; resize:vertical; }
+    textarea:hover, input:hover, select:hover { border-color:#a9bbd2; }
+    textarea:focus-visible, input:focus-visible, select:focus-visible { outline:0; border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,196,.15); }
+
+    /* ====== 按钮 ====== */
+    button { font:inherit; }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+    .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:14px 0; }
+    button.primary, button.secondary, button.danger, button.ghost { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:7px 14px; border-radius:var(--radius-sm); font-size:14px; font-weight:600; cursor:pointer; transition:background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .08s ease; }
+    button.primary { border:1px solid var(--accent-deep); background:var(--accent); color:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,.18); }
+    button.primary:hover:not(:disabled) { background:#2b6ed4; }
+    button.secondary { border:1px solid var(--line-strong); background:var(--panel); color:var(--ink); }
+    button.secondary:hover:not(:disabled) { border-color:#a9bbd2; background:var(--soft); }
+    button.danger { border:1px solid #932019; background:var(--bad); color:#fff; }
+    button.danger:hover:not(:disabled) { background:#c02c24; }
+    button.ghost { border:1px solid transparent; background:transparent; color:var(--accent); padding-inline:10px; }
+    button.ghost:hover:not(:disabled) { background:var(--accent-soft); }
+    button.primary:active, button.secondary:active, button.danger:active, button.ghost:active { transform:translateY(1px); }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+    button:focus-visible { outline:2px solid #7fb0ea; outline-offset:2px; }
+    .button-label { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+    .mini-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .mini-actions button, .result-actions button { min-height:32px; padding:5px 11px; font-size:13px; }
+
+    /* ====== 总览 ====== */
+    .overview-status-banner { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:14px; align-items:center; padding:16px 18px; border:1px solid var(--ok-line); border-radius:var(--radius); background:linear-gradient(180deg,#f7fcfa,#f2faf6); box-shadow:var(--shadow); }
+    .overview-status-banner.warn { border-color:var(--warn-line); background:linear-gradient(180deg,#fffaf0,#fdf6e6); }
+    .overview-status-banner.bad { border-color:var(--bad-line); background:linear-gradient(180deg,#fff7f6,#fdefed); }
+    .status-mark { width:36px; height:36px; display:grid; place-items:center; border-radius:50%; background:var(--ok-soft); color:var(--ok); font-weight:800; font-size:16px; }
+    .overview-status-banner.warn .status-mark { background:var(--warn-soft); color:var(--warn); }
+    .overview-status-banner.bad .status-mark { background:var(--bad-soft); color:var(--bad); }
+    .status-copy { min-width:0; }
+    .status-copy strong { display:block; font-size:15px; margin-bottom:2px; }
+    .overview-primary-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:14px 0; }
+    .task-action { display:grid; grid-template-columns:38px minmax(0,1fr) auto; align-items:center; gap:12px; min-height:70px; padding:13px 15px; border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); box-shadow:var(--shadow); color:var(--ink); font:inherit; text-align:left; cursor:pointer; transition:border-color .15s ease, box-shadow .15s ease, transform .12s ease; }
+    .task-action:hover { border-color:var(--accent-line); box-shadow:var(--shadow-raise); transform:translateY(-1px); }
+    .task-action:focus-visible { outline:2px solid #7fb0ea; outline-offset:2px; }
+    .task-action strong { display:block; margin-bottom:2px; font-size:14px; }
+    .task-action span { color:var(--muted); font-size:12px; line-height:1.5; }
+    .task-action b { color:var(--accent); font-size:13px; font-weight:700; }
+    .task-icon { width:38px; height:38px; display:grid; place-items:center; border-radius:9px; background:var(--accent-soft); color:var(--accent-deep); }
+    .task-icon .ui-icon { width:20px; height:20px; }
+    .ui-icon { width:18px; height:18px; flex:none; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+    .metric-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); margin-bottom:14px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+    .metric-strip > div { padding:13px 18px; border-right:1px solid var(--line); }
+    .metric-strip > div:last-child { border-right:0; }
+
+    /* ====== 记忆中心 ====== */
+    .memory-workspace { display:grid; gap:14px; }
+    .search-toolbar { display:grid; grid-template-columns:minmax(240px,1fr) 132px auto auto; gap:10px; align-items:end; padding:14px 16px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+    .search-toolbar label { margin-top:0; }
+    .search-summary { min-height:20px; font-size:13px; color:var(--muted); }
+    .memory-result-list { display:grid; gap:0; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+    .memory-result-row { display:grid; grid-template-columns:112px minmax(0,1fr) auto; gap:14px; align-items:start; padding:14px 16px; border-bottom:1px solid var(--line); transition:background .15s ease; }
+    .memory-result-row:hover { background:var(--soft); }
+    .memory-result-row:last-child { border-bottom:0; }
+    .memory-id { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:12px; color:#3e5a7c; overflow-wrap:anywhere; }
+    .memory-summary { font-weight:700; line-height:1.5; margin-bottom:5px; }
+    .result-meta { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; color:var(--muted); }
+    .result-reason { margin-top:6px; font-size:13px; color:#41546c; }
+    .result-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:7px; }
+    .more-results { margin-top:0; }
+
+    /* ====== Agent 工作台 ====== */
     .timeline { position:relative; display:grid; gap:0; }
     .timeline::before { content:""; position:absolute; left:11px; top:8px; bottom:8px; width:1px; background:var(--line); }
-    .timeline-row { position:relative; padding:0 0 14px 34px; min-width:0; }
-    .timeline-dot { position:absolute; left:4px; top:4px; width:15px; height:15px; border:3px solid #fff; border-radius:50%; background:var(--accent-2); box-shadow:0 0 0 1px var(--line); }
+    .timeline-row { position:relative; padding:0 0 14px 32px; min-width:0; }
+    .timeline-dot { position:absolute; left:5px; top:4px; width:13px; height:13px; border:3px solid var(--panel); border-radius:50%; background:var(--accent); box-shadow:0 0 0 1px var(--line); }
     .timeline-row.tool .timeline-dot { background:var(--warn); }
-    .timeline-row.forgotten .timeline-dot { background:var(--muted); }
-    .timeline-meta { color:var(--muted); font-size:12px; margin-bottom:4px; }
-    .timeline-body { border-bottom:1px solid #eaecf0; padding-bottom:10px; line-height:1.55; word-break:break-word; }
+    .timeline-row.forgotten .timeline-dot { background:var(--faint); }
+    .timeline-meta { margin-bottom:3px; font-size:12px; color:var(--muted); }
+    .timeline-body { padding-bottom:10px; border-bottom:1px solid #edf1f6; line-height:1.6; word-break:break-word; font-size:13px; }
     .stage-columns { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
-    .stage-column { border-top:3px solid var(--accent); background:#fff; padding:12px; min-width:0; }
-    .stage-column h3 { margin:0 0 8px; font-size:15px; }
-    .error { display:none; margin:0 0 12px; padding:10px 12px; border:1px solid #fecaca; background:#fff1f2; color:#991b1b; border-radius:8px; }
-    details { margin-top:12px; border:1px solid var(--line); border-radius:8px; background:#fff; }
-    details summary { cursor:pointer; padding:10px 12px; font-weight:700; color:var(--ink); }
-    details[open] summary { border-bottom:1px solid var(--line); }
-    .advanced-output { margin:0; border-radius:0 0 8px 8px; min-height:140px; }
-    .overview-more > summary { padding:12px 14px; }
-    .overview-more-body { padding:0 12px 12px; }
-    .operation-status { display:none; position:relative; margin:12px 24px 0; border:1px solid #b7d5ed; background:#eef7ff; color:#185a91; border-radius:6px; padding:10px 12px; font-size:13px; }
-    .operation-status.ok { border-color:#bbf7d0; background:#f0fdf4; color:#166534; }
-    .operation-status.warn { border-color:#fde68a; background:#fffbeb; color:#92400e; }
-    .operation-status.bad { border-color:#fecaca; background:#fef2f2; color:#991b1b; }
-    .button-label { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
-    .mini-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-    [hidden] { display:none !important; }
-    button:hover { filter:brightness(.98); }
-    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline:2px solid #78b5e3; outline-offset:2px; }
-    .health { min-width:0; }
-    .health > * { min-width:0; }
-    .metric { overflow-wrap:anywhere; }
-    .page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-bottom:18px; }
-    .page-header .lead { margin-bottom:0; max-width:760px; }
-    .overview-status-banner { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:14px; align-items:center; padding:17px 18px; border:1px solid #bcd6cb; border-radius:7px; background:#f8fcfa; }
-    .overview-status-banner.warn { border-color:#ead3a8; background:#fffaf1; }
-    .overview-status-banner.bad { border-color:#ebc2bd; background:#fff8f7; }
-    .status-mark { width:34px; height:34px; display:grid; place-items:center; border-radius:50%; background:#dff4eb; color:var(--ok); font-weight:800; }
-    .overview-status-banner.warn .status-mark { background:#fff0cf; color:var(--warn); }
-    .overview-status-banner.bad .status-mark { background:#fde7e4; color:var(--bad); }
-    .status-copy strong { display:block; font-size:16px; margin-bottom:3px; }
-    .overview-primary-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:14px 0 18px; }
-    .task-action { display:grid; grid-template-columns:36px minmax(0,1fr) auto; align-items:center; gap:12px; min-height:68px; padding:12px 14px; border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--ink); cursor:pointer; text-align:left; }
-    .task-action:hover { border-color:#a9c8e2; background:#f8fbfe; }
-    .task-action strong { display:block; margin-bottom:3px; }
-    .task-action span { color:var(--muted); font-size:12px; line-height:1.4; }
-    .ui-icon { width:19px; height:19px; flex:none; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; }
-    .task-icon { width:34px; height:34px; display:grid; place-items:center; border-radius:7px; background:#edf4fb; color:#245f98; }
-    .task-icon .ui-icon { width:20px; height:20px; }
-    .linear-list { border-top:1px solid var(--line); margin-top:10px; }
-    .linear-list .list-row { min-height:58px; padding:12px 0; }
-    .linear-list .list-row:last-child { border-bottom:0; }
-    .notification-list { display:block; }
-    .notification-list .list-row { min-height:72px; }
-    .notification-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:8px; }
-    .result-section { border:1px solid var(--line); border-radius:7px; background:#fff; overflow:hidden; }
-    .result-section > .section-block-header { background:var(--surface-subtle, #f8fafc); }
-    .workflow-steps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0; margin:16px 0; padding:0; list-style:none; border-block:1px solid var(--line); background:#fff; }
+    .stage-column { min-width:0; padding:12px; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:0 0 var(--radius-sm) var(--radius-sm); background:var(--panel); }
+    .stage-column h3 { margin:0 0 6px; font-size:14px; }
+    .trace { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
+    .trace .step { border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--panel); padding:10px 12px; font-size:13px; }
+    .step b { display:block; margin-bottom:3px; color:var(--accent-deep); }
+
+    /* ====== 精准遗忘 ====== */
+    .workflow-steps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0; margin:16px 0; padding:0; list-style:none; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
     .workflow-steps li { display:grid; grid-template-columns:28px minmax(0,1fr); gap:10px; padding:13px 16px; border-right:1px solid var(--line); }
     .workflow-steps li:last-child { border-right:0; }
-    .workflow-step-number { width:24px; height:24px; display:grid; place-items:center; border-radius:50%; background:#eaf2fa; color:#174f84; font-size:12px; font-weight:750; }
-    .workflow-steps strong { display:block; margin-bottom:3px; }
-    .metric-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border:1px solid var(--line); border-radius:7px; background:#fff; overflow:hidden; margin-bottom:18px; }
-    .metric-strip > div { padding:14px 16px; border-right:1px solid var(--line); }
-    .metric-strip > div:last-child { border-right:0; }
-    .metric-strip .metric { font-size:23px; }
-    .content-split { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr); gap:14px; }
-    .section-block { min-width:0; border:1px solid var(--line); border-radius:7px; background:#fff; }
-    .section-block-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 15px; border-bottom:1px solid var(--line); }
-    .section-block-body { padding:8px 15px 14px; }
-    .memory-workspace { display:grid; gap:14px; }
-    .search-toolbar { display:grid; grid-template-columns:minmax(240px,1fr) 150px auto auto; gap:10px; align-items:end; padding:14px; border:1px solid var(--line); border-radius:7px; background:#fff; }
-    .search-toolbar label { margin-top:0; }
-    .search-summary { min-height:22px; color:var(--muted); font-size:13px; }
-    .memory-result-list { display:grid; gap:0; border:1px solid var(--line); border-radius:7px; background:#fff; overflow:hidden; }
-    .memory-result-row { display:grid; grid-template-columns:118px minmax(0,1fr) auto; gap:14px; align-items:start; padding:14px 15px; border-bottom:1px solid var(--line); }
-    .memory-result-row:last-child { border-bottom:0; }
-    .memory-id { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; color:#36506c; font-size:12px; overflow-wrap:anywhere; }
-    .memory-summary { font-weight:700; line-height:1.45; margin-bottom:6px; }
-    .result-meta { display:flex; flex-wrap:wrap; gap:6px 12px; color:var(--muted); font-size:12px; }
-    .result-reason { margin-top:7px; color:#34465a; font-size:13px; }
-    .result-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:7px; }
-    .result-actions button { min-height:34px; }
-    .more-results { margin-top:0; }
-    .empty-state { display:flex; flex-direction:column; align-items:center; gap:7px; padding:30px 20px; text-align:center; color:var(--muted); }
-    .empty-state strong { color:var(--ink); font-size:14px; }
-    .empty-state button { margin-top:5px; }
-    .status-list { border:1px solid var(--line); border-radius:7px; background:#fff; overflow:hidden; }
-    .status-row { display:grid; grid-template-columns:minmax(160px,.8fr) minmax(0,1.2fr) auto; gap:14px; align-items:center; min-height:54px; padding:10px 14px; border-bottom:1px solid var(--line); }
-    .status-row:last-child { border-bottom:0; }
-    .skeleton { min-height:78px; background:linear-gradient(90deg,#f2f5f8 25%,#fafcfd 45%,#f2f5f8 65%); background-size:240% 100%; animation:skeleton 1.2s ease-in-out infinite; }
+    .workflow-step-number { width:24px; height:24px; display:grid; place-items:center; border-radius:50%; background:var(--accent-soft); color:var(--accent-deep); font-size:12px; font-weight:750; }
+    .workflow-steps strong { display:block; margin-bottom:2px; font-size:13px; }
+    .workflow-steps .muted { font-size:12px; }
+
+    /* ====== 进度与骨架 ====== */
+    .progress { height:8px; margin-top:8px; border-radius:999px; background:#e6ebf2; overflow:hidden; }
+    .progress span { display:block; height:100%; width:0%; border-radius:999px; background:var(--accent); transition:width .3s ease; }
+    .skeleton { min-height:72px; border-radius:var(--radius-sm); background:linear-gradient(90deg,#eef2f7 25%,#f8fafc 45%,#eef2f7 65%); background-size:240% 100%; animation:skeleton 1.2s ease-in-out infinite; }
     .spinner { width:14px; height:14px; display:inline-block; margin-right:7px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:spin .7s linear infinite; vertical-align:-2px; }
     @keyframes spin { to { transform:rotate(360deg); } }
     @keyframes skeleton { to { background-position:-120% 0; } }
-    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; } }
+
+    /* ====== 反馈条与错误 ====== */
+    .error { display:none; margin:14px 24px 0; padding:10px 14px; border:1px solid var(--bad-line); border-radius:var(--radius-sm); background:var(--bad-soft); color:var(--bad); font-size:13px; }
+    .operation-status { display:none; position:relative; margin:14px 24px 0; padding:10px 14px; border:1px solid var(--accent-line); border-radius:var(--radius-sm); background:var(--accent-soft); color:var(--accent-deep); font-size:13px; animation:pageIn .18s ease; }
+    .operation-status.ok { border-color:var(--ok-line); background:var(--ok-soft); color:var(--ok); }
+    .operation-status.warn { border-color:var(--warn-line); background:var(--warn-soft); color:var(--warn); }
+    .operation-status.bad { border-color:var(--bad-line); background:var(--bad-soft); color:var(--bad); }
+
+    /* ====== 折叠详情 ====== */
+    details { margin-top:12px; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--panel); }
+    details summary { padding:10px 14px; font-size:13px; font-weight:600; color:var(--muted); cursor:pointer; user-select:none; transition:color .15s ease; }
+    details summary:hover { color:var(--ink); }
+    details[open] summary { border-bottom:1px solid var(--line); color:var(--ink); }
+    pre { white-space:pre-wrap; word-break:break-word; margin:0; padding:12px 14px; min-height:120px; background:#101828; color:#cfe3f7; font-size:12px; border-radius:0 0 var(--radius-sm) var(--radius-sm); overflow:auto; }
+    .advanced-output { margin:0; }
+    .overview-more-body { padding:10px 14px 14px; }
+    .overview-more > summary { padding:11px 14px; }
+    .auth-settings { max-width:520px; }
+
+
+    /* ====== 价值主视觉 ====== */
+    .value-hero { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr); gap:20px; align-items:center; padding:22px 24px; border:1px solid var(--accent-line); border-radius:var(--radius); background:linear-gradient(135deg,#f4f9ff 0%,#eef5fd 100%); box-shadow:var(--shadow); }
+    .value-hero-eyebrow { font-size:12px; font-weight:700; letter-spacing:.08em; color:var(--accent); margin-bottom:6px; }
+    .value-hero-title { display:block; font-size:21px; font-weight:750; line-height:1.4; color:var(--ink); }
+    .value-hero-detail { margin:8px 0 0; font-size:14px; line-height:1.65; color:var(--muted); }
+    .value-hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+    button.primary.large { min-height:44px; padding:10px 20px; font-size:15px; font-weight:700; box-shadow:0 2px 8px rgba(37,99,196,.28); }
+    button.primary.large:hover:not(:disabled) { box-shadow:0 4px 12px rgba(37,99,196,.34); }
+    .value-hero-stats { display:grid; gap:10px; }
+    .value-stat { display:flex; align-items:baseline; gap:10px; padding:10px 14px; border:1px solid var(--line); border-radius:var(--radius-sm); background:rgba(255,255,255,.75); }
+    .value-stat-num { font-size:24px; font-weight:750; color:var(--accent-deep); font-variant-numeric:tabular-nums; min-width:44px; }
+    .value-stat-label { font-size:13px; color:var(--muted); }
+
+    /* ====== 学到→生效 配对 ====== */
+    .pair-row { display:grid; grid-template-columns:minmax(0,1fr) 34px minmax(0,1fr) auto; gap:12px; align-items:center; padding:13px 0; border-bottom:1px solid var(--line); }
+    .pair-row:last-child { border-bottom:0; }
+    .pair-cell strong { display:block; font-size:14px; margin-bottom:3px; }
+    .pair-cell span { font-size:12px; color:var(--muted); }
+    .pair-arrow { display:grid; place-items:center; width:34px; height:34px; border-radius:50%; background:var(--accent-soft); color:var(--accent-deep); font-weight:700; }
+    .pair-actions { display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; }
+
+    /* ====== 记忆效果对比 ====== */
+    .compare-verdict { display:grid; grid-template-columns:auto minmax(0,1fr); gap:14px; align-items:center; padding:16px 18px; border:1px solid var(--ok-line); border-radius:var(--radius); background:var(--ok-soft); }
+    .compare-verdict.info { border-color:var(--accent-line); background:var(--accent-soft); }
+    .compare-verdict.warn { border-color:var(--warn-line); background:var(--warn-soft); }
+    .compare-verdict-mark { width:38px; height:38px; display:grid; place-items:center; border-radius:50%; background:rgba(255,255,255,.7); font-size:19px; }
+    .compare-verdict strong { display:block; font-size:15px; margin-bottom:3px; }
+    .compare-grid { display:grid; grid-template-columns:minmax(140px,.8fr) minmax(0,1fr) minmax(0,1fr); background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+    .compare-grid > div { padding:12px 15px; border-bottom:1px solid var(--line); min-width:0; }
+    .compare-grid .compare-head { background:var(--soft); font-weight:700; font-size:13px; }
+    .compare-grid .compare-head.without { color:var(--muted); }
+    .compare-grid .compare-head.with { color:var(--accent-deep); }
+    .compare-grid > div:nth-last-child(-n+3) { border-bottom:0; }
+    .compare-cell-changed { background:#f4fbf7; }
+    .compare-value { font-weight:650; }
+    .compare-value.muted-value { color:var(--muted); font-weight:500; }
+    .compare-cmd { display:block; margin-top:5px; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:12px; color:#3e5a7c; overflow-wrap:anywhere; }
+    .compare-badge { display:inline-flex; align-items:center; gap:4px; margin-left:6px; padding:1px 7px; border-radius:999px; background:var(--ok-soft); border:1px solid var(--ok-line); color:var(--ok); font-size:11px; font-weight:700; }
+    .measured-tag { display:inline-block; padding:1px 7px; border-radius:999px; font-size:11px; font-weight:700; }
+    .measured-tag.measured { background:var(--ok-soft); border:1px solid var(--ok-line); color:var(--ok); }
+    .measured-tag.modelled { background:var(--warn-soft); border:1px solid var(--warn-line); color:var(--warn); }
+    @media (max-width: 900px) {
+      .value-hero { grid-template-columns:1fr; }
+      .value-hero-stats { grid-template-columns:repeat(3,1fr); }
+      .pair-row { grid-template-columns:1fr; }
+      .pair-arrow { display:none; }
+      .compare-grid { grid-template-columns:1fr; }
+      .compare-grid .compare-head { border-top:1px solid var(--line); }
+    }
+
+    /* ====== 其他 ====== */
+    .acceptance-item .actions { margin-top:10px; }
+    .hint-card { display:grid; gap:10px; }
+    .hint-card .hint-row { display:flex; gap:10px; align-items:flex-start; font-size:13px; color:var(--muted); }
+    .hint-row .hint-index { flex:none; width:22px; height:22px; display:grid; place-items:center; margin-top:1px; border-radius:50%; background:var(--accent-soft); color:var(--accent-deep); font-size:12px; font-weight:700; }
+    [hidden] { display:none !important; }
+    ::selection { background:#cfe2f8; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
+    }
     @media (max-width: 1180px) {
-      main { grid-template-columns:210px minmax(0,1fr); }
-      section { padding:18px; }
-      .grid.four, .health-matrix { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      main { grid-template-columns:208px minmax(0,1fr); }
+      section { padding:18px 20px 32px; }
+      .grid.four { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .grid.three, .trace, .stage-columns { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .content-split { grid-template-columns:1fr; }
-      .memory-result-row { grid-template-columns:106px minmax(0,1fr); }
+      .memory-result-row { grid-template-columns:104px minmax(0,1fr); }
       .result-actions { grid-column:2; justify-content:flex-start; }
     }
     @media (max-width: 760px) {
-      header { align-items:flex-start; padding:14px 16px; }
+      header { align-items:flex-start; padding:12px 16px; }
       header .meta { display:none; }
-      main { grid-template-columns: 1fr; }
-      nav { position:sticky; top:0; z-index:10; display:flex; align-items:center; min-height:auto; overflow-x:auto; border-right:0; border-bottom:1px solid var(--line); gap:4px; padding:8px 12px; }
+      main { grid-template-columns:1fr; }
+      nav { position:sticky; top:0; z-index:10; display:flex; align-items:center; min-height:auto; overflow-x:auto; gap:4px; padding:8px 12px; border-right:0; border-bottom:1px solid var(--line); }
       .nav-group { display:none; }
       nav button { width:auto; min-width:max-content; min-height:42px; margin:0; flex:0 0 auto; justify-content:center; white-space:nowrap; text-align:center; }
-      section { padding:16px 14px 24px; scroll-margin-top:72px; }
-      .grid, .grid.two, .grid.three, .grid.four, .trace, .stage-columns, .health-matrix, .lifecycle { grid-template-columns: 1fr; }
-      .lifecycle-step { border-right:0; border-bottom:1px solid var(--line); }
-      .lifecycle-step:last-child { border-bottom:0; }
-      .funnel-row { grid-template-columns:72px 1fr 42px; }
-      .quick-actions { align-items:stretch; }
-      .quick-actions button { flex:1 1 145px; min-height:44px; }
-      button.primary, button.secondary, button.danger { min-height:44px; }
+      nav button.active::before { display:none; }
+      section { padding:16px 14px 28px; scroll-margin-top:72px; }
+      .grid, .grid.two, .grid.three, .grid.four, .trace, .stage-columns { grid-template-columns:1fr; }
       .page-header { display:block; }
+      .page-header .actions { margin-top:10px; }
       .overview-status-banner { grid-template-columns:auto minmax(0,1fr); }
       .overview-status-banner > button { grid-column:1 / -1; width:100%; }
       .overview-primary-actions, .metric-strip { grid-template-columns:1fr; }
@@ -1172,19 +1304,25 @@ def _dashboard_html() -> str:
       .workflow-steps li:last-child { border-bottom:0; }
       .status-row { grid-template-columns:minmax(0,1fr) auto; gap:5px 10px; align-items:center; }
       .status-row > .muted { grid-column:1 / -1; grid-row:2; }
+      button.primary, button.secondary, button.danger { min-height:44px; }
+      .error, .operation-status { margin:12px 14px 0; }
     }
     @media (max-width: 480px) { nav button { padding-inline:10px; } }
   </style>
 </head>
 <body>
   <header>
-    <div><h1>MemGuardOS 记忆安全中心</h1><div class="subtitle">帮助本机 OS Agent 记住有用信息、保护敏感内容并按需遗忘</div></div>
+    <div class="brand">
+      <span class="brand-mark" data-lucide="shield" aria-hidden="true"></span>
+      <div><h1>MemGuardOS 记忆安全中心</h1><div class="subtitle">帮助本机 OS Agent 记住有用信息、保护敏感内容并按需遗忘</div></div>
+    </div>
     <div class="meta">
-      <span id="namespaceMeta">记忆空间：加载中</span>
+      <span id="namespaceMeta" class="meta-chip">记忆空间：加载中</span>
+      <span class="meta-chip">仅保存在本机</span>
     </div>
   </header>
   <main>
-    <nav>
+    <nav aria-label="功能导航">
       <div class="nav-group">普通用户</div>
       <button class="active" data-tab="overview">总览</button>
       <button data-tab="agent">Agent 工作台</button>
@@ -1198,40 +1336,80 @@ def _dashboard_html() -> str:
       <button data-tab="acceptance" data-min-role="admin">系统检查</button>
     </nav>
     <div class="shell-content">
-      <div id="errorBox" class="error"></div>
+      <div id="errorBox" class="error" role="alert"></div>
       <div id="operationStatus" class="operation-status" role="status" aria-live="polite"></div>
+
       <section id="overview" class="active">
         <div class="page-header">
-          <div><h2>总览</h2><p class="lead">查看 Agent 记忆是否可用，以及最近记住了什么、是否有内容需要处理。</p></div>
-          <button class="secondary" onclick="refresh(event)">重新检查</button>
+          <div><h2>总览</h2><p class="lead">这里回答一个问题：记忆到底帮到了什么。下面展示当前记忆空间的真实状态和可复现效果参考。</p></div>
+          <div class="actions"><button class="secondary" onclick="refresh(event)">重新检查</button></div>
         </div>
-        <div id="overviewStatusBanner" class="overview-status-banner">
+
+        <div class="value-hero">
+          <div class="value-hero-main">
+            <div class="value-hero-eyebrow">记忆价值</div>
+            <strong id="valueHeadline" class="value-hero-title">正在读取记忆生效情况…</strong>
+            <p id="valueDetail" class="value-hero-detail">完成后会显示哪些偏好已自动生效、影响了哪些任务动作。</p>
+            <div class="value-hero-actions">
+              <button class="primary large" onclick="openTab('compare')"><span class="button-label">▶ 运行记忆效果对比</span></button>
+              <button class="ghost" onclick="openTab('preferences')">查看生效偏好</button>
+            </div>
+          </div>
+          <div class="value-hero-stats">
+            <div class="value-stat"><span class="value-stat-num" id="statPreferences">-</span><span class="value-stat-label">条偏好已生效</span></div>
+            <div class="value-stat"><span class="value-stat-num" id="statMemories">-</span><span class="value-stat-label">条记忆在管</span></div>
+            <div class="value-stat"><span class="value-stat-num" id="statProtected">-</span><span class="value-stat-label">次敏感保护</span></div>
+          </div>
+        </div>
+
+        <div class="section-block" style="margin-top:14px">
+          <div class="section-block-header"><strong>学到 → 下次生效</strong><span class="muted">每一条都可点开看依据</span></div>
+          <div id="learningPairs" class="section-block-body"><div class="empty-state">正在读取记忆与偏好的配对关系…</div></div>
+        </div>
+
+        <div class="content-split" style="margin-top:14px">
+          <div class="section-block">
+            <div class="section-block-header"><strong>可复现效果参考</strong><span class="muted" id="valueEvidenceSource">固定场景回归</span></div>
+            <div id="valueEvidencePanel" class="section-block-body"><div class="empty-state">正在读取实验证据…</div></div>
+          </div>
+          <div class="section-block">
+            <div class="section-block-header"><strong>最近动态</strong><button class="ghost" onclick="openTab('notifications')">查看全部</button></div>
+            <div id="homeNotifications" class="section-block-body"><div class="empty-state">正在读取保护与遗忘结果…</div></div>
+          </div>
+        </div>
+
+        <div id="overviewStatusBanner" class="overview-status-banner" style="margin-top:14px">
           <div class="status-mark" aria-hidden="true">✓</div>
           <div class="status-copy"><strong id="overviewStateTitle">正在连接记忆服务</strong><span id="overviewStateText" class="muted">完成后会显示是否影响 Agent 使用。</span></div>
           <button class="secondary" data-min-role="admin" onclick="openTab('diagnostics')">系统维护</button>
         </div>
-        <div id="overview-primary-actions" class="overview-primary-actions">
-          <button class="task-action" onclick="openTab('memory')"><i class="task-icon" data-lucide="database" aria-hidden="true"></i><span><strong>查看记忆</strong>浏览编号、来源、范围和状态</span><b>查看</b></button>
-          <button class="task-action" onclick="openMemorySearch()"><i class="task-icon" data-lucide="search" aria-hidden="true"></i><span><strong>搜索记忆</strong>按相关度查找并查看命中原因</span><b>搜索</b></button>
-          <button class="task-action" onclick="openTab('forget')"><i class="task-icon" data-lucide="trash" aria-hidden="true"></i><span><strong>精准遗忘</strong>先预览影响，再确认执行</span><b>预览</b></button>
+
+        <div class="overview-primary-actions">
+          <button class="task-action" onclick="openTab('memory')"><i class="task-icon" data-lucide="database" aria-hidden="true"></i><span><strong>记忆中心</strong>浏览、搜索并核对每条记忆的来源</span><b>进入</b></button>
+          <button class="task-action" onclick="openTab('agent')"><i class="task-icon" data-lucide="bot" aria-hidden="true"></i><span><strong>Agent 工作台</strong>查看交互、偏好依据与生效证明</span><b>进入</b></button>
+          <button class="task-action" onclick="openTab('forget')"><i class="task-icon" data-lucide="trash" aria-hidden="true"></i><span><strong>精准遗忘</strong>先预览影响，再确认执行</span><b>进入</b></button>
         </div>
-        <div class="metric-strip" aria-label="记忆状态摘要">
-          <div><div class="muted">当前记忆</div><div class="metric" id="liveCount">-</div></div>
-          <div><div class="muted">记忆空间</div><div class="metric compact" id="namespaceCount">-</div></div>
-          <div><div class="muted">保存位置</div><div id="dataLocation" class="metric compact">仅保存在本机</div></div>
-        </div>
-        <div class="content-split">
-          <div class="section-block">
-            <div class="section-block-header"><strong>最近记忆</strong><button class="secondary" onclick="loadFeedbackHome(event)">刷新</button></div>
-            <div id="recentMemoriesList" class="section-block-body"><div class="empty-state">正在读取最近记忆…</div></div>
-          </div>
-          <div class="section-block">
-            <div class="section-block-header"><strong>最近动态</strong><button class="secondary" onclick="openTab('notifications')">查看全部</button></div>
-            <div id="homeNotifications" class="section-block-body"><div class="empty-state">正在读取保护与遗忘结果…</div></div>
-          </div>
-        </div>
-        <details><summary>查看系统技术状态</summary><div class="overview-more-body"><div id="statusCards" class="list"></div><pre id="overviewOut" class="advanced-output"></pre></div></details>
+
+        <details class="overview-more"><summary>查看系统技术状态</summary><div class="overview-more-body"><div id="statusCards" class="list"></div><pre id="overviewOut" class="advanced-output"></pre></div></details>
       </section>
+
+      <section id="compare">
+        <div class="crumbs"><button class="ghost" onclick="openTab('overview')">← 返回总览</button><span class="crumbs-path">总览 / <b>记忆效果对比</b></span></div>
+        <div class="page-header">
+          <div><h2>记忆效果对比：带记忆 vs 不带记忆</h2><p class="lead">同一个任务分别在"没有任何记忆"和"使用当前记忆空间"两种条件下构建上下文，把差异直接摆出来。差异完全由你当前真实存在的记忆决定。</p></div>
+        </div>
+        <div class="panel">
+          <label for="compareTask">任务描述</label>
+          <input id="compareTask" value="查找 build_agent_context 的定义" placeholder="例如：查找某个函数的定义、运行测试、排查服务日志">
+          <p class="field-hint">建议使用与已有偏好相关的任务（代码搜索、测试、日志、高风险操作），差异会更明显。</p>
+          <div class="actions"><button class="primary" onclick="runValueComparison(event)">运行对比</button><button class="secondary" onclick="openTab('preferences')">先看有哪些偏好</button></div>
+        </div>
+        <div id="compareVerdict" style="margin-top:14px"></div>
+        <div id="compareTable" style="margin-top:14px"></div>
+        <div id="compareCost" style="margin-top:14px"></div>
+        <details><summary>详细记录：对比原始结果</summary><pre id="compareOut" class="advanced-output"></pre></details>
+      </section>
+
       <section id="memory">
         <div class="page-header">
           <div><h2>记忆中心</h2><p class="lead">查看已保存内容，按相关度搜索，并从同一列表进入详情、验证或遗忘。</p></div>
@@ -1250,39 +1428,55 @@ def _dashboard_html() -> str:
           <details><summary>查看完整技术结果</summary><pre id="memoryWorkspaceOut" class="advanced-output"></pre></details>
         </div>
       </section>
+
       <section id="ingest">
-        <div class="page-header"><div><h2>添加记忆</h2><p class="lead">保存前会先检查内容质量和敏感风险；相同内容不会重复保存。</p></div><button class="secondary" onclick="openTab('memory')">返回记忆中心</button></div>
-        <div class="panel">
-          <label for="ingestText">要保存的内容</label><textarea id="ingestText">以后回答 openKylin 服务问题时，先给 systemctl 命令，再说明风险。</textarea>
-          <label for="sourceKind">内容来源</label><select id="sourceKind"><option value="manual">手动输入</option><option value="dashboard">本地控制台</option><option value="tool_result">工具执行结果</option><option value="user_behavior">用户与 Agent 交互</option><option value="os_event">系统事件</option></select>
-          <label for="tier">保存时长</label><select id="tier"><option value="">自动选择</option><option value="working">临时工作记忆</option><option value="session">当前会话记忆</option><option value="long_term">长期记忆</option></select>
-          <div class="actions"><button class="primary" data-min-role="operator" onclick="ingest(event)">保存为记忆</button><button class="secondary" onclick="explainExtraction(event)">查看提取依据</button></div>
+        <div class="crumbs"><button class="ghost" onclick="openTab('memory')">← 返回记忆中心</button><span class="crumbs-path">记忆中心 / <b>添加记忆</b></span></div>
+        <div class="page-header"><div><h2>添加记忆</h2><p class="lead">保存前会先检查内容质量和敏感风险；相同内容不会重复保存。</p></div></div>
+        <div class="content-split">
+          <div class="panel">
+            <label for="ingestText">要保存的内容</label><textarea id="ingestText">以后回答 openKylin 服务问题时，先给 systemctl 命令，再说明风险。</textarea>
+            <label for="sourceKind">内容来源</label><select id="sourceKind"><option value="manual">手动输入</option><option value="dashboard">本地控制台</option><option value="tool_result">工具执行结果</option><option value="user_behavior">用户与 Agent 交互</option><option value="os_event">系统事件</option></select>
+            <label for="tier">保存时长</label><select id="tier"><option value="">自动选择</option><option value="working">临时工作记忆</option><option value="session">当前会话记忆</option><option value="long_term">长期记忆</option></select>
+            <div class="actions"><button class="primary" data-min-role="operator" onclick="ingest(event)">保存为记忆</button><button class="secondary" onclick="explainExtraction(event)">查看提取依据</button></div>
+          </div>
+          <div class="panel hint-card" aria-label="保存流程说明">
+            <div class="item-title">保存前会发生什么</div>
+            <div class="hint-row"><span class="hint-index">1</span><span>内容质量检查：过短、无信息量的文本不会形成记忆。</span></div>
+            <div class="hint-row"><span class="hint-index">2</span><span>敏感检测：凭据、密钥等高风险内容会被阻止进入长期记忆。</span></div>
+            <div class="hint-row"><span class="hint-index">3</span><span>去重合并：与已有记忆相同的内容会复用原编号，不会重复保存。</span></div>
+          </div>
         </div>
-        <div id="ingestFeedback" class="list" style="margin-top:12px"></div>
+        <div id="ingestFeedback" class="list" style="margin-top:14px"></div>
         <details><summary>详细记录：操作回执</summary><pre id="ingestOut" class="advanced-output"></pre></details>
       </section>
+
       <section id="search">
-        <div class="page-header"><div><h2>详细检索</h2><p class="lead">查看召回来源和完整技术结果；日常搜索建议直接使用记忆中心。</p></div><button class="secondary" onclick="openTab('memory')">返回记忆中心</button></div>
+        <div class="crumbs"><button class="ghost" onclick="openTab('memory')">← 返回记忆中心</button><span class="crumbs-path">记忆中心 / <b>详细检索</b></span></div>
+        <div class="page-header"><div><h2>详细检索</h2><p class="lead">查看召回来源和完整技术结果；日常搜索建议直接使用记忆中心。</p></div></div>
         <div class="panel">
           <label for="searchQuery">查询</label><input id="searchQuery" value="openKylin 服务内存限制">
           <div class="actions"><button class="primary" onclick="search(event)">检索</button><button class="secondary" onclick="graphSearch(event)">层次图谱</button></div>
         </div>
-        <div id="searchCards" class="list" style="margin-top:12px"></div>
+        <div id="searchCards" class="list" style="margin-top:14px"></div>
         <details><summary>详细记录：操作回执</summary><pre id="searchOut" class="advanced-output"></pre></details>
       </section>
+
       <section id="context">
-        <div class="page-header"><div><h2>上下文预览</h2><p class="lead">查看回答前会使用哪些记忆、内容来自哪里，以及候选被纳入或过滤的原因。</p></div><button class="secondary" onclick="openTab('memory')">返回记忆中心</button></div>
+        <div class="crumbs"><button class="ghost" onclick="openTab('memory')">← 返回记忆中心</button><span class="crumbs-path">记忆中心 / <b>上下文预览</b></span></div>
+        <div class="page-header"><div><h2>上下文预览</h2><p class="lead">查看回答前会使用哪些记忆、内容来自哪里，以及候选被纳入或过滤的原因。</p></div></div>
         <div class="panel">
           <label for="contextQuery">问题</label><input id="contextQuery" value="openKylin 服务内存限制">
           <label for="tokenBudget">上下文长度上限</label><input id="tokenBudget" type="number" value="1200">
           <div class="actions"><button class="primary" onclick="contextBuild(event)">生成预览</button></div>
         </div>
-        <div id="contextVisual" style="margin-top:12px"></div>
+        <div id="contextVisual" style="margin-top:14px"></div>
         <details><summary>详细记录：操作回执</summary><pre id="contextOut" class="advanced-output"></pre></details>
       </section>
+
       <section id="agent">
-        <h2>Agent 工作台</h2>
-        <p class="lead">查看 Agent 在任务中使用了哪些记忆、形成了哪些偏好，以及这些偏好是否真正影响工具选择和回答。已遗忘内容只保留必要的核验记录。</p>
+        <div class="page-header">
+          <div><h2>Agent 工作台</h2><p class="lead">查看 Agent 在任务中使用了哪些记忆、形成了哪些偏好，以及这些偏好是否真正影响工具选择和回答。已遗忘内容只保留必要的核验记录。</p></div>
+        </div>
         <div class="panel">
           <div class="grid two">
             <div><label for="agentSession">会话编号（可选）</label><input id="agentSession" placeholder="留空查看最近记录"></div>
@@ -1295,14 +1489,14 @@ def _dashboard_html() -> str:
           <div class="actions"><button class="primary" data-min-role="operator" onclick="runAgentTask(event)">运行任务</button><button class="secondary" onclick="loadAgentOverview(event)">查看已有记录</button><button class="secondary" onclick="exportDiagnostics(event)">导出系统报告</button></div>
           <p class="muted">本地回放用于检查完整记忆流程；只读预览不会写入新内容。真实 OpenHands 由已配置的 Agent 接入入口运行，本页不会把回放结果标成真实模型结果。</p>
         </div>
-        <div id="agentMetrics" class="grid four" style="margin-top:12px"></div>
-        <div class="grid two" style="margin-top:12px">
-          <div class="panel"><div class="item-title">交互记录</div><div id="agentTimeline" class="timeline" style="margin-top:12px"></div></div>
-          <div class="panel"><div class="item-title">偏好依据</div><div id="agentPreferences" class="list" style="margin-top:12px"></div></div>
+        <div id="agentMetrics" class="grid four" style="margin-top:14px"></div>
+        <div class="grid two" style="margin-top:14px">
+          <div class="panel"><div class="health"><div class="item-title">交互记录</div></div><div id="agentTimeline" class="timeline" style="margin-top:12px"></div></div>
+          <div class="panel"><div class="health"><div class="item-title">偏好依据</div></div><div id="agentPreferences" class="list" style="margin-top:12px"></div></div>
         </div>
-        <div class="panel" style="margin-top:12px"><div class="item-title">三阶段上下文对比</div><div id="agentContexts" class="stage-columns" style="margin-top:12px"></div></div>
-        <div class="panel" style="margin-top:12px"><div class="item-title">偏好生效证明</div><p class="muted">只有观察到实际工具命令或回答内容时才会判定“通过”；没有真实行为时显示“暂无证据”，不会把上下文注入误当成 Agent 已遵循。</p><div id="preferenceProofs" class="list" style="margin-top:12px"></div></div>
-        <div class="panel" style="margin-top:12px">
+        <div class="panel" style="margin-top:14px"><div class="item-title">三阶段上下文对比</div><div id="agentContexts" class="stage-columns" style="margin-top:12px"></div></div>
+        <div class="panel" style="margin-top:14px"><div class="item-title">偏好生效证明</div><p class="muted">只有观察到实际工具命令或回答内容时才会判定“通过”；没有真实行为时显示“暂无证据”，不会把上下文注入误当成 Agent 已遵循。</p><div id="preferenceProofs" class="list" style="margin-top:12px"></div></div>
+        <div class="panel" style="margin-top:14px">
           <div class="item-title">按交互主题精准遗忘</div>
           <div class="grid two">
             <div><label for="agentForgetName">Agent</label><input id="agentForgetName" value="openhands"></div>
@@ -1313,9 +1507,11 @@ def _dashboard_html() -> str:
         </div>
         <details><summary>详细记录：操作回执</summary><pre id="agentOut" class="advanced-output"></pre></details>
       </section>
+
       <section id="preferences">
-        <h2>我的偏好</h2>
-        <p class="lead">查看 Agent 已记住的使用偏好、适用范围和实际使用结果。只有观察到工具或回答确实遵循偏好时，才会显示为已验证。</p>
+        <div class="page-header">
+          <div><h2>我的偏好</h2><p class="lead">查看 Agent 已记住的使用偏好、适用范围和实际使用结果。只有观察到工具或回答确实遵循偏好时，才会显示为已验证。</p></div>
+        </div>
         <div class="panel">
           <div class="grid two">
             <div><label for="proofTask">验证任务</label><input id="proofTask" value="查找 MemGuardService 的定义"></div>
@@ -1323,21 +1519,25 @@ def _dashboard_html() -> str:
           </div>
           <div class="actions"><button class="primary" onclick="loadPreferences(event)">刷新偏好</button><button class="secondary" onclick="runAgentTask(event)">运行验证任务</button></div>
         </div>
-        <div id="preferenceList" class="list" style="margin-top:12px"></div>
+        <div id="preferenceList" class="list" style="margin-top:14px"></div>
         <details><summary>详细记录：偏好证明</summary><pre id="preferenceOut" class="advanced-output"></pre></details>
       </section>
+
       <section id="memory-detail">
-        <div class="page-header"><div><h2>记忆详情</h2><p class="lead">核对编号、摘要、来源事件、作用范围、版本和最近使用证据。</p></div><button class="secondary" onclick="returnFromMemoryDetail()">返回上一页</button></div>
+        <div class="crumbs"><button class="ghost" onclick="returnFromMemoryDetail()">← 返回上一页</button><span class="crumbs-path">记忆中心 / <b>记忆详情</b></span></div>
+        <div class="page-header"><div><h2>记忆详情</h2><p class="lead">核对编号、摘要、来源事件、作用范围、版本和最近使用证据。</p></div></div>
         <div class="panel">
           <label for="memoryDetailId">记忆编号</label><input id="memoryDetailId" placeholder="从最近学到的内容或检索结果中选择">
           <div class="actions"><button class="primary" onclick="loadMemoryDetail(event)">查看详情</button><button class="danger" data-min-role="admin" onclick="forgetMemoryFromDetail(event)">遗忘这条记忆</button></div>
         </div>
-        <div id="memoryDetailCards" class="list" style="margin-top:12px"></div>
+        <div id="memoryDetailCards" class="list" style="margin-top:14px"></div>
         <details><summary>详细记录：记忆详情</summary><pre id="memoryDetailOut" class="advanced-output"></pre></details>
       </section>
+
       <section id="sensitive">
-        <h2>内容保护</h2>
-        <p class="lead">敏感内容不会默认进入长期记忆或 Agent 上下文。这里可以查看最近保护结果，并在不保存文本的情况下测试检测策略。</p>
+        <div class="page-header">
+          <div><h2>内容保护</h2><p class="lead">敏感内容不会默认进入长期记忆或 Agent 上下文。这里可以查看最近保护结果，并在不保存文本的情况下测试检测策略。</p></div>
+        </div>
         <div class="grid two">
           <div class="panel">
             <div class="health"><div class="item-title">保护状态</div><span class="badge ok">默认保护</span></div>
@@ -1352,27 +1552,36 @@ def _dashboard_html() -> str:
             <p class="muted">测试只返回检测摘要，不会把输入保存为记忆。</p>
             <label for="sensitiveTestText">待检查文本</label>
             <textarea id="sensitiveTestText" placeholder="输入一段需要检查的文本"></textarea>
-            <button class="primary" onclick="testSensitiveText(event)">检查保护策略</button>
+            <div class="actions"><button class="primary" onclick="testSensitiveText(event)">检查保护策略</button></div>
             <div id="sensitiveTestResult" class="list" style="margin-top:12px"><div class="muted">尚未执行检查。</div></div>
           </div>
         </div>
-        <div class="panel">
-          <div class="health"><div class="item-title">最近敏感阻断</div><button class="secondary" onclick="loadSensitiveProtection(event)">刷新</button></div>
-          <div id="sensitiveBlockList" class="list" style="margin-top:12px"><div class="muted">正在读取最近保护结果…</div></div>
+        <div class="section-block" style="margin-top:14px">
+          <div class="section-block-header"><strong>最近敏感阻断</strong><button class="ghost" onclick="loadSensitiveProtection(event)">刷新</button></div>
+          <div id="sensitiveBlockList" class="section-block-body"><div class="muted">正在读取最近保护结果…</div></div>
         </div>
         <details><summary>查看完整技术详情</summary><pre id="sensitiveOut" class="advanced-output"></pre></details>
       </section>
 
       <section id="notifications">
-        <h2>通知中心</h2>
-        <p class="lead">通知中心记录重要记忆变化和风险事件。普通检索、缓存命中和本机智能检索降级不会频繁打扰桌面，只在这里保留状态变化。</p>
-        <div class="toolbar"><button class="primary" onclick="loadNotifications(event)">刷新通知</button><button class="secondary" data-min-role="admin" onclick="openTab('diagnostics')">查看系统维护</button></div>
+        <div class="crumbs"><button class="ghost" onclick="openTab('overview')">← 返回总览</button><span class="crumbs-path">总览 / <b>通知中心</b></span></div>
+        <div class="page-header">
+          <div><h2>通知中心</h2><p class="lead">通知中心记录重要记忆变化和风险事件。普通检索、缓存命中和本机智能检索降级不会频繁打扰桌面，只在这里保留状态变化。</p></div>
+          <div class="actions"><button class="primary" onclick="loadNotifications(event)">刷新通知</button><button class="secondary" data-min-role="admin" onclick="openTab('diagnostics')">查看系统维护</button></div>
+        </div>
         <div id="notificationList" class="list"></div>
         <details><summary>详细记录：通知来源</summary><pre id="notificationOut" class="advanced-output"></pre></details>
       </section>
+
       <section id="forget">
-        <h2>精准遗忘</h2>
-        <p class="lead">先预览会影响哪些记忆，再确认执行。系统会列出候选编号、匹配依据和作用范围，帮助避免误删。</p>
+        <div class="page-header">
+          <div><h2>精准遗忘</h2><p class="lead">先预览会影响哪些记忆，再确认执行。系统会列出候选编号、匹配依据和作用范围，帮助避免误删。</p></div>
+        </div>
+        <ol class="workflow-steps" aria-label="精准遗忘步骤">
+          <li><span class="workflow-step-number">1</span><div><strong>预览影响</strong><span class="muted">核对候选编号和匹配依据。</span></div></li>
+          <li><span class="workflow-step-number">2</span><div><strong>确认遗忘</strong><span class="muted">确认后移除选中的受管记忆。</span></div></li>
+          <li><span class="workflow-step-number">3</span><div><strong>自动复检</strong><span class="muted">复查检索、存储和操作记录。</span></div></li>
+        </ol>
         <div class="panel">
           <div class="item-title">遗忘二次确认</div>
           <p class="muted">只有点击确认按钮后，选中的记忆才会从可查询内容和相关索引中移除，并保留必要的操作记录。</p>
@@ -1380,26 +1589,23 @@ def _dashboard_html() -> str:
           <div class="actions"><button class="secondary" data-min-role="operator" onclick="forget(event, false)">预览影响</button><button id="forgetConfirmButton" class="danger" data-min-role="admin" onclick="forget(event, true)" disabled>确认遗忘并整理存储</button></div>
           <p class="warning">确认后，相关内容将不能再被 Agent 查询。此操作不能在页面中直接撤销。</p>
         </div>
-        <ol class="workflow-steps" aria-label="精准遗忘步骤">
-          <li><span class="workflow-step-number">1</span><div><strong>预览影响</strong><span class="muted">核对候选编号和匹配依据。</span></div></li>
-          <li><span class="workflow-step-number">2</span><div><strong>确认遗忘</strong><span class="muted">确认后移除选中的受管记忆。</span></div></li>
-          <li><span class="workflow-step-number">3</span><div><strong>自动复检</strong><span class="muted">复查检索、存储和操作记录。</span></div></li>
-        </ol>
-        <div id="forgetCards" class="list" style="margin-top:12px"></div>
-        <div class="section-block" style="margin-top:16px">
-          <div class="section-block-header"><strong>最近遗忘验证</strong><button class="secondary" onclick="loadRecentForgetting(event, true)">刷新</button></div>
+        <div id="forgetCards" class="list" style="margin-top:14px"></div>
+        <div class="section-block" style="margin-top:14px">
+          <div class="section-block-header"><strong>最近遗忘验证</strong><button class="ghost" onclick="loadRecentForgetting(event, true)">刷新</button></div>
           <div id="recentForgetList" class="section-block-body"><div class="empty-state">正在读取最近验证结果…</div></div>
         </div>
         <details><summary>详细记录：操作回执</summary><pre id="forgetOut" class="advanced-output"></pre></details>
       </section>
+
       <section id="evidence" data-min-role="admin">
-        <h2>审计与证据</h2>
-        <p class="lead">集中查看操作记录完整性、最近关键事件和本机状态证据。导出内容默认不包含记忆正文，适合交付复核和问题排查。</p>
+        <div class="page-header">
+          <div><h2>审计与证据</h2><p class="lead">集中查看操作记录完整性、最近关键事件和本机状态证据。导出内容默认不包含记忆正文，适合交付复核和问题排查。</p></div>
+        </div>
         <div class="grid two">
           <div class="panel">
             <div class="health"><div class="item-title">审计链状态</div><span id="evidenceAuditBadge" class="badge">待检查</span></div>
             <p id="evidenceAuditSummary" class="muted">打开页面后会校验操作记录完整性。</p>
-            <button class="secondary" onclick="loadEvidenceHub(event)">重新校验</button>
+            <div class="actions"><button class="secondary" onclick="loadEvidenceHub(event)">重新校验</button></div>
           </div>
           <div class="panel">
             <div class="item-title">证据导出</div>
@@ -1407,7 +1613,7 @@ def _dashboard_html() -> str:
             <div class="actions"><button class="primary" onclick="exportEvidence(event)">导出证据包</button><button class="secondary" onclick="openTab('audit')">查看详细记录</button></div>
           </div>
         </div>
-        <div class="panel">
+        <div class="panel" style="margin-top:14px">
           <div class="item-title">最近关键事件</div>
           <div id="evidenceEventList" class="list" style="margin-top:12px"><div class="muted">正在读取最近事件…</div></div>
         </div>
@@ -1415,15 +1621,20 @@ def _dashboard_html() -> str:
       </section>
 
       <section id="audit" data-min-role="admin">
-        <h2>审计记录</h2>
-        <div class="actions"><button class="primary" onclick="audit(event)">刷新</button></div>
+        <div class="crumbs"><button class="ghost" onclick="openTab('evidence')">← 返回审计与证据</button><span class="crumbs-path">审计与证据 / <b>审计记录</b></span></div>
+        <div class="page-header">
+          <div><h2>审计记录</h2><p class="lead">最近的写入、检索、保护与遗忘操作记录，按时间倒序显示。</p></div>
+          <div class="actions"><button class="primary" onclick="audit(event)">刷新</button></div>
+        </div>
         <details><summary>运行记录</summary><pre id="auditOut" class="advanced-output"></pre></details>
       </section>
+
       <section id="diagnostics">
-        <h2>系统维护</h2>
-        <p class="lead">管理员视图用于本机维护和问题排查，集中查看操作记录、检索状态、记忆策略、本机 AI 能力和资源限制，并支持一键导出系统报告。</p>
+        <div class="page-header">
+          <div><h2>系统维护</h2><p class="lead">管理员视图用于本机维护和问题排查，集中查看操作记录、检索状态、记忆策略、本机 AI 能力和资源限制，并支持一键导出系统报告。</p></div>
+        </div>
         <div class="panel">
-          <div class="actions">
+          <div class="actions" style="margin-top:0">
             <button class="primary" data-min-role="admin" onclick="verifyAudit(event)">校验操作记录</button>
             <button class="secondary" data-min-role="admin" onclick="retrievalStatus(event)">检查检索方式</button>
             <button class="secondary" data-min-role="admin" onclick="memoryPolicy(event)">查看记忆策略</button>
@@ -1443,7 +1654,7 @@ def _dashboard_html() -> str:
           <div class="status-row"><div class="health-title"><span id="osDot" class="status-dot"></span><span>系统资源</span></div><span class="muted">服务资源限制和运行环境状态</span><span id="osBadge" class="badge">待检查</span></div>
         </div>
         <div id="refreshWarnings" class="list" style="display:none;margin-top:14px"></div>
-        <div class="result-section" style="margin-top:12px">
+        <div class="result-section" style="margin-top:14px">
           <div class="section-block-header"><strong>系统报告包含的内容</strong><span class="muted">不包含记忆正文</span></div>
           <div class="section-block-body">
           <div class="linear-list">
@@ -1456,9 +1667,11 @@ def _dashboard_html() -> str:
         </div>
         <details><summary>详细记录：操作回执</summary><pre id="diagnosticsOut" class="advanced-output"></pre></details>
       </section>
+
       <section id="acceptance" data-min-role="admin">
-        <h2>系统检查</h2>
-        <p class="lead">按顺序检查运行环境、记忆流程、安全保护和桌面集成。自动项目由本机白名单执行；需要观察桌面菜单或弹窗的项目会明确标记为人工确认。</p>
+        <div class="page-header">
+          <div><h2>系统检查</h2><p class="lead">按顺序检查运行环境、记忆流程、安全保护和桌面集成。自动项目由本机白名单执行；需要观察桌面菜单或弹窗的项目会明确标记为人工确认。</p></div>
+        </div>
         <div class="grid three">
           <div class="panel emphasis">
             <div class="item-title">复核进度</div>
@@ -1468,7 +1681,7 @@ def _dashboard_html() -> str:
           </div>
           <div class="panel">
             <div class="item-title">推荐顺序</div>
-            <div class="list">
+            <div class="list" style="margin-top:10px">
               <div class="item"><div class="item-title">1. 基础环境</div><div class="muted">先确认服务、资源和本机状态。</div></div>
               <div class="item"><div class="item-title">2. 记忆闭环</div><div class="muted">再检查写入、检索、上下文、遗忘和审计。</div></div>
               <div class="item"><div class="item-title">3. 桌面确认</div><div class="muted">最后补拍 Peony、UKUI 和托盘人工截图。</div></div>
@@ -1526,6 +1739,38 @@ def _dashboard_html() -> str:
     });
     const tabLoadedAt = new Map([['overview', Date.now()]]);
     const dynamicTabTtlMs = 5000;
+    const tabParents = {ingest:'memory', search:'memory', context:'memory', 'memory-detail':'memory', notifications:'overview', audit:'evidence', compare:'overview'};
+    const feedbackHomeCache = {at:0, promise:null};
+    function fetchFeedbackHome(limit, timeoutMs, force) {
+      const now = Date.now();
+      if (!force && feedbackHomeCache.promise && now - feedbackHomeCache.at < 10000)
+        return feedbackHomeCache.promise;
+      const promise = getJson('/api/feedback-home?limit=' + (limit || 30), timeoutMs || 10000);
+      feedbackHomeCache.at = now;
+      feedbackHomeCache.promise = promise;
+      promise.catch(() => { if (feedbackHomeCache.promise === promise) feedbackHomeCache.promise = null; });
+      return promise;
+    }
+    const rawOutputs = new Map();
+    function setRawOutput(id, payload) {
+      const node = document.getElementById(id);
+      if (!node) return;
+      rawOutputs.set(id, payload);
+      const details = node.closest('details');
+      if (!details || details.open) {
+        node.textContent = typeof payload === 'string' ? payload : pretty(payload);
+        return;
+      }
+      node.textContent = '';
+      if (!details.dataset.lazyBound) {
+        details.dataset.lazyBound = '1';
+        details.addEventListener('toggle', () => {
+          if (!details.open) return;
+          const value = rawOutputs.get(id);
+          node.textContent = typeof value === 'string' ? value : pretty(value ?? {});
+        });
+      }
+    }
     let activeTab = 'overview';
     let memoryDetailReturnTab = 'memory';
     document.querySelectorAll('nav button').forEach(btn => btn.addEventListener('click', () => {
@@ -1544,6 +1789,7 @@ def _dashboard_html() -> str:
       else if (action === 'notification-target') openNotificationTarget(button.dataset.notificationAction || '');
       else if (action === 'diagnostic-warning') runDiagnosticWarning(actionEvent, button.dataset.warningAction || '');
       else if (action === 'return-memory-detail') returnFromMemoryDetail();
+      else if (action === 'retry-memory-detail') loadMemoryDetail(actionEvent);
     });
     async function openTab(tab, options) {
       const settings = options || {};
@@ -1557,10 +1803,13 @@ def _dashboard_html() -> str:
         return;
       }
       setOperationStatus('', '');
-      document.querySelectorAll('nav button').forEach(item => item.classList.toggle('active', item.dataset.tab === tab));
+      const navTab = tabParents[tab] || tab;
+      document.querySelectorAll('nav button').forEach(item => item.classList.toggle('active', item.dataset.tab === navTab));
       document.querySelectorAll('section').forEach(item => item.classList.toggle('active', item.id === tab));
       activeTab = tab;
-      if (requestedButton) requestedButton.scrollIntoView({block:'nearest', inline:'nearest'});
+      const navButton = requestedButton
+        || Array.from(document.querySelectorAll('nav button')).find(item => item.dataset.tab === navTab);
+      if (navButton) navButton.scrollIntoView({block:'nearest', inline:'nearest'});
       window.scrollTo({top:0, behavior:'auto'});
       if (settings.history !== 'none' && window.location.hash !== '#' + tab) {
         const method = settings.history === 'replace' ? 'replaceState' : 'pushState';
@@ -1574,6 +1823,7 @@ def _dashboard_html() -> str:
       const lastLoaded = Number(tabLoadedAt.get(tab) || 0);
       if (!settings.force && lastLoaded && Date.now() - lastLoaded < dynamicTabTtlMs) return;
       const loaders = {
+        overview: loadOverviewEvidence,
         audit: audit,
         agent: loadAgentOverview,
         memory: loadMemoryWorkspace,
@@ -1590,9 +1840,16 @@ def _dashboard_html() -> str:
         tabLoadedAt.set(tab, Date.now());
         return;
       }
-      const result = await loader(event);
-      if (result !== null)
-        tabLoadedAt.set(tab, Date.now());
+      try {
+        const result = await loader(event);
+        if (result !== null)
+          tabLoadedAt.set(tab, Date.now());
+      } catch (err) {
+        const message = err && err.userMessage
+          ? err.userMessage
+          : '页面内容暂时没有加载出来。请点击本页的刷新按钮重试。';
+        showError(message);
+      }
     }
     function openHashTab() {
       const tab = window.location.hash.replace(/^#/, '');
@@ -1676,9 +1933,10 @@ def _dashboard_html() -> str:
         button.innerHTML = '<span class="button-label"><span class="spinner" aria-hidden="true"></span>' + esc(label) + '</span>';
       }
       try {
-        setOperationStatus('正在处理：' + buttonText({textContent: label}) + '。请稍候，页面可继续查看其他信息。', 'warn');
+        if (button)
+          setOperationStatus('正在处理：' + buttonText({textContent: label}) + '。请稍候，页面可继续查看其他信息。', 'warn');
         const result = await work();
-        if (operationId === operationSequence) {
+        if (button && operationId === operationSequence) {
           const feedback = result && result.operationFeedback;
           setOperationStatus(
             feedback ? feedback.message : '操作完成。页面内容已更新，请查看对应区域的结果摘要。',
@@ -1770,6 +2028,7 @@ def _dashboard_html() -> str:
           const message = userErrorMessage(payload, '请求没有完成。');
           throw requestError(message, payload);
         }
+        feedbackHomeCache.promise = null;
         return payload;
       } catch (err) {
         if (err && err.userMessage) throw err;
@@ -2224,7 +2483,7 @@ def _dashboard_html() -> str:
       await withBusy(event, async () => {
         const payload = await getJson('/api/acceptance-plan');
         renderAcceptancePlan(payload.result || {});
-        acceptanceOut.textContent = pretty(payload);
+        setRawOutput('acceptanceOut', payload);
       });
     }
     async function runAcceptanceItem(event, itemId) {
@@ -2232,7 +2491,7 @@ def _dashboard_html() -> str:
         const payload = await postJson('/api/acceptance-run', {item_id:itemId});
         if (payload.result) acceptanceResults[itemId] = payload.result;
         renderAcceptancePlan({items: acceptanceItems});
-        acceptanceOut.textContent = pretty(payload);
+        setRawOutput('acceptanceOut', payload);
       });
     }
     async function runAcceptanceGroup(event) {
@@ -2252,7 +2511,7 @@ def _dashboard_html() -> str:
           }
           renderAcceptancePlan({items: acceptanceItems});
         }
-        acceptanceOut.textContent = pretty({ok:true, result:{ran:results.length, results:results}});
+        setRawOutput('acceptanceOut', {ok:true, result:{ran:results.length, results:results}});
       });
     }
     function markManualAcceptance(event, itemId, status) {
@@ -2268,7 +2527,7 @@ def _dashboard_html() -> str:
     async function exportAcceptanceReport(event) {
       await withBusy(event, async () => {
         const payload = await postJson('/api/acceptance-report', {results:Object.values(acceptanceResults), format:'markdown'});
-        acceptanceOut.textContent = (payload.result && payload.result.markdown) || pretty(payload);
+        setRawOutput('acceptanceOut', (payload.result && payload.result.markdown) || payload);
       });
     }
     function renderForgetCards(payload, confirmed) {
@@ -2362,12 +2621,28 @@ def _dashboard_html() -> str:
           + '&task=' + encodeURIComponent(agentTask.value) + '&limit=100';
         const payload = await getJson(url);
         renderAgentOverview(payload);
-        agentOut.textContent = pretty(payload);
+        setRawOutput('agentOut', payload);
       });
     }
     async function loadPreferenceEvidence(event, memoryId) {
-      await withBusy(event, async () => {
-        agentOut.textContent = pretty(await getJson('/api/agent-evidence?memory_id=' + encodeURIComponent(memoryId)));
+      return withBusy(event, async () => {
+        const payload = await getJson('/api/agent-evidence?memory_id=' + encodeURIComponent(memoryId));
+        setRawOutput('agentOut', payload);
+        const events = (payload.result || {}).events || [];
+        const box = document.getElementById('agentPreferences');
+        if (!box) return operationFeedback('偏好依据已载入。', 'ok');
+        box.innerHTML = '<div class="section-block"><div class="section-block-header"><strong>偏好依据：'
+          + esc(shortMemoryId(memoryId)) + '</strong><span class="badge">' + events.length + ' 条来源事件</span></div>'
+          + '<div class="section-block-body">'
+          + (events.length
+              ? '<div class="timeline">' + agentTimelineMarkup(events.slice(0, 8)) + '</div>'
+              : '<div class="empty-state"><strong>没有找到来源事件</strong><span>该偏好可能来自手动写入，或来源事件已被遗忘。</span></div>')
+          + '<div class="mini-actions"><button class="secondary" data-action="open-memory-detail" data-memory-id="'
+          + esc(memoryId) + '">查看记忆详情</button></div></div></div>';
+        return operationFeedback(
+          events.length ? '已展示支撑该偏好的来源事件。' : '该偏好没有可展示的来源事件。',
+          events.length ? 'ok' : 'warn'
+        );
       });
     }
     async function runAgentTask(event) {
@@ -2379,7 +2654,7 @@ def _dashboard_html() -> str:
         });
         const result = payload.result || {};
         if (result.session_id) document.getElementById('agentSession').value = result.session_id;
-        document.getElementById('agentOut').textContent = pretty(payload);
+        setRawOutput('agentOut', payload);
         if (result.truthful_note) setOperationStatus(result.truthful_note, result.ok ? 'ok' : 'warn');
         if (result.preference_effect_proofs) renderPreferenceProofs(result.preference_effect_proofs);
         if (result.ok) await loadAgentOverview(null);
@@ -2392,9 +2667,179 @@ def _dashboard_html() -> str:
       openTab('agent');
       await runAgentTask(event);
     }
+    function renderValueHero(feedback, comparisonHint) {
+      const result = (feedback || {}).result || {};
+      const preferences = result.current_preferences || [];
+      const stable = preferences.filter(item => item.stable);
+      const memories = result.recent_memories || [];
+      const blocks = result.recent_sensitive_blocks || [];
+      const setText = (id, value) => { const node = document.getElementById(id); if (node) node.textContent = value; };
+      setText('statPreferences', stable.length);
+      setText('statMemories', result.live_memory_count ?? memories.length);
+      setText('statProtected', blocks.length);
+      const headline = document.getElementById('valueHeadline');
+      const detail = document.getElementById('valueDetail');
+      if (!headline || !detail) return;
+      if (stable.length) {
+        const names = stable.slice(0, 3).map(item => topicLabel(item.topic) + '：' + (item.value || '')).join('；');
+        headline.textContent = 'Agent 已经记住 ' + stable.length + ' 条你的使用习惯';
+        detail.textContent = '下次任务会自动应用：' + names + (stable.length > 3 ? ' 等' : '') + '。不需要你再交代一遍。';
+      } else if (memories.length) {
+        headline.textContent = '已保存 ' + memories.length + ' 条记忆，还没有形成稳定偏好';
+        detail.textContent = '同一习惯在不同会话中重复出现，或明确说明一次（例如"以后查代码优先用 rg"），就会晋升为稳定偏好。';
+      } else {
+        headline.textContent = '还没有可用记忆';
+        detail.textContent = '通过 Agent 工作台运行一次任务，或在记忆中心手动添加一条，系统会自动提取可复用的偏好。';
+      }
+    }
+    function renderLearningPairs(feedback) {
+      const box = document.getElementById('learningPairs');
+      if (!box) return;
+      const result = (feedback || {}).result || {};
+      const preferences = (result.current_preferences || []).filter(item => item.stable);
+      if (!preferences.length) {
+        box.innerHTML = '<div class="empty-state"><strong>还没有"学到 → 生效"的配对</strong>'
+          + '<span>稳定偏好形成后，这里会展示它来自哪次交互、会在哪个阶段生效。</span>'
+          + '<button class="secondary" data-action="open-tab" data-tab-target="agent">去 Agent 工作台运行一次任务</button></div>';
+        return;
+      }
+      const stageOf = topic => ({
+        code_search_tool: '工具选择阶段',
+        test_runner_command: '工具选择阶段',
+        service_log_tool: '工具选择阶段',
+        response_order: '回答生成阶段',
+        response_language: '回答生成阶段',
+        response_verbosity: '回答生成阶段',
+        high_risk_confirmation: '任务规划阶段'
+      }[topic] || '相关任务阶段');
+      box.innerHTML = preferences.slice(0, 6).map(item => {
+        const memoryId = String(item.memory_id || '');
+        return '<div class="pair-row">'
+          + '<div class="pair-cell"><strong>学到：' + esc(topicLabel(item.topic)) + ' = ' + esc(item.value || '') + '</strong>'
+          + '<span>作用范围 ' + esc(scopeLabel(item.scope || 'global')) + '</span></div>'
+          + '<div class="pair-arrow" aria-hidden="true">→</div>'
+          + '<div class="pair-cell"><strong>生效：' + esc(stageOf(item.topic)) + '自动应用</strong>'
+          + '<span>无需重复交代，Agent 直接按此执行</span></div>'
+          + '<div class="pair-actions">'
+          + (memoryId ? '<button class="secondary" data-action="preference-proof" data-memory-id="' + esc(memoryId) + '">生效证明</button>'
+                        + '<button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(memoryId) + '">来源</button>'
+                      : '<span class="muted">暂无记忆编号</span>')
+          + '</div></div>';
+      }).join('');
+    }
+    function renderValueEvidencePanel(reference) {
+      const box = document.getElementById('valueEvidencePanel');
+      if (!box) return;
+      if (!reference || !reference.available) {
+        box.innerHTML = '<div class="empty-state"><strong>暂无实验证据文件</strong>'
+          + '<span>完成本机效果评估后，这里会显示可复现的对照结果。</span></div>';
+        return;
+      }
+      const groups = reference.groups || {};
+      const memguard = groups.memguard || {};
+      const noMemory = groups.no_memory || {};
+      const fullHistory = groups.full_history || {};
+      const pct = value => (value === null || value === undefined) ? '-' : Math.round(Number(value) * 100) + '%';
+      const num = value => (value === null || value === undefined) ? '-' : Number(value).toFixed(2);
+      const source = document.getElementById('valueEvidenceSource');
+      if (source) source.textContent = (reference.case_count || 0) + ' 组固定场景回归';
+      const rows = [
+        ['任务完成率', pct(noMemory.task_completion_rate), pct(memguard.task_completion_rate)],
+        ['首选工具正确率', pct(noMemory.first_tool_accuracy), pct(memguard.first_tool_accuracy)],
+        ['平均交互轮数', num(noMemory.mean_interaction_turns), num(memguard.mean_interaction_turns)],
+        ['平均失败命令数', num(noMemory.mean_failed_commands), num(memguard.mean_failed_commands)]
+      ];
+      const tokenRow = ['平均提示 tokens', num(fullHistory.mean_prompt_tokens), num(memguard.mean_prompt_tokens)];
+      box.innerHTML = '<div class="compare-grid">'
+        + '<div class="compare-head">指标</div><div class="compare-head without">无记忆 / 全历史</div><div class="compare-head with">MemGuardOS</div>'
+        + rows.concat([tokenRow]).map(row =>
+            '<div>' + esc(row[0]) + '</div>'
+            + '<div class="compare-value muted-value">' + esc(row[1]) + '</div>'
+            + '<div class="compare-value">' + esc(row[2]) + '</div>').join('')
+        + '</div>'
+        + '<p class="muted" style="margin-top:10px">' + esc(reference.evidence_note || '固定场景用于可复现机制回归，不替代真实 Agent 独立运行证据。') + '</p>';
+    }
+    async function runValueComparison(event) {
+      return withBusy(event, async () => {
+        const task = String(document.getElementById('compareTask').value || '').trim();
+        if (!task) {
+          return operationFeedback('请先填写任务描述。', 'warn');
+        }
+        document.getElementById('compareVerdict').innerHTML = '<div class="skeleton" aria-label="正在运行对比"></div>';
+        document.getElementById('compareTable').innerHTML = '';
+        document.getElementById('compareCost').innerHTML = '';
+        const payload = await getJson('/api/value-comparison?task=' + encodeURIComponent(task), 30000);
+        renderValueComparison(payload.result || {});
+        setRawOutput('compareOut', payload);
+        const applied = ((payload.result || {}).measured || {}).applied_preference_count || 0;
+        return operationFeedback(
+          applied ? '对比完成：有 ' + applied + ' 项偏好因记忆而自动生效。' : '对比完成：本次任务未产生动作差异。',
+          applied ? 'ok' : 'warn'
+        );
+      });
+    }
+    function renderValueComparison(result) {
+      const measured = result.measured || {};
+      const modelled = result.modelled || {};
+      const verdict = result.verdict || {};
+      const verdictBox = document.getElementById('compareVerdict');
+      const marks = {ok:'✓', info:'i', warn:'!'};
+      verdictBox.innerHTML = '<div class="compare-verdict ' + esc(verdict.state || 'info') + '">'
+        + '<div class="compare-verdict-mark" aria-hidden="true">' + esc(marks[verdict.state] || 'i') + '</div>'
+        + '<div><strong>' + esc(verdict.headline || '') + '</strong><span class="muted">' + esc(verdict.detail || '') + '</span></div></div>';
+
+      const differences = measured.differences || [];
+      const tableBox = document.getElementById('compareTable');
+      if (!differences.length) {
+        tableBox.innerHTML = '<div class="empty-state"><strong>该任务没有可对比的偏好维度</strong><span>换一个涉及代码搜索、测试、日志或高风险操作的任务再试。</span></div>';
+      } else {
+        tableBox.innerHTML = '<div class="compare-grid">'
+          + '<div class="compare-head">任务中的决策点</div><div class="compare-head without">不带记忆</div><div class="compare-head with">带记忆</div>'
+          + differences.map(item => {
+              const changed = item.changed;
+              return '<div>' + esc(item.topic_label) + '</div>'
+                + '<div class="compare-value muted-value">' + esc(item.without_memory_label)
+                + (item.naive_command ? '<code class="compare-cmd">' + esc(item.naive_command) + '</code>' : '') + '</div>'
+                + '<div class="compare-value' + (changed ? ' compare-cell-changed' : '') + '">' + esc(item.with_memory_label)
+                + (changed ? '<span class="compare-badge">记忆生效</span>' : '')
+                + (item.memory_command ? '<code class="compare-cmd">' + esc(item.memory_command) + '</code>' : '') + '</div>';
+            }).join('')
+          + '</div>';
+      }
+
+      const costBox = document.getElementById('compareCost');
+      const injected = measured.injected_memories || [];
+      costBox.innerHTML = '<div class="section-block"><div class="section-block-header"><strong>成本与依据</strong>'
+        + '<span class="measured-tag measured">measured 实测</span></div><div class="section-block-body">'
+        + '<div class="linear-list">'
+        + '<div class="list-row"><div><div class="item-title">本轮注入上下文</div><div class="muted">'
+        + esc(measured.context_cost_note || '') + '</div></div><span class="badge">' + esc(measured.memguard_context_tokens || 0) + ' tokens</span></div>'
+        + '<div class="list-row"><div><div class="item-title">注入的记忆</div><div class="muted">'
+        + (injected.length ? injected.slice(0, 4).map(item => esc(shortMemoryId(item.memory_id)) + '（' + esc(item.stage) + '）').join('、') : '本次没有命中记忆')
+        + '</div></div><span class="badge">' + injected.length + ' 条</span></div>'
+        + '</div>'
+        + '<div class="list-row" style="border-top:1px solid var(--line);margin-top:8px;padding-top:12px"><div>'
+        + '<div class="item-title">推论：省下的重复说明 <span class="measured-tag modelled">modelled 推论</span></div>'
+        + '<div class="muted">' + esc(modelled.assumption || '') + '</div></div>'
+        + '<span class="badge">' + esc(modelled.corrections_avoided || 0) + ' 次</span></div>'
+        + '<p class="muted" style="margin-top:10px">' + esc(result.truthful_note || '') + '</p>'
+        + '</div></div>';
+    }
+    let valueEvidenceLoaded = false;
+    async function loadOverviewEvidence(event) {
+      if (valueEvidenceLoaded) return null;
+      try {
+        const payload = await getJson('/api/value-evidence', 10000);
+        renderValueEvidencePanel((payload.result || {}));
+        valueEvidenceLoaded = true;
+      } catch (err) {
+        renderValueEvidencePanel(null);
+      }
+      return null;
+    }
     async function loadFeedbackHome(event) {
       const work = async () => {
-        const payload = await getJson('/api/feedback-home?limit=8');
+        const payload = await fetchFeedbackHome(30, 10000, Boolean(event));
         const result = payload.result || {};
         const memories = result.recent_memories || [];
         const recentBox = document.getElementById('recentMemoriesList');
@@ -2403,6 +2848,8 @@ def _dashboard_html() -> str:
             ? memories.slice(0, 4).map((item, index) => memoryResultMarkup(item, index, 'recent')).join('')
             : '<div class="empty-state">还没有可展示的记忆。完成一次 Agent 交互或手动添加后会显示在这里。</div>';
         }
+        renderValueHero(payload);
+        renderLearningPairs(payload);
         renderNotifications(result.notifications || [], 'homeNotifications');
         return payload;
       };
@@ -2413,15 +2860,14 @@ def _dashboard_html() -> str:
       const work = async () => {
         const main = document.getElementById('memoryWorkspaceResults');
         if (main) main.innerHTML = '<div class="skeleton" aria-label="正在读取记忆"></div><div class="skeleton" aria-hidden="true"></div>';
-        const payload = await getJson('/api/feedback-home?limit=30', 5000);
+        const payload = await fetchFeedbackHome(30, 10000, Boolean(event));
         const memories = (payload.result || {}).recent_memories || [];
         renderMemoryWorkspaceRows(memories, 'recent');
         const summary = document.getElementById('memorySearchSummary');
         if (summary) summary.textContent = memories.length
           ? '共读取 ' + memories.length + ' 条最近记忆，完整编号可复制，点击可查看来源和作用范围。'
           : '当前记忆空间还没有可展示记忆。';
-        const output = document.getElementById('memoryWorkspaceOut');
-        if (output) output.textContent = pretty(payload);
+        setRawOutput('memoryWorkspaceOut', payload);
         return operationFeedback('记忆列表已更新。', 'ok');
       };
       if (event) return withBusy(event, work);
@@ -2443,7 +2889,7 @@ def _dashboard_html() -> str:
         document.getElementById('memorySearchSummary').textContent = rows.length
           ? '找到 ' + rows.length + ' 条结果，已按相关度排序并折叠重复内容。' + (rows.length > 3 ? '优先展示前三条，其余结果可展开查看。' : '')
           : '没有找到相关记忆。建议使用更具体的主题、工具或项目名称。';
-        document.getElementById('memoryWorkspaceOut').textContent = pretty(payload);
+        setRawOutput('memoryWorkspaceOut', payload);
         return operationFeedback(rows.length ? '记忆搜索已完成。' : '未找到相关记忆。', rows.length ? 'ok' : 'warn');
       });
     }
@@ -2487,13 +2933,13 @@ def _dashboard_html() -> str:
       await withBusy(event, async () => {
         const payload = await getJson('/api/notifications?limit=50');
         renderNotifications((payload.result || []), 'notificationList');
-        document.getElementById('notificationOut').textContent = pretty(payload);
+        setRawOutput('notificationOut', payload);
         return operationFeedback('通知列表已更新。', 'ok');
       });
     }
     async function loadSensitiveProtection(event) {
       const work = async () => {
-        const payload = await getJson('/api/feedback-home?limit=30');
+        const payload = await fetchFeedbackHome(30, 10000, Boolean(event));
         const blocks = (payload.result || {}).recent_sensitive_blocks || [];
         const box = document.getElementById('sensitiveBlockList');
         if (!blocks.length) {
@@ -2501,7 +2947,7 @@ def _dashboard_html() -> str:
         } else {
           renderNotifications(blocks, 'sensitiveBlockList');
         }
-        document.getElementById('sensitiveOut').textContent = pretty(payload);
+        setRawOutput('sensitiveOut', payload);
         return operationFeedback('敏感保护状态已更新。', 'ok');
       };
       return event ? withBusy(event, work) : work();
@@ -2510,7 +2956,7 @@ def _dashboard_html() -> str:
       const work = async () => {
         const box = document.getElementById('recentForgetList');
         if (box) box.innerHTML = '<div class="skeleton" aria-label="正在读取最近遗忘验证"></div>';
-        const payload = await getJson('/api/feedback-home?limit=30', 8000);
+        const payload = await fetchFeedbackHome(30, 10000, Boolean(event));
         const items = (payload.result || {}).recent_forgetting || [];
         if (box) {
           box.innerHTML = items.length ? items.map(item =>
@@ -2540,7 +2986,7 @@ def _dashboard_html() -> str:
         const blocked = level === 'high' || level === 'critical';
         const action = blocked ? '阻止进入长期记忆' : (labels.length ? '脱敏后再评估' : '允许进入受控抽取');
         document.getElementById('sensitiveTestResult').innerHTML = '<div class="item"><div class="health"><div class="item-title">检测结果：' + esc(sensitivityLabel(level)) + '</div><span class="badge ' + (blocked ? 'bad' : (labels.length ? 'warn' : 'ok')) + '">' + esc(action) + '</span></div><div class="muted">检测类型：' + esc(labels.length ? labels.join('、') : '未发现已知敏感特征') + '</div><div class="muted">本次测试不会保存输入文本，也不会写入 Agent 上下文。</div></div>';
-        document.getElementById('sensitiveOut').textContent = pretty(payload);
+        setRawOutput('sensitiveOut', payload);
         return operationFeedback(blocked ? '检测到高风险内容，系统会阻止保存。' : '敏感检查已完成。', blocked ? 'warn' : 'ok');
       });
     }
@@ -2579,7 +3025,7 @@ def _dashboard_html() -> str:
           const countText = group.count > 1 ? '最近同类事件 ' + group.count + ' 次' : '已记录';
           return '<div class="item"><div class="health"><div class="item-title">' + esc(auditEventLabel(item.event_type || 'event')) + '</div><span class="badge">' + esc(countText) + '</span></div><div class="muted">最近记录编号 ' + esc(item.audit_id || '-') + ' · 关联记忆 ' + esc(item.memory_id || '无') + '</div></div>';
         }).join('') : '<div class="item"><div class="item-title">暂无关键事件</div><div class="muted">完成记忆写入、上下文构建或遗忘后会在这里显示。</div></div>';
-        document.getElementById('evidenceOut').textContent = pretty({audit:auditCheck, events:settled[1], status:statusPayload});
+        setRawOutput('evidenceOut', {audit:auditCheck, events:settled[1], status:statusPayload});
         return operationFeedback(auditOk ? '审计与证据状态已更新。' : '审计状态需要处理。', auditOk ? 'ok' : 'bad');
       };
       return event ? withBusy(event, work) : work();
@@ -2598,7 +3044,7 @@ def _dashboard_html() -> str:
     }
     async function loadPreferences(event) {
       await withBusy(event, async () => {
-        const payload = await getJson('/api/feedback-home?limit=30');
+        const payload = await fetchFeedbackHome(30, 10000, Boolean(event));
         const items = (payload.result || {}).current_preferences || [];
         const box = document.getElementById('preferenceList');
         box.innerHTML = items.length ? items.map(item =>
@@ -2611,7 +3057,7 @@ def _dashboard_html() -> str:
             : '<span class="muted">暂无对应记忆编号</span>')
           + '</div></div>'
         ).join('') : '<div class="item"><div class="item-title">暂无稳定偏好</div><div class="muted">通过 Agent 工作台运行任务后，这里会显示可复用偏好。</div></div>';
-        document.getElementById('preferenceOut').textContent = pretty(payload);
+        setRawOutput('preferenceOut', payload);
         return operationFeedback(items.length ? '当前偏好已更新。' : '当前没有稳定偏好。', items.length ? 'ok' : 'warn');
       });
     }
@@ -2619,7 +3065,7 @@ def _dashboard_html() -> str:
       await withBusy(event, async () => {
         const url = '/api/preference-proof?memory_id=' + encodeURIComponent(memoryId) + '&task=' + encodeURIComponent(document.getElementById('proofTask').value) + '&stage=' + encodeURIComponent(document.getElementById('proofStage').value);
         const payload = await getJson(url);
-        document.getElementById('preferenceOut').textContent = pretty(payload);
+        setRawOutput('preferenceOut', payload);
         renderPreferenceProofs((payload.result || {}).proof ? [(payload.result || {}).proof] : []);
         openTab('agent');
       });
@@ -2634,28 +3080,37 @@ def _dashboard_html() -> str:
       return openTab(memoryDetailReturnTab || 'memory', {force:true});
     }
     async function loadMemoryDetail(event) {
-      const id = document.getElementById('memoryDetailId').value.trim();
+      const idInput = document.getElementById('memoryDetailId');
+      const id = String(idInput.value || '').replace(/[\\s\\u2026]+/g, '');
+      idInput.value = id;
       if (!id) {
         setOperationStatus('请先选择一条记忆。', 'warn');
         return null;
       }
       return withBusy(event, async () => {
+        const box = document.getElementById('memoryDetailCards');
+        box.innerHTML = '<div class="skeleton" aria-label="正在读取记忆详情"></div>';
         let payload;
         try {
-          payload = await getJson('/api/memory-detail?memory_id=' + encodeURIComponent(id), 8000);
+          payload = await getJson('/api/memory-detail?memory_id=' + encodeURIComponent(id) + '&light=1', 30000);
         } catch (err) {
           const errorCode = String(((err || {}).payload || {}).error || '');
-          if (errorCode !== 'memory_not_found') throw err;
+          if (errorCode !== 'memory_not_found') {
+            box.innerHTML = '<div class="empty-state"><strong>详情暂时没有加载出来</strong><span>'
+              + esc(err && err.userMessage ? err.userMessage : '本地服务暂时没有响应。')
+              + '</span><div class="mini-actions"><button class="secondary" data-action="retry-memory-detail">重新查询</button><button class="secondary" data-action="return-memory-detail">返回原列表</button></div></div>';
+            throw err;
+          }
           document.getElementById('memoryDetailCards').innerHTML = '<div class="empty-state"><strong>这条记忆当前不可查看</strong><span>'
             + esc(err.userMessage || '它可能已完成遗忘，或不属于当前记忆空间。')
-            + '</span><button class="secondary" data-action="return-memory-detail">返回原列表</button></div>';
-          document.getElementById('memoryDetailOut').textContent = pretty((err || {}).payload || {});
+            + '</span><div class="mini-actions"><button class="secondary" data-action="retry-memory-detail">重新查询</button><button class="secondary" data-action="return-memory-detail">返回原列表</button></div></div>';
+          setRawOutput('memoryDetailOut', (err || {}).payload || {});
           return operationFeedback('没有找到这条记忆，请返回原列表重新选择。', 'warn');
         }
         const result = payload.result || {};
         const memory = result.memory || {};
         document.getElementById('memoryDetailCards').innerHTML = result.found ? '<div class="item"><div class="health"><div><div class="item-title">' + esc(memorySummaryLabel(memory)) + '</div><div class="memory-id">完整编号 ' + esc(memory.memory_id || id) + '</div></div><button class="secondary" onclick="copyMemoryId(\\'' + esc(memory.memory_id || id) + '\\')">复制编号</button></div><div class="muted">' + esc(memoryTypeLabel(memory.type || 'memory')) + ' · ' + esc(memorySubtypeLabel(memory.subtype || memory.type)) + ' · ' + esc(tierLabel(memory.tier || '')) + '</div><div class="muted">适用范围：' + esc(scopeLabel(memory.preference_scope || memory.scope || '')) + ' · 来源：' + esc(sourceLabel(memory.source_kind || (memory.source || {}).kind || '')) + '</div></div><div class="grid two"><div class="panel"><div class="item-title">来源与版本</div><div class="muted">来源事件 ' + esc((result.source_events || []).length) + ' 条 · 版本 ' + esc((result.versions || []).length) + ' 个</div><div class="muted">最近使用阶段：' + esc(stageLabel((result.agent_usage || {}).last_stage || '')) + '</div></div><div class="panel"><div class="item-title">关联信息</div><div class="muted">实体 ' + esc(((result.graph || {}).entities || []).length) + ' 个 · 关系 ' + esc(((result.graph || {}).relations || []).length) + ' 条</div></div></div>' : '<div class="item"><div class="item-title">没有找到这条记忆</div><div class="muted">请从记忆中心重新选择。</div></div>';
-        document.getElementById('memoryDetailOut').textContent = pretty(payload);
+        setRawOutput('memoryDetailOut', payload);
         return operationFeedback(result.found ? '记忆详情已加载。' : '没有找到这条记忆。', result.found ? 'ok' : 'warn');
       });
     }
@@ -2664,7 +3119,7 @@ def _dashboard_html() -> str:
       if (!id || !window.confirm('确认遗忘这条记忆？系统会先执行受管记录验证，并保留外部日志边界说明。')) return;
       return withMutation(event, '遗忘记忆', async () => {
         const payload = await postJson('/api/forget-memory', {memory_ids:[id], reason:'用户从记忆详情发起遗忘', compact:true});
-        document.getElementById('memoryDetailOut').textContent = pretty(payload);
+        setRawOutput('memoryDetailOut', payload);
         setOperationStatus(payload.ok ? '这条记忆的遗忘验证已完成。' : '遗忘未完全完成，请查看验证报告。', payload.ok ? 'ok' : 'bad');
         await loadFeedbackHome(null);
       });
@@ -2700,7 +3155,7 @@ def _dashboard_html() -> str:
           + ' · 历史上下文使用 ' + esc(affected.context_usage_count || 0) + '</div></div>'
           + '<div class="item"><div class="item-title">外部残留</div><div class="muted">'
           + esc(externalResidueMessage(residue)) + '</div></div>';
-        agentOut.textContent = pretty(payload);
+        setRawOutput('agentOut', payload);
         if (confirmForget) {
           invalidateAgentForgetPreview();
           await loadAgentOverview(null);
@@ -2714,12 +3169,11 @@ def _dashboard_html() -> str:
       });
     }
     function renderStatusPayload(status) {
-      document.getElementById('overviewOut').textContent = pretty(status);
+      setRawOutput('overviewOut', status);
       const result = status.result || {};
       document.getElementById('namespaceMeta').textContent = '记忆空间：' + namespaceLabel(result.namespace);
-      document.getElementById('liveCount').textContent = result.live_record_count ?? '-';
-      document.getElementById('namespaceCount').textContent = namespaceLabel(result.namespace);
-      document.getElementById('dataLocation').textContent = '仅保存在本机';
+      const memoryCount = document.getElementById('statMemories');
+      if (memoryCount) memoryCount.textContent = result.live_record_count ?? '-';
       const banner = document.getElementById('overviewStatusBanner');
       const title = document.getElementById('overviewStateTitle');
       const text = document.getElementById('overviewStateText');
@@ -2754,6 +3208,7 @@ def _dashboard_html() -> str:
       const settled = await Promise.allSettled([
         getJson('/api/status', 5000),
         loadFeedbackHome(null),
+        loadOverviewEvidence(null),
       ]);
       const statusResult = settled[0];
       if (statusResult.status === 'fulfilled')
@@ -2809,7 +3264,7 @@ def _dashboard_html() -> str:
       return withMutation(event, '保存记忆', async () => {
         const data = {text: ingestText.value, source_kind: sourceKind.value, tier: tier.value};
         const payload = await postJson('/api/ingest', data);
-        ingestOut.textContent = pretty(payload);
+        setRawOutput('ingestOut', payload);
         renderIngestFeedback(payload);
         return refreshAfterMutation('保存已经完成');
       });
@@ -2842,29 +3297,82 @@ def _dashboard_html() -> str:
       box.innerHTML = '<div class="item"><div class="health"><div class="item-title">已学到：' + esc(item.summary_for_user) + '</div><span class="badge ok">已保存</span></div><div class="muted">为什么保存：' + esc(item.why_extracted) + '</div><div class="muted">适用范围：' + esc((item.where_it_will_apply || []).join('、')) + '</div><div class="mini-actions"><button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(item.memory_id || '') + '">查看详情</button><button class="secondary" data-action="preference-proof" data-memory-id="' + esc(item.memory_id || '') + '">测试生效</button></div></div>';
     }
     async function explainExtraction(event) {
-      await withBusy(event, async () => {
+      return withBusy(event, async () => {
         const url = '/api/explain-extraction?text=' + encodeURIComponent(ingestText.value) + '&source_kind=' + encodeURIComponent(sourceKind.value);
-        ingestOut.textContent = pretty(await getJson(url));
+        const payload = await getJson(url);
+        setRawOutput('ingestOut', payload);
+        const result = payload.result || {};
+        const extraction = result.extraction || {};
+        const quality = result.quality || {};
+        const sensitivity = result.sensitivity || {};
+        const signals = extraction.signals || [];
+        const blocked = String(sensitivity.level) === 'high';
+        document.getElementById('ingestFeedback').innerHTML =
+          '<div class="section-block"><div class="section-block-header"><strong>提取依据（未写入记忆）</strong>'
+          + '<span class="badge">' + esc(memoryTypeLabel(extraction.memory_type || extraction.type || '')) + '</span></div>'
+          + '<div class="section-block-body"><div class="linear-list">'
+          + '<div class="list-row"><div><div class="item-title">判定类型</div><div class="muted">'
+          + esc(memoryTypeLabel(extraction.memory_type || extraction.type || '')) + ' / '
+          + esc(memorySubtypeLabel(extraction.subtype || '')) + '</div></div>'
+          + '<span class="badge">置信度 ' + esc(extraction.confidence != null ? extraction.confidence : '-') + '</span></div>'
+          + '<div class="list-row"><div><div class="item-title">判定信号</div><div class="muted">'
+          + esc(signals.length ? signals.join('、') : '未识别到明显信号') + '</div></div>'
+          + '<span class="badge">' + signals.length + ' 条</span></div>'
+          + '<div class="list-row"><div><div class="item-title">内容质量</div><div class="muted">'
+          + esc(quality.accepted ? '通过质量门槛' : '未通过：' + ((quality.issues || []).join('、') || '内容信息量不足'))
+          + '</div></div><span class="badge ' + (quality.accepted ? 'ok' : 'warn') + '">'
+          + (quality.accepted ? '可保存' : '需修改') + '</span></div>'
+          + '<div class="list-row"><div><div class="item-title">敏感检查</div><div class="muted">'
+          + esc(sensitivityLabel(sensitivity.level || 'none')) + '（' + esc((sensitivity.labels || []).join('、') || '未发现敏感特征') + '）'
+          + '</div></div><span class="badge ' + (blocked ? 'bad' : 'ok') + '">'
+          + (blocked ? '会被阻断' : '允许保存') + '</span></div>'
+          + '</div><p class="muted" style="margin-top:10px">这是保存前的预判，本次没有写入任何记忆。</p></div></div>';
+        return operationFeedback('已显示这段文本会被如何提取。', 'ok');
       });
     }
     async function search(event) {
       await withBusy(event, async () => {
         const payload = await getJson('/api/search?q=' + encodeURIComponent(searchQuery.value) + '&top_k=5');
         renderSearchCards(payload);
-        searchOut.textContent = pretty(payload);
+        setRawOutput('searchOut', payload);
       });
     }
     async function graphSearch(event) {
-      await withBusy(event, async () => {
+      return withBusy(event, async () => {
         const payload = await getJson('/api/hierarchical-graph?q=' + encodeURIComponent(searchQuery.value) + '&limit=8');
-        searchOut.textContent = pretty(payload);
+        setRawOutput('searchOut', payload);
+        const layers = (payload.result || {}).layers || {};
+        const box = document.getElementById('searchCards');
+        const names = [['summary', '摘要层'], ['entity_relation', '实体关系层'], ['chunk', '原文片段层']];
+        const total = names.reduce((sum, item) => sum + ((layers[item[0]] || []).length), 0);
+        if (!total) {
+          box.innerHTML = '<div class="empty-state"><strong>没有找到关联结果</strong>'
+            + '<span>换一个实体名（例如 systemd、cgroup、journalctl）再试。</span></div>';
+          return operationFeedback('层次图谱没有命中关联记忆。', 'warn');
+        }
+        box.innerHTML = names.map(function (pair) {
+          const rows = layers[pair[0]] || [];
+          const body = rows.length
+            ? rows.slice(0, 6).map(function (row) {
+                return '<div class="list-row"><div><div class="item-title">'
+                  + esc(row.summary || row.relation || row.content_preview || row.memory_id || '关联项')
+                  + '</div><div class="muted">'
+                  + esc(row.source && row.target ? (row.source + ' → ' + row.target) : shortMemoryId(row.memory_id || ''))
+                  + '</div></div><span class="badge">' + esc(pair[1]) + '</span></div>';
+              }).join('')
+            : '<div class="muted">该层没有命中。</div>';
+          return '<div class="section-block" style="margin-bottom:12px"><div class="section-block-header"><strong>'
+            + esc(pair[1]) + '</strong><span class="badge">' + rows.length + ' 项</span></div>'
+            + '<div class="section-block-body"><div class="linear-list">' + body + '</div></div></div>';
+        }).join('');
+        return operationFeedback('层次图谱已展开三层关联结果。', 'ok');
       });
     }
     async function contextBuild(event) {
       await withBusy(event, async () => {
         const payload = await getJson('/api/context?q=' + encodeURIComponent(contextQuery.value) + '&token_budget=' + encodeURIComponent(tokenBudget.value));
         renderContextVisual(payload);
-        contextOut.textContent = pretty(payload);
+        setRawOutput('contextOut', payload);
       });
     }
     async function forget(event, confirmForget) {
@@ -2888,7 +3396,7 @@ def _dashboard_html() -> str:
           preview_token:confirmForget ? forgetPreview.previewToken : ''
         });
         renderForgetCards(payload, confirmForget);
-        forgetOut.textContent = pretty(payload);
+        setRawOutput('forgetOut', payload);
         if (confirmForget) {
           invalidateForgetPreview();
           tabLoadedAt.delete('memory');
@@ -2900,12 +3408,12 @@ def _dashboard_html() -> str:
       });
     }
     async function audit(event) {
-      await withBusy(event, async () => { auditOut.textContent = pretty(await getJson('/api/audit?limit=30')); return operationFeedback('操作记录已更新。', 'ok'); });
+      await withBusy(event, async () => { setRawOutput('auditOut', await getJson('/api/audit?limit=30')); return operationFeedback('操作记录已更新。', 'ok'); });
     }
     async function verifyAudit(event) {
       await withBusy(event, async () => {
         const payload = await getJson('/api/verify-audit');
-        diagnosticsOut.textContent = pretty(payload);
+        setRawOutput('diagnosticsOut', payload);
         const ok = Boolean((payload.result || {}).ok);
         badge('auditBadge', ok ? 'ok' : 'bad', ok ? '通过' : '异常');
         dot('auditDot', ok ? 'ok' : 'bad');
@@ -2915,7 +3423,7 @@ def _dashboard_html() -> str:
     async function retrievalStatus(event) {
       await withBusy(event, async () => {
         const payload = await getJson('/api/retrieval-status');
-        diagnosticsOut.textContent = pretty(payload);
+        setRawOutput('diagnosticsOut', payload);
         const retrieval = payload.result || {};
         const ready = Boolean(retrieval.requested_backend || retrieval.last_backend_used);
         badge('retrievalBadge', ready ? 'ok' : 'warn', retrievalModeLabel(retrieval.last_backend_used || retrieval.requested_backend));
@@ -2924,12 +3432,12 @@ def _dashboard_html() -> str:
       });
     }
     async function memoryPolicy(event) {
-      await withBusy(event, async () => { diagnosticsOut.textContent = pretty(await getJson('/api/memory-policy')); return operationFeedback('记忆策略已加载。', 'ok'); });
+      await withBusy(event, async () => { setRawOutput('diagnosticsOut', await getJson('/api/memory-policy')); return operationFeedback('记忆策略已加载。', 'ok'); });
     }
     async function diagnostics(event) {
       return withBusy(event, async () => {
         const payload = await getJson('/api/diagnostics');
-        diagnosticsOut.textContent = pretty(payload);
+        setRawOutput('diagnosticsOut', payload);
         renderDiagnosticsPayload(payload, {ok:payload.ok, result:{namespace:(payload.result || {}).namespace}});
         return operationFeedback('系统状态检查已完成。', 'ok');
       });
@@ -2968,6 +3476,13 @@ def _dashboard_html() -> str:
       });
     }
     openHashTab();
+    if (bootstrapTab && document.getElementById(bootstrapTab)) {
+      const navSource = Array.from(document.querySelectorAll('nav button'))
+        .find(item => item.dataset.tab === (tabParents[bootstrapTab] || bootstrapTab));
+      const sectionTitle = document.querySelector('#' + bootstrapTab + ' h2');
+      const pageTitle = sectionTitle ? sectionTitle.textContent.trim() : (navSource ? navSource.textContent.trim() : bootstrapTab);
+      setOperationStatus('已按桌面入口打开「' + pageTitle + '」，下方内容加载完成后即可查看。', 'ok');
+    }
     document.getElementById('memorySearchQuery').addEventListener('keydown', event => {
       if (event.key === 'Enter') {
         event.preventDefault();

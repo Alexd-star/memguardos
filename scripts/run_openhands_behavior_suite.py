@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from memguard.eval.real_agent_behavior import (  # noqa: E402
+    aggregate_real_agent_paired_results,
     aggregate_real_agent_results,
     evaluate_real_agent_run,
 )
@@ -154,9 +155,11 @@ def ingest_setup_events(service, case, workspace: Path | None = None):
     return stored
 
 
-def run_case(case, output_dir: Path, args):
+def run_case(case, output_dir: Path, args, memory_mode: str = "on", paired_layout: bool = False):
     case_id = str(case["case_id"])
     case_dir = output_dir / "cases" / case_id
+    if paired_layout:
+        case_dir = case_dir / ("memory_on" if memory_mode == "on" else "memory_off")
     result_file = case_dir / "result.json"
     if result_file.exists():
         if args.resume:
@@ -174,10 +177,14 @@ def run_case(case, output_dir: Path, args):
         db_path=state_dir / "memory.sqlite3",
     )
     try:
-        setup_results = ingest_setup_events(service, case, workspace=workspace)
+        setup_results = (
+            ingest_setup_events(service, case, workspace=workspace)
+            if memory_mode == "on"
+            else []
+        )
         forget_result = None
         forget_action = dict(case.get("forget_action") or {})
-        if forget_action:
+        if forget_action and memory_mode == "on":
             forget_result = service.forget_agent_interactions(
                 dict(forget_action.get("filters") or {}),
                 confirm=bool(forget_action.get("confirm")),
@@ -204,8 +211,11 @@ def run_case(case, output_dir: Path, args):
             run_result.get("context") or {},
             adherence=run_result.get("adherence") or {},
         )
+        evaluation_case = dict(case)
+        if memory_mode == "off":
+            evaluation_case["memory_assertions"] = {}
         evaluation = evaluate_real_agent_run(
-            case=case,
+            case=evaluation_case,
             context=context,
             events=events,
             workspace=workspace,
@@ -216,6 +226,9 @@ def run_case(case, output_dir: Path, args):
             "title": case["title"],
             "category": case["category"],
             "model": model,
+            "memory_mode": memory_mode,
+            "arm_source": "real_agent_run",
+            "expected_tool": str(case.get("expected_tool") or ""),
             "setup_event_count": len(setup_results),
             "forget_result": forget_result,
             "run": run_result,
@@ -231,6 +244,9 @@ def run_case(case, output_dir: Path, args):
             "title": case["title"],
             "category": case["category"],
             "model": str(case.get("model") or args.model),
+            "memory_mode": memory_mode,
+            "arm_source": "real_agent_run",
+            "expected_tool": str(case.get("expected_tool") or ""),
             "run_exception": {
                 "type": exc.__class__.__name__,
                 "message": str(exc),
@@ -322,6 +338,42 @@ def render_report(metrics, runtime):
     )
 
 
+def render_paired_report(metrics, runtime):
+    off = metrics["arms"]["memory_off"]
+    on = metrics["arms"]["memory_on"]
+    completion_test = metrics["paired_tests"]["task_completion"]
+    tool_test = metrics["paired_tests"]["first_tool_accuracy"]
+    return "\n".join(
+        [
+            "# MemGuardOS 真实 OpenHands 有/无记忆配对评测",
+            "",
+            "每个案例在相同模型、相同工作区夹具和相同任务下独立运行两次："
+            "`memory_off` 不注入历史记忆，`memory_on` 启用 MemGuardOS。失败运行原样保留。",
+            "",
+            "- 配对案例数：%s" % metrics["case_count"],
+            "- 无记忆任务完成率：%s" % _format_real_interval(off["task_completion"]),
+            "- 启用记忆任务完成率：%s" % _format_real_interval(on["task_completion"]),
+            "- 任务完成率 McNemar p：%s" % completion_test["p_value"],
+            "- 无记忆首选工具准确率：%s" % _format_real_interval(off["first_tool_accuracy"]),
+            "- 启用记忆首选工具准确率：%s" % _format_real_interval(on["first_tool_accuracy"]),
+            "- 工具准确率 McNemar p：%s" % tool_test["p_value"],
+            "- OpenHands 运行时：`%s`" % json.dumps(runtime, ensure_ascii=False),
+            "",
+            "错误命令和重复命令同时报告配对 bootstrap 95% 置信区间与 Wilcoxon 检验，"
+            "完整逐案例双臂结果见 `metrics.json` 和 `cases/*/memory_{on,off}/result.json`。",
+            "",
+        ]
+    )
+
+
+def _format_real_interval(value):
+    if value.get("point") is None:
+        return "不适用"
+    return "%.4f [%.4f, %.4f], n=%s" % (
+        value["point"], value["ci_low"], value["ci_high"], value["n"]
+    )
+
+
 def _safe_workspace_path(workspace: Path, relative_path: str) -> Path:
     root = workspace.resolve()
     target = (root / relative_path).resolve()
@@ -358,6 +410,12 @@ def build_parser():
     )
     parser.add_argument("--api-key-env", default="OPENHANDS_API_KEY")
     parser.add_argument("--case-id", action="append", default=[])
+    parser.add_argument(
+        "--memory-mode",
+        choices=("on", "off", "paired"),
+        default="on",
+        help="启用记忆、关闭记忆，或对每个案例运行有/无记忆双臂",
+    )
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--validate-only", action="store_true")
     parser.add_argument(
@@ -396,15 +454,35 @@ def main():
     selected = [
         case for case in cases if not selected_ids or case["case_id"] in selected_ids
     ]
-    results = [run_case(case, output_dir, args) for case in selected]
-    metrics = aggregate_real_agent_results(results)
+    if args.memory_mode == "paired":
+        results = []
+        for case in selected:
+            memory_on = run_case(case, output_dir, args, memory_mode="on", paired_layout=True)
+            memory_off = run_case(case, output_dir, args, memory_mode="off", paired_layout=True)
+            results.append(
+                {
+                    "case_id": str(case["case_id"]),
+                    "expected_tool": str(case.get("expected_tool") or ""),
+                    "arms": {"memory_on": memory_on, "memory_off": memory_off},
+                }
+            )
+        metrics = aggregate_real_agent_paired_results(results)
+    else:
+        results = [
+            run_case(case, output_dir, args, memory_mode=args.memory_mode)
+            for case in selected
+        ]
+        metrics = aggregate_real_agent_results(results)
+        metrics["memory_mode"] = args.memory_mode
     metrics["runtime"] = runtime
     (output_dir / "metrics.json").write_text(
         json.dumps(metrics, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
     (output_dir / "report.md").write_text(
-        render_report(metrics, runtime),
+        render_paired_report(metrics, runtime)
+        if args.memory_mode == "paired"
+        else render_report(metrics, runtime),
         encoding="utf-8",
     )
     print(json.dumps(metrics, ensure_ascii=False, indent=2))

@@ -1,0 +1,5293 @@
+{
+  "dataset": {
+    "files": {
+      "extraction/knowledge_structured_cases.jsonl": 10,
+      "extraction/preference_explicit.jsonl": 10,
+      "extraction/preference_implicit.jsonl": 10,
+      "extraction/tool_result_to_preference.jsonl": 10,
+      "forgetting/forget_keep_hard_negatives.jsonl": 10,
+      "forgetting/natural_language_erasure.jsonl": 10,
+      "forgetting/scoped_agent_forgetting.jsonl": 10,
+      "forgetting/time_range_forgetting.jsonl": 10,
+      "holdout/holdout_agent_tasks.jsonl": 20,
+      "holdout/holdout_forgetting.jsonl": 20,
+      "holdout/holdout_retrieval.jsonl": 20,
+      "os_agent/auditd_bpf_tasks.jsonl": 10,
+      "os_agent/openkylin_service_tasks.jsonl": 10,
+      "os_agent/tool_failure_traces.jsonl": 10,
+      "os_agent/ukui_peony_tasks.jsonl": 10,
+      "retrieval/cross_language_retrieval.jsonl": 10,
+      "retrieval/graph_association_retrieval.jsonl": 10,
+      "retrieval/hard_negative_retrieval.jsonl": 10,
+      "retrieval/temporal_retrieval.jsonl": 10,
+      "sensitivity/credential_synthetic.jsonl": 10,
+      "sensitivity/custom_sensitive_patterns.jsonl": 10,
+      "sensitivity/pii_synthetic_zh.jsonl": 10,
+      "sensitivity/sensitive_hard_negatives.jsonl": 10
+    },
+    "holdout_ratio": 0.2308,
+    "holdout_samples": 60,
+    "split_overlap_count": 0,
+    "total_samples": 260
+  },
+  "failure_examples": [
+    {
+      "acceptable_ids": [
+        "seed_retrieval_cross_language_retrieval_01"
+      ],
+      "actual": [
+        "seed_retrieval_temporal_retrieval_01",
+        "seed_retrieval_graph_association_retrieval_01",
+        "seed_retrieval_hard_negative_retrieval_01",
+        "seed_retrieval_cross_language_retrieval_01",
+        "neg_retrieval_cross_language_retrieval_04"
+      ],
+      "case_id": "retrieval_cross_language_retrieval_01",
+      "expected": [
+        "seed_retrieval_cross_language_retrieval_01"
+      ],
+      "failure_type": "strict_rank_miss",
+      "failure_types": [
+        "strict_rank_miss"
+      ],
+      "hard_negative_hit": false,
+      "metric": "retrieval",
+      "query": "Which logs and resource limits should be checked before restarting an openKylin service?",
+      "reason": "strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "cgroup",
+                "daemon resource limits",
+                "service resource limits",
+                "resource quota",
+                "memory limits",
+                "cpu limits"
+              ],
+              "expanded_query": "Which logs and resource limits should be checked before restarting an openKylin service? cgroup daemon resource limits service resource limits resource quota memory limits cpu limits",
+              "expansion_trace": [
+                {
+                  "added": "cgroup, daemon resource limits, service resource limits, resource quota, memory limits, cpu limits",
+                  "canonical": "cgroup",
+                  "matched": "resource limits"
+                }
+              ],
+              "query": "Which logs and resource limits should be checked before restarting an openKylin service?"
+            },
+            "content_score": 0.14,
+            "distinctive_latin_token_count": 7,
+            "distinctive_term_coverage": 0.1429,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 4,
+            "lexical_precision": 0.1429,
+            "original_lexical_hit_count": 2,
+            "original_lexical_precision": 0.0714,
+            "query_token_count": 18,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.16,
+            "topic_score": 0.0,
+            "total": 0.6286
+          },
+          "memory_id": "seed_retrieval_temporal_retrieval_01",
+          "score": 0.0325
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "cgroup",
+                "daemon resource limits",
+                "service resource limits",
+                "resource quota",
+                "memory limits",
+                "cpu limits"
+              ],
+              "expanded_query": "Which logs and resource limits should be checked before restarting an openKylin service? cgroup daemon resource limits service resource limits resource quota memory limits cpu limits",
+              "expansion_trace": [
+                {
+                  "added": "cgroup, daemon resource limits, service resource limits, resource quota, memory limits, cpu limits",
+                  "canonical": "cgroup",
+                  "matched": "resource limits"
+                }
+              ],
+              "query": "Which logs and resource limits should be checked before restarting an openKylin service?"
+            },
+            "content_score": 0.14,
+            "distinctive_latin_token_count": 7,
+            "distinctive_term_coverage": 0.1429,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 4,
+            "lexical_precision": 0.1481,
+            "original_lexical_hit_count": 2,
+            "original_lexical_precision": 0.0741,
+            "query_token_count": 18,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.16,
+            "topic_score": 0.0,
+            "total": 0.6333
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_01",
+          "score": 0.0325
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "cgroup",
+                "daemon resource limits",
+                "service resource limits",
+                "resource quota",
+                "memory limits",
+                "cpu limits"
+              ],
+              "expanded_query": "Which logs and resource limits should be checked before restarting an openKylin service? cgroup daemon resource limits service resource limits resource quota memory limits cpu limits",
+              "expansion_trace": [
+                {
+                  "added": "cgroup, daemon resource limits, service resource limits, resource quota, memory limits, cpu limits",
+                  "canonical": "cgroup",
+                  "matched": "resource limits"
+                }
+              ],
+              "query": "Which logs and resource limits should be checked before restarting an openKylin service?"
+            },
+            "content_score": 0.14,
+            "distinctive_latin_token_count": 7,
+            "distinctive_term_coverage": 0.1429,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 4,
+            "lexical_precision": 0.1429,
+            "original_lexical_hit_count": 2,
+            "original_lexical_precision": 0.0714,
+            "query_token_count": 18,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.16,
+            "topic_score": 0.0,
+            "total": 0.6286
+          },
+          "memory_id": "seed_retrieval_hard_negative_retrieval_01",
+          "score": 0.0315
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "cgroup",
+                "daemon resource limits",
+                "service resource limits",
+                "resource quota",
+                "memory limits",
+                "cpu limits"
+              ],
+              "expanded_query": "Which logs and resource limits should be checked before restarting an openKylin service? cgroup daemon resource limits service resource limits resource quota memory limits cpu limits",
+              "expansion_trace": [
+                {
+                  "added": "cgroup, daemon resource limits, service resource limits, resource quota, memory limits, cpu limits",
+                  "canonical": "cgroup",
+                  "matched": "resource limits"
+                }
+              ],
+              "query": "Which logs and resource limits should be checked before restarting an openKylin service?"
+            },
+            "content_score": 0.14,
+            "distinctive_latin_token_count": 7,
+            "distinctive_term_coverage": 0.1429,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 4,
+            "lexical_precision": 0.1379,
+            "original_lexical_hit_count": 2,
+            "original_lexical_precision": 0.069,
+            "query_token_count": 18,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.16,
+            "topic_score": 0.0,
+            "total": 0.6241
+          },
+          "memory_id": "seed_retrieval_cross_language_retrieval_01",
+          "score": 0.0315
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "cgroup",
+                "daemon resource limits",
+                "service resource limits",
+                "resource quota",
+                "memory limits",
+                "cpu limits"
+              ],
+              "expanded_query": "Which logs and resource limits should be checked before restarting an openKylin service? cgroup daemon resource limits service resource limits resource quota memory limits cpu limits",
+              "expansion_trace": [
+                {
+                  "added": "cgroup, daemon resource limits, service resource limits, resource quota, memory limits, cpu limits",
+                  "canonical": "cgroup",
+                  "matched": "resource limits"
+                }
+              ],
+              "query": "Which logs and resource limits should be checked before restarting an openKylin service?"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 7,
+            "distinctive_term_coverage": 0.1429,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0714,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0714,
+            "query_token_count": 18,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.3679
+          },
+          "memory_id": "neg_retrieval_cross_language_retrieval_04",
+          "score": 0.0308
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_retrieval_cross_language_retrieval_02"
+      ],
+      "actual": [
+        "seed_retrieval_graph_association_retrieval_02",
+        "seed_retrieval_temporal_retrieval_02",
+        "seed_retrieval_hard_negative_retrieval_02",
+        "seed_retrieval_cross_language_retrieval_02",
+        "neg_retrieval_cross_language_retrieval_10"
+      ],
+      "case_id": "retrieval_cross_language_retrieval_02",
+      "expected": [
+        "seed_retrieval_cross_language_retrieval_02"
+      ],
+      "failure_type": "strict_rank_miss",
+      "failure_types": [
+        "strict_rank_miss"
+      ],
+      "hard_negative_hit": false,
+      "metric": "retrieval",
+      "query": "How are auditd observation and BPF LSM enforcement separated?",
+      "reason": "strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "audit observation",
+                "audit observation layer",
+                "user-space audit",
+                "audit logging",
+                "kernel enforcement",
+                "enforcement layer",
+                "path enforcement"
+              ],
+              "expanded_query": "How are auditd observation and BPF LSM enforcement separated? audit observation audit observation layer user-space audit audit logging kernel enforcement enforcement layer path enforcement",
+              "expansion_trace": [
+                {
+                  "added": "audit observation, audit observation layer, user-space audit, audit logging",
+                  "canonical": "auditd",
+                  "matched": "auditd"
+                },
+                {
+                  "added": "audit logging, kernel enforcement, enforcement layer, path enforcement",
+                  "canonical": "BPF LSM",
+                  "matched": "BPF LSM"
+                }
+              ],
+              "query": "How are auditd observation and BPF LSM enforcement separated?"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.5,
+            "distinctive_term_hit_count": 3,
+            "entity_score": 0.3,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1,
+            "original_lexical_hit_count": 3,
+            "original_lexical_precision": 0.1,
+            "query_token_count": 15,
+            "routing_reasons": [
+              "cross_language_term_overlap"
+            ],
+            "routing_score": 0.35,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 1.005
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_02",
+          "score": 0.0328
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "audit observation",
+                "audit observation layer",
+                "user-space audit",
+                "audit logging",
+                "kernel enforcement",
+                "enforcement layer",
+                "path enforcement"
+              ],
+              "expanded_query": "How are auditd observation and BPF LSM enforcement separated? audit observation audit observation layer user-space audit audit logging kernel enforcement enforcement layer path enforcement",
+              "expansion_trace": [
+                {
+                  "added": "audit observation, audit observation layer, user-space audit, audit logging",
+                  "canonical": "auditd",
+                  "matched": "auditd"
+                },
+                {
+                  "added": "audit logging, kernel enforcement, enforcement layer, path enforcement",
+                  "canonical": "BPF LSM",
+                  "matched": "BPF LSM"
+                }
+              ],
+              "query": "How are auditd observation and BPF LSM enforcement separated?"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.5,
+            "distinctive_term_hit_count": 3,
+            "entity_score": 0.3,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.0968,
+            "original_lexical_hit_count": 3,
+            "original_lexical_precision": 0.0968,
+            "query_token_count": 15,
+            "routing_reasons": [
+              "cross_language_term_overlap"
+            ],
+            "routing_score": 0.35,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 1.0008
+          },
+          "memory_id": "seed_retrieval_temporal_retrieval_02",
+          "score": 0.0323
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "audit observation",
+                "audit observation layer",
+                "user-space audit",
+                "audit logging",
+                "kernel enforcement",
+                "enforcement layer",
+                "path enforcement"
+              ],
+              "expanded_query": "How are auditd observation and BPF LSM enforcement separated? audit observation audit observation layer user-space audit audit logging kernel enforcement enforcement layer path enforcement",
+              "expansion_trace": [
+                {
+                  "added": "audit observation, audit observation layer, user-space audit, audit logging",
+                  "canonical": "auditd",
+                  "matched": "auditd"
+                },
+                {
+                  "added": "audit logging, kernel enforcement, enforcement layer, path enforcement",
+                  "canonical": "BPF LSM",
+                  "matched": "BPF LSM"
+                }
+              ],
+              "query": "How are auditd observation and BPF LSM enforcement separated?"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.5,
+            "distinctive_term_hit_count": 3,
+            "entity_score": 0.3,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.0938,
+            "original_lexical_hit_count": 3,
+            "original_lexical_precision": 0.0938,
+            "query_token_count": 15,
+            "routing_reasons": [
+              "cross_language_term_overlap"
+            ],
+            "routing_score": 0.35,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.9969
+          },
+          "memory_id": "seed_retrieval_hard_negative_retrieval_02",
+          "score": 0.0317
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "audit observation",
+                "audit observation layer",
+                "user-space audit",
+                "audit logging",
+                "kernel enforcement",
+                "enforcement layer",
+                "path enforcement"
+              ],
+              "expanded_query": "How are auditd observation and BPF LSM enforcement separated? audit observation audit observation layer user-space audit audit logging kernel enforcement enforcement layer path enforcement",
+              "expansion_trace": [
+                {
+                  "added": "audit observation, audit observation layer, user-space audit, audit logging",
+                  "canonical": "auditd",
+                  "matched": "auditd"
+                },
+                {
+                  "added": "audit logging, kernel enforcement, enforcement layer, path enforcement",
+                  "canonical": "BPF LSM",
+                  "matched": "BPF LSM"
+                }
+              ],
+              "query": "How are auditd observation and BPF LSM enforcement separated?"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.5,
+            "distinctive_term_hit_count": 3,
+            "entity_score": 0.3,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.0938,
+            "original_lexical_hit_count": 3,
+            "original_lexical_precision": 0.0938,
+            "query_token_count": 15,
+            "routing_reasons": [
+              "cross_language_term_overlap"
+            ],
+            "routing_score": 0.35,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.9969
+          },
+          "memory_id": "seed_retrieval_cross_language_retrieval_02",
+          "score": 0.0312
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "audit observation",
+                "audit observation layer",
+                "user-space audit",
+                "audit logging",
+                "kernel enforcement",
+                "enforcement layer",
+                "path enforcement"
+              ],
+              "expanded_query": "How are auditd observation and BPF LSM enforcement separated? audit observation audit observation layer user-space audit audit logging kernel enforcement enforcement layer path enforcement",
+              "expansion_trace": [
+                {
+                  "added": "audit observation, audit observation layer, user-space audit, audit logging",
+                  "canonical": "auditd",
+                  "matched": "auditd"
+                },
+                {
+                  "added": "audit logging, kernel enforcement, enforcement layer, path enforcement",
+                  "canonical": "BPF LSM",
+                  "matched": "BPF LSM"
+                }
+              ],
+              "query": "How are auditd observation and BPF LSM enforcement separated?"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.1667,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0588,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0588,
+            "query_token_count": 15,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.2515
+          },
+          "memory_id": "neg_retrieval_cross_language_retrieval_10",
+          "score": 0.0308
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_retrieval_cross_language_retrieval_03"
+      ],
+      "actual": [
+        "seed_retrieval_hard_negative_retrieval_03",
+        "seed_retrieval_graph_association_retrieval_03",
+        "neg_retrieval_cross_language_retrieval_07",
+        "seed_retrieval_temporal_retrieval_03",
+        "seed_retrieval_cross_language_retrieval_03"
+      ],
+      "case_id": "retrieval_cross_language_retrieval_03",
+      "expected": [
+        "seed_retrieval_cross_language_retrieval_03"
+      ],
+      "failure_type": "strict_rank_miss",
+      "failure_types": [
+        "strict_rank_miss"
+      ],
+      "hard_negative_hit": false,
+      "metric": "retrieval",
+      "query": "Where can a user review memory candidates after a Peony file scan?",
+      "reason": "strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "UKUI",
+                "control center",
+                "memory control center",
+                "file manager scan"
+              ],
+              "expanded_query": "Where can a user review memory candidates after a Peony file scan? UKUI control center memory control center file manager scan",
+              "expansion_trace": [
+                {
+                  "added": "UKUI, control center, memory control center",
+                  "canonical": "UKUI",
+                  "matched": "review memory candidates"
+                },
+                {
+                  "added": "UKUI, control center, memory control center, file manager scan",
+                  "canonical": "Peony",
+                  "matched": "Peony"
+                }
+              ],
+              "query": "Where can a user review memory candidates after a Peony file scan?"
+            },
+            "content_score": 0.07,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.1667,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 2,
+            "lexical_precision": 0.0667,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0333,
+            "query_token_count": 15,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.08,
+            "topic_score": 0.0,
+            "total": 0.41
+          },
+          "memory_id": "seed_retrieval_hard_negative_retrieval_03",
+          "score": 0.0323
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "UKUI",
+                "control center",
+                "memory control center",
+                "file manager scan"
+              ],
+              "expanded_query": "Where can a user review memory candidates after a Peony file scan? UKUI control center memory control center file manager scan",
+              "expansion_trace": [
+                {
+                  "added": "UKUI, control center, memory control center",
+                  "canonical": "UKUI",
+                  "matched": "review memory candidates"
+                },
+                {
+                  "added": "UKUI, control center, memory control center, file manager scan",
+                  "canonical": "Peony",
+                  "matched": "Peony"
+                }
+              ],
+              "query": "Where can a user review memory candidates after a Peony file scan?"
+            },
+            "content_score": 0.07,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.1667,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 2,
+            "lexical_precision": 0.069,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0345,
+            "query_token_count": 15,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.08,
+            "topic_score": 0.0,
+            "total": 0.4121
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_03",
+          "score": 0.032
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "UKUI",
+                "control center",
+                "memory control center",
+                "file manager scan"
+              ],
+              "expanded_query": "Where can a user review memory candidates after a Peony file scan? UKUI control center memory control center file manager scan",
+              "expansion_trace": [
+                {
+                  "added": "UKUI, control center, memory control center",
+                  "canonical": "UKUI",
+                  "matched": "review memory candidates"
+                },
+                {
+                  "added": "UKUI, control center, memory control center, file manager scan",
+                  "canonical": "Peony",
+                  "matched": "Peony"
+                }
+              ],
+              "query": "Where can a user review memory candidates after a Peony file scan?"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.1667,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.05,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.05,
+            "query_token_count": 15,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.24
+          },
+          "memory_id": "neg_retrieval_cross_language_retrieval_07",
+          "score": 0.0318
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "UKUI",
+                "control center",
+                "memory control center",
+                "file manager scan"
+              ],
+              "expanded_query": "Where can a user review memory candidates after a Peony file scan? UKUI control center memory control center file manager scan",
+              "expansion_trace": [
+                {
+                  "added": "UKUI, control center, memory control center",
+                  "canonical": "UKUI",
+                  "matched": "review memory candidates"
+                },
+                {
+                  "added": "UKUI, control center, memory control center, file manager scan",
+                  "canonical": "Peony",
+                  "matched": "Peony"
+                }
+              ],
+              "query": "Where can a user review memory candidates after a Peony file scan?"
+            },
+            "content_score": 0.07,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.1667,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 2,
+            "lexical_precision": 0.0667,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0333,
+            "query_token_count": 15,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.08,
+            "topic_score": 0.0,
+            "total": 0.41
+          },
+          "memory_id": "seed_retrieval_temporal_retrieval_03",
+          "score": 0.0318
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "UKUI",
+                "control center",
+                "memory control center",
+                "file manager scan"
+              ],
+              "expanded_query": "Where can a user review memory candidates after a Peony file scan? UKUI control center memory control center file manager scan",
+              "expansion_trace": [
+                {
+                  "added": "UKUI, control center, memory control center",
+                  "canonical": "UKUI",
+                  "matched": "review memory candidates"
+                },
+                {
+                  "added": "UKUI, control center, memory control center, file manager scan",
+                  "canonical": "Peony",
+                  "matched": "Peony"
+                }
+              ],
+              "query": "Where can a user review memory candidates after a Peony file scan?"
+            },
+            "content_score": 0.07,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.1667,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 2,
+            "lexical_precision": 0.0645,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0323,
+            "query_token_count": 15,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.08,
+            "topic_score": 0.0,
+            "total": 0.4081
+          },
+          "memory_id": "seed_retrieval_cross_language_retrieval_03",
+          "score": 0.031
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_retrieval_cross_language_retrieval_04"
+      ],
+      "actual": [
+        "seed_retrieval_graph_association_retrieval_04",
+        "seed_retrieval_temporal_retrieval_04",
+        "seed_retrieval_cross_language_retrieval_04",
+        "seed_retrieval_hard_negative_retrieval_04",
+        "neg_retrieval_cross_language_retrieval_05"
+      ],
+      "case_id": "retrieval_cross_language_retrieval_04",
+      "expected": [
+        "seed_retrieval_cross_language_retrieval_04"
+      ],
+      "failure_type": "strict_rank_miss",
+      "failure_types": [
+        "strict_rank_miss"
+      ],
+      "hard_negative_hit": false,
+      "metric": "retrieval",
+      "query": "What fallback remains available when the local embedding backend fails?",
+      "reason": "strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "hash fallback",
+                "embedding fallback",
+                "fallback when the local embedding backend fails"
+              ],
+              "expanded_query": "What fallback remains available when the local embedding backend fails? hash fallback embedding fallback fallback when the local embedding backend fails",
+              "expansion_trace": [
+                {
+                  "added": "hash fallback, embedding fallback, fallback when the local embedding backend fails",
+                  "canonical": "hash fallback",
+                  "matched": "local embedding backend fails"
+                }
+              ],
+              "query": "What fallback remains available when the local embedding backend fails?"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 7,
+            "distinctive_term_coverage": 0.2857,
+            "distinctive_term_hit_count": 2,
+            "entity_score": 0.3,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1071,
+            "original_lexical_hit_count": 2,
+            "original_lexical_precision": 0.0714,
+            "query_token_count": 11,
+            "routing_reasons": [
+              "cross_language_term_overlap"
+            ],
+            "routing_score": 0.35,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.9857
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_04",
+          "score": 0.0369
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "hash fallback",
+                "embedding fallback",
+                "fallback when the local embedding backend fails"
+              ],
+              "expanded_query": "What fallback remains available when the local embedding backend fails? hash fallback embedding fallback fallback when the local embedding backend fails",
+              "expansion_trace": [
+                {
+                  "added": "hash fallback, embedding fallback, fallback when the local embedding backend fails",
+                  "canonical": "hash fallback",
+                  "matched": "local embedding backend fails"
+                }
+              ],
+              "query": "What fallback remains available when the local embedding backend fails?"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 7,
+            "distinctive_term_coverage": 0.2857,
+            "distinctive_term_hit_count": 2,
+            "entity_score": 0.3,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1034,
+            "original_lexical_hit_count": 2,
+            "original_lexical_precision": 0.069,
+            "query_token_count": 11,
+            "routing_reasons": [
+              "cross_language_term_overlap"
+            ],
+            "routing_score": 0.35,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.9819
+          },
+          "memory_id": "seed_retrieval_temporal_retrieval_04",
+          "score": 0.036
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "hash fallback",
+                "embedding fallback",
+                "fallback when the local embedding backend fails"
+              ],
+              "expanded_query": "What fallback remains available when the local embedding backend fails? hash fallback embedding fallback fallback when the local embedding backend fails",
+              "expansion_trace": [
+                {
+                  "added": "hash fallback, embedding fallback, fallback when the local embedding backend fails",
+                  "canonical": "hash fallback",
+                  "matched": "local embedding backend fails"
+                }
+              ],
+              "query": "What fallback remains available when the local embedding backend fails?"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 7,
+            "distinctive_term_coverage": 0.2857,
+            "distinctive_term_hit_count": 2,
+            "entity_score": 0.3,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1,
+            "original_lexical_hit_count": 2,
+            "original_lexical_precision": 0.0667,
+            "query_token_count": 11,
+            "routing_reasons": [
+              "cross_language_term_overlap"
+            ],
+            "routing_score": 0.35,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.9783
+          },
+          "memory_id": "seed_retrieval_cross_language_retrieval_04",
+          "score": 0.0357
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "hash fallback",
+                "embedding fallback",
+                "fallback when the local embedding backend fails"
+              ],
+              "expanded_query": "What fallback remains available when the local embedding backend fails? hash fallback embedding fallback fallback when the local embedding backend fails",
+              "expansion_trace": [
+                {
+                  "added": "hash fallback, embedding fallback, fallback when the local embedding backend fails",
+                  "canonical": "hash fallback",
+                  "matched": "local embedding backend fails"
+                }
+              ],
+              "query": "What fallback remains available when the local embedding backend fails?"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 7,
+            "distinctive_term_coverage": 0.2857,
+            "distinctive_term_hit_count": 2,
+            "entity_score": 0.3,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1034,
+            "original_lexical_hit_count": 2,
+            "original_lexical_precision": 0.069,
+            "query_token_count": 11,
+            "routing_reasons": [
+              "cross_language_term_overlap"
+            ],
+            "routing_score": 0.35,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.9819
+          },
+          "memory_id": "seed_retrieval_hard_negative_retrieval_04",
+          "score": 0.0355
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "hash fallback",
+                "embedding fallback",
+                "fallback when the local embedding backend fails"
+              ],
+              "expanded_query": "What fallback remains available when the local embedding backend fails? hash fallback embedding fallback fallback when the local embedding backend fails",
+              "expansion_trace": [
+                {
+                  "added": "hash fallback, embedding fallback, fallback when the local embedding backend fails",
+                  "canonical": "hash fallback",
+                  "matched": "local embedding backend fails"
+                }
+              ],
+              "query": "What fallback remains available when the local embedding backend fails?"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 7,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 11,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.0
+          },
+          "memory_id": "neg_retrieval_cross_language_retrieval_05",
+          "score": 0.0154
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_retrieval_cross_language_retrieval_05"
+      ],
+      "actual": [
+        "seed_retrieval_graph_association_retrieval_05",
+        "seed_retrieval_temporal_retrieval_05",
+        "seed_retrieval_cross_language_retrieval_05",
+        "seed_retrieval_hard_negative_retrieval_05",
+        "neg_retrieval_cross_language_retrieval_05"
+      ],
+      "case_id": "retrieval_cross_language_retrieval_05",
+      "expected": [
+        "seed_retrieval_cross_language_retrieval_05"
+      ],
+      "failure_type": "hard_negative_confusion",
+      "failure_types": [
+        "strict_rank_miss",
+        "hard_negative_confusion"
+      ],
+      "hard_negative_hit": true,
+      "metric": "retrieval",
+      "query": "How is managed plaintext absence verified after segment compaction?",
+      "reason": "中性 hard negative 进入检索结果。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "mmap",
+                "segment file",
+                "compact",
+                "storage compaction"
+              ],
+              "expanded_query": "How is managed plaintext absence verified after segment compaction? mmap segment file compact storage compaction",
+              "expansion_trace": [
+                {
+                  "added": "mmap, segment file",
+                  "canonical": "mmap",
+                  "matched": "managed plaintext absence"
+                },
+                {
+                  "added": "segment file, compact, storage compaction",
+                  "canonical": "compact",
+                  "matched": "segment compaction"
+                }
+              ],
+              "query": "How is managed plaintext absence verified after segment compaction?"
+            },
+            "content_score": 0.07,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 2,
+            "lexical_precision": 0.0741,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 13,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.08,
+            "topic_score": 0.0,
+            "total": 0.387
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_05",
+          "score": 0.0323
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "mmap",
+                "segment file",
+                "compact",
+                "storage compaction"
+              ],
+              "expanded_query": "How is managed plaintext absence verified after segment compaction? mmap segment file compact storage compaction",
+              "expansion_trace": [
+                {
+                  "added": "mmap, segment file",
+                  "canonical": "mmap",
+                  "matched": "managed plaintext absence"
+                },
+                {
+                  "added": "segment file, compact, storage compaction",
+                  "canonical": "compact",
+                  "matched": "segment compaction"
+                }
+              ],
+              "query": "How is managed plaintext absence verified after segment compaction?"
+            },
+            "content_score": 0.07,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 2,
+            "lexical_precision": 0.0714,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 13,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.08,
+            "topic_score": 0.0,
+            "total": 0.3857
+          },
+          "memory_id": "seed_retrieval_temporal_retrieval_05",
+          "score": 0.0323
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "mmap",
+                "segment file",
+                "compact",
+                "storage compaction"
+              ],
+              "expanded_query": "How is managed plaintext absence verified after segment compaction? mmap segment file compact storage compaction",
+              "expansion_trace": [
+                {
+                  "added": "mmap, segment file",
+                  "canonical": "mmap",
+                  "matched": "managed plaintext absence"
+                },
+                {
+                  "added": "segment file, compact, storage compaction",
+                  "canonical": "compact",
+                  "matched": "segment compaction"
+                }
+              ],
+              "query": "How is managed plaintext absence verified after segment compaction?"
+            },
+            "content_score": 0.07,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 2,
+            "lexical_precision": 0.069,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 13,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.08,
+            "topic_score": 0.0,
+            "total": 0.3845
+          },
+          "memory_id": "seed_retrieval_cross_language_retrieval_05",
+          "score": 0.032
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "mmap",
+                "segment file",
+                "compact",
+                "storage compaction"
+              ],
+              "expanded_query": "How is managed plaintext absence verified after segment compaction? mmap segment file compact storage compaction",
+              "expansion_trace": [
+                {
+                  "added": "mmap, segment file",
+                  "canonical": "mmap",
+                  "matched": "managed plaintext absence"
+                },
+                {
+                  "added": "segment file, compact, storage compaction",
+                  "canonical": "compact",
+                  "matched": "segment compaction"
+                }
+              ],
+              "query": "How is managed plaintext absence verified after segment compaction?"
+            },
+            "content_score": 0.07,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 2,
+            "lexical_precision": 0.0714,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 13,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.08,
+            "topic_score": 0.0,
+            "total": 0.3857
+          },
+          "memory_id": "seed_retrieval_hard_negative_retrieval_05",
+          "score": 0.0315
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "mmap",
+                "segment file",
+                "compact",
+                "storage compaction"
+              ],
+              "expanded_query": "How is managed plaintext absence verified after segment compaction? mmap segment file compact storage compaction",
+              "expansion_trace": [
+                {
+                  "added": "mmap, segment file",
+                  "canonical": "mmap",
+                  "matched": "managed plaintext absence"
+                },
+                {
+                  "added": "segment file, compact, storage compaction",
+                  "canonical": "compact",
+                  "matched": "segment compaction"
+                }
+              ],
+              "query": "How is managed plaintext absence verified after segment compaction?"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0588,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 13,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.2044
+          },
+          "memory_id": "neg_retrieval_cross_language_retrieval_05",
+          "score": 0.0308
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_retrieval_cross_language_retrieval_06"
+      ],
+      "actual": [
+        "seed_retrieval_graph_association_retrieval_06",
+        "seed_retrieval_temporal_retrieval_06",
+        "seed_retrieval_hard_negative_retrieval_06",
+        "seed_retrieval_cross_language_retrieval_06",
+        "seed_retrieval_graph_association_retrieval_01"
+      ],
+      "case_id": "retrieval_cross_language_retrieval_06",
+      "expected": [
+        "seed_retrieval_cross_language_retrieval_06"
+      ],
+      "failure_type": "strict_rank_miss",
+      "failure_types": [
+        "strict_rank_miss"
+      ],
+      "hard_negative_hit": false,
+      "metric": "retrieval",
+      "query": "How are workspace isolation and daemon resource limits combined?",
+      "reason": "strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "cgroup",
+                "service resource limits",
+                "resource quota",
+                "memory limits",
+                "cpu limits",
+                "namespace"
+              ],
+              "expanded_query": "How are workspace isolation and daemon resource limits combined? cgroup service resource limits resource quota memory limits cpu limits namespace",
+              "expansion_trace": [
+                {
+                  "added": "cgroup, service resource limits, resource quota, memory limits, cpu limits",
+                  "canonical": "cgroup",
+                  "matched": "resource limits"
+                },
+                {
+                  "added": "cpu limits, namespace",
+                  "canonical": "namespace",
+                  "matched": "workspace isolation"
+                }
+              ],
+              "query": "How are workspace isolation and daemon resource limits combined?"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.12,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 15,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.485
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_06",
+          "score": 0.0328
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "cgroup",
+                "service resource limits",
+                "resource quota",
+                "memory limits",
+                "cpu limits",
+                "namespace"
+              ],
+              "expanded_query": "How are workspace isolation and daemon resource limits combined? cgroup service resource limits resource quota memory limits cpu limits namespace",
+              "expansion_trace": [
+                {
+                  "added": "cgroup, service resource limits, resource quota, memory limits, cpu limits",
+                  "canonical": "cgroup",
+                  "matched": "resource limits"
+                },
+                {
+                  "added": "cpu limits, namespace",
+                  "canonical": "namespace",
+                  "matched": "workspace isolation"
+                }
+              ],
+              "query": "How are workspace isolation and daemon resource limits combined?"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1154,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 15,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.4827
+          },
+          "memory_id": "seed_retrieval_temporal_retrieval_06",
+          "score": 0.0323
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "cgroup",
+                "service resource limits",
+                "resource quota",
+                "memory limits",
+                "cpu limits",
+                "namespace"
+              ],
+              "expanded_query": "How are workspace isolation and daemon resource limits combined? cgroup service resource limits resource quota memory limits cpu limits namespace",
+              "expansion_trace": [
+                {
+                  "added": "cgroup, service resource limits, resource quota, memory limits, cpu limits",
+                  "canonical": "cgroup",
+                  "matched": "resource limits"
+                },
+                {
+                  "added": "cpu limits, namespace",
+                  "canonical": "namespace",
+                  "matched": "workspace isolation"
+                }
+              ],
+              "query": "How are workspace isolation and daemon resource limits combined?"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1154,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 15,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.4827
+          },
+          "memory_id": "seed_retrieval_hard_negative_retrieval_06",
+          "score": 0.0315
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "cgroup",
+                "service resource limits",
+                "resource quota",
+                "memory limits",
+                "cpu limits",
+                "namespace"
+              ],
+              "expanded_query": "How are workspace isolation and daemon resource limits combined? cgroup service resource limits resource quota memory limits cpu limits namespace",
+              "expansion_trace": [
+                {
+                  "added": "cgroup, service resource limits, resource quota, memory limits, cpu limits",
+                  "canonical": "cgroup",
+                  "matched": "resource limits"
+                },
+                {
+                  "added": "cpu limits, namespace",
+                  "canonical": "namespace",
+                  "matched": "workspace isolation"
+                }
+              ],
+              "query": "How are workspace isolation and daemon resource limits combined?"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1111,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 15,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.4806
+          },
+          "memory_id": "seed_retrieval_cross_language_retrieval_06",
+          "score": 0.0315
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "cgroup",
+                "service resource limits",
+                "resource quota",
+                "memory limits",
+                "cpu limits",
+                "namespace"
+              ],
+              "expanded_query": "How are workspace isolation and daemon resource limits combined? cgroup service resource limits resource quota memory limits cpu limits namespace",
+              "expansion_trace": [
+                {
+                  "added": "cgroup, service resource limits, resource quota, memory limits, cpu limits",
+                  "canonical": "cgroup",
+                  "matched": "resource limits"
+                },
+                {
+                  "added": "cpu limits, namespace",
+                  "canonical": "namespace",
+                  "matched": "workspace isolation"
+                }
+              ],
+              "query": "How are workspace isolation and daemon resource limits combined?"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1111,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 15,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.3806
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_01",
+          "score": 0.0308
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_retrieval_cross_language_retrieval_07"
+      ],
+      "actual": [
+        "seed_retrieval_graph_association_retrieval_07",
+        "seed_retrieval_temporal_retrieval_07",
+        "seed_retrieval_hard_negative_retrieval_07",
+        "seed_retrieval_cross_language_retrieval_07",
+        "seed_retrieval_graph_association_retrieval_05"
+      ],
+      "case_id": "retrieval_cross_language_retrieval_07",
+      "expected": [
+        "seed_retrieval_cross_language_retrieval_07"
+      ],
+      "failure_type": "strict_rank_miss",
+      "failure_types": [
+        "strict_rank_miss"
+      ],
+      "hard_negative_hit": false,
+      "metric": "retrieval",
+      "query": "What answer structure distinguishes conclusions, evidence, and boundaries?",
+      "reason": "strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "证据与边界",
+                "evidence and boundaries",
+                "conclusions evidence and boundaries"
+              ],
+              "expanded_query": "What answer structure distinguishes conclusions, evidence, and boundaries? 证据与边界 evidence and boundaries conclusions evidence and boundaries",
+              "expansion_trace": [
+                {
+                  "added": "证据与边界, evidence and boundaries, conclusions evidence and boundaries",
+                  "canonical": "证据与边界",
+                  "matched": "answer structure"
+                }
+              ],
+              "query": "What answer structure distinguishes conclusions, evidence, and boundaries?"
+            },
+            "content_score": 0.14,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 4,
+            "lexical_precision": 0.1176,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 13,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.16,
+            "topic_score": 0.0,
+            "total": 0.4588
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_07",
+          "score": 0.0328
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "证据与边界",
+                "evidence and boundaries",
+                "conclusions evidence and boundaries"
+              ],
+              "expanded_query": "What answer structure distinguishes conclusions, evidence, and boundaries? 证据与边界 evidence and boundaries conclusions evidence and boundaries",
+              "expansion_trace": [
+                {
+                  "added": "证据与边界, evidence and boundaries, conclusions evidence and boundaries",
+                  "canonical": "证据与边界",
+                  "matched": "answer structure"
+                }
+              ],
+              "query": "What answer structure distinguishes conclusions, evidence, and boundaries?"
+            },
+            "content_score": 0.14,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 4,
+            "lexical_precision": 0.1143,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 13,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.16,
+            "topic_score": 0.0,
+            "total": 0.4571
+          },
+          "memory_id": "seed_retrieval_temporal_retrieval_07",
+          "score": 0.0323
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "证据与边界",
+                "evidence and boundaries",
+                "conclusions evidence and boundaries"
+              ],
+              "expanded_query": "What answer structure distinguishes conclusions, evidence, and boundaries? 证据与边界 evidence and boundaries conclusions evidence and boundaries",
+              "expansion_trace": [
+                {
+                  "added": "证据与边界, evidence and boundaries, conclusions evidence and boundaries",
+                  "canonical": "证据与边界",
+                  "matched": "answer structure"
+                }
+              ],
+              "query": "What answer structure distinguishes conclusions, evidence, and boundaries?"
+            },
+            "content_score": 0.14,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 4,
+            "lexical_precision": 0.1143,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 13,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.16,
+            "topic_score": 0.0,
+            "total": 0.4571
+          },
+          "memory_id": "seed_retrieval_hard_negative_retrieval_07",
+          "score": 0.0315
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "证据与边界",
+                "evidence and boundaries",
+                "conclusions evidence and boundaries"
+              ],
+              "expanded_query": "What answer structure distinguishes conclusions, evidence, and boundaries? 证据与边界 evidence and boundaries conclusions evidence and boundaries",
+              "expansion_trace": [
+                {
+                  "added": "证据与边界, evidence and boundaries, conclusions evidence and boundaries",
+                  "canonical": "证据与边界",
+                  "matched": "answer structure"
+                }
+              ],
+              "query": "What answer structure distinguishes conclusions, evidence, and boundaries?"
+            },
+            "content_score": 0.14,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 4,
+            "lexical_precision": 0.1111,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 13,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.16,
+            "topic_score": 0.0,
+            "total": 0.4556
+          },
+          "memory_id": "seed_retrieval_cross_language_retrieval_07",
+          "score": 0.0315
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "证据与边界",
+                "evidence and boundaries",
+                "conclusions evidence and boundaries"
+              ],
+              "expanded_query": "What answer structure distinguishes conclusions, evidence, and boundaries? 证据与边界 evidence and boundaries conclusions evidence and boundaries",
+              "expansion_trace": [
+                {
+                  "added": "证据与边界, evidence and boundaries, conclusions evidence and boundaries",
+                  "canonical": "证据与边界",
+                  "matched": "answer structure"
+                }
+              ],
+              "query": "What answer structure distinguishes conclusions, evidence, and boundaries?"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 13,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.0
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_05",
+          "score": 0.0154
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_retrieval_cross_language_retrieval_08"
+      ],
+      "actual": [
+        "neg_retrieval_cross_language_retrieval_04",
+        "seed_retrieval_graph_association_retrieval_08",
+        "seed_retrieval_graph_association_retrieval_01",
+        "seed_retrieval_hard_negative_retrieval_08",
+        "seed_retrieval_hard_negative_retrieval_01"
+      ],
+      "case_id": "retrieval_cross_language_retrieval_08",
+      "expected": [
+        "seed_retrieval_cross_language_retrieval_08"
+      ],
+      "failure_type": "strict_rank_miss",
+      "failure_types": [
+        "strict_rank_miss",
+        "topic_retrieval_miss"
+      ],
+      "hard_negative_hit": false,
+      "metric": "retrieval",
+      "query": "Which tools are preferred for code search and service diagnostics?",
+      "reason": "strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "代码搜索",
+                "preferred tools for code search",
+                "查代码",
+                "rg",
+                "ripgrep",
+                "服务排障",
+                "service troubleshooting",
+                "systemd troubleshooting"
+              ],
+              "expanded_query": "Which tools are preferred for code search and service diagnostics? 代码搜索 preferred tools for code search 查代码 rg ripgrep 服务排障 service troubleshooting systemd troubleshooting",
+              "expansion_trace": [
+                {
+                  "added": "代码搜索, preferred tools for code search, 查代码, rg, ripgrep",
+                  "canonical": "代码搜索",
+                  "matched": "code search"
+                },
+                {
+                  "added": "ripgrep, 服务排障, service troubleshooting, systemd troubleshooting",
+                  "canonical": "服务排障",
+                  "matched": "service diagnostics"
+                }
+              ],
+              "query": "Which tools are preferred for code search and service diagnostics?"
+            },
+            "content_score": 0.07,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.1667,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.3,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 2,
+            "lexical_precision": 0.1429,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0714,
+            "query_token_count": 25,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.08,
+            "topic_score": 0.0,
+            "total": 0.5786
+          },
+          "memory_id": "neg_retrieval_cross_language_retrieval_04",
+          "score": 0.0359
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "代码搜索",
+                "preferred tools for code search",
+                "查代码",
+                "rg",
+                "ripgrep",
+                "服务排障",
+                "service troubleshooting",
+                "systemd troubleshooting"
+              ],
+              "expanded_query": "Which tools are preferred for code search and service diagnostics? 代码搜索 preferred tools for code search 查代码 rg ripgrep 服务排障 service troubleshooting systemd troubleshooting",
+              "expansion_trace": [
+                {
+                  "added": "代码搜索, preferred tools for code search, 查代码, rg, ripgrep",
+                  "canonical": "代码搜索",
+                  "matched": "code search"
+                },
+                {
+                  "added": "ripgrep, 服务排障, service troubleshooting, systemd troubleshooting",
+                  "canonical": "服务排障",
+                  "matched": "service diagnostics"
+                }
+              ],
+              "query": "Which tools are preferred for code search and service diagnostics?"
+            },
+            "content_score": 0.24,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.3,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 11,
+            "lexical_precision": 0.3793,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0345,
+            "query_token_count": 25,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.28,
+            "topic_score": 0.0,
+            "total": 0.9976
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_08",
+          "score": 0.0356
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "代码搜索",
+                "preferred tools for code search",
+                "查代码",
+                "rg",
+                "ripgrep",
+                "服务排障",
+                "service troubleshooting",
+                "systemd troubleshooting"
+              ],
+              "expanded_query": "Which tools are preferred for code search and service diagnostics? 代码搜索 preferred tools for code search 查代码 rg ripgrep 服务排障 service troubleshooting systemd troubleshooting",
+              "expansion_trace": [
+                {
+                  "added": "代码搜索, preferred tools for code search, 查代码, rg, ripgrep",
+                  "canonical": "代码搜索",
+                  "matched": "code search"
+                },
+                {
+                  "added": "ripgrep, 服务排障, service troubleshooting, systemd troubleshooting",
+                  "canonical": "服务排障",
+                  "matched": "service diagnostics"
+                }
+              ],
+              "query": "Which tools are preferred for code search and service diagnostics?"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1111,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.037,
+            "query_token_count": 25,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.4102
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_01",
+          "score": 0.0353
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "代码搜索",
+                "preferred tools for code search",
+                "查代码",
+                "rg",
+                "ripgrep",
+                "服务排障",
+                "service troubleshooting",
+                "systemd troubleshooting"
+              ],
+              "expanded_query": "Which tools are preferred for code search and service diagnostics? 代码搜索 preferred tools for code search 查代码 rg ripgrep 服务排障 service troubleshooting systemd troubleshooting",
+              "expansion_trace": [
+                {
+                  "added": "代码搜索, preferred tools for code search, 查代码, rg, ripgrep",
+                  "canonical": "代码搜索",
+                  "matched": "code search"
+                },
+                {
+                  "added": "ripgrep, 服务排障, service troubleshooting, systemd troubleshooting",
+                  "canonical": "服务排障",
+                  "matched": "service diagnostics"
+                }
+              ],
+              "query": "Which tools are preferred for code search and service diagnostics?"
+            },
+            "content_score": 0.24,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.3,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 11,
+            "lexical_precision": 0.3667,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0333,
+            "query_token_count": 25,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.28,
+            "topic_score": 0.0,
+            "total": 0.9967
+          },
+          "memory_id": "seed_retrieval_hard_negative_retrieval_08",
+          "score": 0.0348
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "代码搜索",
+                "preferred tools for code search",
+                "查代码",
+                "rg",
+                "ripgrep",
+                "服务排障",
+                "service troubleshooting",
+                "systemd troubleshooting"
+              ],
+              "expanded_query": "Which tools are preferred for code search and service diagnostics? 代码搜索 preferred tools for code search 查代码 rg ripgrep 服务排障 service troubleshooting systemd troubleshooting",
+              "expansion_trace": [
+                {
+                  "added": "代码搜索, preferred tools for code search, 查代码, rg, ripgrep",
+                  "canonical": "代码搜索",
+                  "matched": "code search"
+                },
+                {
+                  "added": "ripgrep, 服务排障, service troubleshooting, systemd troubleshooting",
+                  "canonical": "服务排障",
+                  "matched": "service diagnostics"
+                }
+              ],
+              "query": "Which tools are preferred for code search and service diagnostics?"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 6,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1071,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0357,
+            "query_token_count": 25,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.4071
+          },
+          "memory_id": "seed_retrieval_hard_negative_retrieval_01",
+          "score": 0.0348
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 0.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 0.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_retrieval_cross_language_retrieval_09"
+      ],
+      "actual": [
+        "seed_retrieval_hard_negative_retrieval_09",
+        "seed_retrieval_graph_association_retrieval_09",
+        "seed_retrieval_cross_language_retrieval_09",
+        "seed_retrieval_temporal_retrieval_09",
+        "neg_retrieval_cross_language_retrieval_04"
+      ],
+      "case_id": "retrieval_cross_language_retrieval_09",
+      "expected": [
+        "seed_retrieval_cross_language_retrieval_09"
+      ],
+      "failure_type": "strict_rank_miss",
+      "failure_types": [
+        "strict_rank_miss"
+      ],
+      "hard_negative_hit": false,
+      "metric": "retrieval",
+      "query": "What confirmation is required before a high-risk command?",
+      "reason": "strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "二次确认",
+                "double confirmation",
+                "确认后执行"
+              ],
+              "expanded_query": "What confirmation is required before a high-risk command? 二次确认 double confirmation 确认后执行",
+              "expansion_trace": [
+                {
+                  "added": "二次确认, double confirmation, 确认后执行",
+                  "canonical": "二次确认",
+                  "matched": "confirmation"
+                }
+              ],
+              "query": "What confirmation is required before a high-risk command?"
+            },
+            "content_score": 0.175,
+            "distinctive_latin_token_count": 3,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 5,
+            "lexical_precision": 0.1429,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0286,
+            "query_token_count": 18,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.3,
+            "summary_score": 0.2,
+            "topic_score": 0.72,
+            "total": 1.5893
+          },
+          "memory_id": "seed_retrieval_hard_negative_retrieval_09",
+          "score": 0.0323
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "二次确认",
+                "double confirmation",
+                "确认后执行"
+              ],
+              "expanded_query": "What confirmation is required before a high-risk command? 二次确认 double confirmation 确认后执行",
+              "expansion_trace": [
+                {
+                  "added": "二次确认, double confirmation, 确认后执行",
+                  "canonical": "二次确认",
+                  "matched": "confirmation"
+                }
+              ],
+              "query": "What confirmation is required before a high-risk command?"
+            },
+            "content_score": 0.175,
+            "distinctive_latin_token_count": 3,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 5,
+            "lexical_precision": 0.1471,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0294,
+            "query_token_count": 18,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.3,
+            "summary_score": 0.2,
+            "topic_score": 0.72,
+            "total": 1.5921
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_09",
+          "score": 0.032
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "二次确认",
+                "double confirmation",
+                "确认后执行"
+              ],
+              "expanded_query": "What confirmation is required before a high-risk command? 二次确认 double confirmation 确认后执行",
+              "expansion_trace": [
+                {
+                  "added": "二次确认, double confirmation, 确认后执行",
+                  "canonical": "二次确认",
+                  "matched": "confirmation"
+                }
+              ],
+              "query": "What confirmation is required before a high-risk command?"
+            },
+            "content_score": 0.175,
+            "distinctive_latin_token_count": 3,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 5,
+            "lexical_precision": 0.1389,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0278,
+            "query_token_count": 18,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.3,
+            "summary_score": 0.2,
+            "topic_score": 0.72,
+            "total": 1.5867
+          },
+          "memory_id": "seed_retrieval_cross_language_retrieval_09",
+          "score": 0.032
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "二次确认",
+                "double confirmation",
+                "确认后执行"
+              ],
+              "expanded_query": "What confirmation is required before a high-risk command? 二次确认 double confirmation 确认后执行",
+              "expansion_trace": [
+                {
+                  "added": "二次确认, double confirmation, 确认后执行",
+                  "canonical": "二次确认",
+                  "matched": "confirmation"
+                }
+              ],
+              "query": "What confirmation is required before a high-risk command?"
+            },
+            "content_score": 0.175,
+            "distinctive_latin_token_count": 3,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 5,
+            "lexical_precision": 0.1429,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0286,
+            "query_token_count": 18,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.3,
+            "summary_score": 0.2,
+            "topic_score": 0.72,
+            "total": 1.5893
+          },
+          "memory_id": "seed_retrieval_temporal_retrieval_09",
+          "score": 0.0317
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "二次确认",
+                "double confirmation",
+                "确认后执行"
+              ],
+              "expanded_query": "What confirmation is required before a high-risk command? 二次确认 double confirmation 确认后执行",
+              "expansion_trace": [
+                {
+                  "added": "二次确认, double confirmation, 确认后执行",
+                  "canonical": "二次确认",
+                  "matched": "confirmation"
+                }
+              ],
+              "query": "What confirmation is required before a high-risk command?"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 3,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 18,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.3,
+            "summary_score": 0.0,
+            "topic_score": 0.72,
+            "total": 1.02
+          },
+          "memory_id": "neg_retrieval_cross_language_retrieval_04",
+          "score": 0.0154
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_retrieval_cross_language_retrieval_10"
+      ],
+      "actual": [
+        "seed_retrieval_hard_negative_retrieval_10",
+        "seed_retrieval_graph_association_retrieval_10",
+        "seed_retrieval_temporal_retrieval_10",
+        "seed_retrieval_cross_language_retrieval_10",
+        "neg_retrieval_cross_language_retrieval_10"
+      ],
+      "case_id": "retrieval_cross_language_retrieval_10",
+      "expected": [
+        "seed_retrieval_cross_language_retrieval_10"
+      ],
+      "failure_type": "hard_negative_confusion",
+      "failure_types": [
+        "strict_rank_miss",
+        "hard_negative_confusion"
+      ],
+      "hard_negative_hit": true,
+      "metric": "retrieval",
+      "query": "What is the first step after a pytest failure?",
+      "reason": "中性 hard negative 进入检索结果。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "最小失败用例",
+                "minimal failing case"
+              ],
+              "expanded_query": "What is the first step after a pytest failure? 最小失败用例 minimal failing case",
+              "expansion_trace": [
+                {
+                  "added": "最小失败用例, minimal failing case",
+                  "canonical": "最小失败用例",
+                  "matched": "first step after a pytest failure"
+                }
+              ],
+              "query": "What is the first step after a pytest failure?"
+            },
+            "content_score": 0.21,
+            "distinctive_latin_token_count": 4,
+            "distinctive_term_coverage": 0.25,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.3,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 6,
+            "lexical_precision": 0.1875,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0312,
+            "query_token_count": 18,
+            "routing_reasons": [
+              "procedural_source"
+            ],
+            "routing_score": 0.5,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.24,
+            "topic_score": 0.0,
+            "total": 1.3687
+          },
+          "memory_id": "seed_retrieval_hard_negative_retrieval_10",
+          "score": 0.0328
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "最小失败用例",
+                "minimal failing case"
+              ],
+              "expanded_query": "What is the first step after a pytest failure? 最小失败用例 minimal failing case",
+              "expansion_trace": [
+                {
+                  "added": "最小失败用例, minimal failing case",
+                  "canonical": "最小失败用例",
+                  "matched": "first step after a pytest failure"
+                }
+              ],
+              "query": "What is the first step after a pytest failure?"
+            },
+            "content_score": 0.21,
+            "distinctive_latin_token_count": 4,
+            "distinctive_term_coverage": 0.25,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.3,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 6,
+            "lexical_precision": 0.1935,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0323,
+            "query_token_count": 18,
+            "routing_reasons": [
+              "procedural_source"
+            ],
+            "routing_score": 0.25,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.24,
+            "topic_score": 0.0,
+            "total": 1.1226
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_10",
+          "score": 0.0323
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "最小失败用例",
+                "minimal failing case"
+              ],
+              "expanded_query": "What is the first step after a pytest failure? 最小失败用例 minimal failing case",
+              "expansion_trace": [
+                {
+                  "added": "最小失败用例, minimal failing case",
+                  "canonical": "最小失败用例",
+                  "matched": "first step after a pytest failure"
+                }
+              ],
+              "query": "What is the first step after a pytest failure?"
+            },
+            "content_score": 0.21,
+            "distinctive_latin_token_count": 4,
+            "distinctive_term_coverage": 0.25,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.3,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 6,
+            "lexical_precision": 0.1875,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0312,
+            "query_token_count": 18,
+            "routing_reasons": [
+              "procedural_source"
+            ],
+            "routing_score": 0.25,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.24,
+            "topic_score": 0.0,
+            "total": 1.1187
+          },
+          "memory_id": "seed_retrieval_temporal_retrieval_10",
+          "score": 0.0317
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "最小失败用例",
+                "minimal failing case"
+              ],
+              "expanded_query": "What is the first step after a pytest failure? 最小失败用例 minimal failing case",
+              "expansion_trace": [
+                {
+                  "added": "最小失败用例, minimal failing case",
+                  "canonical": "最小失败用例",
+                  "matched": "first step after a pytest failure"
+                }
+              ],
+              "query": "What is the first step after a pytest failure?"
+            },
+            "content_score": 0.21,
+            "distinctive_latin_token_count": 4,
+            "distinctive_term_coverage": 0.25,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.3,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 6,
+            "lexical_precision": 0.1818,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0303,
+            "query_token_count": 18,
+            "routing_reasons": [
+              "procedural_source"
+            ],
+            "routing_score": 0.25,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.24,
+            "topic_score": 0.0,
+            "total": 1.1152
+          },
+          "memory_id": "seed_retrieval_cross_language_retrieval_10",
+          "score": 0.0312
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "最小失败用例",
+                "minimal failing case"
+              ],
+              "expanded_query": "What is the first step after a pytest failure? 最小失败用例 minimal failing case",
+              "expansion_trace": [
+                {
+                  "added": "最小失败用例, minimal failing case",
+                  "canonical": "最小失败用例",
+                  "matched": "first step after a pytest failure"
+                }
+              ],
+              "query": "What is the first step after a pytest failure?"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 4,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 18,
+            "routing_reasons": [
+              "procedural_source"
+            ],
+            "routing_score": 0.25,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.25
+          },
+          "memory_id": "neg_retrieval_cross_language_retrieval_10",
+          "score": 0.0154
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_retrieval_graph_association_retrieval_01"
+      ],
+      "actual": [
+        "seed_retrieval_graph_association_retrieval_10",
+        "seed_retrieval_graph_association_retrieval_01",
+        "seed_retrieval_graph_association_retrieval_04",
+        "seed_retrieval_graph_association_retrieval_08",
+        "seed_retrieval_graph_association_retrieval_06"
+      ],
+      "case_id": "retrieval_graph_association_retrieval_01",
+      "expected": [
+        "seed_retrieval_graph_association_retrieval_01"
+      ],
+      "failure_type": "strict_rank_miss",
+      "failure_types": [
+        "strict_rank_miss"
+      ],
+      "hard_negative_hit": false,
+      "metric": "retrieval",
+      "query": "journalctl 的关联组件与步骤",
+      "reason": "strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "service logs",
+                "system logs",
+                "logs before restarting"
+              ],
+              "expanded_query": "journalctl 的关联组件与步骤 service logs system logs logs before restarting",
+              "expansion_trace": [
+                {
+                  "added": "service logs, system logs, logs before restarting",
+                  "canonical": "journalctl",
+                  "matched": "journalctl"
+                }
+              ],
+              "query": "journalctl 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0323,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0323,
+            "query_token_count": 14,
+            "routing_reasons": [
+              "relational_source",
+              "procedural_source"
+            ],
+            "routing_score": 0.65,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.7669
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_10",
+          "score": 0.0366
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "service logs",
+                "system logs",
+                "logs before restarting"
+              ],
+              "expanded_query": "journalctl 的关联组件与步骤 service logs system logs logs before restarting",
+              "expansion_trace": [
+                {
+                  "added": "service logs, system logs, logs before restarting",
+                  "canonical": "journalctl",
+                  "matched": "journalctl"
+                }
+              ],
+              "query": "journalctl 的关联组件与步骤"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 1.0,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1111,
+            "original_lexical_hit_count": 2,
+            "original_lexical_precision": 0.0741,
+            "query_token_count": 14,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.9398
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_01",
+          "score": 0.0366
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "service logs",
+                "system logs",
+                "logs before restarting"
+              ],
+              "expanded_query": "journalctl 的关联组件与步骤 service logs system logs logs before restarting",
+              "expansion_trace": [
+                {
+                  "added": "service logs, system logs, logs before restarting",
+                  "canonical": "journalctl",
+                  "matched": "journalctl"
+                }
+              ],
+              "query": "journalctl 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0357,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0357,
+            "query_token_count": 14,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.5214
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_04",
+          "score": 0.0346
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "service logs",
+                "system logs",
+                "logs before restarting"
+              ],
+              "expanded_query": "journalctl 的关联组件与步骤 service logs system logs logs before restarting",
+              "expansion_trace": [
+                {
+                  "added": "service logs, system logs, logs before restarting",
+                  "canonical": "journalctl",
+                  "matched": "journalctl"
+                }
+              ],
+              "query": "journalctl 的关联组件与步骤"
+            },
+            "content_score": 0.07,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 2,
+            "lexical_precision": 0.069,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0345,
+            "query_token_count": 14,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.08,
+            "topic_score": 0.0,
+            "total": 0.7121
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_08",
+          "score": 0.0346
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "service logs",
+                "system logs",
+                "logs before restarting"
+              ],
+              "expanded_query": "journalctl 的关联组件与步骤 service logs system logs logs before restarting",
+              "expansion_trace": [
+                {
+                  "added": "service logs, system logs, logs before restarting",
+                  "canonical": "journalctl",
+                  "matched": "journalctl"
+                }
+              ],
+              "query": "journalctl 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.04,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.04,
+            "query_token_count": 14,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.527
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_06",
+          "score": 0.0339
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_retrieval_graph_association_retrieval_02"
+      ],
+      "actual": [
+        "seed_retrieval_graph_association_retrieval_10",
+        "seed_retrieval_graph_association_retrieval_02",
+        "seed_retrieval_graph_association_retrieval_04",
+        "seed_retrieval_graph_association_retrieval_05",
+        "seed_retrieval_graph_association_retrieval_03"
+      ],
+      "case_id": "retrieval_graph_association_retrieval_02",
+      "expected": [
+        "seed_retrieval_graph_association_retrieval_02"
+      ],
+      "failure_type": "strict_rank_miss",
+      "failure_types": [
+        "strict_rank_miss"
+      ],
+      "hard_negative_hit": false,
+      "metric": "retrieval",
+      "query": "BPF LSM 的关联组件与步骤",
+      "reason": "strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "kernel enforcement",
+                "enforcement layer",
+                "path enforcement"
+              ],
+              "expanded_query": "BPF LSM 的关联组件与步骤 kernel enforcement enforcement layer path enforcement",
+              "expansion_trace": [
+                {
+                  "added": "kernel enforcement, enforcement layer, path enforcement",
+                  "canonical": "BPF LSM",
+                  "matched": "BPF LSM"
+                }
+              ],
+              "query": "BPF LSM 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 2,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0323,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0323,
+            "query_token_count": 14,
+            "routing_reasons": [
+              "relational_source",
+              "procedural_source"
+            ],
+            "routing_score": 0.65,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.7669
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_10",
+          "score": 0.0366
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "kernel enforcement",
+                "enforcement layer",
+                "path enforcement"
+              ],
+              "expanded_query": "BPF LSM 的关联组件与步骤 kernel enforcement enforcement layer path enforcement",
+              "expansion_trace": [
+                {
+                  "added": "kernel enforcement, enforcement layer, path enforcement",
+                  "canonical": "BPF LSM",
+                  "matched": "BPF LSM"
+                }
+              ],
+              "query": "BPF LSM 的关联组件与步骤"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 2,
+            "distinctive_term_coverage": 1.0,
+            "distinctive_term_hit_count": 2,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1,
+            "original_lexical_hit_count": 3,
+            "original_lexical_precision": 0.1,
+            "query_token_count": 14,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.955
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_02",
+          "score": 0.0366
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "kernel enforcement",
+                "enforcement layer",
+                "path enforcement"
+              ],
+              "expanded_query": "BPF LSM 的关联组件与步骤 kernel enforcement enforcement layer path enforcement",
+              "expansion_trace": [
+                {
+                  "added": "kernel enforcement, enforcement layer, path enforcement",
+                  "canonical": "BPF LSM",
+                  "matched": "BPF LSM"
+                }
+              ],
+              "query": "BPF LSM 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 2,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0357,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0357,
+            "query_token_count": 14,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.5214
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_04",
+          "score": 0.0343
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "kernel enforcement",
+                "enforcement layer",
+                "path enforcement"
+              ],
+              "expanded_query": "BPF LSM 的关联组件与步骤 kernel enforcement enforcement layer path enforcement",
+              "expansion_trace": [
+                {
+                  "added": "kernel enforcement, enforcement layer, path enforcement",
+                  "canonical": "BPF LSM",
+                  "matched": "BPF LSM"
+                }
+              ],
+              "query": "BPF LSM 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 2,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.037,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.037,
+            "query_token_count": 14,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.5231
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_05",
+          "score": 0.0342
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "kernel enforcement",
+                "enforcement layer",
+                "path enforcement"
+              ],
+              "expanded_query": "BPF LSM 的关联组件与步骤 kernel enforcement enforcement layer path enforcement",
+              "expansion_trace": [
+                {
+                  "added": "kernel enforcement, enforcement layer, path enforcement",
+                  "canonical": "BPF LSM",
+                  "matched": "BPF LSM"
+                }
+              ],
+              "query": "BPF LSM 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 2,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0345,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0345,
+            "query_token_count": 14,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.5198
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_03",
+          "score": 0.0338
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_retrieval_graph_association_retrieval_03"
+      ],
+      "actual": [
+        "seed_retrieval_graph_association_retrieval_10",
+        "seed_retrieval_graph_association_retrieval_03",
+        "seed_retrieval_graph_association_retrieval_06",
+        "seed_retrieval_graph_association_retrieval_04",
+        "seed_retrieval_graph_association_retrieval_01"
+      ],
+      "case_id": "retrieval_graph_association_retrieval_03",
+      "expected": [
+        "seed_retrieval_graph_association_retrieval_03"
+      ],
+      "failure_type": "strict_rank_miss",
+      "failure_types": [
+        "strict_rank_miss"
+      ],
+      "hard_negative_hit": false,
+      "metric": "retrieval",
+      "query": "UKUI 的关联组件与步骤",
+      "reason": "strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "control center",
+                "memory control center",
+                "review memory candidates"
+              ],
+              "expanded_query": "UKUI 的关联组件与步骤 control center memory control center review memory candidates",
+              "expansion_trace": [
+                {
+                  "added": "control center, memory control center, review memory candidates",
+                  "canonical": "UKUI",
+                  "matched": "UKUI"
+                }
+              ],
+              "query": "UKUI 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0323,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0323,
+            "query_token_count": 14,
+            "routing_reasons": [
+              "relational_source",
+              "procedural_source"
+            ],
+            "routing_score": 0.65,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.7669
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_10",
+          "score": 0.0369
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "control center",
+                "memory control center",
+                "review memory candidates"
+              ],
+              "expanded_query": "UKUI 的关联组件与步骤 control center memory control center review memory candidates",
+              "expansion_trace": [
+                {
+                  "added": "control center, memory control center, review memory candidates",
+                  "canonical": "UKUI",
+                  "matched": "UKUI"
+                }
+              ],
+              "query": "UKUI 的关联组件与步骤"
+            },
+            "content_score": 0.07,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 1.0,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 2,
+            "lexical_precision": 0.069,
+            "original_lexical_hit_count": 2,
+            "original_lexical_precision": 0.069,
+            "query_token_count": 14,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.08,
+            "topic_score": 0.0,
+            "total": 0.7397
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_03",
+          "score": 0.0363
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "control center",
+                "memory control center",
+                "review memory candidates"
+              ],
+              "expanded_query": "UKUI 的关联组件与步骤 control center memory control center review memory candidates",
+              "expansion_trace": [
+                {
+                  "added": "control center, memory control center, review memory candidates",
+                  "canonical": "UKUI",
+                  "matched": "UKUI"
+                }
+              ],
+              "query": "UKUI 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.04,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.04,
+            "query_token_count": 14,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.527
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_06",
+          "score": 0.0352
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "control center",
+                "memory control center",
+                "review memory candidates"
+              ],
+              "expanded_query": "UKUI 的关联组件与步骤 control center memory control center review memory candidates",
+              "expansion_trace": [
+                {
+                  "added": "control center, memory control center, review memory candidates",
+                  "canonical": "UKUI",
+                  "matched": "UKUI"
+                }
+              ],
+              "query": "UKUI 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0357,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0357,
+            "query_token_count": 14,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.5214
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_04",
+          "score": 0.0348
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "control center",
+                "memory control center",
+                "review memory candidates"
+              ],
+              "expanded_query": "UKUI 的关联组件与步骤 control center memory control center review memory candidates",
+              "expansion_trace": [
+                {
+                  "added": "control center, memory control center, review memory candidates",
+                  "canonical": "UKUI",
+                  "matched": "UKUI"
+                }
+              ],
+              "query": "UKUI 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.037,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.037,
+            "query_token_count": 14,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.5231
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_01",
+          "score": 0.0347
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_retrieval_graph_association_retrieval_05"
+      ],
+      "actual": [
+        "seed_retrieval_graph_association_retrieval_10",
+        "seed_retrieval_graph_association_retrieval_05",
+        "seed_retrieval_graph_association_retrieval_01",
+        "seed_retrieval_graph_association_retrieval_04",
+        "seed_retrieval_graph_association_retrieval_08"
+      ],
+      "case_id": "retrieval_graph_association_retrieval_05",
+      "expected": [
+        "seed_retrieval_graph_association_retrieval_05"
+      ],
+      "failure_type": "strict_rank_miss",
+      "failure_types": [
+        "strict_rank_miss"
+      ],
+      "hard_negative_hit": false,
+      "metric": "retrieval",
+      "query": "compact 的关联组件与步骤",
+      "reason": "strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "segment compaction",
+                "storage compaction"
+              ],
+              "expanded_query": "compact 的关联组件与步骤 segment compaction storage compaction",
+              "expansion_trace": [
+                {
+                  "added": "segment compaction, storage compaction",
+                  "canonical": "compact",
+                  "matched": "compact"
+                }
+              ],
+              "query": "compact 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0323,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0323,
+            "query_token_count": 12,
+            "routing_reasons": [
+              "relational_source",
+              "procedural_source"
+            ],
+            "routing_score": 0.65,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.7669
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_10",
+          "score": 0.0366
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "segment compaction",
+                "storage compaction"
+              ],
+              "expanded_query": "compact 的关联组件与步骤 segment compaction storage compaction",
+              "expansion_trace": [
+                {
+                  "added": "segment compaction, storage compaction",
+                  "canonical": "compact",
+                  "matched": "compact"
+                }
+              ],
+              "query": "compact 的关联组件与步骤"
+            },
+            "content_score": 0.07,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 1.0,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 2,
+            "lexical_precision": 0.0741,
+            "original_lexical_hit_count": 2,
+            "original_lexical_precision": 0.0741,
+            "query_token_count": 12,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.08,
+            "topic_score": 0.0,
+            "total": 0.7463
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_05",
+          "score": 0.0366
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "segment compaction",
+                "storage compaction"
+              ],
+              "expanded_query": "compact 的关联组件与步骤 segment compaction storage compaction",
+              "expansion_trace": [
+                {
+                  "added": "segment compaction, storage compaction",
+                  "canonical": "compact",
+                  "matched": "compact"
+                }
+              ],
+              "query": "compact 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.037,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.037,
+            "query_token_count": 12,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.5231
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_01",
+          "score": 0.0349
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "segment compaction",
+                "storage compaction"
+              ],
+              "expanded_query": "compact 的关联组件与步骤 segment compaction storage compaction",
+              "expansion_trace": [
+                {
+                  "added": "segment compaction, storage compaction",
+                  "canonical": "compact",
+                  "matched": "compact"
+                }
+              ],
+              "query": "compact 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0357,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0357,
+            "query_token_count": 12,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.5214
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_04",
+          "score": 0.0349
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "segment compaction",
+                "storage compaction"
+              ],
+              "expanded_query": "compact 的关联组件与步骤 segment compaction storage compaction",
+              "expansion_trace": [
+                {
+                  "added": "segment compaction, storage compaction",
+                  "canonical": "compact",
+                  "matched": "compact"
+                }
+              ],
+              "query": "compact 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0345,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0345,
+            "query_token_count": 12,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.5198
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_08",
+          "score": 0.0348
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_retrieval_graph_association_retrieval_06"
+      ],
+      "actual": [
+        "seed_retrieval_graph_association_retrieval_10",
+        "seed_retrieval_graph_association_retrieval_06",
+        "seed_retrieval_graph_association_retrieval_01",
+        "seed_retrieval_graph_association_retrieval_08",
+        "seed_retrieval_graph_association_retrieval_04"
+      ],
+      "case_id": "retrieval_graph_association_retrieval_06",
+      "expected": [
+        "seed_retrieval_graph_association_retrieval_06"
+      ],
+      "failure_type": "strict_rank_miss",
+      "failure_types": [
+        "strict_rank_miss"
+      ],
+      "hard_negative_hit": false,
+      "metric": "retrieval",
+      "query": "cgroup 的关联组件与步骤",
+      "reason": "strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "resource limits",
+                "daemon resource limits",
+                "service resource limits",
+                "resource quota",
+                "memory limits",
+                "cpu limits"
+              ],
+              "expanded_query": "cgroup 的关联组件与步骤 resource limits daemon resource limits service resource limits resource quota memory limits cpu limits",
+              "expansion_trace": [
+                {
+                  "added": "resource limits, daemon resource limits, service resource limits, resource quota, memory limits, cpu limits",
+                  "canonical": "cgroup",
+                  "matched": "cgroup"
+                }
+              ],
+              "query": "cgroup 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0323,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0323,
+            "query_token_count": 16,
+            "routing_reasons": [
+              "relational_source",
+              "procedural_source"
+            ],
+            "routing_score": 0.65,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.7669
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_10",
+          "score": 0.0364
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "resource limits",
+                "daemon resource limits",
+                "service resource limits",
+                "resource quota",
+                "memory limits",
+                "cpu limits"
+              ],
+              "expanded_query": "cgroup 的关联组件与步骤 resource limits daemon resource limits service resource limits resource quota memory limits cpu limits",
+              "expansion_trace": [
+                {
+                  "added": "resource limits, daemon resource limits, service resource limits, resource quota, memory limits, cpu limits",
+                  "canonical": "cgroup",
+                  "matched": "cgroup"
+                }
+              ],
+              "query": "cgroup 的关联组件与步骤"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 1.0,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.12,
+            "original_lexical_hit_count": 2,
+            "original_lexical_precision": 0.08,
+            "query_token_count": 16,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.849
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_06",
+          "score": 0.0363
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "resource limits",
+                "daemon resource limits",
+                "service resource limits",
+                "resource quota",
+                "memory limits",
+                "cpu limits"
+              ],
+              "expanded_query": "cgroup 的关联组件与步骤 resource limits daemon resource limits service resource limits resource quota memory limits cpu limits",
+              "expansion_trace": [
+                {
+                  "added": "resource limits, daemon resource limits, service resource limits, resource quota, memory limits, cpu limits",
+                  "canonical": "cgroup",
+                  "matched": "cgroup"
+                }
+              ],
+              "query": "cgroup 的关联组件与步骤"
+            },
+            "content_score": 0.14,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 1.0,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 4,
+            "lexical_precision": 0.1481,
+            "original_lexical_hit_count": 2,
+            "original_lexical_precision": 0.0741,
+            "query_token_count": 16,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.16,
+            "topic_score": 0.0,
+            "total": 0.9333
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_01",
+          "score": 0.0362
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "resource limits",
+                "daemon resource limits",
+                "service resource limits",
+                "resource quota",
+                "memory limits",
+                "cpu limits"
+              ],
+              "expanded_query": "cgroup 的关联组件与步骤 resource limits daemon resource limits service resource limits resource quota memory limits cpu limits",
+              "expansion_trace": [
+                {
+                  "added": "resource limits, daemon resource limits, service resource limits, resource quota, memory limits, cpu limits",
+                  "canonical": "cgroup",
+                  "matched": "cgroup"
+                }
+              ],
+              "query": "cgroup 的关联组件与步骤"
+            },
+            "content_score": 0.07,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 2,
+            "lexical_precision": 0.069,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0345,
+            "query_token_count": 16,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.08,
+            "topic_score": 0.0,
+            "total": 0.6121
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_08",
+          "score": 0.0343
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [
+                "resource limits",
+                "daemon resource limits",
+                "service resource limits",
+                "resource quota",
+                "memory limits",
+                "cpu limits"
+              ],
+              "expanded_query": "cgroup 的关联组件与步骤 resource limits daemon resource limits service resource limits resource quota memory limits cpu limits",
+              "expansion_trace": [
+                {
+                  "added": "resource limits, daemon resource limits, service resource limits, resource quota, memory limits, cpu limits",
+                  "canonical": "cgroup",
+                  "matched": "cgroup"
+                }
+              ],
+              "query": "cgroup 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0357,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0357,
+            "query_token_count": 16,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.5214
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_04",
+          "score": 0.0339
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_retrieval_graph_association_retrieval_08"
+      ],
+      "actual": [
+        "seed_retrieval_graph_association_retrieval_10",
+        "seed_retrieval_graph_association_retrieval_08",
+        "seed_retrieval_graph_association_retrieval_04",
+        "seed_retrieval_graph_association_retrieval_05",
+        "seed_retrieval_graph_association_retrieval_06"
+      ],
+      "case_id": "retrieval_graph_association_retrieval_08",
+      "expected": [
+        "seed_retrieval_graph_association_retrieval_08"
+      ],
+      "failure_type": "strict_rank_miss",
+      "failure_types": [
+        "strict_rank_miss"
+      ],
+      "hard_negative_hit": false,
+      "metric": "retrieval",
+      "query": "systemctl status 的关联组件与步骤",
+      "reason": "strict gold 未命中 rank 1；同时记录 topic acceptable 是否命中。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "systemctl status 的关联组件与步骤",
+              "expansion_trace": [],
+              "query": "systemctl status 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 2,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0323,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0323,
+            "query_token_count": 10,
+            "routing_reasons": [
+              "relational_source",
+              "procedural_source"
+            ],
+            "routing_score": 0.65,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.7669
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_10",
+          "score": 0.0366
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "systemctl status 的关联组件与步骤",
+              "expansion_trace": [],
+              "query": "systemctl status 的关联组件与步骤"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 2,
+            "distinctive_term_coverage": 1.0,
+            "distinctive_term_hit_count": 2,
+            "entity_score": 0.2,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1034,
+            "original_lexical_hit_count": 3,
+            "original_lexical_precision": 0.1034,
+            "query_token_count": 10,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.9595
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_08",
+          "score": 0.0366
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "systemctl status 的关联组件与步骤",
+              "expansion_trace": [],
+              "query": "systemctl status 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 2,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0357,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0357,
+            "query_token_count": 10,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.5214
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_04",
+          "score": 0.0346
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "systemctl status 的关联组件与步骤",
+              "expansion_trace": [],
+              "query": "systemctl status 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 2,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.037,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.037,
+            "query_token_count": 10,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.5231
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_05",
+          "score": 0.0342
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "systemctl status 的关联组件与步骤",
+              "expansion_trace": [],
+              "query": "systemctl status 的关联组件与步骤"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 2,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.04,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.04,
+            "query_token_count": 10,
+            "routing_reasons": [
+              "relational_source"
+            ],
+            "routing_score": 0.4,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.527
+          },
+          "memory_id": "seed_retrieval_graph_association_retrieval_06",
+          "score": 0.0341
+        }
+      ],
+      "strict_at_1": 0.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 0.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_holdout_holdout_retrieval_04"
+      ],
+      "actual": [
+        "seed_holdout_holdout_retrieval_04",
+        "neg_holdout_holdout_retrieval_04",
+        "seed_holdout_holdout_retrieval_20",
+        "neg_holdout_holdout_retrieval_02",
+        "seed_holdout_holdout_retrieval_07"
+      ],
+      "case_id": "holdout_holdout_retrieval_04",
+      "expected": [
+        "seed_holdout_holdout_retrieval_04"
+      ],
+      "failure_type": "hard_negative_confusion",
+      "failure_types": [
+        "hard_negative_confusion"
+      ],
+      "hard_negative_hit": true,
+      "metric": "retrieval",
+      "query": "请检索与词法索引直接相关的操作证据。",
+      "reason": "中性 hard negative 进入检索结果。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与词法索引直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与词法索引直接相关的操作证据。"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.0968,
+            "original_lexical_hit_count": 3,
+            "original_lexical_precision": 0.0968,
+            "query_token_count": 17,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.3508
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_04",
+          "score": 0.0328
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与词法索引直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与词法索引直接相关的操作证据。"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0625,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0625,
+            "query_token_count": 17,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.1562
+          },
+          "memory_id": "neg_holdout_holdout_retrieval_04",
+          "score": 0.032
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与词法索引直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与词法索引直接相关的操作证据。"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0357,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0357,
+            "query_token_count": 17,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.1214
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_20",
+          "score": 0.032
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与词法索引直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与词法索引直接相关的操作证据。"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 17,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.0
+          },
+          "memory_id": "neg_holdout_holdout_retrieval_02",
+          "score": 0.0156
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与词法索引直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与词法索引直接相关的操作证据。"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 17,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.0
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_07",
+          "score": 0.0154
+        }
+      ],
+      "strict_at_1": 1.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 1.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_holdout_holdout_retrieval_06"
+      ],
+      "actual": [
+        "seed_holdout_holdout_retrieval_06",
+        "seed_holdout_holdout_retrieval_20",
+        "neg_holdout_holdout_retrieval_06",
+        "seed_holdout_holdout_retrieval_07",
+        "seed_holdout_holdout_retrieval_11"
+      ],
+      "case_id": "holdout_holdout_retrieval_06",
+      "expected": [
+        "seed_holdout_holdout_retrieval_06"
+      ],
+      "failure_type": "hard_negative_confusion",
+      "failure_types": [
+        "hard_negative_confusion"
+      ],
+      "hard_negative_hit": true,
+      "metric": "retrieval",
+      "query": "请检索与目标目录权限直接相关的操作证据。",
+      "reason": "中性 hard negative 进入检索结果。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与目标目录权限直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与目标目录权限直接相关的操作证据。"
+            },
+            "content_score": 0.175,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 5,
+            "lexical_precision": 0.1562,
+            "original_lexical_hit_count": 5,
+            "original_lexical_precision": 0.1562,
+            "query_token_count": 19,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.2,
+            "topic_score": 0.0,
+            "total": 0.5781
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_06",
+          "score": 0.0328
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与目标目录权限直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与目标目录权限直接相关的操作证据。"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0357,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0357,
+            "query_token_count": 19,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.1214
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_20",
+          "score": 0.032
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与目标目录权限直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与目标目录权限直接相关的操作证据。"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0556,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0556,
+            "query_token_count": 19,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.1472
+          },
+          "memory_id": "neg_holdout_holdout_retrieval_06",
+          "score": 0.032
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与目标目录权限直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与目标目录权限直接相关的操作证据。"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 19,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.0
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_07",
+          "score": 0.0156
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与目标目录权限直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与目标目录权限直接相关的操作证据。"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 19,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.0
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_11",
+          "score": 0.0154
+        }
+      ],
+      "strict_at_1": 1.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 1.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_holdout_holdout_retrieval_10"
+      ],
+      "actual": [
+        "seed_holdout_holdout_retrieval_10",
+        "neg_holdout_holdout_retrieval_10",
+        "seed_holdout_holdout_retrieval_20",
+        "neg_holdout_holdout_retrieval_15",
+        "seed_holdout_holdout_retrieval_07"
+      ],
+      "case_id": "holdout_holdout_retrieval_10",
+      "expected": [
+        "seed_holdout_holdout_retrieval_10"
+      ],
+      "failure_type": "hard_negative_confusion",
+      "failure_types": [
+        "hard_negative_confusion"
+      ],
+      "hard_negative_hit": true,
+      "metric": "retrieval",
+      "query": "请检索与最小日志窗口直接相关的操作证据。",
+      "reason": "中性 hard negative 进入检索结果。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与最小日志窗口直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与最小日志窗口直接相关的操作证据。"
+            },
+            "content_score": 0.175,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 5,
+            "lexical_precision": 0.1471,
+            "original_lexical_hit_count": 5,
+            "original_lexical_precision": 0.1471,
+            "query_token_count": 19,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.2,
+            "topic_score": 0.0,
+            "total": 0.5662
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_10",
+          "score": 0.0328
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与最小日志窗口直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与最小日志窗口直接相关的操作证据。"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.05,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.05,
+            "query_token_count": 19,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.14
+          },
+          "memory_id": "neg_holdout_holdout_retrieval_10",
+          "score": 0.0323
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与最小日志窗口直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与最小日志窗口直接相关的操作证据。"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0357,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0357,
+            "query_token_count": 19,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.1214
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_20",
+          "score": 0.0315
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与最小日志窗口直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与最小日志窗口直接相关的操作证据。"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.05,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.05,
+            "query_token_count": 19,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.14
+          },
+          "memory_id": "neg_holdout_holdout_retrieval_15",
+          "score": 0.0313
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与最小日志窗口直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与最小日志窗口直接相关的操作证据。"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0323,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0323,
+            "query_token_count": 19,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.1169
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_07",
+          "score": 0.031
+        }
+      ],
+      "strict_at_1": 1.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 1.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_holdout_holdout_retrieval_16"
+      ],
+      "actual": [
+        "seed_holdout_holdout_retrieval_16",
+        "seed_holdout_holdout_retrieval_20",
+        "neg_holdout_holdout_retrieval_16",
+        "seed_holdout_holdout_retrieval_18",
+        "seed_holdout_holdout_retrieval_05"
+      ],
+      "case_id": "holdout_holdout_retrieval_16",
+      "expected": [
+        "seed_holdout_holdout_retrieval_16"
+      ],
+      "failure_type": "hard_negative_confusion",
+      "failure_types": [
+        "hard_negative_confusion"
+      ],
+      "hard_negative_hit": true,
+      "metric": "retrieval",
+      "query": "请检索与脱敏预览直接相关的操作证据。",
+      "reason": "中性 hard negative 进入检索结果。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与脱敏预览直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与脱敏预览直接相关的操作证据。"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1034,
+            "original_lexical_hit_count": 3,
+            "original_lexical_precision": 0.1034,
+            "query_token_count": 17,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.3595
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_16",
+          "score": 0.0328
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与脱敏预览直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与脱敏预览直接相关的操作证据。"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0357,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0357,
+            "query_token_count": 17,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.1214
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_20",
+          "score": 0.032
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与脱敏预览直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与脱敏预览直接相关的操作证据。"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0526,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0526,
+            "query_token_count": 17,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.1434
+          },
+          "memory_id": "neg_holdout_holdout_retrieval_16",
+          "score": 0.032
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与脱敏预览直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与脱敏预览直接相关的操作证据。"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 17,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.0
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_18",
+          "score": 0.0156
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与脱敏预览直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与脱敏预览直接相关的操作证据。"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 17,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.0
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_05",
+          "score": 0.0154
+        }
+      ],
+      "strict_at_1": 1.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 1.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_holdout_holdout_retrieval_18"
+      ],
+      "actual": [
+        "seed_holdout_holdout_retrieval_18",
+        "seed_holdout_holdout_retrieval_20",
+        "seed_holdout_holdout_retrieval_07",
+        "neg_holdout_holdout_retrieval_18",
+        "neg_holdout_holdout_retrieval_17"
+      ],
+      "case_id": "holdout_holdout_retrieval_18",
+      "expected": [
+        "seed_holdout_holdout_retrieval_18"
+      ],
+      "failure_type": "hard_negative_confusion",
+      "failure_types": [
+        "hard_negative_confusion"
+      ],
+      "hard_negative_hit": true,
+      "metric": "retrieval",
+      "query": "请检索与RSS直接相关的操作证据。",
+      "reason": "中性 hard negative 进入检索结果。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与RSS直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与RSS直接相关的操作证据。"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 1.0,
+            "distinctive_term_hit_count": 1,
+            "entity_score": 0.1,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0357,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0357,
+            "query_token_count": 14,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.2214
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_18",
+          "score": 0.0328
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与RSS直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与RSS直接相关的操作证据。"
+            },
+            "content_score": 0.035,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 1,
+            "lexical_precision": 0.0357,
+            "original_lexical_hit_count": 1,
+            "original_lexical_precision": 0.0357,
+            "query_token_count": 14,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.04,
+            "topic_score": 0.0,
+            "total": 0.1214
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_20",
+          "score": 0.0323
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与RSS直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与RSS直接相关的操作证据。"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 14,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.0
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_07",
+          "score": 0.0159
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与RSS直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与RSS直接相关的操作证据。"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 14,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.0
+          },
+          "memory_id": "neg_holdout_holdout_retrieval_18",
+          "score": 0.0156
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与RSS直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与RSS直接相关的操作证据。"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 1,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 14,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.0
+          },
+          "memory_id": "neg_holdout_holdout_retrieval_17",
+          "score": 0.0154
+        }
+      ],
+      "strict_at_1": 1.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 1.0,
+      "topic_acceptable_at_5": 1.0
+    },
+    {
+      "acceptable_ids": [
+        "seed_holdout_holdout_retrieval_20"
+      ],
+      "actual": [
+        "seed_holdout_holdout_retrieval_20",
+        "seed_holdout_holdout_retrieval_16",
+        "seed_holdout_holdout_retrieval_10",
+        "neg_holdout_holdout_retrieval_20",
+        "neg_holdout_holdout_retrieval_03"
+      ],
+      "case_id": "holdout_holdout_retrieval_20",
+      "expected": [
+        "seed_holdout_holdout_retrieval_20"
+      ],
+      "failure_type": "hard_negative_confusion",
+      "failure_types": [
+        "hard_negative_confusion"
+      ],
+      "hard_negative_hit": true,
+      "metric": "retrieval",
+      "query": "请检索与缺失证据直接相关的操作证据。",
+      "reason": "中性 hard negative 进入检索结果。",
+      "score_breakdown": [
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与缺失证据直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与缺失证据直接相关的操作证据。"
+            },
+            "content_score": 0.105,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 3,
+            "lexical_precision": 0.1071,
+            "original_lexical_hit_count": 3,
+            "original_lexical_precision": 0.1071,
+            "query_token_count": 16,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.12,
+            "topic_score": 0.0,
+            "total": 0.3643
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_20",
+          "score": 0.0328
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与缺失证据直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与缺失证据直接相关的操作证据。"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 16,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.0
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_16",
+          "score": 0.0161
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与缺失证据直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与缺失证据直接相关的操作证据。"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 16,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.0
+          },
+          "memory_id": "seed_holdout_holdout_retrieval_10",
+          "score": 0.0159
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与缺失证据直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与缺失证据直接相关的操作证据。"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 16,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.0
+          },
+          "memory_id": "neg_holdout_holdout_retrieval_20",
+          "score": 0.0156
+        },
+        {
+          "breakdown": {
+            "alias_expansion": {
+              "aliases": [],
+              "expanded_query": "请检索与缺失证据直接相关的操作证据。",
+              "expansion_trace": [],
+              "query": "请检索与缺失证据直接相关的操作证据。"
+            },
+            "content_score": 0.0,
+            "distinctive_latin_token_count": 0,
+            "distinctive_term_coverage": 0.0,
+            "distinctive_term_hit_count": 0,
+            "entity_score": 0.0,
+            "exact_phrase_score": 0.0,
+            "hard_negative_penalty": 0.0,
+            "lexical_hit_count": 0,
+            "lexical_precision": 0.0,
+            "original_lexical_hit_count": 0,
+            "original_lexical_precision": 0.0,
+            "query_token_count": 16,
+            "routing_reasons": [],
+            "routing_score": 0.0,
+            "scope_penalty": 0.0,
+            "subtype_score": 0.0,
+            "summary_score": 0.0,
+            "topic_score": 0.0,
+            "total": 0.0
+          },
+          "memory_id": "neg_holdout_holdout_retrieval_03",
+          "score": 0.0154
+        }
+      ],
+      "strict_at_1": 1.0,
+      "strict_at_5": 1.0,
+      "topic_acceptable_at_1": 1.0,
+      "topic_acceptable_at_5": 1.0
+    }
+  ],
+  "metadata": {
+    "benchmark_name": "MemGuardOS EvidenceBench",
+    "data_revision": "2fbde0891347afed12aa51b6f7dcde48f528e071eef4c9dc02a534b82fbaf211",
+    "evaluation_namespaces": {
+      "holdout": "evidencebench-v2-holdout",
+      "public": "evidencebench-v2-public"
+    },
+    "generated_by": "scripts/run_evidencebench_v2.py",
+    "manifest_sha256": "abf3b16b4e129e8d30e3d047b7ce2c25bebadac0bb7e1546065c8d7d7af276b0",
+    "note": "原 benchmark 偏功能正确性；EvidenceBench v2 偏 hard negative、holdout 和边界解释。",
+    "schema": "memguardos-evidencebench-v2-result",
+    "version": "v2"
+  },
+  "metrics": {
+    "agent_context_adherence_rate": 1.0,
+    "agent_context_behavior_accuracy": 1.0,
+    "agent_context_cases_evaluated": 60,
+    "agent_context_hint_accuracy": 1.0,
+    "agent_context_scope_accuracy": 1.0,
+    "alias_expansion_hit_rate": 0.65,
+    "audit_chain_ok": true,
+    "conflict_cases_evaluated": 5,
+    "conflict_resolution_accuracy": 1.0,
+    "cpu_time_ms": 5097.208,
+    "cross_language_cases_evaluated": 10,
+    "cross_language_recall_at_1": 0.0,
+    "cross_language_recall_at_5": 0.9,
+    "extraction_cases_evaluated": 40,
+    "extraction_subtype_accuracy": 1.0,
+    "extraction_topic_accuracy": 1.0,
+    "extraction_type_accuracy": 1.0,
+    "forget_candidates_evaluated": 240,
+    "forget_cases_evaluated": 60,
+    "forget_expected_delete_count": 120,
+    "forget_expected_keep_count": 120,
+    "forget_keep_success": 1.0,
+    "forget_precision": 1.0,
+    "forget_recall": 1.0,
+    "forget_residual_leak_rate": 0.0,
+    "hard_negative_false_positive_rate": 0.1333,
+    "memory_update_accuracy": 1.0,
+    "mrr": 0.8241,
+    "ndcg_at_5": 0.8637,
+    "p50_latency_ms": 124.758,
+    "p95_latency_ms": 159.675,
+    "p99_latency_ms": 164.485,
+    "recall_at_1": 0.7333,
+    "recall_at_3": 0.8833,
+    "recall_at_5": 0.9833,
+    "retrieval_cases_evaluated": 60,
+    "rss_delta_kb": 28184.0,
+    "rss_kb": 58828.0,
+    "sensitive_block_f1": 1.0,
+    "sensitive_false_positive_rate": 0.0,
+    "sensitive_redaction_f1": 1.0,
+    "storage_footprint_kb": 9133.092,
+    "strict_recall_at_1": 0.7333,
+    "strict_recall_at_5": 0.9833,
+    "tool_result_to_preference_extraction_accuracy": 1.0,
+    "topic_recall_at_1": 0.7333,
+    "topic_recall_at_5": 0.9833
+  },
+  "runtime": {
+    "latency_queries": 30,
+    "wall_time_ms": 30622.07
+  },
+  "split_metrics": {
+    "holdout": {
+      "agent_context_adherence_rate": 1.0,
+      "agent_context_behavior_accuracy": 1.0,
+      "agent_context_cases_evaluated": 20,
+      "agent_context_hint_accuracy": 1.0,
+      "agent_context_scope_accuracy": 1.0,
+      "alias_expansion_hit_rate": 0.1,
+      "cross_language_cases_evaluated": 0,
+      "cross_language_recall_at_1": 0.0,
+      "cross_language_recall_at_5": 0.0,
+      "forget_candidates_evaluated": 80,
+      "forget_cases_evaluated": 20,
+      "forget_expected_delete_count": 40,
+      "forget_expected_keep_count": 40,
+      "forget_keep_success": 1.0,
+      "forget_precision": 1.0,
+      "forget_recall": 1.0,
+      "forget_residual_leak_rate": 0.0,
+      "hard_negative_false_positive_rate": 0.3,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "retrieval_cases_evaluated": 20,
+      "strict_recall_at_1": 1.0,
+      "strict_recall_at_5": 1.0,
+      "topic_recall_at_1": 1.0,
+      "topic_recall_at_5": 1.0
+    },
+    "public": {
+      "agent_context_adherence_rate": 1.0,
+      "agent_context_behavior_accuracy": 1.0,
+      "agent_context_cases_evaluated": 40,
+      "agent_context_hint_accuracy": 1.0,
+      "agent_context_scope_accuracy": 1.0,
+      "alias_expansion_hit_rate": 0.925,
+      "cross_language_cases_evaluated": 10,
+      "cross_language_recall_at_1": 0.0,
+      "cross_language_recall_at_5": 0.9,
+      "forget_candidates_evaluated": 160,
+      "forget_cases_evaluated": 40,
+      "forget_expected_delete_count": 80,
+      "forget_expected_keep_count": 80,
+      "forget_keep_success": 1.0,
+      "forget_precision": 1.0,
+      "forget_recall": 1.0,
+      "forget_residual_leak_rate": 0.0,
+      "hard_negative_false_positive_rate": 0.05,
+      "mrr": 0.7362,
+      "ndcg_at_5": 0.7956,
+      "recall_at_1": 0.6,
+      "recall_at_3": 0.825,
+      "recall_at_5": 0.975,
+      "retrieval_cases_evaluated": 40,
+      "strict_recall_at_1": 0.6,
+      "strict_recall_at_5": 0.975,
+      "topic_recall_at_1": 0.6,
+      "topic_recall_at_5": 0.975
+    }
+  }
+}

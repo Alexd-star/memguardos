@@ -2,7 +2,7 @@
   "schema": "memguardos-sbom-v1",
   "name": "memguardos",
   "version": "0.1.0",
-  "generated_at": "2026-07-25T23:15:07+00:00",
+  "generated_at": "2026-07-27T10:25:57+00:00",
   "source": {
     "root": "project-root",
     "license": "MIT License",
@@ -43,26 +43,26 @@
     {
       "path": "README.md",
       "present": true,
-      "sha256": "c3e023f47aa6e58624d0f102279719c14b9a6a0428405b2525aca7af000dc607",
-      "bytes": 28158
+      "sha256": "fbfaec7d5e967f169e516a3c217876a79a2b036a75b24f9fb4f1541fc4983abe",
+      "bytes": 28506
     },
     {
       "path": "memguard/service.py",
       "present": true,
-      "sha256": "c71e69bafa6c101494dafbfd2e0fcde666d774be4dae39e20e38481bbecb8503",
-      "bytes": 157475
+      "sha256": "2a1e4540937fec701858acebe45718390076dfaa937b95ff76ec9da31a390ef5",
+      "bytes": 184303
     },
     {
       "path": "memguard/api/server.py",
       "present": true,
-      "sha256": "707a298f59110b649645dc8dec695cc59c715a1c3b1b1676ecd5921ab3a5ab50",
-      "bytes": 20377
+      "sha256": "73a1d03ff5048ad2ba39d09eeb649a191478ab6770b963cbd6668ae661c8031b",
+      "bytes": 21369
     },
     {
       "path": "memguard/web/dashboard.py",
       "present": true,
-      "sha256": "a134c3f3100542887cca1c05b26305d484e1ca64a2ff0342b601783e9354140e",
-      "bytes": 173534
+      "sha256": "64dfc0ab2e2f74a310f4376f276972a62db43e22451f245a1b8a3376df37329b",
+      "bytes": 212376
     },
     {
       "path": "memguard/integrations/openhands_adapter.py",
@@ -79,8 +79,8 @@
     {
       "path": "memguard/retrieval/hybrid.py",
       "present": true,
-      "sha256": "9523dec4679baea76b70e97c177a09d0922b85a01374423ee83d52ac23453807",
-      "bytes": 27785
+      "sha256": "5947d1ade785679d29bf510978ef882535a9b393ac60a3396edcc76e7a73a7b5",
+      "bytes": 28503
     },
     {
       "path": "memguard/retrieval/kylin_sdk.py",
@@ -91,14 +91,14 @@
     {
       "path": "memguard/store/mmap_store.py",
       "present": true,
-      "sha256": "5d700fa28d079a7376d6fcef04a2166f960d01588bbccfcece3d7883292858d6",
-      "bytes": 8754
+      "sha256": "0851e91ab4d87a9074169eb88b88b6af009c68f246f9c9e5ba86a5eed8aed604",
+      "bytes": 9284
     },
     {
       "path": "memguard/store/sqlite_meta.py",
       "present": true,
-      "sha256": "baf9c8f33b2805358783d6b1807d925f9e8899dcd035bb99fdca300da78445b5",
-      "bytes": 80568
+      "sha256": "11a753439f18e1106e72ae97aa920a2f96d5cecc6f16629737c814690260b49d",
+      "bytes": 88025
     },
     {
       "path": "memguard/extraction/semantic.py",
@@ -109,26 +109,26 @@
     {
       "path": "memguard/forgetting/planner.py",
       "present": true,
-      "sha256": "69b5236b6d901359fb71eda28c3ac33402c3754530a5598afcbaca36f23b86cb",
-      "bytes": 14023
+      "sha256": "663b422ebd9a55c84ab544005be2971e2aad8ee5191cb62e3da371a26ede4cb9",
+      "bytes": 17178
     },
     {
       "path": "memguard/eval/memory_value.py",
       "present": true,
-      "sha256": "916c668eb8659aef42f17063a290e4e88f72f5dd0983d078b074e2207c3c779f",
-      "bytes": 14093
+      "sha256": "8bd0593d6169e0a35efa869c6a7318bb3f76d1d10da34c8c61917626241af232",
+      "bytes": 17042
     },
     {
       "path": "memguard/eval/real_agent_behavior.py",
       "present": true,
-      "sha256": "d106a58e2d03b272336471e7c5f10bde9b4c6d62456e4a245457eaa8f1011651",
-      "bytes": 18628
+      "sha256": "d3a8cb81918b5fd5b33740db110beca3508016ab7308171af68ba207b568b533",
+      "bytes": 21998
     },
     {
       "path": "scripts/run_openhands_behavior_suite.py",
       "present": true,
-      "sha256": "5498fa4a08399c82fb0eed1485e457e578bf724d70739e9a72a8b4570a2f2720",
-      "bytes": 15863
+      "sha256": "8733ece5a0fddbf1aada138735f89b4176fda03c423135bdf6f19b4a2bcf0e1a",
+      "bytes": 19449
     },
     {
       "path": "scripts/run_security_scan.py",
@@ -175,8 +175,8 @@
     {
       "path": "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp",
       "present": true,
-      "sha256": "adf309542129276a564835ee1a2a5f132b57aee94579cbb69f7e21d02bc0ba16",
-      "bytes": 101395
+      "sha256": "c6a15324b24ce880b5d35a296e503b3836e76197ccf72657eec90e681a29862d",
+      "bytes": 105988
     },
     {
       "path": "data/benchmarks/agent_memory_value.jsonl",

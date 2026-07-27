@@ -1,7 +1,7 @@
 {
   "schema": "memguardos-security-scan-v1",
   "ok": true,
-  "elapsed_s": 2.823,
+  "elapsed_s": 7.017,
   "policy": {
     "bandit_high_severity_allowed": 0,
     "bandit_medium_severity_allowed": 0,
@@ -12,7 +12,7 @@
   "summary": {
     "bandit_high_count": 0,
     "bandit_medium_count": 0,
-    "bandit_low_count": 88,
+    "bandit_low_count": 99,
     "pip_audit_vulnerability_count": 0,
     "missing_tools": []
   },
@@ -33,8 +33,8 @@
       "returncode": 1,
       "high_count": 0,
       "medium_count": 0,
-      "low_count": 88,
-      "issue_count": 88,
+      "low_count": 99,
+      "issue_count": 99,
       "issues": [
         {
           "filename": "memguard\\cli\\memctl.py",
@@ -46,7 +46,7 @@
         },
         {
           "filename": "memguard\\cli\\memctl.py",
-          "line_number": 960,
+          "line_number": 1093,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B607",
@@ -54,7 +54,7 @@
         },
         {
           "filename": "memguard\\cli\\memctl.py",
-          "line_number": 960,
+          "line_number": 1093,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
@@ -62,7 +62,7 @@
         },
         {
           "filename": "memguard\\cli\\memctl.py",
-          "line_number": 963,
+          "line_number": 1096,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B607",
@@ -70,7 +70,7 @@
         },
         {
           "filename": "memguard\\cli\\memctl.py",
-          "line_number": 963,
+          "line_number": 1096,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
@@ -78,7 +78,7 @@
         },
         {
           "filename": "memguard\\cli\\memctl.py",
-          "line_number": 1022,
+          "line_number": 1155,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
@@ -118,11 +118,19 @@
         },
         {
           "filename": "memguard\\eval\\run_eval.py",
-          "line_number": 573,
+          "line_number": 585,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B110",
           "issue_text": "Try, Except, Pass detected."
+        },
+        {
+          "filename": "memguard\\eval\\stats.py",
+          "line_number": 57,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B311",
+          "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes."
         },
         {
           "filename": "memguard\\extraction\\semantic.py",
@@ -147,6 +155,22 @@
           "confidence": "HIGH",
           "test_id": "B404",
           "issue_text": "Consider possible security implications associated with the subprocess module."
+        },
+        {
+          "filename": "memguard\\integrations\\preference_enhancer.py",
+          "line_number": 17,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B404",
+          "issue_text": "Consider possible security implications associated with the subprocess module."
+        },
+        {
+          "filename": "memguard\\integrations\\preference_enhancer.py",
+          "line_number": 93,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B603",
+          "issue_text": "subprocess call - check for execution of untrusted input."
         },
         {
           "filename": "memguard\\llm\\adapter.py",
@@ -365,6 +389,14 @@
           "issue_text": "subprocess call - check for execution of untrusted input."
         },
         {
+          "filename": "memguard\\service.py",
+          "line_number": 3651,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B110",
+          "issue_text": "Try, Except, Pass detected."
+        },
+        {
           "filename": "memguard\\web\\acceptance.py",
           "line_number": 6,
           "severity": "LOW",
@@ -403,38 +435,6 @@
           "confidence": "HIGH",
           "test_id": "B607",
           "issue_text": "Starting a process with a partial executable path"
-        },
-        {
-          "filename": "scripts\\backup_memguard.py",
-          "line_number": 87,
-          "severity": "LOW",
-          "confidence": "HIGH",
-          "test_id": "B603",
-          "issue_text": "subprocess call - check for execution of untrusted input."
-        },
-        {
-          "filename": "scripts\\build_deb_packages.py",
-          "line_number": 13,
-          "severity": "LOW",
-          "confidence": "HIGH",
-          "test_id": "B404",
-          "issue_text": "Consider possible security implications associated with the subprocess module."
-        },
-        {
-          "filename": "scripts\\build_deb_packages.py",
-          "line_number": 124,
-          "severity": "LOW",
-          "confidence": "HIGH",
-          "test_id": "B607",
-          "issue_text": "Starting a process with a partial executable path"
-        },
-        {
-          "filename": "scripts\\build_deb_packages.py",
-          "line_number": 124,
-          "severity": "LOW",
-          "confidence": "HIGH",
-          "test_id": "B603",
-          "issue_text": "subprocess call - check for execution of untrusted input."
         }
       ],
       "stderr_tail": "[tester]\tWARNING\tnosec encountered (B108), but no failed test on file memguard\\os_guard\\openkylin_native.py:265\n"

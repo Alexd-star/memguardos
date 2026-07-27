@@ -7,6 +7,12 @@ import json
 import re
 
 from memguard.eval.memory_value import normalize_command
+from memguard.eval.stats import (
+    mcnemar_exact,
+    paired_bootstrap_mean_difference,
+    wilcoxon_signed_rank,
+    wilson_interval,
+)
 
 
 def evaluate_real_agent_run(
@@ -334,6 +340,82 @@ def aggregate_real_agent_results(
             for result in results
             if result.get("evaluation", {}).get("status") != "pass"
         ],
+    }
+
+
+def aggregate_real_agent_paired_results(
+    paired_results: List[Dict[str, object]],
+) -> Dict[str, object]:
+    """Compare independent real Agent runs with and without managed memory."""
+
+    rows = []
+    for case in paired_results:
+        arms = dict(case.get("arms") or {})
+        off = _real_arm_summary(dict(arms.get("memory_off") or {}))
+        on = _real_arm_summary(dict(arms.get("memory_on") or {}))
+        rows.append(
+            {
+                "case_id": str(case.get("case_id") or ""),
+                "expected_tool": str(case.get("expected_tool") or ""),
+                "memory_off": off,
+                "memory_on": on,
+            }
+        )
+    off_rows = [row["memory_off"] for row in rows]
+    on_rows = [row["memory_on"] for row in rows]
+    eligible = [index for index, row in enumerate(rows) if row["expected_tool"]]
+
+    completion_off = [bool(item["task_completed"]) for item in off_rows]
+    completion_on = [bool(item["task_completed"]) for item in on_rows]
+    tool_off = [bool(off_rows[index]["first_tool_correct"]) for index in eligible]
+    tool_on = [bool(on_rows[index]["first_tool_correct"]) for index in eligible]
+    return {
+        "evidence_class": "real_agent_paired_run",
+        "case_count": len(rows),
+        "arms": {
+            "memory_off": {
+                "task_completion": wilson_interval(sum(completion_off), len(completion_off)),
+                "first_tool_accuracy": wilson_interval(sum(tool_off), len(tool_off)),
+            },
+            "memory_on": {
+                "task_completion": wilson_interval(sum(completion_on), len(completion_on)),
+                "first_tool_accuracy": wilson_interval(sum(tool_on), len(tool_on)),
+            },
+        },
+        "paired_tests": {
+            "task_completion": mcnemar_exact(completion_off, completion_on),
+            "first_tool_accuracy": mcnemar_exact(tool_off, tool_on),
+            "failed_commands": _real_numeric_pair(off_rows, on_rows, "failed_command_count"),
+            "repeated_commands": _real_numeric_pair(off_rows, on_rows, "repeated_command_count"),
+        },
+        "cases": rows,
+    }
+
+
+def _real_arm_summary(result: Dict[str, object]) -> Dict[str, object]:
+    evaluation = dict(result.get("evaluation") or {})
+    behavior = dict(evaluation.get("agent_behavior") or {})
+    metrics = dict(evaluation.get("metrics") or {})
+    return {
+        "task_completed": bool(behavior.get("task_completed")),
+        "first_tool": str(behavior.get("first_tool") or ""),
+        "first_tool_correct": bool(behavior.get("first_tool_correct")),
+        "failed_command_count": int(metrics.get("failed_command_count") or 0),
+        "repeated_command_count": int(metrics.get("repeated_command_count") or 0),
+        "status": str(evaluation.get("status") or "run_exception"),
+    }
+
+
+def _real_numeric_pair(
+    baseline: List[Dict[str, object]],
+    treatment: List[Dict[str, object]],
+    key: str,
+) -> Dict[str, object]:
+    left = [float(item.get(key) or 0.0) for item in baseline]
+    right = [float(item.get(key) or 0.0) for item in treatment]
+    return {
+        "effect": paired_bootstrap_mean_difference(left, right),
+        "paired_test": wilcoxon_signed_rank(left, right),
     }
 
 

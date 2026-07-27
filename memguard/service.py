@@ -27,6 +27,7 @@ from memguard.feedback import (
 )
 from memguard.extraction.semantic import HybridMemoryExtractor
 from memguard.forgetting.natural_intent import ErasureIntentCompiler
+from memguard.forgetting.plan import ErasurePlan
 from memguard.forgetting.planner import ForgetPlanner
 from memguard.governance.trust import assess_memory_source
 from memguard.ingestion.behavior import BehaviorEvent, load_shell_history
@@ -41,7 +42,13 @@ from memguard.integrations.context_injector import (
     validate_agent_context_stage,
 )
 from memguard.integrations.habit_aggregator import PreferenceAggregate
-from memguard.integrations.interaction_extractor import PreferenceObservation, extract_interaction_preferences
+from memguard.integrations.interaction_extractor import (
+    InteractionExtractionResult,
+    PreferenceObservation,
+    extract_interaction_preferences,
+)
+from memguard.integrations.preference_enhancer import PreferenceEnhancer
+from memguard.eval.live_comparison import STAGES as LIVE_COMPARISON_STAGES, build_comparison as build_live_comparison
 from memguard.integrations.normalizer import normalize_event, normalize_events
 from memguard.models import AuditInfo, MemoryRecord, MemorySource, VersionInfo, make_memory, new_id, stable_hash, utc_now
 from memguard.os_guard.events import parse_os_event
@@ -59,6 +66,7 @@ from memguard.store.sqlite_meta import SQLiteMetaStore
 
 class MemGuardService:
     EMBEDDING_BACKEND = "kylin_sdk"
+    HIT_FLUSH_THRESHOLD = 512
     EMBEDDING_MODEL_REVISION = "kylin-sdk-v1"
 
     def __init__(self, store_path: Optional[Path] = None, db_path: Optional[Path] = None, namespace: Optional[str] = None):
@@ -71,6 +79,7 @@ class MemGuardService:
             self.pattern_path = custom_patterns_path(self.namespace)
         self.detector = SensitiveDetector(load_patterns(self.pattern_path))
         self.extractor = HybridMemoryExtractor()
+        self.preference_enhancer = PreferenceEnhancer()
         self.retriever = HybridRetriever()
         self.conflicts = ConflictResolver()
         self.forget_planner = ForgetPlanner()
@@ -79,8 +88,21 @@ class MemGuardService:
         self.journald = JournaldLogger()
         self._search_cache: OrderedDict[Tuple[str, int, str], List[Dict[str, object]]] = OrderedDict()
         self._search_cache_limit = 128
+        self._last_search_timings: Dict[str, float] = {}
+        self._pending_hits: List[str] = []
+        permission_corrections = [
+            *getattr(self.store, "permission_corrections", []),
+            *getattr(self.meta, "permission_corrections", []),
+        ]
+        if permission_corrections:
+            self._audit(
+                "storage_permissions_corrected",
+                None,
+                {"corrections": permission_corrections},
+            )
 
     def close(self) -> None:
+        self.flush_memory_hits()
         self.meta.close()
 
     def enqueue_missing_embedding_jobs(
@@ -207,7 +229,7 @@ class MemGuardService:
         if not quality.accepted:
             detail = {
                 "source_kind": source_kind,
-                "source_uri": source_uri,
+                "source_uri_hash": stable_hash(source_uri) if source_uri else "",
                 "quality": quality.to_dict(),
                 "reason": "input quality check rejected the memory",
             }
@@ -326,7 +348,11 @@ class MemGuardService:
                 "sensitivity": record.sensitivity.level,
                 "labels": record.sensitivity.labels,
                 "quality": quality.to_dict(),
-                "extraction": extraction.to_dict(),
+                "extraction": {
+                    key: value
+                    for key, value in extraction.to_dict().items()
+                    if key != "summary"
+                },
                 "governance": governance.to_dict(),
             },
         )
@@ -383,7 +409,10 @@ class MemGuardService:
     def ingest_interaction(self, event: Union[AgentInteractionEvent, Dict[str, object]]) -> Dict[str, object]:
         parsed = event if isinstance(event, AgentInteractionEvent) else AgentInteractionEvent.from_dict(event)
         normalized = normalize_event(parsed)
+        # 偏好提取用原文，避免低风险打码（例如 systemd 单元名被邮箱规则命中）
+        # 破坏正常抽取；写入记忆时再对偏好值单独脱敏，见 _store_preference_observation。
         extraction = extract_interaction_preferences(normalized)
+        extraction = self._augment_with_enhancer(extraction, normalized)
         safe_event, sensitivity = self._sanitize_interaction_event(
             normalized,
             remember_allowed=extraction.remember_allowed,
@@ -410,6 +439,7 @@ class MemGuardService:
             },
         )
         memory_ids = []
+        preference_updates = []
         if result["stored"] and extraction.remember_allowed and sensitivity.level != "high":
             for observation in extraction.observations:
                 self.meta.add_preference_observation(observation, safe_event)
@@ -421,6 +451,9 @@ class MemGuardService:
                         self.link_memory_event(memory.memory_id, event_id, relation)
                     self.meta.mark_preference_promoted(aggregate_row, memory.memory_id)
                     memory_ids.append(memory.memory_id)
+                    update = self._adjudicate_preference_update(observation, memory, safe_event)
+                    if update:
+                        preference_updates.append(update)
         feedback_parts = []
         for memory_id in memory_ids:
             row = self.meta.get_memory(memory_id)
@@ -460,6 +493,7 @@ class MemGuardService:
             "turn_id": safe_event.turn_id,
             "sequence": safe_event.sequence,
             "event_type": safe_event.event_type,
+            "preference_updates": preference_updates,
             "remember_allowed": extraction.remember_allowed,
             "remember_reason": extraction.reason,
             "sensitivity": sensitivity.__dict__,
@@ -899,17 +933,24 @@ class MemGuardService:
         task: str = "验证这条记忆的适用范围",
         agent_name: str = "openhands",
         session_id: str = "detail-preview",
+        light: bool = False,
     ) -> Dict[str, object]:
         memory = self.meta.get_memory(str(memory_id))
         if memory is None:
             return {"found": False, "memory_id": memory_id, "reason": "memory_not_found"}
+        if memory.get("deleted"):
+            # 已遗忘的记忆只回执状态，不再返回正文与来源，避免"遗忘后仍能查看详情"。
+            return {"found": False, "memory_id": memory_id, "reason": "memory_forgotten"}
         evidence = self.preference_evidence(str(memory_id))
         observed_events = list(evidence.get("events", []))
-        source_sessions = {str(item.get("session_id") or "") for item in observed_events if item.get("session_id")}
-        for source_session in source_sessions:
-            for event in self.meta.list_agent_events(session_id=source_session, limit=500):
-                if not any(str(item.get("event_id")) == str(event.get("event_id")) for item in observed_events):
-                    observed_events.append(event)
+        if not light:
+            observed_ids = {str(item.get("event_id")) for item in observed_events}
+            source_sessions = {str(item.get("session_id") or "") for item in observed_events if item.get("session_id")}
+            for source_session in source_sessions:
+                for event in self.meta.list_agent_events(session_id=source_session, limit=500):
+                    if str(event.get("event_id")) not in observed_ids:
+                        observed_ids.add(str(event.get("event_id")))
+                        observed_events.append(event)
         detail = {
             "found": True,
             "memory": memory,
@@ -922,7 +963,7 @@ class MemGuardService:
                 "last_stage": "tool_selection" if any(item.get("event_type") == "tool_call" for item in observed_events) else "暂无证据",
             },
         }
-        if memory.get("preference_topic"):
+        if memory.get("preference_topic") and not light:
             detail["preference_proof"] = self.preference_effect_proof(
                 str(memory_id), task=task, agent_name=agent_name, session_id=session_id
             )
@@ -1018,6 +1059,108 @@ class MemGuardService:
             ][:limit],
             "notifications": notifications[:limit],
             "audit": self.verify_audit(),
+        }
+
+    def memory_value_comparison(
+        self,
+        task: str,
+        *,
+        agent_name: str = "openhands",
+        session_id: str = "",
+        task_type: str = "code_assistance",
+    ) -> Dict[str, object]:
+        """Run the same task with and without memory and report the real difference.
+
+        Both arms are built from live state: the baseline injects nothing, the
+        memory arm injects whatever actually matches. The cost of the naive
+        "paste the whole history" alternative is measured from the stored
+        interaction events rather than assumed.
+        """
+
+        clean_task = str(task or "").strip()
+        if not clean_task:
+            raise ValueError("task is required")
+        probe_session = str(session_id or "comparison-%s" % new_id("session"))
+
+        contexts = {
+            stage: self.build_agent_context(
+                task=clean_task,
+                stage=stage,
+                agent_name=agent_name,
+                session_id=probe_session,
+                task_type=task_type,
+            )
+            for stage in LIVE_COMPARISON_STAGES
+        }
+        selection = self.select_preferences(
+            agent_name=agent_name,
+            session_id=probe_session,
+            task_type=task_type,
+        )
+        result = build_live_comparison(
+            task=clean_task,
+            contexts=contexts,
+            selected_preferences=list(selection.get("selected") or []),
+            full_history_tokens=self._full_history_token_estimate(agent_name=agent_name),
+        )
+        result["session_id"] = probe_session
+        result["execution_mode"] = "deterministic_policy_comparison"
+        result["value_evidence_reference"] = self.memory_value_evidence()
+        self._audit(
+            "memory_value_comparison",
+            None,
+            {
+                "task": clean_task,
+                "applied_preference_count": result["measured"]["applied_preference_count"],
+                "injected_memory_count": result["measured"]["injected_memory_count"],
+                "token_saving_vs_full_history": result["measured"]["token_saving_vs_full_history"],
+            },
+        )
+        return result
+
+    def _full_history_token_estimate(self, agent_name: str = "openhands", limit: int = 200) -> int:
+        """Token cost of replaying raw interaction history instead of memories."""
+
+        parts: List[str] = []
+        for event in self.meta.list_agent_events(limit=limit):
+            if agent_name and str(event.get("agent_name") or "") != agent_name:
+                continue
+            for field in ("content", "tool_result", "state_before", "state_after", "user_feedback"):
+                value = str(event.get(field) or "")
+                if value:
+                    parts.append(value)
+        return self.estimate_tokens(" ".join(parts))
+
+    def memory_value_evidence(self) -> Dict[str, object]:
+        """Validated paired-experiment numbers, if the evidence file is present."""
+
+        path = (
+            Path(__file__).resolve().parents[1]
+            / "docs"
+            / "evidence"
+            / "memory_value_latest"
+            / "deterministic"
+            / "metrics.json"
+        )
+        if not path.exists():
+            return {"available": False, "reason": "benchmark evidence file not found"}
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return {"available": False, "reason": "benchmark evidence file unreadable"}
+        aggregate = payload.get("aggregate") or {}
+        return {
+            "available": True,
+            "case_count": payload.get("case_count") or aggregate.get("case_count"),
+            "groups": aggregate.get("groups"),
+            "mean_deltas": aggregate.get("mean_deltas"),
+            "inference": aggregate.get("inference"),
+            "evidence_class": payload.get("evidence_class") or "deterministic_authored_fixture",
+            "evidence_note": payload.get("evidence_note") or (
+                "结果来自人工编写的固定场景，用于可复现机制回归；"
+                "不能替代真实 Agent 独立运行的因果证据。"
+            ),
+            "source": "docs/evidence/memory_value_latest/deterministic/metrics.json",
         }
 
     def run_feedback_replay(
@@ -1177,6 +1320,8 @@ class MemGuardService:
         event: AgentInteractionEvent,
         remember_allowed: bool,
     ) -> Tuple[AgentInteractionEvent, object]:
+        # tool_args 的值同样可能藏有凭据（例如 curl -H "Authorization: Bearer ..."），
+        # 必须一起参与判定和脱敏，否则按键名脱敏会被值级内容绕过。
         combined = " ".join(
             part
             for part in (
@@ -1185,6 +1330,7 @@ class MemGuardService:
                 event.state_before,
                 event.state_after,
                 event.user_feedback,
+                _flatten_tool_args_text(event.tool_args),
             )
             if part
         )
@@ -1198,7 +1344,108 @@ class MemGuardService:
         elif sensitivity.labels:
             for field in ("content", "tool_result", "state_before", "state_after", "user_feedback"):
                 payload[field] = self.detector.redact(str(payload[field]), event.source_uri)
+            payload["tool_args"] = self._redact_tool_args(payload.get("tool_args"), event.source_uri)
         return AgentInteractionEvent.from_dict(payload), sensitivity
+
+    def _redact_tool_args(self, value: object, source_uri: str) -> object:
+        if isinstance(value, dict):
+            return {key: self._redact_tool_args(item, source_uri) for key, item in value.items()}
+        if isinstance(value, list):
+            return [self._redact_tool_args(item, source_uri) for item in value]
+        if isinstance(value, str):
+            return self.detector.redact(value, source_uri)
+        return value
+
+    def _augment_with_enhancer(
+        self,
+        extraction: InteractionExtractionResult,
+        event: AgentInteractionEvent,
+    ) -> InteractionExtractionResult:
+        """Let an optional local model add candidates; rules keep the final say.
+
+        Suggestions are schema-validated, topic-whitelisted and always recorded
+        as implicit evidence, so an enhancer can never promote a preference on
+        its own and a failing enhancer never blocks ingest.
+        """
+
+        if not extraction.remember_allowed or not self.preference_enhancer.enabled:
+            return extraction
+        try:
+            extra, error = self.preference_enhancer.suggest(event, list(extraction.observations))
+        except Exception as exc:  # noqa: BLE001 - enhancer must never break ingest
+            extra, error = [], "preference enhancer raised: %s" % str(exc)[:120]
+        if error:
+            self._audit("preference_enhancer_skipped", None, {"reason": error, "event_id": event.event_id})
+            return extraction
+        if not extra:
+            return extraction
+        self._audit(
+            "preference_enhancer_suggested",
+            None,
+            {
+                "event_id": event.event_id,
+                "accepted": [{"topic": item.topic, "value": item.value} for item in extra],
+                "decided_by": "deterministic_rules_with_optional_model_suggestion",
+            },
+        )
+        return InteractionExtractionResult(
+            remember_allowed=extraction.remember_allowed,
+            reason=extraction.reason,
+            observations=list(extraction.observations) + extra,
+        )
+
+    def _adjudicate_preference_update(
+        self,
+        observation: PreferenceObservation,
+        memory: MemoryRecord,
+        event: AgentInteractionEvent,
+    ) -> Optional[Dict[str, object]]:
+        """Retire older memories for the same preference topic when a new value wins.
+
+        Without this, "以后改用 grep" leaves the previous rg preference active and
+        both values stay retrievable. The superseded record is marked in
+        governance state (not deleted) so the change stays auditable and the
+        evidence chain records which event caused it.
+        """
+
+        topic = str(observation.topic or "").strip()
+        if not topic:
+            return None
+        superseded: List[str] = []
+        for row in self.meta.list_memories(include_deleted=False, governance_state="active"):
+            memory_id = str(row.get("memory_id") or "")
+            if not memory_id or memory_id == memory.memory_id:
+                continue
+            if str(row.get("preference_topic") or "") != topic:
+                continue
+            if str(row.get("preference_scope") or "") != str(observation.scope or ""):
+                continue
+            if str(row.get("preference_value") or "") == str(observation.value or ""):
+                continue
+            self.meta.set_governance_state(
+                memory_id,
+                "superseded",
+                str(row.get("trust_level") or "normal"),
+                float(row.get("trust_score") or 0.0),
+                "superseded_by_preference_update:%s" % memory.memory_id,
+            )
+            self.link_memory_event(memory_id, event.event_id, "contradicted_by")
+            superseded.append(memory_id)
+        if not superseded:
+            return None
+        self._invalidate_search_cache()
+        update = {
+            "topic": topic,
+            "scope": observation.scope,
+            "new_value": observation.value,
+            "new_memory_id": memory.memory_id,
+            "superseded_memory_ids": superseded,
+            "explicit": observation.explicit,
+            "decided_by": "deterministic_rule",
+            "reason": "same topic and scope resolved to a newer value",
+        }
+        self._audit("preference_update", memory.memory_id, update)
+        return update
 
     def _store_preference_observation(
         self,
@@ -1234,6 +1481,9 @@ class MemGuardService:
             observation.value,
             observation.scope,
         )
+        # 偏好正文与摘要在落盘前再过一次敏感检测，避免抽取阶段读原文时把敏感片段带入记忆。
+        content = self.detector.redact(content, event.source_uri)
+        summary = self.detector.redact(summary, event.source_uri)
         record = make_memory(
             content=content,
             memory_type=memory_type,
@@ -1670,6 +1920,7 @@ class MemGuardService:
         return {"evicted": True, "tier": tier, "memory_ids": evicted}
 
     def memory_policy_status(self, eviction_limit: int = 10) -> Dict[str, object]:
+        self.flush_memory_hits()
         live_records = self.meta.list_memories(include_deleted=False)
         meta_records = self.meta.list_memories(include_deleted=True, governance_state=None)
         segment_records = self.store.scan()
@@ -1724,6 +1975,7 @@ class MemGuardService:
                     bucket["newest_updated_at"] = updated_at
 
         stale_count = max(0, len(segment_records) - len(live_records))
+        # 淘汰按"冷度优先"：既看多久没更新，也看是否真的被检索命中过。
         eviction_candidates = [
             {
                 "memory_id": row.get("memory_id"),
@@ -1732,11 +1984,14 @@ class MemGuardService:
                 "subtype": row.get("subtype"),
                 "source_kind": row.get("source_kind"),
                 "updated_at": row.get("updated_at"),
+                "hit_count": int(row.get("hit_count") or 0),
+                "last_hit_at": row.get("last_hit_at") or "",
+                "heat_score": _memory_heat_score(row),
                 "summary": row.get("summary"),
             }
             for row in sorted(
                 [row for row in live_records if row.get("tier") in {"working", "session"}],
-                key=lambda item: str(item.get("updated_at") or ""),
+                key=lambda item: (_memory_heat_score(item), str(item.get("updated_at") or "")),
             )[: max(0, eviction_limit)]
         ]
         store_bytes = self._path_size(self.store.path)
@@ -1942,10 +2197,12 @@ class MemGuardService:
                 self._audit("search", None, {"query": clean_query, "count": len(results), "cache": "hit"})
             return results
 
+        started_at = perf_counter()
         intent = classify_query_intent(clean_query)
         candidates = self._search_candidates(
             query, limit=max(limit * 8, 64), include_graph=False
         )
+        recall_done_at = perf_counter()
         exact_ids: List[str] = []
         if intent == QueryIntent.EXACT_LOOKUP:
             exact_ids = re.findall(r"\bmem[-_][a-zA-Z0-9-]{8,}\b", clean_query)
@@ -2157,7 +2414,9 @@ class MemGuardService:
             )
             if phrase_hit or id_hit or distinctive_hit or command_signature_hit:
                 exact_hits.add(memory_id)
+        scoring_done_at = perf_counter()
         fused = rrf_fuse(rankings, weights=weights, exact_hits=exact_hits)
+        fusion_done_at = perf_counter()
         ranked = []
         for fused_item in fused:
             item = by_id.get(fused_item.memory_id)
@@ -2194,8 +2453,28 @@ class MemGuardService:
             item["rank"] = rank
             item["match_reason"] = self._search_match_reason(item)
         results = results[:limit]
+        finished_at = perf_counter()
+        timings = {
+            "candidate_recall_ms": round((recall_done_at - started_at) * 1000, 2),
+            "scoring_ms": round((scoring_done_at - recall_done_at) * 1000, 2),
+            "fusion_ms": round((fusion_done_at - scoring_done_at) * 1000, 2),
+            "postprocess_ms": round((finished_at - fusion_done_at) * 1000, 2),
+            "total_ms": round((finished_at - started_at) * 1000, 2),
+        }
+        self._last_search_timings = dict(timings)
+        for item in results:
+            explanation = item.get("retrieval_explanation")
+            if isinstance(explanation, dict):
+                explanation["timings"] = dict(timings)
+        # 命中反馈：被真正召回的记忆计入热度，供分层淘汰按"冷度优先"排序。
+        # 热度只是统计量，按批落盘；每次检索都 fsync 会让 P50 从 8ms 劣化到 110ms。
+        self._buffer_memory_hits([str(item.get("memory_id") or "") for item in results])
         if audit:
-            self._audit("search", None, {"query": clean_query, "count": len(results), "cache": "miss"})
+            self._audit(
+                "search",
+                None,
+                {"query": clean_query, "count": len(results), "cache": "miss", "timings": timings},
+            )
         self._remember_search(cache_key, results)
         return [dict(item) for item in results]
 
@@ -2849,18 +3128,49 @@ class MemGuardService:
         return result
 
     def forget(self, request: str, confirm: bool = False, compact: bool = False) -> Dict[str, object]:
-        records = self.meta.list_memories(include_deleted=False)
-        candidates = self.forget_planner.candidates(request, records)
+        intent = self.compile_erasure_intent(request)
+        plan = ErasurePlan.from_intent(intent)
+        return self._forget_with_plan(plan, confirm=confirm, compact=compact)
+
+    def _forget_with_plan(
+        self,
+        plan: ErasurePlan,
+        confirm: bool = False,
+        compact: bool = False,
+    ) -> Dict[str, object]:
+        all_records = self.meta.list_memories(include_deleted=False)
+        _, time_window = _apply_forget_time_window(all_records, plan.as_intent())
+        records = self.meta.select_forget_candidates(plan)
+        time_window = dict(time_window)
+        time_window["structured_records_after"] = len(records)
+        if plan.unresolved_scope:
+            time_window["scope_blocked"] = True
+            time_window["note"] = "请求指定了作用域，但缺少对应的 Agent、会话或项目标识，已安全停止。"
+        candidates = self.forget_planner.candidates(
+            plan.source_text,
+            records,
+            intent=plan.as_intent(),
+        )
         external_residue = self._managed_forget_residue(confirm=confirm)
         if not confirm:
-            self._audit("forget_dry_run", None, {"request": request, "candidate_count": len(candidates)})
+            self._audit(
+                "forget_dry_run",
+                None,
+                _forget_audit_detail(plan, candidate_count=len(candidates)),
+            )
             result = {
                 "confirmed": False,
-                "request": request,
+                "request": plan.source_text,
+                "erasure_plan": plan.as_dict(),
                 "candidates": candidates,
+                "time_window": time_window,
                 "external_residue": external_residue,
             }
-            result["verification_report"] = self.forget_verification_report(result, request=request, dry_run=True)
+            result["verification_report"] = self.forget_verification_report(
+                result,
+                request=plan.source_text,
+                dry_run=True,
+            )
             return result
 
         forgotten = []
@@ -2871,11 +3181,20 @@ class MemGuardService:
             if record is None:
                 continue
             probes[memory_id] = record.content
-            tombstone = self.store.tombstone(record, request)
+            tombstone = self.store.tombstone(record, plan.source_text)
             self.meta.mark_deleted(memory_id, superseded_by=tombstone.version.version_id)
             forgotten.append(memory_id)
         if compact:
             self.store.compact()
+        audit_payloads_redacted = self.meta.redact_audit_payloads(
+            forgotten,
+            list(probes.values()),
+        ) if forgotten else 0
+        storage_cleanup = self.meta.secure_cleanup(vacuum=compact) if forgotten else {
+            "checkpoint": [],
+            "vacuum": False,
+        }
+        cache_entries_dropped = self._invalidate_search_cache() if forgotten else 0
         verification = [
             self.verify_forget_probe(memory_id, probe_text=probe)
             for memory_id, probe in probes.items()
@@ -2883,18 +3202,31 @@ class MemGuardService:
         audit = self._audit(
             "forget",
             None,
-            {"request": request, "forgotten": forgotten, "compact": compact},
+            {
+                **_forget_audit_detail(plan, candidate_count=len(candidates)),
+                "forgotten": forgotten,
+                "compact": compact,
+            },
         )
         result = {
             "confirmed": True,
-            "request": request,
+            "request": plan.source_text,
+            "erasure_plan": plan.as_dict(),
             "forgotten": forgotten,
+            "time_window": time_window,
             "external_residue": external_residue,
             "compact": compact,
+            "storage_cleanup": storage_cleanup,
+            "audit_payloads_redacted": audit_payloads_redacted,
             "verification": verification,
+            "search_cache_entries_dropped": cache_entries_dropped,
             "audit_chain_ok": bool(self.meta.verify_audit_chain().get("ok")),
         }
-        result["verification_report"] = self.forget_verification_report(result, request=request, dry_run=False)
+        result["verification_report"] = self.forget_verification_report(
+            result,
+            request=plan.source_text,
+            dry_run=False,
+        )
         result["audit_event_id"] = _audit_event_id(audit)
         return result
 
@@ -2920,25 +3252,18 @@ class MemGuardService:
         compact: bool = True,
     ) -> Dict[str, object]:
         compiled = self.compile_erasure_intent(request, context=context or {})
+        plan = ErasurePlan.from_intent(compiled)
         agent_filters = self.erasure_intent_compiler.to_agent_filters(compiled)
         use_agent_route = bool(
-            agent_filters
-            and (
-                compiled.get("agent_name")
-                or compiled.get("session_id")
-                or (compiled.get("scope") or {}).get("level") in {"agent", "session"}
-                or compiled.get("preference_topic")
-            )
+            not plan.unresolved_scope
+            and plan.scope_level in {"agent", "session"}
+            and (agent_filters.get("agent_name") or agent_filters.get("session_id"))
         )
         if use_agent_route:
             result = self.forget_agent_interactions(agent_filters, confirm=confirm, compact=compact)
             route = "agent_interactions"
         else:
-            result = self.forget(
-                self.erasure_intent_compiler.to_forget_request(compiled),
-                confirm=confirm,
-                compact=compact,
-            )
+            result = self._forget_with_plan(plan, confirm=confirm, compact=compact)
             route = "managed_memory"
         return {"compiled_intent": compiled, "route": route, "result": result}
 
@@ -2953,6 +3278,7 @@ class MemGuardService:
         missing: List[str] = []
         already_deleted: List[str] = []
         verification: List[Dict[str, object]] = []
+        probe_texts: Dict[str, str] = {}
 
         for memory_id in unique_ids:
             row = self.meta.get_memory(memory_id)
@@ -2962,20 +3288,31 @@ class MemGuardService:
                 continue
             if (row is not None and row.get("deleted")) or (record is not None and record.deleted):
                 already_deleted.append(memory_id)
-                verification.append(self.verify_forget_probe(memory_id))
+                verification.append(self.verify_forget_probe(memory_id, probe_texts.get(memory_id, "")))
                 continue
             if record is None:
                 missing.append(memory_id)
                 continue
+            # 先留存原文片段，删除后才能用它真实回查各检索面。
+            probe_texts[memory_id] = str(getattr(record, "content", "") or getattr(record, "summary", "") or "")[:120]
             tombstone = self.store.tombstone(record, reason)
             self.meta.mark_deleted(memory_id, superseded_by=tombstone.version.version_id)
             forgotten.append(memory_id)
 
         if compact and forgotten:
             self.store.compact()
+        audit_payloads_redacted = self.meta.redact_audit_payloads(
+            forgotten,
+            list(probe_texts.values()),
+        ) if forgotten else 0
+        storage_cleanup = self.meta.secure_cleanup(vacuum=compact) if forgotten else {
+            "checkpoint": [],
+            "vacuum": False,
+        }
+        cache_entries_dropped = self._invalidate_search_cache() if forgotten else 0
 
         for memory_id in forgotten:
-            verification.append(self.verify_forget_probe(memory_id))
+            verification.append(self.verify_forget_probe(memory_id, probe_texts.get(memory_id, "")))
 
         result = {
             "ok": bool(forgotten) and not missing,
@@ -2993,9 +3330,16 @@ class MemGuardService:
                 "compact": compact,
             },
             "verification": verification,
+            "storage_cleanup": storage_cleanup,
+            "audit_payloads_redacted": audit_payloads_redacted,
+            "search_cache_entries_dropped": cache_entries_dropped,
             "external_residue": self._managed_forget_residue(confirm=True),
         }
-        audit = self._audit("forget_memory_ids", None, result["summary"] | {"reason": reason, "memory_ids": forgotten})
+        audit = self._audit(
+            "forget_memory_ids",
+            None,
+            result["summary"] | {"reason_hash": stable_hash(reason), "memory_ids": forgotten},
+        )
         result["audit_event_id"] = _audit_event_id(audit)
         result["audit_chain_ok"] = bool(self.meta.verify_audit_chain().get("ok"))
         return result
@@ -3113,6 +3457,12 @@ class MemGuardService:
         scrubbed_events = self.meta.forget_agent_event_payloads(impact["event_ids"])
         if compact:
             self.store.compact()
+        audit_payloads_redacted = self.meta.redact_audit_payloads(
+            forgotten_memory_ids,
+            probes,
+        ) if forgotten_memory_ids else 0
+        storage_cleanup = self.meta.secure_cleanup(vacuum=compact)
+        cache_entries_dropped = self._invalidate_search_cache()
 
         verification_session = "forget-verify-%s" % new_id("session")
         contexts = {
@@ -3149,12 +3499,21 @@ class MemGuardService:
             not probe or not self.store.raw_contains(probe)
             for probe in probes
         )
+        retrieval_surfaces = [
+            self.probe_retrieval_surfaces(memory_id, probe)
+            for memory_id, probe in zip(forgotten_memory_ids, list(probes) + [""] * len(forgotten_memory_ids))
+        ]
         verification = {
             "verification_session_id": verification_session,
             "selected_memory_ids_by_stage": selected_after,
             "all_stages_absent": all_stages_absent,
             "event_payload_scrubbed": event_payload_scrubbed,
             "segment_plaintext_absent": segment_plaintext_absent,
+            "retrieval_surfaces": retrieval_surfaces,
+            "retrieval_surfaces_clean": all(
+                not item.get("any_surface_recallable") for item in retrieval_surfaces
+            ),
+            "search_cache_entries_dropped": cache_entries_dropped,
         }
         audit = self._audit(
             "agent_forget",
@@ -3176,6 +3535,8 @@ class MemGuardService:
             "scrubbed_event_count": scrubbed_events,
             "deleted_observation_count": deleted_observations,
             "compact": compact,
+            "storage_cleanup": storage_cleanup,
+            "audit_payloads_redacted": audit_payloads_redacted,
             "verification": verification,
             "audit_chain_ok": bool(self.meta.verify_audit_chain().get("ok")),
         }
@@ -3198,13 +3559,98 @@ class MemGuardService:
         if meta and meta.get("content"):
             leaked = True
         segment_leak = self.store.raw_contains(probe_text) if probe_text else False
+        surfaces = self.probe_retrieval_surfaces(memory_id, probe_text)
         return {
             "memory_id": memory_id,
             "deleted": deleted,
             "metadata_plaintext_leak": leaked,
             "segment_plaintext_leak": segment_leak,
-            "irreversible_ok": deleted and not leaked and not segment_leak,
+            "retrieval_surfaces": surfaces,
+            "irreversible_ok": (
+                deleted
+                and not leaked
+                and not segment_leak
+                and not surfaces.get("any_surface_recallable", False)
+            ),
         }
+
+    def probe_retrieval_surfaces(self, memory_id: str, probe_text: str = "") -> Dict[str, object]:
+        """Re-query each retrieval surface and report whether the id is still recallable.
+
+        This turns the FTS / graph / cache verification steps from an assertion
+        into a measurement: we actually search again instead of trusting that a
+        confirmed delete cleaned every path.
+        """
+
+        target = str(memory_id).strip()
+        probe = str(probe_text or "").strip()
+        fts_hit = False
+        graph_hit = False
+        cache_hit = False
+        if probe:
+            try:
+                fts_hit = any(
+                    str(row.get("memory_id") or "") == target
+                    for row in self.meta.search_text(probe, limit=20)
+                )
+            except Exception:
+                fts_hit = False
+            try:
+                graph_hit = any(
+                    str(row.get("memory_id") or "") == target
+                    for row in self.meta.graph_search(probe, limit=20)
+                )
+            except Exception:
+                graph_hit = False
+        for cached in self._search_cache.values():
+            if any(str(item.get("memory_id") or "") == target for item in cached):
+                cache_hit = True
+                break
+        return {
+            "probe_text_used": bool(probe),
+            "sqlite_fts_recallable": fts_hit,
+            "graph_relations_recallable": graph_hit,
+            "search_cache_recallable": cache_hit,
+            "any_surface_recallable": bool(fts_hit or graph_hit or cache_hit),
+        }
+
+    def _buffer_memory_hits(self, memory_ids: List[str]) -> None:
+        """Queue retrieval hits; flush in batches so search stays fsync-free."""
+
+        for memory_id in memory_ids:
+            normalized = str(memory_id).strip()
+            if normalized:
+                self._pending_hits.append(normalized)
+        if len(self._pending_hits) >= self.HIT_FLUSH_THRESHOLD:
+            self.flush_memory_hits()
+
+    def flush_memory_hits(self) -> int:
+        """Persist buffered retrieval hits. Safe to call at any time."""
+
+        if not self._pending_hits:
+            return 0
+        pending, self._pending_hits = self._pending_hits, []
+        try:
+            return self.meta.record_memory_hits(pending)
+        except Exception:
+            # 热度是统计量，落盘失败不得影响检索或遗忘主链路。
+            return 0
+
+    def _invalidate_search_cache(self) -> int:
+        """Drop in-process retrieval caches so forgotten text cannot be served again."""
+
+        self.flush_memory_hits()
+        dropped = len(self._search_cache)
+        self._search_cache.clear()
+        self._last_search_timings = {}
+        provider = getattr(self.retriever, "embedding_provider", None)
+        cache = getattr(provider, "cache", None)
+        if hasattr(cache, "clear"):
+            try:
+                cache.clear()
+            except Exception:
+                pass
+        return dropped
 
     def compact(self) -> Dict[str, object]:
         live_count = self.store.compact()
@@ -3226,6 +3672,7 @@ class MemGuardService:
             "kylin_sdk_role": "openkylin_auto_rerank_with_hash_fallback",
             "fallback_behavior": "If Kylin embedding inference fails or times out, retrieval keeps using stable SQLite FTS + hash-vector ranking.",
         }
+        status["last_search_timings"] = dict(self._last_search_timings)
         self._audit(
             "retrieval_status",
             None,
@@ -3312,18 +3759,18 @@ class MemGuardService:
         self._audit("conflict_resolve", None, result)
         return result
 
-    def list_patterns(self) -> Dict[str, str]:
+    def list_patterns(self) -> Dict[str, object]:
         return load_patterns(self.pattern_path)
 
-    def add_pattern(self, name: str, regex: str) -> Dict[str, str]:
-        patterns = save_pattern(self.pattern_path, name, regex)
+    def add_pattern(self, name: str, regex: str, level: str = "") -> Dict[str, object]:
+        patterns = save_pattern(self.pattern_path, name, regex, level=level)
         self.detector = SensitiveDetector(patterns)
-        self._audit("pattern_add", None, {"name": name, "regex": regex})
+        self._audit("pattern_add", None, {"name": name, "regex": regex, "level": level or "default"})
         return patterns
 
-    def try_add_pattern(self, name: str, regex: str) -> Dict[str, object]:
+    def try_add_pattern(self, name: str, regex: str, level: str = "") -> Dict[str, object]:
         try:
-            patterns = self.add_pattern(name, regex)
+            patterns = self.add_pattern(name, regex, level=level)
             return {"ok": True, "patterns": patterns}
         except PatternValidationError as exc:
             self._audit("pattern_reject", None, {"name": name, "reason": str(exc)})
@@ -3584,6 +4031,87 @@ class MemGuardService:
         if not recommendations:
             recommendations.append("当前分层、存储和淘汰状态健康，可继续按默认策略运行。")
         return recommendations
+
+
+def _memory_heat_score(row: Dict[str, object]) -> float:
+    """Heat = retrieval hits with a recency bonus for the last hit.
+
+    Used only to order eviction candidates, so an unreferenced working-tier
+    memory is retired before one the Agent keeps recalling.
+    """
+
+    hits = int(row.get("hit_count") or 0)
+    score = float(hits)
+    last_hit = str(row.get("last_hit_at") or "")
+    if last_hit:
+        score += 0.5
+    return score
+
+
+def _apply_forget_time_window(
+    records: List[Dict[str, object]],
+    intent: Dict[str, object],
+) -> Tuple[List[Dict[str, object]], Dict[str, object]]:
+    """Restrict forget candidates to the time window the request actually asked for.
+
+    Returns the filtered records plus a description of the applied window so the
+    preview can show the user which boundary was enforced.
+    """
+
+    raw = intent.get("time_range") if isinstance(intent, dict) else None
+    if not isinstance(raw, dict):
+        return records, {"applied": False, "reason": "no_time_range_in_request"}
+    start = str(raw.get("start_time") or "").strip()
+    end = str(raw.get("end_time") or "").strip()
+    if not start and not end:
+        return records, {"applied": False, "reason": "empty_time_range"}
+
+    kept: List[Dict[str, object]] = []
+    for record in records:
+        stamp = str(record.get("valid_from") or record.get("updated_at") or "").strip()
+        if not stamp:
+            # 没有时间戳的记忆不因时间条件被删除，避免误伤。
+            continue
+        if start and stamp < start:
+            continue
+        if end and stamp > end:
+            continue
+        kept.append(record)
+    return kept, {
+        "applied": True,
+        "start_time": start,
+        "end_time": end,
+        "source_text": str(raw.get("source_text") or ""),
+        "records_before": len(records),
+        "records_after": len(kept),
+    }
+
+
+def _forget_audit_detail(plan: ErasurePlan, candidate_count: int) -> Dict[str, object]:
+    """Keep a verifiable audit trail without retaining the forgotten phrase."""
+
+    return {
+        "request_hash": stable_hash(plan.source_text),
+        "candidate_count": int(candidate_count),
+        "memory_types": list(plan.memory_types),
+        "scope_level": plan.scope_level,
+        "has_time_window": plan.has_time_window,
+        "start_time": plan.start_time,
+        "end_time": plan.end_time,
+        "plan_schema": "memguardos-erasure-plan-v1",
+    }
+
+
+def _flatten_tool_args_text(value: object) -> str:
+    """Collect every string leaf of tool_args so value-level secrets are inspected too."""
+
+    if isinstance(value, dict):
+        return " ".join(_flatten_tool_args_text(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return " ".join(_flatten_tool_args_text(item) for item in value)
+    if isinstance(value, str):
+        return value
+    return ""
 
 
 def _audit_event_id(audit: object) -> str:

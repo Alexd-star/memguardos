@@ -46,9 +46,10 @@ def test_dashboard_keeps_raw_payloads_in_advanced_details_instead_of_main_flow()
 def test_dashboard_has_visual_product_affordances_not_only_text_blocks():
     page = _dashboard_html()
 
-    assert "quick-actions" in page
-    assert "health-matrix" in page
-    assert "lifecycle" in page
+    assert "task-action" in page
+    assert "metric-strip" in page
+    assert "workflow-steps" in page
+    assert "overview-status-banner" in page
     assert "status-dot" in page
     assert "memory-funnel" not in page
     assert "Agent 记忆服务可以正常使用" in page
@@ -180,8 +181,8 @@ def test_dashboard_adapts_status_grids_before_labels_wrap_vertically():
     page = _dashboard_html()
 
     assert "@media (max-width: 1180px)" in page
-    assert ".grid.four, .health-matrix { grid-template-columns:repeat(2,minmax(0,1fr)); }" in page
-    assert ".health-tile .health-title > span:not(.status-dot) { white-space:nowrap; }" in page
+    assert ".grid.four { grid-template-columns:repeat(2,minmax(0,1fr)); }" in page
+    assert ".content-split { grid-template-columns:1fr; }" in page
     assert "@media (max-width: 760px)" in page
     assert "nav { position:sticky; top:0; z-index:10; display:flex;" in page
     assert "overflow-x:auto" in page
@@ -287,7 +288,8 @@ def test_dashboard_all_tab_entry_points_share_retryable_lazy_loading():
     assert "await loadTabData(tab, null, {force:Boolean(settings.force)});" in page
     assert "async function loadTabData(tab, event, options)" in page
     assert "tabLoadedAt.set(tab, Date.now());" in page
-    assert "const result = await loader(event);\n      if (result !== null)\n        tabLoadedAt.set(tab, Date.now());" in page
+    assert "const result = await loader(event);\n        if (result !== null)\n          tabLoadedAt.set(tab, Date.now());" in page
+    assert "页面内容暂时没有加载出来" in page
     assert "openTab(btn.dataset.tab);\n      loadTabData(btn.dataset.tab, null);" not in page
 
 
@@ -515,3 +517,13 @@ def test_forgetting_preview_hides_internal_step_names_and_refreshes_verification
     assert "遗忘已经完成，验证结果已更新" in page
     assert "button.dataset.preserveBusyState === 'true'" in page
     assert "forgetConfirmButton.dataset.preserveBusyState = 'true'" in page
+
+
+def test_overview_status_renderer_only_targets_current_dom_ids():
+    page = _dashboard_html()
+
+    assert "document.getElementById('statMemories')" in page
+    assert "document.getElementById('liveCount').textContent" not in page
+    assert "document.getElementById('namespaceCount').textContent" not in page
+    assert "document.getElementById('dataLocation').textContent" not in page
+    assert "loadOverviewEvidence(null)" in page

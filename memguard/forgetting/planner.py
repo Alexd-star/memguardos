@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Optional, Set
 import re
 
 from memguard.forgetting.natural_intent import ErasureIntentCompiler
@@ -25,6 +25,20 @@ STOPWORDS = {
     "这条",
     "知识",
 }
+
+# 遗忘请求里普遍出现、不具区分度的词，不作为锚点参与覆盖率判定。
+ANCHOR_STOPWORDS = {
+    "and", "the", "for", "with", "from", "into", "all", "any", "please",
+    "agent", "memory", "memories", "project", "session", "forget", "delete",
+    "remove", "erase", "about", "related",
+    "记忆", "遗忘", "忘掉", "忘记", "删除", "清除", "所有", "相关", "关于",
+    "以及", "还有", "这些", "那些", "内容", "信息", "数据", "系统", "用户",
+}
+
+# 候选相对分数下限（偏好定向 / 有目标短语 / 纯关键词）。
+# 只删"与最佳匹配同等接近"的记忆，是控制过度遗忘的主要杠杆；
+# 数值由 data/benchmarks/forgetting.jsonl 上的扫描确定，不针对任何单条请求。
+CANDIDATE_SCORE_FLOORS = (0.45, 0.75, 0.85)
 
 GENERIC_MATCH_TERMS = {
     "回答",
@@ -70,16 +84,39 @@ class ForgetPlanner:
                 unique.append(lowered)
         return unique[:12]
 
-    def candidates(self, request: str, records: Iterable[Dict[str, str]], limit: int = 20) -> List[Dict[str, object]]:
-        intent = self.intent_compiler.compile(request)
+    def candidates(
+        self,
+        request: str,
+        records: Iterable[Dict[str, str]],
+        limit: int = 20,
+        intent: Optional[Dict[str, object]] = None,
+    ) -> List[Dict[str, object]]:
+        # A caller on the destructive path passes the already compiled intent.
+        # Recompiling generated text here would discard time/scope constraints.
+        intent = dict(intent) if intent is not None else self.intent_compiler.compile(request)
         aliases = [str(alias).lower() for alias in intent.get("topic_aliases") or [] if str(alias).strip()]
         preference_topic = str(intent.get("normalized_preference_topic") or intent.get("preference_topic") or "")
         target_phrase = str(intent.get("target_phrase") or "")
-        keywords = self.keywords(request + " " + target_phrase + " " + " ".join(aliases) + " " + preference_topic)
+        search_basis = " ".join(
+            part
+            for part in [
+                _target_request_text(request),
+                target_phrase,
+                str(intent.get("topic") or ""),
+                " ".join(aliases),
+                preference_topic,
+                " ".join(str(item) for item in intent.get("sensitive_labels") or []),
+            ]
+            if part
+        )
+        keywords = self.keywords(search_basis or request)
         distinctive_keywords = [keyword for keyword in keywords if keyword not in GENERIC_MATCH_TERMS]
-        ranked = self.retriever.rank(" ".join(keywords) or request, records, limit=limit)
+        corpus = list(records)
+        ranked = self.retriever.rank(" ".join(keywords) or request, corpus, limit=limit)
         if not ranked:
             return []
+        # 锚点判别度按全语料的文档频次计算；只统计已排序的 top-N 会因查询相关而有偏。
+        anchor_df, corpus_size = _anchor_document_frequency(distinctive_keywords, corpus)
         results = []
         for score, record in ranked:
             if score < 0.18:
@@ -126,7 +163,9 @@ class ForgetPlanner:
             if distinctive_keywords and not matched_distinctive:
                 continue
             strong_matches = [keyword for keyword in matched_distinctive if keyword not in WEAK_MATCH_TERMS and len(keyword) >= 2]
-            if not _anchor_policy_passes(request, matched_distinctive, strong_matches):
+            if not _anchor_policy_passes(
+                distinctive_keywords, matched_distinctive, strong_matches, aliases, anchor_df, corpus_size
+            ):
                 continue
             if _violates_retention_constraints(intent, record, text):
                 continue
@@ -144,9 +183,26 @@ class ForgetPlanner:
         if not results:
             return []
         top_score = max(float(item["score"]) for item in results)
-        relative_floor = 0.45 if preference_topic else 0.70 if target_phrase else 0.80
+        preference_floor, phrase_floor, plain_floor = CANDIDATE_SCORE_FLOORS
+        relative_floor = preference_floor if preference_topic else phrase_floor if target_phrase else plain_floor
         score_floor = max(0.18, top_score * relative_floor)
         return [item for item in results if float(item["score"]) >= score_floor]
+
+
+def _target_request_text(request: str) -> str:
+    """Remove protected clauses while retaining useful target context."""
+
+    text = re.sub(
+        r"^\s*除了\s*.+?\s*(?:以外|之外)\s*[，,；;]?\s*",
+        "",
+        str(request or ""),
+    )
+    text = re.split(
+        r"(?:[，,；;]|\s+(?:但是|但))\s*(?:但是|但)?\s*保留",
+        text,
+        maxsplit=1,
+    )[0]
+    return text.strip()
 
 
 def _record_type_matches(intent: Dict[str, object], record: Dict[str, str]) -> bool:
@@ -250,81 +306,131 @@ def _preference_topic_matches(preference_topic: str, text: str) -> bool:
 
 
 def _violates_retention_constraints(intent: Dict[str, object], record: Dict[str, str], text: str) -> bool:
-    if "保留不相关记忆" in str(intent.get("source_text") or "") and str(record.get("source_uri") or "").startswith("neg_"):
-        return True
+    """A record is protected only when it matches every dimension of a constraint.
+
+    Disjunctive matching would make "忘记 X 的偏好，但保留 X 的知识" protect
+    everything mentioning X — including the preference the user explicitly asked
+    to delete — silently turning the whole request into a no-op.
+    """
+
+    lowered = text.lower()
     for constraint in intent.get("retention_constraints") or []:
         if not isinstance(constraint, dict):
             continue
-        memory_types = set(str(item) for item in constraint.get("memory_types") or [])
-        if memory_types and str(record.get("type") or "") in memory_types:
-            return True
-        if constraint.get("scope") == "other_agents" and ("其他 agent" in text.lower() or "其他agent" in text.lower()):
-            return True
+        conditions = []
+        memory_types = {str(item) for item in constraint.get("memory_types") or []}
+        if memory_types:
+            conditions.append(_record_type_in(record, memory_types))
+        if constraint.get("scope") == "other_agents":
+            conditions.append("其他 agent" in lowered or "其他agent" in lowered)
         topic = str(constraint.get("topic") or "")
-        if topic and topic in text:
+        if topic:
+            conditions.append(topic in text)
+        terms = [str(term) for term in constraint.get("terms") or [] if str(term).strip()]
+        if terms:
+            conditions.append(any(term.lower() in lowered for term in terms))
+        if conditions and all(conditions):
             return True
     return False
 
 
-def _anchor_policy_passes(request: str, matched_distinctive: List[str], strong_matches: List[str]) -> bool:
-    lowered_request = request.lower()
-    matched = set(matched_distinctive)
-    if "精准遗忘" in request and "流程" in request:
-        return bool({"精准遗忘", "精准", "遗忘"} & matched) and "流程" in matched
-    if "超时" in request and "修复" in request and ("sdk" in lowered_request or "kylin" in lowered_request):
-        return "超时" in matched and "修复" in matched and bool({"sdk", "kylin"} & matched)
-    if "端侧" in request and "768" in lowered_request and "embedding" in lowered_request:
-        return "端侧" in matched and "768" in matched and bool({"向量", "维向"} & matched)
-    if "不可见" in request and ("peony" in lowered_request or "右键" in request):
-        has_invisible = "不可见" in matched or {"不可", "可见"}.issubset(matched)
-        return has_invisible and bool({"peony", "右键"} & matched)
-    if "auto retrieval" in lowered_request:
-        return "auto" in matched and ("retrieval" in matched or ({"可选", "后端"} & matched))
-    if "审计链" in request and "失败" in request and "恢复" in request:
-        return bool({"审计链", "审计"} & matched) and "失败" in matched and "恢复" in matched
-    if "linux" in lowered_request:
-        return "linux" in matched
-    if "rg" in lowered_request:
-        return "rg" in matched
-    if (
-        "高风险命令" in request
-        or "高风险操作" in request
-        or "二次确认" in request
-        or "操作确认" in request
-        or "危险操作" in request
-    ):
-        return bool({"高风险命令", "高风", "风险", "命令", "二次确认", "二次", "确认", "high_risk_confirmation"} & matched)
-    if "shell history" in lowered_request:
-        if "pytest" in lowered_request:
-            return "pytest" in matched and "shell" in matched and "history" in matched
-        return "shell" in matched and "history" in matched
-    if "huggingface" in lowered_request or "api key" in lowered_request.lower():
-        return "token" in matched and bool({"api", "key", "huggingface"} & matched)
-    if "精准遗忘流程" in request:
-        return "流程" in matched or "忘流" in matched
-    if "embedding" in lowered_request:
-        if "维度" in request:
-            return bool({"维度", "768"} & matched)
-        return "embedding" in matched
-    if "auditd" in lowered_request:
-        return "auditd" in matched
-    if "web" in lowered_request and ("控制" in request or "控制台" in request):
-        return "web" in matched and bool({"控制", "制台", "控制台"} & matched)
-    if "bpf" in lowered_request and "lsm" in lowered_request:
-        has_bpf = bool({"bpf", "ebpf"} & matched)
-        if "hook" in lowered_request or "阻断" in request or "拦截" in request:
-            return has_bpf and "lsm" in matched and bool({"hook", "file_open"} & matched) and bool({"阻断", "拦截", "deny"} & matched)
-        return has_bpf and "lsm" in matched
-    if "systemd" in lowered_request:
-        return "systemd" in matched
-    requested_latin_terms = {
-        term.lower()
-        for term in re.findall(r"[A-Za-z][A-Za-z0-9_\-]{2,}", request)
-        if term.lower() not in {"agent", "memory", "project", "session"}
+def _record_type_in(record: Dict[str, str], memory_types: Set[str]) -> bool:
+    record_type = str(record.get("type") or "")
+    subtype = str(record.get("subtype") or "")
+    for memory_type in memory_types:
+        if memory_type == record_type:
+            return True
+        if memory_type in {"preference", "security_policy"} and record_type in {"preference", "sensitive_policy"}:
+            return True
+        if memory_type == "knowledge" and record_type == "knowledge":
+            return True
+        if memory_type == "tool_trace" and subtype in {"tool_trace", "procedural_trace", "tool_failure_case"}:
+            return True
+    return False
+
+
+def _anchor_document_frequency(
+    keywords: List[str],
+    corpus: Iterable[Dict[str, str]],
+) -> tuple:
+    """Document frequency of each keyword across the whole managed corpus."""
+
+    texts = []
+    for record in corpus:
+        texts.append(
+            ("%s %s %s" % (
+                record.get("summary", ""),
+                record.get("content", ""),
+                record.get("preference_topic", ""),
+            )).lower()
+        )
+    frequency = {}
+    for keyword in keywords:
+        lowered = str(keyword or "").lower()
+        if not lowered:
+            continue
+        frequency[lowered] = sum(1 for text in texts if lowered in text)
+    return frequency, len(texts)
+
+
+def _anchor_policy_passes(
+    distinctive_keywords: List[str],
+    matched_distinctive: List[str],
+    strong_matches: List[str],
+    aliases: List[str],
+    anchor_df: Dict[str, int],
+    corpus_size: int,
+) -> bool:
+    """Require the request's most discriminative anchor to be matched.
+
+    Never inspect benchmark-specific literals: a rule that recognises particular
+    evaluation requests makes forgetting precision/recall self-fulfilling.
+    Discriminativeness is derived from the candidate corpus at run time — the
+    rarer a term is across candidates, the more it defines what this request
+    is actually about.
+    """
+
+    anchors = {
+        keyword.lower()
+        for keyword in distinctive_keywords
+        if keyword and keyword.lower() not in ANCHOR_STOPWORDS
     }
-    if requested_latin_terms:
-        return bool(requested_latin_terms & matched)
-    latin_terms = [keyword for keyword in matched_distinctive if re.search(r"[A-Za-z]", keyword)]
-    if latin_terms:
-        return bool(strong_matches)
-    return True
+    matched = {str(item).lower() for item in matched_distinctive if item}
+    if not anchors:
+        return bool(strong_matches) if matched_distinctive else True
+    if not matched:
+        return False
+
+    alias_pool = {str(alias).lower() for alias in aliases if str(alias).strip()}
+    covered = {
+        anchor
+        for anchor in anchors
+        if _anchor_is_covered(anchor, matched, alias_pool)
+    }
+    if not covered:
+        return False
+
+    # 判别度阈值：出现在超过一半候选里的词太普通，不能独自代表遗忘目标。
+    common_ceiling = max(1, corpus_size // 2)
+    discriminative = {
+        anchor for anchor in anchors if anchor_df.get(anchor, corpus_size) <= common_ceiling
+    }
+    if discriminative and not (covered & discriminative):
+        return False
+    return bool(strong_matches) or bool(covered - WEAK_MATCH_TERMS)
+
+
+def _anchor_is_covered(anchor: str, matched: Set[str], alias_pool: Set[str]) -> bool:
+    """Covered when a matched keyword overlaps the anchor, or an alias bridges it.
+
+    The alias bridge is what lets a Chinese record satisfy an English anchor
+    (and vice versa) without hardcoding either side.
+    """
+
+    if anchor in matched:
+        return True
+    if any(keyword and (anchor in keyword or keyword in anchor) for keyword in matched):
+        return True
+    if anchor in alias_pool and matched & alias_pool:
+        return True
+    return False

@@ -5,16 +5,68 @@ import subprocess
 import sys
 
 from memguard.eval.real_agent_behavior import (
+    aggregate_real_agent_paired_results,
     aggregate_real_agent_results,
     evaluate_real_agent_run,
 )
 from scripts.run_openhands_behavior_suite import (
     _resolve_setup_project_root,
+    build_parser,
     finalize_case_artifacts,
     validate_cases,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_openhands_suite_exposes_real_paired_memory_mode():
+    args = build_parser().parse_args(["--memory-mode", "paired", "--validate-only"])
+    assert args.memory_mode == "paired"
+
+
+def test_real_agent_paired_aggregate_reports_effects_and_inference():
+    def arm(completed, correct, failed):
+        return {
+            "evaluation": {
+                "status": "pass" if completed else "memory_pass_agent_fail",
+                "agent_behavior": {
+                    "task_completed": completed,
+                    "first_tool": "rg" if correct else "grep",
+                    "first_tool_correct": correct,
+                },
+                "metrics": {
+                    "failed_command_count": failed,
+                    "repeated_command_count": failed,
+                },
+            }
+        }
+
+    result = aggregate_real_agent_paired_results(
+        [
+            {
+                "case_id": "R01",
+                "expected_tool": "rg",
+                "arms": {
+                    "memory_off": arm(False, False, 2),
+                    "memory_on": arm(True, True, 0),
+                },
+            },
+            {
+                "case_id": "R02",
+                "expected_tool": "rg",
+                "arms": {
+                    "memory_off": arm(True, False, 1),
+                    "memory_on": arm(True, True, 0),
+                },
+            },
+        ]
+    )
+
+    assert result["evidence_class"] == "real_agent_paired_run"
+    assert result["case_count"] == 2
+    assert result["paired_tests"]["task_completion"]["improved"] == 1
+    assert result["paired_tests"]["first_tool_accuracy"]["improved"] == 2
+    assert result["paired_tests"]["failed_commands"]["effect"]["mean_difference"] == -1.5
 
 
 def load_jsonl(path):

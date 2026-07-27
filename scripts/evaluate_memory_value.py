@@ -32,12 +32,17 @@ def render_report(result):
     aggregate = result["aggregate"]
     groups = aggregate["groups"]
     deltas = aggregate["mean_deltas"]
+    inference = aggregate["inference"]
+    completion = inference["task_completion"]
+    tools = inference["first_tool_accuracy"]
     lines = [
         "# MemGuardOS 智能体记忆价值确定性评测报告",
         "",
         "本报告由固定 JSONL 数据集和实际 MemGuardOS 服务代码自动生成。"
         "确定性层用于验证记忆抽取、作用域、选择、遗忘和指标计算，"
         "不能替代 openKylin 上的真实 OpenHands 行为证据。",
+        "三组行为结果的来源标记为 `authored_fixture`（人工编写固定场景），"
+        "不得表述为模型独立运行所得。",
         "",
         "## 数据与系统验证",
         "",
@@ -79,6 +84,26 @@ def render_report(result):
         "| 重复命令变化 | %.4f | 无记忆组 |"
         % (deltas["repeated_commands_vs_no_memory"] or 0.0),
         "",
+        "## 统计推断",
+        "",
+        "| 指标 | 无记忆组 95% CI | MemGuardOS 组 95% CI | 配对检验 |",
+        "|---|---:|---:|---:|",
+        "| 任务完成率 | %s | %s | McNemar p=%s |"
+        % (
+            _format_interval(completion["no_memory"]),
+            _format_interval(completion["memguard"]),
+            completion["paired_test"]["p_value"],
+        ),
+        "| 首选工具准确率 | %s | %s | McNemar p=%s |"
+        % (
+            _format_interval(tools["no_memory"]),
+            _format_interval(tools["memguard"]),
+            tools["paired_test"]["p_value"],
+        ),
+        "",
+        "交互轮数、错误命令、重复命令与 Prompt token 同时输出固定种子的配对 bootstrap "
+        "95% 置信区间和 Wilcoxon 配对检验，完整值见 `metrics.json`。小样本下 p 值不等于产品效果保证。",
+        "",
         "## 失败与边界",
         "",
     ]
@@ -99,6 +124,17 @@ def render_report(result):
         ]
     )
     return "\n".join(lines)
+
+
+def _format_interval(value):
+    if value.get("point") is None:
+        return "不适用"
+    return "%.4f [%.4f, %.4f], n=%s" % (
+        value["point"],
+        value["ci_low"],
+        value["ci_high"],
+        value["n"],
+    )
 
 
 def main():

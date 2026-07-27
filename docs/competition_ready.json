@@ -1,9 +1,9 @@
 {
-  "ok": true,
+  "ok": false,
   "summary": {
     "total": 242,
-    "passed": 242,
-    "failed": 0,
+    "passed": 241,
+    "failed": 1,
     "warnings": 0
   },
   "checks": [
@@ -11,14 +11,14 @@
       "category": "中文文档",
       "name": "README.md",
       "ok": true,
-      "detail": "中文字符数 4642",
+      "detail": "中文字符数 4702",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "PROJECT_INDEX.md",
       "ok": true,
-      "detail": "中文字符数 3061",
+      "detail": "中文字符数 3124",
       "severity": "P0"
     },
     {
@@ -123,7 +123,7 @@
       "category": "中文文档",
       "name": "docs/15_更新日志.md",
       "ok": true,
-      "detail": "中文字符数 1267",
+      "detail": "中文字符数 1311",
       "severity": "P0"
     },
     {
@@ -151,14 +151,14 @@
       "category": "中文文档",
       "name": "docs/最终提交说明.md",
       "ok": true,
-      "detail": "中文字符数 3686",
+      "detail": "中文字符数 3755",
       "severity": "P0"
     },
     {
       "category": "中文文档",
       "name": "docs/平台摘要.md",
       "ok": true,
-      "detail": "中文字符数 2710",
+      "detail": "中文字符数 2731",
       "severity": "P0"
     },
     {
@@ -235,7 +235,7 @@
       "category": "中文文档",
       "name": "docs/测试报告.md",
       "ok": true,
-      "detail": "中文字符数 4499",
+      "detail": "中文字符数 4528",
       "severity": "P0"
     },
     {
@@ -277,7 +277,7 @@
       "category": "中文文档",
       "name": "docs/评委证据包索引.md",
       "ok": true,
-      "detail": "中文字符数 2160",
+      "detail": "中文字符数 2187",
       "severity": "P0"
     },
     {
@@ -305,7 +305,7 @@
       "category": "中文文档",
       "name": "docs/超标准交付评分矩阵.md",
       "ok": true,
-      "detail": "中文字符数 1278",
+      "detail": "中文字符数 1334",
       "severity": "P0"
     },
     {
@@ -1347,8 +1347,8 @@
     {
       "category": "openKylin原生证据",
       "name": "证据对应当前 Git HEAD",
-      "ok": true,
-      "detail": "source=80963d01d2da9af2ef20936f06d40795fcc382ec；当前 HEAD 仅追加/更新原生证据文件 37 个",
+      "ok": false,
+      "detail": "证据 80963d01d2da 与当前 fb39c5f9589d 不一致",
       "severity": "P0"
     },
     {

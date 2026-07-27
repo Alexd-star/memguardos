@@ -28,7 +28,7 @@ jobs:
       - name: Install package and dev dependencies
         run: |
           python -m pip install -U pip
-          python -m pip install -e ".[dev]"
+          python -m pip install -e ".[dev,security]"
 
       - name: Lint
         run: |
@@ -40,6 +40,12 @@ jobs:
 
       - name: Docs link check
         run: python scripts/check_docs_links.py
+
+      - name: Metric consistency check
+        run: python scripts/check_metric_consistency.py
+
+      - name: Security scan
+        run: python scripts/run_security_scan.py
 
       - name: Web dashboard smoke
         run: python scripts/web_dashboard_smoke.py

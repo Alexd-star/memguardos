@@ -4,12 +4,14 @@ import glob
 
 
 DEFAULT_SENSITIVE_PATHS = [
+    "~/.memguardos",
     "~/.ssh",
     "~/.config",
     "~/.env",
     "/etc/ssh",
     "/etc/passwd",
     "/etc/shadow",
+    "/var/lib/memguardos",
 ]
 
 

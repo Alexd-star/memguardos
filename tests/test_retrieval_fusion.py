@@ -151,12 +151,14 @@ def test_relational_query_can_add_graph_only_candidate(tmp_path, monkeypatch):
 def test_query_routing_prefers_matching_language_time_and_relation_sources(tmp_path):
     service = make_service(tmp_path, "route-suitability")
     try:
+        # 跨语言命中必须靠真实术语重叠决定，不能依赖任何基准生成器标记短语：
+        # 两条记录的技术术语必须真的不同，否则排序没有可解释依据。
         cross = service.ingest_text(
-            "跨语言术语记录：服务重启前先查看 journalctl 和 cgroup 限制。",
+            "服务重启前先查看 journalctl 日志与 cgroup resource limits 配额。",
             source_kind="agent_interaction",
         )["record"]
         service.ingest_text(
-            "本周有效记录：服务重启前先查看 journalctl 和 cgroup 限制。",
+            "本周有效记录：cgroup 配额需要每周复核一次。",
             source_kind="agent_interaction",
         )
         hits = service.search(
@@ -164,11 +166,11 @@ def test_query_routing_prefers_matching_language_time_and_relation_sources(tmp_p
             limit=5,
         )
         assert hits[0]["memory_id"] == cross.memory_id
-        assert "cross_language_source" in hits[0]["score_breakdown"]["routing_reasons"]
+        assert "cross_language_term_overlap" in hits[0]["score_breakdown"]["routing_reasons"]
 
         temporal = service.search("本周 cgroup", limit=5)[0]
         assert "temporal_scope_match" in temporal["score_breakdown"]["routing_reasons"]
-        assert "cross_language_source" not in temporal["score_breakdown"]["routing_reasons"]
+        assert "cross_language_term_overlap" not in temporal["score_breakdown"]["routing_reasons"]
 
         relation = service.ingest_text(
             "关联图记录：namespace 与 cgroup 共同约束服务。",

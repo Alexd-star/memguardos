@@ -22,7 +22,7 @@ def build_package_plan(version: str, architecture: str, multiarch: str) -> Dict[
     return {
         "memguardos-core": {
             "architecture": architecture,
-            "depends": "python3 (>= 3.9), systemd, policykit-1 | polkitd",
+            "depends": "python3 (>= 3.10), systemd, adduser, policykit-1 | polkitd",
             "recommends": f"memguardos-ukui (= {version}), memguardos-agent-bridge (= {version})",
             "breaks": moved,
             "replaces": moved,
@@ -263,6 +263,9 @@ class DebianPackageBuilder:
                 "\n".join(
                     self._legacy_runtime_cleanup_lines()
                     + [
+                        "getent group memguard >/dev/null 2>&1 || addgroup --system memguard >/dev/null",
+                        "getent passwd memguard >/dev/null 2>&1 || adduser --system --ingroup memguard --home /nonexistent --no-create-home --shell /usr/sbin/nologin memguard >/dev/null",
+                        "install -d -o memguard -g memguard -m 0700 /var/lib/memguardos",
                         "command -v systemctl >/dev/null 2>&1 && systemctl daemon-reload || true",
                         "command -v systemctl >/dev/null 2>&1 && systemctl enable --now memguardd.service >/dev/null 2>&1 || true",
                         "command -v systemctl >/dev/null 2>&1 && systemctl --global disable memguard-kylin-warmup.service >/dev/null 2>&1 || true",

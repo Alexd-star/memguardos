@@ -34,7 +34,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 
 | 类别 | 当前结果 |
 |---|---:|
-| 本地当前工作树全量测试 | 641 passed, 14 skipped |
+| 本地当前工作树全量测试 | 675 passed, 16 skipped |
 | openKylin 最终 HEAD 原生证据 | 源修订 `80963d0`；`654 passed, 1 skipped`；manifest 24 个文件并附 SHA256 |
 | 多发行版复验（Ubuntu CI / Debian 13 容器） | CI 三版本矩阵 13 步门禁全绿；容器全量 654 passed, 1 skipped |
 | openKylin systemd 服务重启 | 873 ms（服务恢复后为 active/running） |
@@ -52,7 +52,7 @@ MemGuardOS 围绕这些问题构建本地智能体记忆模块。上游 Agent �
 | 冲突处理正确率 | 1.0000 |
 | benchmark 用例/种子总数 | 217 |
 | Agent 交互记忆专项 benchmark | 200 条，各项指标 1.0000，openKylin P95 113.97 ms |
-| 记忆价值确定性配对实验 | 16/16 系统验证通过；任务完成率 0.75→1.00；Prompt token 较完整历史减少 61.1264% |
+| 记忆价值固定场景三臂回归 | 16/16 系统验证通过；人工编写场景中的任务完成率 0.75→1.00、Prompt token 减少 61.1264%；仅验证机制与指标计算，不作为真实模型因果结论 |
 | 真实 Agent 记忆价值实验 | 原 12/12 + 新增 8/8 完整运行；记忆系统层与 Agent 行为层均为 1.0000；未归因失败为 0 |
 
 真实 Agent 场景库已从 12 组扩展到 28 组，新增覆盖偏好冲突覆盖、失败修复轨迹、高风险确认、跨会话 runbook 复用、精准遗忘边界和 holdout 留出盲测。新增 R13-R20 已在 openKylin 上完成独立复跑，证据位于 [docs/evidence/real_agent_extension_r13_r20_latest/](docs/evidence/real_agent_extension_r13_r20_latest/)；新增 8 组 holdout 留出盲测证据位于 [docs/evidence/real_agent_holdout_latest/](docs/evidence/real_agent_holdout_latest/)；原 12 组仍保留在 [docs/evidence/memory_value_latest/](docs/evidence/memory_value_latest/) 中，三者共同构成 28 组真实 OpenHands 证据。

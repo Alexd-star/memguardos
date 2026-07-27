@@ -229,12 +229,36 @@ def build_parser() -> argparse.ArgumentParser:
     forget_import.add_argument("--compact", action="store_true", help="Compact segment storage after forgetting")
     forget_import.add_argument("--notify", action="store_true", help="Send one desktop notification")
 
+    compare = sub.add_parser("compare", help="Run the same task with and without memory and show the difference")
+    compare.add_argument("task")
+    compare.add_argument("--agent-name", default="openhands")
+    compare.add_argument("--session-id", default="")
+
+    memory_detail = sub.add_parser("memory-detail", help="Show one memory with its sources, versions and usage")
+    memory_detail.add_argument("memory_id")
+    memory_detail.add_argument("--light", action="store_true", help="Skip session expansion and preference proof for a fast lookup")
+
+    forget_ids = sub.add_parser("forget-ids", help="Forget specific memory ids and verify every managed surface")
+    forget_ids.add_argument("memory_ids", nargs="+")
+    forget_ids.add_argument("--reason", default="memctl forget-ids")
+    forget_ids.add_argument("--compact", action="store_true")
+
+    acceptance = sub.add_parser("acceptance", help="List or run the local acceptance review items")
+    acceptance_sub = acceptance.add_subparsers(dest="acceptance_command", required=True)
+    acceptance_sub.add_parser("list", help="List acceptance items and their pass standards")
+    acceptance_run = acceptance_sub.add_parser("run", help="Run one automated acceptance item")
+    acceptance_run.add_argument("item_id")
+    acceptance_report = acceptance_sub.add_parser("report", help="Build an acceptance report from a results JSON file")
+    acceptance_report.add_argument("--results", required=True, help="Path to a JSON array of acceptance results")
+    acceptance_report.add_argument("--markdown", action="store_true")
+
     patterns = sub.add_parser("patterns", help="List or add custom sensitive patterns")
     pattern_sub = patterns.add_subparsers(dest="pattern_command", required=True)
     pattern_sub.add_parser("list", help="List custom patterns")
     pattern_add = pattern_sub.add_parser("add", help="Add a custom sensitive pattern")
     pattern_add.add_argument("name")
     pattern_add.add_argument("regex")
+    pattern_add.add_argument("--level", default="", choices=["", "high", "medium", "low"], help="Severity: high blocks, medium redacts; default treats the rule as low risk")
     pattern_suggest = pattern_sub.add_parser("suggest", help="Suggest a validated sensitive regex from a natural-language instruction")
     pattern_suggest.add_argument("instruction")
     pattern_suggest.add_argument("--name", default="", help="Optional pattern name; inferred when omitted")
@@ -288,6 +312,16 @@ def build_parser() -> argparse.ArgumentParser:
     agent_sub.add_parser("status", help="Show Agent event and preference aggregation status")
     agent_evidence = agent_sub.add_parser("evidence", help="Show interaction evidence for one memory")
     agent_evidence.add_argument("memory_id")
+    agent_overview = agent_sub.add_parser("overview", help="Show the Agent dashboard snapshot (timeline, preferences, proofs)")
+    agent_overview.add_argument("--session-id", default="")
+    agent_overview.add_argument("--task", default="查看当前 Agent 记忆状态")
+    agent_overview.add_argument("--limit", type=int, default=100)
+    agent_proof = agent_sub.add_parser("preference-proof", help="Show whether a preference was actually followed")
+    agent_proof.add_argument("memory_id")
+    agent_proof.add_argument("--task", default="验证当前偏好是否生效")
+    agent_proof.add_argument("--stage", default="tool_selection", choices=["planning", "tool_selection", "response_generation"])
+    agent_proof.add_argument("--agent-name", default="openhands")
+    agent_proof.add_argument("--session-id", default="proof-cli")
     agent_forget = agent_sub.add_parser("forget", help="Preview or execute scoped Agent interaction forgetting")
     agent_forget.add_argument("--agent-name", default="")
     agent_forget.add_argument("--session-id", default="")
@@ -414,6 +448,24 @@ def main(argv: list[str] | None = None) -> int:
             if args.agent_command == "evidence":
                 result = service.preference_evidence(args.memory_id)
                 print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0 if result.get("found") else 2
+            if args.agent_command == "overview":
+                result = service.agent_dashboard_snapshot(
+                    session_id=args.session_id,
+                    task=args.task,
+                    limit=args.limit,
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+                return 0
+            if args.agent_command == "preference-proof":
+                result = service.preference_effect_proof(
+                    args.memory_id,
+                    task=args.task,
+                    stage=args.stage,
+                    agent_name=args.agent_name,
+                    session_id=args.session_id,
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
                 return 0 if result.get("found") else 2
             if args.agent_command == "forget":
                 filters = {
@@ -771,12 +823,63 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 0
 
+        if args.command == "compare":
+            result = service.memory_value_comparison(args.task, agent_name=args.agent_name, session_id=args.session_id)
+            print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+            return 0
+
+        if args.command == "memory-detail":
+            result = service.memory_detail(args.memory_id, light=args.light)
+            print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+            return 0 if result.get("found") else 2
+
+        if args.command == "forget-ids":
+            result = service.forget_memory_ids(
+                args.memory_ids,
+                reason=args.reason,
+                compact=args.compact,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+            return 0 if result.get("ok") else 2
+
+        if args.command == "acceptance":
+            from memguard.web.acceptance import (
+                acceptance_plan,
+                acceptance_report as build_acceptance_report,
+                report_to_markdown,
+                run_acceptance_item,
+            )
+
+            if args.acceptance_command == "list":
+                print(json.dumps(acceptance_plan(), ensure_ascii=False, indent=2, default=str))
+                return 0
+            if args.acceptance_command == "run":
+                try:
+                    result = run_acceptance_item(service, args.item_id)
+                except KeyError:
+                    print(json.dumps({"ok": False, "error": "unknown_acceptance_item", "item_id": args.item_id}, ensure_ascii=False, indent=2))
+                    return 2
+                print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+                return 0 if result.get("ok") else 2
+            if args.acceptance_command == "report":
+                try:
+                    results = json.loads(Path(args.results).read_text(encoding="utf-8"))
+                    report = build_acceptance_report(results)
+                except (OSError, json.JSONDecodeError, ValueError) as exc:
+                    print(json.dumps({"ok": False, "error": "invalid_acceptance_results", "message": str(exc)}, ensure_ascii=False, indent=2))
+                    return 2
+                if args.markdown:
+                    print(report_to_markdown(report))
+                else:
+                    print(json.dumps(report, ensure_ascii=False, indent=2, default=str))
+                return 0
+
         if args.command == "patterns":
             if args.pattern_command == "list":
                 print(json.dumps(service.list_patterns(), ensure_ascii=False, indent=2))
                 return 0
             if args.pattern_command == "add":
-                result = service.try_add_pattern(args.name, args.regex)
+                result = service.try_add_pattern(args.name, args.regex, level=args.level)
                 print(json.dumps(result, ensure_ascii=False, indent=2))
                 return 0 if result["ok"] else 2
             if args.pattern_command == "suggest":

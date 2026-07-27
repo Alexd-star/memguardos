@@ -513,8 +513,8 @@ def _verification_statuses(result: Mapping[str, Any], *, confirmed: bool, dry_ru
             status = "passed" if int(result.get("scrubbed_event_count") or 0) >= 0 else "failed"
             detail = "Agent 事件载荷已按结果处理。"
         elif name in {"sqlite_fts", "graph_relations", "search_cache"} and result.get("confirmed"):
-            status = "passed" if result.get("compact") is not False else "skipped"
-            detail = "确认遗忘已更新受管元数据和检索路径。" if status == "passed" else "未执行整理，保留后续复核。"
+            # 真实回查每个检索面，而不是凭 confirmed 标志直接判定通过。
+            status, detail = _retrieval_surface_status(name, result)
         elif name == "mmap_segment_compact" and result.get("compact") is not None:
             status = "passed" if result.get("compact") else "skipped"
             detail = "段文件整理已执行。" if status == "passed" else "未要求整理段文件。"
@@ -529,6 +529,42 @@ def _verification_statuses(result: Mapping[str, Any], *, confirmed: bool, dry_ru
             detail = "操作记录完整性校验通过。" if status == "passed" else "操作记录完整性需要复核。"
         result_steps.append({"name": name, "status": status, "detail": detail})
     return result_steps
+
+
+_SURFACE_FIELDS = {
+    "sqlite_fts": ("sqlite_fts_recallable", "文本检索索引"),
+    "graph_relations": ("graph_relations_recallable", "关联关系索引"),
+    "search_cache": ("search_cache_recallable", "检索缓存"),
+}
+
+
+def _retrieval_surface_status(name: str, result: Mapping[str, Any]) -> tuple[str, str]:
+    """Report a retrieval surface from the post-delete probe, not from a flag."""
+
+    field, label = _SURFACE_FIELDS[name]
+    probes: list[Mapping[str, Any]] = []
+    raw = result.get("verification")
+    if isinstance(raw, list):
+        for item in raw:
+            surfaces = item.get("retrieval_surfaces") if isinstance(item, Mapping) else None
+            if isinstance(surfaces, Mapping):
+                probes.append(surfaces)
+    elif isinstance(raw, Mapping):
+        for item in raw.get("retrieval_surfaces") or []:
+            if isinstance(item, Mapping):
+                probes.append(item)
+    if not probes:
+        return "skipped", "%s未提供复查结果，请在管理员视图重新校验。" % label
+    recallable = [item for item in probes if item.get(field)]
+    if recallable:
+        return "failed", "%s仍可召回已遗忘内容，需要管理员处理。" % label
+    if name == "search_cache":
+        dropped = result.get("search_cache_entries_dropped")
+        if dropped is None and isinstance(raw, Mapping):
+            dropped = raw.get("search_cache_entries_dropped")
+        suffix = "（已清理 %s 条缓存）" % dropped if dropped is not None else ""
+        return "passed", "%s复查未命中已遗忘内容%s。" % (label, suffix)
+    return "passed", "%s复查未命中已遗忘内容。" % label
 
 
 def _notification_mapping(event_type: str) -> tuple[str, str, str, str] | None:

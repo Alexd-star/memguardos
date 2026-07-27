@@ -199,6 +199,9 @@ def test_all_deterministic_cases_validate_memguard_system_behavior(tmp_path):
     result = evaluate_memory_value_cases(cases, tmp_path)
 
     assert result["aggregate"]["case_count"] == 16
+    assert result["evidence_class"] == "deterministic_authored_fixture"
+    assert result["aggregate"]["arm_source"] == "authored_fixture"
+    assert result["aggregate"]["inference"]["task_completion"]["paired_test"]["method"] == "mcnemar_exact_two_sided"
     assert result["system_validation"]["passed"] == 16
     assert result["system_validation"]["failed"] == 0
     assert result["failures"] == []
@@ -229,3 +232,6 @@ def test_memory_value_cli_writes_traceable_json_and_chinese_report(tmp_path):
     assert "任务完成率" in report
     assert "Prompt token" in report
     assert "失败与边界" in report
+    assert "authored_fixture" in report
+    assert "统计推断" in report
+    assert "McNemar" in report

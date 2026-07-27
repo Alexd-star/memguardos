@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 from memguard.cli.memctl import main as memctl_main
@@ -797,7 +798,9 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "overviewDetailsToggle_" in source
     assert "overviewDetailsPanel_->setVisible(false)" in source
     assert "QScrollArea" in source
-    assert "setTextVisible(false)" not in source
+    assert "本机就绪度" in source
+    assert "readinessBar_ = new QProgressBar" in source
+    assert "readinessValueLabel_" in source
     assert "健康度百分比" not in source
     assert "日常使用" in source
     assert "管理员" in source
@@ -835,7 +838,10 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "HH:mm:ss" not in source
     assert 'QStringLiteral("时间")' not in source
     assert "服务日志已显示在【系统维护】" in source
-    assert "summaryDescription_->setText(message)" in source
+    # setBusy 只更新操作进度行，不得把忙碌文案覆盖到状态摘要，避免横幅出现重复文字。
+    busy_body = source[source.index("void MemGuardUkccPlugin::setBusy") : source.index("void MemGuardUkccPlugin::showError")]
+    assert "summaryDescription_" not in busy_body
+    assert "updateOperationGuide(message, busy)" in busy_body
     assert 'runMemctl({QStringLiteral("diagnostics")}, QStringLiteral("export"))' in source
     assert "先确认记忆服务是否可用，再查看、搜索或遗忘本机记忆" in source
     assert "服务运行" in source
@@ -894,7 +900,13 @@ def test_ukui_control_center_uses_structured_native_product_ui():
     assert "报告保存已取消，系统状态未改变" in source
     assert "检查内核保护状态" in source
     assert "native-action" in source
-    assert "setStyleSheet" not in source
+    # 分组卡片允许使用 QSS，但必须全部取 palette() 主题角色，禁止写死颜色，保持 UKUI 主题跟随。
+    assert "setStyleSheet" in source
+    stylesheet_start = source.index("page_->setStyleSheet")
+    stylesheet_body = source[stylesheet_start : source.index("));", stylesheet_start)]
+    assert "palette(mid)" in stylesheet_body
+    assert "palette(highlight)" in stylesheet_body
+    assert not re.search(r"(?<!memguardRoot)#[0-9a-fA-F]{3,8}\b", stylesheet_body.replace("#memguardRoot", ""))
     assert "QPalette" in source
 
 
@@ -920,7 +932,7 @@ def test_ukui_control_center_has_spacious_native_layout_tokens():
     assert "setFrameShape(QFrame::NoFrame)" in source
     assert "setMinimumHeight(44)" in source
     assert "setMaximumHeight(52)" in source
-    assert "setMaximumWidth(220)" in source
+    assert "setMaximumWidth(220)" not in source
     assert "当前任务：" not in source[source.index("QWidget *MemGuardUkccPlugin::pluginUi") :]
     assert "处理进度：" in source
 
@@ -1368,9 +1380,11 @@ def test_ukui_control_center_has_actionable_recent_behavior_and_preflight_review
     assert "behaviorTimeline_" in header
     assert "提交前复核" in source
     assert "运行本机验收复核" in source
-    assert "导出 openKylin 证据" in source
     assert "打开 Web 验收中心" in source
     assert "报告默认不包含记忆正文" in source
+    # 证据导出入口只保留【报告与控制台】一处，提交前复核不得重复摆放同功能按钮。
+    assert "导出本机证据" in source
+    assert source.count('runMemctl({QStringLiteral("collect-openkylin-evidence")}') == 1
 def test_ukui_memory_effect_validation_stays_on_daily_page_with_structured_json():
     source = Path("native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
     header = Path("native/ukui/ukcc-memguard/memguard_ukcc_plugin.h").read_text(encoding="utf-8")

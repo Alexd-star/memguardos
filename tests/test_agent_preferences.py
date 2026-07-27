@@ -412,10 +412,20 @@ def test_explicit_preference_wins_over_promoted_implicit_preference_at_same_scop
 
         assert selected["selected"][0]["value"] == "grep"
         assert selected["selected"][0]["preference_explicit"] is True
-        assert any(
-            item["value"] == "rg" and item["reason"] == "lower_evidence_priority"
-            for item in selected["excluded"]
-        )
+        # 同一 topic+scope 下的旧取值必须被裁决退役，而不是继续作为可召回候选并存。
+        active_values = {
+            str(row.get("preference_value") or "")
+            for row in service.list_memories(governance_state="active")
+            if str(row.get("preference_topic") or "") == "code_search_tool"
+        }
+        assert active_values == {"grep"}
+        superseded = [
+            row
+            for row in service.list_memories(governance_state="superseded")
+            if str(row.get("preference_value") or "") == "rg"
+        ]
+        assert superseded, "旧偏好应标记为 superseded 以保留审计痕迹"
+        assert any(event["event_type"] == "preference_update" for event in service.audit(limit=50))
     finally:
         service.close()
 
@@ -452,7 +462,16 @@ def test_latest_explicit_preference_uses_event_ingest_order_when_timestamps_tie(
         )
 
         assert selected["selected"][0]["value"] == "rg"
-        assert selected["excluded"][0]["value"] == "grep"
-        assert selected["excluded"][0]["reason"] == "older_version"
+        # 时间戳相同时按事件写入顺序裁决：后写入的 rg 生效，grep 退役并留痕。
+        active_values = {
+            str(row.get("preference_value") or "")
+            for row in service.list_memories(governance_state="active")
+            if str(row.get("preference_topic") or "") == "code_search_tool"
+        }
+        assert active_values == {"rg"}
+        assert any(
+            str(row.get("preference_value") or "") == "grep"
+            for row in service.list_memories(governance_state="superseded")
+        )
     finally:
         service.close()

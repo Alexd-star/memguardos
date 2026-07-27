@@ -6,7 +6,6 @@ import os
 import sys
 from pathlib import Path
 
-from memguard.integrations.events import AgentInteractionEvent
 from memguard.service import MemGuardService
 
 
@@ -30,8 +29,13 @@ def build_parser() -> argparse.ArgumentParser:
     memory.add_argument("--limit", type=int, default=10)
     search = sub.add_parser("search", help="搜索记忆")
     search.add_argument("query")
+    search.add_argument("--limit", type=int, default=5, help="返回结果条数")
     context = sub.add_parser("context", help="预览 Agent 可用上下文")
     context.add_argument("task")
+    context.add_argument("--limit", type=int, default=5, help="纳入上下文的记忆条数")
+    context.add_argument("--token-budget", type=int, default=1200, help="上下文长度上限")
+    sub.add_parser("preferences", help="查看当前生效偏好")
+    sub.add_parser("audit", help="查看最近操作记录")
     forget = sub.add_parser("forget", help="预览或确认精准遗忘")
     forget.add_argument("request")
     forget.add_argument("--yes", action="store_true", help="确认执行遗忘")
@@ -59,9 +63,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "memory":
             return _memory(service, limit=args.limit)
         if args.command == "search":
-            return _search(service, args.query)
+            return _search(service, args.query, limit=args.limit)
         if args.command == "context":
-            return _context(service, args.task)
+            return _context(service, args.task, limit=args.limit, token_budget=args.token_budget)
+        if args.command == "preferences":
+            return _preferences(service)
+        if args.command == "audit":
+            return _audit_readable(service)
         if args.command == "forget":
             return _forget(service, args.request, confirm=args.yes, compact=args.compact)
         if args.command == "evidence":
@@ -104,7 +112,14 @@ def _remember(service: MemGuardService, text: str) -> int:
     result = service.ingest_text(text, source_kind="user_cli", source_uri="memguard")
     _section("记忆写入")
     if result.get("stored"):
-        print("已保存：%s" % result.get("memory_id"))
+        memory_id = str(getattr(result.get("record"), "memory_id", "") or "")
+        feedback = result.get("feedback") or {}
+        items = list(feedback.get("new_memories") or []) + list(feedback.get("updated_memories") or [])
+        first = items[0] if items else {}
+        summary = str(first.get("summary_for_user") if isinstance(first, dict) else getattr(first, "summary_for_user", "") or "")
+        if summary:
+            print("已学到：%s" % summary)
+        print("记忆编号：%s" % (memory_id or "可在 Web 控制台的最近记忆中查看"))
         print("你可以用 `memguard search 关键词` 或在 Web 控制台查看这条记忆。")
         return 0
     print("未保存：%s" % result.get("reason", "策略未允许"))
@@ -126,8 +141,8 @@ def _memory(service: MemGuardService, limit: int = 10) -> int:
     return 0
 
 
-def _search(service: MemGuardService, query: str) -> int:
-    hits = service.search(query, limit=5)
+def _search(service: MemGuardService, query: str, limit: int = 5) -> int:
+    hits = service.search(query, limit=max(1, limit))
     _section("记忆检索")
     if not hits:
         print("没有找到相关记忆。")
@@ -136,16 +151,38 @@ def _search(service: MemGuardService, query: str) -> int:
     for index, hit in enumerate(hits, 1):
         print("%d. %s" % (index, hit.get("summary") or hit.get("memory_id")))
         print("   分数：%s  来源：%s  ID：%s" % (hit.get("score", "-"), hit.get("match_source", "-"), hit.get("memory_id", "-")))
+        reason = hit.get("match_reason")
+        if reason:
+            print("   命中原因：%s" % reason)
+    _print_retrieval_timings(hits[0].get("retrieval_explanation") if hits else None)
     return 0
 
 
-def _context(service: MemGuardService, task: str) -> int:
-    context = service.build_context(task, limit=5, token_budget=1200)
+def _print_retrieval_timings(explanation: object) -> None:
+    if not isinstance(explanation, dict):
+        return
+    timings = explanation.get("timings")
+    if not isinstance(timings, dict) or not timings:
+        return
+    segments = [
+        ("候选召回", timings.get("candidate_recall_ms")),
+        ("打分", timings.get("scoring_ms")),
+        ("融合", timings.get("fusion_ms")),
+        ("去重与整理", timings.get("postprocess_ms")),
+    ]
+    parts = ["%s %s ms" % (name, value) for name, value in segments if value is not None]
+    total = timings.get("total_ms")
+    if total is not None:
+        print("检索耗时：合计 %s ms（%s）" % (total, "，".join(parts) if parts else "未分段"))
+
+
+def _context(service: MemGuardService, task: str, limit: int = 5, token_budget: int = 1200) -> int:
+    context = service.build_context(task, limit=max(1, limit), token_budget=max(64, token_budget))
     _section("记忆注入")
     memories = context.get("memories", [])
     print("任务：%s" % task)
     print("可用记忆：%d 条" % len(memories))
-    for index, memory in enumerate(memories[:5], 1):
+    for index, memory in enumerate(memories[: max(1, limit)], 1):
         print("%d. %s" % (index, memory.get("summary") or memory.get("memory_id")))
     print("说明：这里只展示 Agent 生成前会被纳入的受控上下文，不包含敏感原文。")
     return 0
@@ -327,9 +364,13 @@ def _run_json(service: MemGuardService, args: argparse.Namespace) -> int:
     elif args.command == "memory":
         value = service.list_memories(include_deleted=False)[: max(1, args.limit)]
     elif args.command == "search":
-        value = service.search(args.query, limit=5)
+        value = service.search(args.query, limit=max(1, args.limit))
     elif args.command == "context":
-        value = service.build_context(args.task, limit=5, token_budget=1200)
+        value = service.build_context(args.task, limit=max(1, args.limit), token_budget=max(64, args.token_budget))
+    elif args.command == "preferences":
+        value = service.interaction_status().get("preference_aggregates", [])
+    elif args.command == "audit":
+        value = service.audit(limit=12)
     elif args.command == "forget":
         value = service.forget(args.request, confirm=args.yes, compact=args.compact or args.yes)
     elif args.command == "evidence":
@@ -359,10 +400,16 @@ def _json_default(value: object) -> object:
     return str(value)
 
 
+SHELL_COMMANDS = (
+    "/status /memory /preferences /search 关键词 /context 任务 /forget 请求 [--yes] "
+    "/run 任务 /audit /evidence /demo /model /workspace /exit"
+)
+
+
 def _shell(service: MemGuardService, prompt: str, workspace: str = "", model: str = "") -> int:
     _section("MemGuardOS 记忆工作台")
     state = {"workspace": str(Path(workspace or Path.cwd()).expanduser()), "model": str(model or "未配置")}
-    print("输入自然语言会写入记忆；内置命令：/help /status /memory /preferences /search 关键词 /context 任务 /forget 请求 /audit /evidence /demo /model /workspace /exit")
+    print("输入自然语言会写入记忆；内置命令：/help " + SHELL_COMMANDS)
     while True:
         try:
             line = input(prompt).strip()
@@ -374,34 +421,46 @@ def _shell(service: MemGuardService, prompt: str, workspace: str = "", model: st
         if line in {"/exit", "exit", "quit"}:
             return 0
         if line == "/help":
-            print("可用操作：/status /memory /preferences /search 关键词 /context 任务 /forget 请求 /audit /evidence /demo /model /workspace /exit")
+            print("可用操作：" + SHELL_COMMANDS)
+            print("说明：/forget 请求 --yes 会在预览后直接确认执行；/run 任务 会用当前模型和工作区运行真实 Agent。")
             continue
         if line == "/model":
             print("当前模型：%s" % state["model"])
-            print("设置方式：输入 `/model 模型名称`；真实 OpenHands 仍需要可用的模型服务和 API 配置。")
+            print("设置方式：输入 `/model 模型名称`，随后可用 `/run 任务` 运行真实 Agent。")
             continue
         if line.startswith("/model "):
-            state["model"] = line.removeprefix("/model ").strip() or "未配置"
+            state["model"] = line[len("/model "):].strip() or "未配置"
             print("已设置当前模型：%s" % state["model"])
             continue
         if line == "/workspace":
             print("当前工作区：%s" % state["workspace"])
             continue
         if line.startswith("/workspace "):
-            candidate = Path(line.removeprefix("/workspace ").strip()).expanduser()
+            candidate = Path(line[len("/workspace "):].strip()).expanduser()
             state["workspace"] = str(candidate.resolve())
             print("已设置工作区：%s" % state["workspace"])
             continue
-        if line == "/preferences":
-            return_code = _preferences(service)
-        elif line == "/audit":
-            return_code = _audit_readable(service)
-        elif line == "/demo":
-            return_code = _demo(service, "查找精准遗忘的实现位置")
-        else:
-            return_code = _run_shell_line(service, line)
-        if return_code not in {0, 1}:
-            return return_code
+        # 任何单条操作的返回码都不再终止工作台：敏感阻断和审计异常同样返回非零，
+        # 直接退出会让"敏感内容保护"演示中途闪退。
+        try:
+            _dispatch_shell_line(service, line, state)
+        except KeyboardInterrupt:
+            print("\n已取消当前操作，工作台继续运行。输入 /exit 退出。")
+
+
+def _dispatch_shell_line(service: MemGuardService, line: str, state: dict) -> int:
+    if line == "/preferences":
+        return _preferences(service)
+    if line == "/audit":
+        return _audit_readable(service)
+    if line == "/demo":
+        return _demo(service, "查找精准遗忘的实现位置")
+    if line.startswith("/run "):
+        return _run_agent_task(service, line[len("/run "):].strip(), state)
+    if line == "/run":
+        print("用法：/run 任务描述。当前模型：%s，工作区：%s" % (state.get("model"), state.get("workspace")))
+        return 0
+    return _run_shell_line(service, line)
 
 
 def _run_shell_line(service: MemGuardService, line: str) -> int:
@@ -412,59 +471,80 @@ def _run_shell_line(service: MemGuardService, line: str) -> int:
     if line == "/preferences":
         return _preferences(service)
     if line.startswith("/search "):
-        return _search(service, line.removeprefix("/search ").strip())
+        return _search(service, line[len("/search "):].strip())
     if line.startswith("/context "):
-        return _context(service, line.removeprefix("/context ").strip())
+        return _context(service, line[len("/context "):].strip())
     if line.startswith("/forget "):
-        return _forget(service, line.removeprefix("/forget ").strip(), confirm=False)
+        request = line[len("/forget "):].strip()
+        confirm = False
+        for flag in (" --yes", " --confirm"):
+            if request.endswith(flag):
+                request = request[: -len(flag)].strip()
+                confirm = True
+        return _forget(service, request, confirm=confirm, compact=confirm)
     if line == "/evidence":
         return _evidence(service)
     return _remember(service, line)
 
 
-def _ingest_demo_events(service: MemGuardService, session_id: str, task: str) -> None:
-    events = [
-        AgentInteractionEvent(
-            agent_name="openhands",
-            agent_version="demo",
-            session_id=session_id,
-            turn_id="turn-1",
-            sequence=1,
-            event_type="user_message",
-            role="user",
-            content="以后查代码优先使用 rg。%s" % task,
-            task_type="code_search",
-        ),
-        AgentInteractionEvent(
-            agent_name="openhands",
-            agent_version="demo",
-            session_id=session_id,
-            turn_id="turn-1",
-            sequence=2,
-            event_type="tool_call",
-            role="assistant",
-            tool_name="terminal",
-            tool_args={"command": 'rg -n "forget_agent_interactions" memguard'},
-            state_before="需要查找精准遗忘实现位置",
-            task_type="code_search",
-        ),
-        AgentInteractionEvent(
-            agent_name="openhands",
-            agent_version="demo",
-            session_id=session_id,
-            turn_id="turn-1",
-            sequence=3,
-            event_type="tool_result",
-            role="tool",
-            tool_name="terminal",
-            tool_result="memguard/service.py:2098:def forget_agent_interactions(",
-            exit_code=0,
-            state_after="rg 成功找到目标定义",
-            task_type="code_search",
-        ),
-    ]
-    for event in events:
-        service.ingest_interaction(event)
+def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
+    """Run a real OpenHands task from the workspace, with an explicit downgrade path."""
+
+    if not task:
+        print("用法：/run 任务描述")
+        return 0
+    from memguard.integrations.openhands_adapter import detect_openhands_runtime
+
+    runtime = detect_openhands_runtime()
+    _section("真实 Agent 运行")
+    if not runtime.get("available"):
+        print("真实 OpenHands 运行环境不可用：Python %s，已安装：%s。" % (
+            runtime.get("python_version", "-"),
+            "是" if runtime.get("installed") else "否",
+        ))
+        print("已改为本地事件回放，用于复核记忆链路；这不是真实模型运行结果。")
+        return _demo(service, task)
+
+    model = str(state.get("model") or "").strip()
+    if not model or model == "未配置":
+        print("尚未设置模型：请先输入 `/model 模型名称`，再运行 `/run 任务`。")
+        return 0
+    api_key = os.environ.get("OPENHANDS_API_KEY", "")
+    if not api_key:
+        print("未找到 OPENHANDS_API_KEY 环境变量，无法向模型发起真实请求。")
+        print("已改为本地事件回放，用于复核记忆链路；这不是真实模型运行结果。")
+        return _demo(service, task)
+
+    from memguard.integrations.openhands_runner import OpenHandsMemoryRunner
+
+    workspace = Path(str(state.get("workspace") or Path.cwd())).expanduser().resolve()
+    session_id = "shell-%s" % os.urandom(4).hex()
+    runner = OpenHandsMemoryRunner(
+        service=service,
+        session_id=session_id,
+        workspace=workspace,
+        state_dir=workspace / ".memguardos-agent",
+        model=model,
+        api_key=api_key,
+        base_url=os.environ.get("OPENHANDS_BASE_URL", ""),
+    )
+    print("模型：%s ｜ 工作区：%s ｜ 会话：%s" % (model, workspace, session_id))
+    print("正在运行真实 Agent，请稍候…")
+    result = runner.run(task)
+    print("执行模式：真实 OpenHands")
+    events = result.get("events") or []
+    print("交互事件：%d 条" % len(events))
+    for proof in result.get("preference_effect_proofs", []) or []:
+        preference = proof.get("preference", {})
+        print("- 偏好 %s = %s：%s" % (
+            preference.get("topic", ""),
+            preference.get("value", ""),
+            {"passed": "已观察到并通过", "failed": "未遵循", "not_applicable": "暂无实际行为证据"}.get(
+                proof.get("compliance"), proof.get("compliance")
+            ),
+        ))
+    print("下一步：输入 /preferences 查看形成的偏好，或 /audit 查看操作记录。")
+    return 0
 
 
 def _section(title: str) -> None:

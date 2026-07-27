@@ -6,6 +6,12 @@ from statistics import mean
 from typing import Dict, Iterable, List, Optional
 
 from memguard.ingestion.tool_result import ToolResult
+from memguard.eval.stats import (
+    mcnemar_exact,
+    paired_bootstrap_mean_difference,
+    wilcoxon_signed_rank,
+    wilson_interval,
+)
 from memguard.integrations.events import AgentInteractionEvent
 from memguard.service import MemGuardService
 
@@ -70,6 +76,7 @@ def evaluate_paired_case(case: Dict[str, object]) -> Dict[str, object]:
     turn_delta = int(memguard["interaction_turns"]) - int(no_memory["interaction_turns"])
     return {
         "case_id": str(case.get("case_id") or ""),
+        "arm_source": str(case.get("arm_source") or "authored_fixture"),
         "category": str(case.get("category") or ""),
         "title": str(case.get("title") or ""),
         "groups": groups,
@@ -129,10 +136,61 @@ def aggregate_paired_results(
             if case["deltas"].get(key) is not None
         ]
         mean_deltas[key] = round(mean(values), 6) if values else None
+    no_memory = [dict(case["groups"]["no_memory"]) for case in cases]
+    memguard = [dict(case["groups"]["memguard"]) for case in cases]
+    full_history = [dict(case["groups"]["full_history"]) for case in cases]
+    eligible_tool = [
+        index
+        for index, (left, right) in enumerate(zip(no_memory, memguard))
+        if int(left.get("tool_call_count") or 0) > 0 or int(right.get("tool_call_count") or 0) > 0
+    ]
+    inference = {
+        "task_completion": {
+            "no_memory": wilson_interval(sum(bool(item["task_completed"]) for item in no_memory), len(no_memory)),
+            "memguard": wilson_interval(sum(bool(item["task_completed"]) for item in memguard), len(memguard)),
+            "paired_test": mcnemar_exact(
+                [bool(item["task_completed"]) for item in no_memory],
+                [bool(item["task_completed"]) for item in memguard],
+            ),
+        },
+        "first_tool_accuracy": {
+            "no_memory": wilson_interval(
+                sum(bool(no_memory[index]["first_tool_correct"]) for index in eligible_tool),
+                len(eligible_tool),
+            ),
+            "memguard": wilson_interval(
+                sum(bool(memguard[index]["first_tool_correct"]) for index in eligible_tool),
+                len(eligible_tool),
+            ),
+            "paired_test": mcnemar_exact(
+                [bool(no_memory[index]["first_tool_correct"]) for index in eligible_tool],
+                [bool(memguard[index]["first_tool_correct"]) for index in eligible_tool],
+            ),
+        },
+        "interaction_turns": _paired_numeric_inference(no_memory, memguard, "interaction_turns"),
+        "failed_commands": _paired_numeric_inference(no_memory, memguard, "failed_command_count"),
+        "repeated_commands": _paired_numeric_inference(no_memory, memguard, "repeated_command_count"),
+        "prompt_tokens_vs_full_history": _paired_numeric_inference(full_history, memguard, "prompt_tokens"),
+    }
     return {
         "case_count": len(cases),
+        "arm_source": "authored_fixture",
         "groups": groups,
         "mean_deltas": mean_deltas,
+        "inference": inference,
+    }
+
+
+def _paired_numeric_inference(
+    baseline: List[Dict[str, object]],
+    treatment: List[Dict[str, object]],
+    key: str,
+) -> Dict[str, object]:
+    left = [float(item.get(key) or 0.0) for item in baseline]
+    right = [float(item.get(key) or 0.0) for item in treatment]
+    return {
+        "effect": paired_bootstrap_mean_difference(left, right),
+        "paired_test": wilcoxon_signed_rank(left, right),
     }
 
 
@@ -165,6 +223,11 @@ def evaluate_memory_value_cases(
         1 for result in case_results if result["system_validation"]["passed"]
     )
     return {
+        "evidence_class": "deterministic_authored_fixture",
+        "evidence_note": (
+            "三组结果来自人工编写的固定场景定义，用于可复现机制回归；"
+            "不能替代真实 Agent 独立运行的因果证据。"
+        ),
         "case_count": len(case_results),
         "aggregate": aggregate_paired_results(case_results),
         "system_validation": {

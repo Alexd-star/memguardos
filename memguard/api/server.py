@@ -73,6 +73,13 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
     if command == "notifications":
         limit = _int_param(request, "limit", 30, minimum=1, maximum=200)
         return {"ok": True, "result": _jsonable(service.recent_notifications(limit=limit))}
+    if command == "memory_value_comparison":
+        task = _string_param(request, "task", "", max_chars=4096)
+        agent_name = _string_param(request, "agent_name", "openhands", max_chars=128)
+        session_id = _string_param(request, "session_id", "", max_chars=256)
+        if not task:
+            return {"ok": False, "error": "task_required"}
+        return {"ok": True, "result": _jsonable(service.memory_value_comparison(task, agent_name=agent_name, session_id=session_id))}
     if command == "memory_detail":
         memory_id = _string_param(request, "memory_id", "", max_chars=128)
         task = _string_param(request, "task", "验证这条记忆的适用范围", max_chars=4096)
@@ -83,6 +90,7 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
             task=task,
             agent_name=agent_name,
             session_id=session_id,
+            light=bool(request.get("light", False)),
         )
         found = bool(result.get("found"))
         response = {"ok": found, "result": _jsonable(result)}

@@ -15,13 +15,16 @@ ROOT = Path(__file__).resolve().parents[1]
 IGNORED_HYGIENE_PARTS = {
     ".git",
     ".mypy_cache",
+    ".playwright-cli",
     ".pytest_cache",
     ".ruff_cache",
     ".venv",
+    ".worktrees",
     "__pycache__",
     "artifacts",
     "dist",
     "local_notes",
+    "output",
     "outputs",
 }
 
@@ -1602,7 +1605,6 @@ def _sha256_file(path: Path) -> str:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
 
 
 

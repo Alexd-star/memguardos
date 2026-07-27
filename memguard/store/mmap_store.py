@@ -10,6 +10,7 @@ except ImportError:  # pragma: no cover - Windows development fallback.
     fcntl = None
 
 from memguard.models import MemoryRecord, MemorySource, Sensitivity, VersionInfo, AuditInfo, new_id, stable_hash, utc_now
+from memguard.store.permissions import ensure_private_directory, ensure_private_file
 
 
 class AppendOnlyMemoryStore:
@@ -22,8 +23,14 @@ class AppendOnlyMemoryStore:
 
     def __init__(self, path: Path):
         self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.permission_corrections = []
+        correction = ensure_private_directory(self.path.parent)
+        if correction:
+            self.permission_corrections.append(correction)
         self.path.touch(exist_ok=True)
+        correction = ensure_private_file(self.path)
+        if correction:
+            self.permission_corrections.append(correction)
         self.lock_path = self.path.with_suffix(self.path.suffix + ".lock")
 
     @contextmanager
@@ -38,6 +45,7 @@ class AppendOnlyMemoryStore:
             yield
             return
         with self.lock_path.open("a+b") as lock:
+            ensure_private_file(self.lock_path)
             fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
             try:
                 yield
@@ -60,9 +68,14 @@ class AppendOnlyMemoryStore:
         with self.path.open("rb") as fh:
             with mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ) as mm:
                 for raw in iter(mm.readline, b""):
-                    line = raw.decode("utf-8").strip()
-                    if line:
-                        records.append(MemoryRecord.from_json(line))
+                    # 单行损坏（例如整理后残留的填充或截断行）只跳过该行；
+                    # 不能让一行坏数据使列表、详情和版本读取全部失败。
+                    try:
+                        line = raw.decode("utf-8").strip().strip("\x00")
+                        if line:
+                            records.append(MemoryRecord.from_json(line))
+                    except (UnicodeDecodeError, ValueError, KeyError, TypeError):
+                        continue
         return records
 
     def latest_records(self, include_deleted: bool = False) -> List[MemoryRecord]:
@@ -100,8 +113,8 @@ class AppendOnlyMemoryStore:
             scope=record.scope,
             tier=record.tier,
             content="",
-            summary="FORGOTTEN: " + reason[:120],
-            source=MemorySource(kind="forget", uri=record.memory_id),
+            summary="FORGOTTEN",
+            source=MemorySource(kind="forget", uri=""),
             evidence=[],
             confidence=record.confidence,
             importance=record.importance,
@@ -117,20 +130,20 @@ class AppendOnlyMemoryStore:
             audit=AuditInfo(
                 created_by="memguard",
                 created_at=utc_now(),
-                hash=stable_hash(record.memory_id + reason + utc_now()),
+                hash=stable_hash(record.memory_id + stable_hash(reason) + utc_now()),
             ),
-            preference_topic=record.preference_topic,
-            preference_value=record.preference_value,
-            preference_scope=record.preference_scope,
-            preference_explicit=record.preference_explicit,
-            agent_name=record.agent_name,
-            preference_session_id=record.preference_session_id,
-            project_root=record.project_root,
-            task_type=record.task_type,
-            trust_level=record.trust_level,
-            trust_score=record.trust_score,
-            governance_state=record.governance_state,
-            governance_reason=record.governance_reason,
+            preference_topic="",
+            preference_value="",
+            preference_scope="global",
+            preference_explicit=False,
+            agent_name="",
+            preference_session_id="",
+            project_root="",
+            task_type="",
+            trust_level="trusted",
+            trust_score=1.0,
+            governance_state="forgotten",
+            governance_reason="",
             deleted=True,
         )
         record.invalidate(valid_to=tomb.temporal.valid_from, superseded_by=tombstone_version_id)

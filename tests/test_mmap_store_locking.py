@@ -84,3 +84,21 @@ def test_replace_all_preserves_the_live_segment_when_generation_fails(tmp_path):
         store.replace_all(broken_replacements())
 
     assert [item.memory_id for item in store.scan()] == [original.memory_id]
+
+
+def test_scan_skips_corrupt_lines_instead_of_failing_all_reads(tmp_path):
+    path = tmp_path / "memory.segment"
+    store = AppendOnlyMemoryStore(path)
+    first = store.append(_record("first usable memory"))
+    second = store.append(_record("second usable memory"))
+
+    with path.open("ab") as fh:
+        fh.write(b"\x00\x00\x00\x00\n")
+        fh.write(b"{truncated json payload\n")
+
+    third = store.append(_record("third usable memory"))
+
+    latest = store.latest_records()
+    assert {record.memory_id for record in latest} == {first.memory_id, second.memory_id, third.memory_id}
+    assert store.get_latest(second.memory_id) is not None
+    assert len(store.get_versions(third.memory_id)) == 1
