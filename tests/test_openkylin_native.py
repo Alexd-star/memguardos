@@ -1340,6 +1340,8 @@ def test_peony_file_scan_has_a_real_plugin_loading_smoke_test():
     assert "preview_rows=" in smoke_source
     assert "smoke_peony_file_scan" not in smoke_script  # no recursive self-invocation
     assert "QT_QPA_PLATFORM=offscreen" in smoke_script
+    assert 'QT_LOGGING_RULES="${QT_LOGGING_RULES:-*.warning=false}"' in smoke_script
+    assert "make --silent --no-print-directory" in smoke_script
     assert "pkill -x peony-qt-desktop" not in refresh_script
     assert "pgrep -f" in refresh_script
     assert "peony-qt-desktop -w -d" in refresh_script

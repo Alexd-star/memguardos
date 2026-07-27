@@ -33,11 +33,12 @@ rm -rf "${BUILD_DIR}"
 mkdir -p "${BUILD_DIR}"
 (
   cd "${BUILD_DIR}"
-  "${QMAKE_BIN}" ../../tests/peony-file-scan-smoke.pro
-  make -j"$(nproc)"
+  "${QMAKE_BIN}" ../../tests/peony-file-scan-smoke.pro >/dev/null
+  make --silent --no-print-directory -j"$(nproc)"
 )
 
 if [ -z "${DISPLAY:-}" ]; then
   export QT_QPA_PLATFORM=offscreen
+  export QT_LOGGING_RULES="${QT_LOGGING_RULES:-*.warning=false}"
 fi
 "${BUILD_DIR}/peony-file-scan-smoke" "${PLUGIN_PATH}" "${SAMPLE_FILE}"
