@@ -63,6 +63,7 @@ def build_package_plan(version: str, architecture: str, multiarch: str) -> Dict[
             "files": [
                 "/lib/systemd/system/memguard-agent@.service",
                 "/usr/lib/memguardos/memguardos-agent-launcher.sh",
+                "/usr/bin/memguard-agent-showcase",
                 "/opt/memguardos/scripts/memguard_agent_bridge.py",
             ],
         },
@@ -196,6 +197,11 @@ class DebianPackageBuilder:
         self._copy_file(
             self.root / "scripts/memguardos-agent-launcher.sh",
             stage / "usr/lib/memguardos/memguardos-agent-launcher.sh",
+            executable=True,
+        )
+        self._copy_file(
+            self.root / "scripts/memguard-agent-showcase.sh",
+            stage / "usr/bin/memguard-agent-showcase",
             executable=True,
         )
         for name in ("memguard_agent_bridge.py", "run_openhands_memguard_demo.py", "run_openhands_behavior_suite.py"):
