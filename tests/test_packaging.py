@@ -141,6 +141,16 @@ def test_debian_packages_apply_openkylin_native_install_lifecycle():
     assert "Categories=Settings;Security;" in menu
 
 
+def test_debian_package_set_has_real_apt_install_gate():
+    installer = (ROOT / "scripts/install_deb_package_set.sh").read_text(encoding="utf-8")
+    collector = (ROOT / "scripts/collect_openkylin_native_evidence.sh").read_text(encoding="utf-8")
+    assert "apt-get install -y --reinstall" in installer
+    assert "package_count=${#PACKAGE_PATHS[@]}" in installer
+    assert "systemctl enable --now memguardd.service" in installer
+    assert "apt_install=ok" in installer
+    assert "install_deb_package_set.sh --no-build" in collector
+
+
 def test_agent_showcase_prefers_current_user_source_tree_over_installed_copy():
     launcher = (ROOT / "scripts/memguard-agent-showcase.sh").read_text(encoding="utf-8")
     assert 'for candidate in "${HOME}/memguardos" /opt/memguardos' in launcher

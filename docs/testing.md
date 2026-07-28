@@ -161,6 +161,7 @@ python scripts/check_competition_ready.py \
 - `source_revision.json`：40 位 Git 修订和干净工作树状态。
 - `pytest_openkylin.txt`：实机测试摘要。
 - `debian_packages.txt` 与 `deb_lifecycle.txt`：五包安装、拆卸、重装和数据保护。
+- `deb_apt_install.txt`：当前五包通过 APT 实际重装并完成服务、桌面资产和审计复核。
 - `systemd_cgroup.txt`：服务状态与资源限制。
 - `openkylin_status_probe_sdk.txt`：显式 SDK 推理探针。
 - `peony_batch_preview.json`、`peony_batch_apply.json`：文件扫描预览与确认导入。

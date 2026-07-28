@@ -314,6 +314,12 @@ mapfile -t packages < <(python3 -c 'import json; print(*[p["path"] for p in json
 sudo apt install "${packages[@]}"
 ```
 
+也可以使用项目提供的清单驱动安装门禁，它会构建五包、执行 `apt-get --reinstall`、启动服务，并检查 CLI、Polkit、托盘入口和审计链：
+
+```bash
+bash scripts/install_deb_package_set.sh
+```
+
 在 openKylin 启用系统包保护的环境中，普通模式可能拒绝向系统目录写入软件包。五包发布流程会在维护模式完成构建、文件冲突检查、离线生命周期验证和完整 `apt install --reinstall` 复验，并采集 `dpkg`、systemd、Peony/UKUI/托盘、Polkit、SDK、审计链和安装后用户流程证据。发布前应以 `docs/evidence/openkylin/source_revision.json` 为准，确认该证据与发布 Git HEAD 一致。
 
 `memguardos-ukui` 安装后会刷新桌面菜单、图标缓存，重启 Peony，并关闭已打开的 UKUI 控制中心实例。用户重新打开文件管理器或设置后应能看到最新入口；如果仍看不到，先重新打开 Peony/控制中心，再执行 `bash scripts/verify_ukui_plugins.sh` 检查插件路径和 Qt 元数据。

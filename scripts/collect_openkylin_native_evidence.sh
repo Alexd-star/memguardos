@@ -250,6 +250,7 @@ test "${ELAPSED_MS}" -le 5000
 test "$(systemctl is-active memguardd.service)" = active'
 
 run_required_capture debian_packages.txt bash scripts/build_deb.sh
+run_required_capture deb_apt_install.txt bash scripts/install_deb_package_set.sh --no-build
 run_required_capture deb_lifecycle.txt bash scripts/verify_deb_lifecycle.sh
 PYTEST_PYTHON="$(find_pytest_python)"
 run_required_capture pytest_openkylin.txt "${PYTEST_PYTHON}" -m pytest -q
