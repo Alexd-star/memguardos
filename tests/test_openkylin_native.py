@@ -980,15 +980,17 @@ def test_ukui_control_center_formats_service_logs_for_product_ui():
     assert "return text.isEmpty() ? summary : text;" not in source
 
 
-def test_native_evidence_collector_refreshes_manifest_after_manifest_log_write():
+def test_native_evidence_collector_sanitizes_before_final_manifest_hashing():
     root = Path(__file__).resolve().parents[1]
     source = (root / "scripts/collect_openkylin_native_evidence.sh").read_text(encoding="utf-8")
 
-    first = 'python3 scripts/refresh_evidence_manifest.py "${OUT_DIR}" >"${OUT_DIR}/manifest_refresh.txt"'
-    second = 'python3 scripts/refresh_evidence_manifest.py "${OUT_DIR}" >/dev/null'
-    assert first in source
-    assert second in source
-    assert source.index(first) < source.index(second)
+    sanitize = 'python3 scripts/sanitize_evidence_paths.py "${OUT_DIR}"'
+    marker = "printf 'manifest_refreshed=true\\n' >\"${OUT_DIR}/manifest_refresh.txt\""
+    refresh = 'python3 scripts/refresh_evidence_manifest.py "${OUT_DIR}" >/dev/null'
+    assert sanitize in source
+    assert marker in source
+    assert refresh in source
+    assert source.index(sanitize) < source.index(marker) < source.index(refresh)
     assert "print_command()" in source
     assert 'echo "$ $*"' not in source
 

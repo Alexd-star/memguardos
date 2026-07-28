@@ -47,6 +47,8 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("evidence", help="导出当前命名空间的轻量复核摘要")
     demo = sub.add_parser("demo", help="运行一轮可读的 Agent 记忆闭环演示")
     demo.add_argument("--task", default="查找精准遗忘的实现位置")
+    compare_live = sub.add_parser("compare-live", help="用真实 Agent 对比关闭和开启记忆的同一任务")
+    compare_live.add_argument("task")
     shell = sub.add_parser("shell", help="进入交互式记忆工作台")
     shell.add_argument("--prompt", default="memguard> ")
     for command_parser in sub.choices.values():
@@ -80,6 +82,8 @@ def main(argv: list[str] | None = None) -> int:
             return _evidence(service)
         if args.command == "demo":
             return _demo(service, args.task)
+        if args.command == "compare-live":
+            return _compare_live(service, args.task, workspace=args.workspace, model=args.model)
         if args.command == "shell":
             return _shell(service, prompt=args.prompt, workspace=args.workspace, model=args.model)
     finally:
@@ -665,6 +669,32 @@ def _memory_mode(line: str, state: dict) -> int:
     else:
         print("当前记忆辅助：%s" % ("开启" if state.get("memory_enabled", True) else "关闭"))
     return 0
+
+
+def _compare_live(
+    service: MemGuardService,
+    task: str,
+    *,
+    workspace: str,
+    model: str,
+) -> int:
+    _section("真实 Agent 记忆对照")
+    print("同一任务将运行两次：第一轮关闭记忆，第二轮开启记忆。")
+    print("请确保已经写入与任务相关的偏好或经验；本命令不会自动制造测试记忆。")
+    common = {
+        "workspace": str(Path(workspace or Path.cwd()).expanduser()),
+        "model": str(model or "未配置"),
+    }
+    print("\n对照组：关闭记忆")
+    off_code = _run_agent_task(service, task, {**common, "memory_enabled": False})
+    if off_code != 0:
+        print("对照组未完成，已停止第二轮，避免形成不可比较的结果。")
+        return off_code
+    print("\n实验组：开启记忆")
+    on_code = _run_agent_task(service, task, {**common, "memory_enabled": True})
+    if on_code == 0:
+        print("\n对照完成：请比较两轮的工具调用、最终答复和偏好作用验证。")
+    return on_code
 
 
 def _shell_guide(state: dict) -> None:

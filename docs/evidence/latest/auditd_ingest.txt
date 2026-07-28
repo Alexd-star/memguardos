@@ -1,8 +1,0 @@
-$ sudo cat /etc/shadow >/dev/null 2>/dev/null || true; bash scripts/auditd_to_memguard.sh "/home/luo/memguardos" memguard_sensitive 200 --summary || true
-
-{
-  "parsed": 5,
-  "ingested_count": 5,
-  "blocked_count": 0,
-  "blocked_samples": []
-}

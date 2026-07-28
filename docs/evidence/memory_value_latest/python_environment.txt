@@ -1,6 +1,0 @@
-$ .venv/bin/python -c import\ json\,platform\,sys\;\ print\(json.dumps\(\{\'python\':sys.version\,\'platform\':platform.platform\(\)\}\,\ ensure_ascii=False\,\ indent=2\)\)
-
-{
-  "python": "3.12.2 (main, Aug 12 2024, 06:27:22) [GCC 12.3.0]",
-  "platform": "Linux-6.6.0-19-generic-x86_64-with-glibc2.38"
-}

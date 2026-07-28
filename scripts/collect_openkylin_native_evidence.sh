@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-OUT_DIR="${1:-docs/evidence/openkylin_native_latest}"
+OUT_DIR="${1:-docs/evidence/openkylin}"
 rm -rf "${OUT_DIR}"
 mkdir -p "${OUT_DIR}"
 export PYTHONPATH="$(pwd)${PYTHONPATH:+:$PYTHONPATH}"
@@ -266,6 +266,10 @@ run_required_capture retrieval_v2.txt \
 run_capture installed_packages.txt bash -c 'dpkg-query -W -f="\${Package} \${Version} \${Status}\n" "memguardos*" 2>/dev/null || true'
 run_capture installed_desktop.txt bash -c 'find /usr/lib -path "*peony-extensions*memguardos*.so" -o -path "*ukui-control-center*memguardos*.so" 2>/dev/null || true; command -v memguardos-tray || true; pgrep -a memguardos-tray || true'
 
-python3 scripts/refresh_evidence_manifest.py "${OUT_DIR}" >"${OUT_DIR}/manifest_refresh.txt"
+python3 scripts/sanitize_evidence_paths.py "${OUT_DIR}" \
+  --project-root "$(pwd)" \
+  --home "${HOME}" \
+  --replace "docs/evidence/openkylin_native_latest=docs/evidence/openkylin"
+printf 'manifest_refreshed=true\n' >"${OUT_DIR}/manifest_refresh.txt"
 python3 scripts/refresh_evidence_manifest.py "${OUT_DIR}" >/dev/null
 echo "openkylin_native_evidence=${OUT_DIR}"

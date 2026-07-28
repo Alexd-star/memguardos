@@ -12,6 +12,7 @@ import secrets
 import stat
 import time
 
+from memguard import __version__
 from memguard.api.server import handle_request
 from memguard.json_support import jsonable
 from memguard.os_guard.cgroup import cgroup_status
@@ -270,7 +271,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
     dashboard_preview_receipts_lock = Lock()
     dashboard_preview_ttl_seconds = 300.0
 
-    server_version = "MemGuardOSDashboard/0.1"
+    server_version = f"MemGuardOSDashboard/{__version__}"
 
     def handle_one_request(self) -> None:
         touch_activity = getattr(self.server, "touch_activity", None)

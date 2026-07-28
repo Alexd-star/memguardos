@@ -19,8 +19,8 @@ fi
 
 STAMP="$(date +%Y%m%d_%H%M%S)"
 JOURNAL_SINCE="$(date '+%Y-%m-%d %H:%M:%S')"
-OUT_DIR="docs/evidence/openkylin_${STAMP}"
-LATEST_DIR="docs/evidence/latest"
+OUT_DIR="output/evidence/openkylin_${STAMP}"
+LATEST_DIR="output/evidence/openkylin_latest"
 EVIDENCE_MEMGUARD_HOME="${TMPDIR:-/tmp}/memguardos_evidence_${STAMP}"
 mkdir -p "$OUT_DIR"
 rm -rf "$EVIDENCE_MEMGUARD_HOME"
@@ -248,8 +248,6 @@ run_capture "eval_1k" "${PYTHON_BIN}" -m memguard.eval.run_eval \
   --latency-queries 120 \
   --output "${OUT_DIR}/eval_result_openkylin.json" \
   --markdown "${OUT_DIR}/eval_report_openkylin.md"
-cp "${OUT_DIR}/eval_result_openkylin.json" docs/eval_result_openkylin.json
-cp "${OUT_DIR}/eval_report_openkylin.md" docs/eval_report_openkylin.md
 
 run_shell_capture "quality_report" "\"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '  普通知识：   systemd   可用 MemoryMax 限制服务内存。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '!!! --- ***' || true; \"${PYTHON_BIN}\" -m memguard.cli.memctl quality-report"
 run_shell_capture "natural_patterns" "\"${PYTHON_BIN}\" -m memguard.cli.memctl patterns suggest '把员工工号，格式以 MG- 开头后接 6 位数字，作为敏感信息'; \"${PYTHON_BIN}\" -m memguard.cli.memctl patterns add-natural '把员工工号，格式以 MG- 开头后接 6 位数字，作为敏感信息'; \"${PYTHON_BIN}\" -m memguard.cli.memctl ingest --text '员工工号 MG-123456 需要脱敏保存。'; \"${PYTHON_BIN}\" -m memguard.cli.memctl search '员工工号' --top-k 3; \"${PYTHON_BIN}\" -m memguard.cli.memctl patterns list"
@@ -339,8 +337,6 @@ if [ "$RUN_10K" -eq 1 ]; then
     --latency-queries 150 \
     --output "${OUT_DIR}/eval_result_openkylin_10k.json" \
     --markdown "${OUT_DIR}/eval_report_openkylin_10k.md"
-  cp "${OUT_DIR}/eval_result_openkylin_10k.json" docs/eval_result_openkylin_10k.json
-  cp "${OUT_DIR}/eval_report_openkylin_10k.md" docs/eval_report_openkylin_10k.md
 fi
 
 run_shell_capture "systemd_cgroup" "systemctl status memguardd --no-pager || true; systemctl show memguardd -p MemoryMax -p CPUQuotaPerSecUSec || true; cat /sys/fs/cgroup/system.slice/memguardd.service/memory.max 2>/dev/null || true; cat /sys/fs/cgroup/system.slice/memguardd.service/cpu.max 2>/dev/null || true; \"${PYTHON_BIN}\" -m memguard.cli.memctl status || true"

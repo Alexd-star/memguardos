@@ -1,5 +1,0 @@
-{
-  "ok": true,
-  "checked": 12,
-  "head_hash": "0329a63be1faf63528b9679a6c08a728bb09ec4a55a783b8d9e1aa7eb2b7ff59"
-}

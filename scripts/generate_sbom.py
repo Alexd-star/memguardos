@@ -4,14 +4,19 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.release_inventory import project_version  # noqa: E402
 DEFAULT_SBOM = ROOT / "docs" / "sbom.json"
-DEFAULT_MARKDOWN = ROOT / "docs" / "供应链与SBOM说明.md"
+DEFAULT_MARKDOWN = ROOT / "output" / "sbom.md"
 
 CORE_ARTIFACTS = [
     "pyproject.toml",
@@ -105,7 +110,7 @@ def _read_project_metadata(pyproject: Path) -> dict[str, Any]:
     optional_block = _section(text, "project.optional-dependencies")
     return {
         "name": _string_value(project_block, "name"),
-        "version": _string_value(project_block, "version"),
+        "version": project_version(),
         "requires_python": _string_value(project_block, "requires-python"),
         "dependencies": _array_value(project_block, "dependencies"),
         "optional_dependencies": _optional_dependencies(optional_block),

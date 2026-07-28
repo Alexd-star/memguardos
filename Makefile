@@ -7,10 +7,10 @@ eval:
 	python -m memguard.eval.run_eval
 
 eval-report:
-	python -m memguard.eval.run_eval --output docs/eval_result.json --markdown docs/eval_report.md
+	python -m memguard.eval.run_eval --output output/eval_result.json --markdown output/eval_report.md
 
 eval-load:
-	python -m memguard.eval.run_eval --latency-size 1000 --output docs/eval_result.json --markdown docs/eval_report.md
+	python -m memguard.eval.run_eval --latency-size 1000 --output output/eval_result.json --markdown output/eval_report.md
 
 doctor:
 	python -m memguard.cli.memctl doctor
@@ -33,10 +33,10 @@ web-smoke:
 	python scripts/web_dashboard_smoke.py
 
 competition-ready:
-	python scripts/check_competition_ready.py --output docs/competition_ready.json --markdown docs/竞赛就绪自检报告.md
+	python scripts/check_competition_ready.py --output output/competition_ready.json --markdown output/competition_ready.md
 
 preflight:
-	python scripts/release_preflight.py --output docs/release_preflight.json
+	python scripts/release_preflight.py --output output/release_preflight.json
 
 ci: lint test docs-check web-smoke competition-ready
 

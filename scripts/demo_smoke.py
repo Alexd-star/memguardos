@@ -27,7 +27,7 @@ def main() -> int:
                     stdout="17 passed in 1.99s",
                     stderr="",
                     duration_ms=1990,
-                    generated_files=["docs/test_report.md", "docs/eval_report.md"],
+                    generated_files=["output/test_report.md", "output/eval_report.md"],
                     tool_name="pytest",
                 ),
                 source_uri="demo_tool_result",

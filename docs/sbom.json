@@ -1,8 +1,8 @@
 {
   "schema": "memguardos-sbom-v1",
   "name": "memguardos",
-  "version": "0.1.0",
-  "generated_at": "2026-07-27T11:24:51+00:00",
+  "version": "1.0.0",
+  "generated_at": "2026-07-28T07:53:38+00:00",
   "source": {
     "root": "project-root",
     "license": "MIT License",
@@ -31,8 +31,8 @@
     {
       "path": "pyproject.toml",
       "present": true,
-      "sha256": "aef749ac94189d8477db1ea6327c7877d703845a7356247a2c35a319a90b698c",
-      "bytes": 817
+      "sha256": "633e8bc7418278dfb32b450ef7d04802c79048fba91dec305508daab5732ff50",
+      "bytes": 1827
     },
     {
       "path": "LICENSE",
@@ -43,14 +43,14 @@
     {
       "path": "README.md",
       "present": true,
-      "sha256": "c4cf1daf52a5bf1942a39a1d1fc89223c6a563aa2b0b4feb3650a11a890710f8",
-      "bytes": 28506
+      "sha256": "a4c9fe7a25463c1c42bbb3697c67ebb747141a52d1e20aa9ef0ccbc918ae0031",
+      "bytes": 9131
     },
     {
       "path": "memguard/service.py",
       "present": true,
-      "sha256": "2a1e4540937fec701858acebe45718390076dfaa937b95ff76ec9da31a390ef5",
-      "bytes": 184303
+      "sha256": "0d576f3b71b1b640db8ad84c9de256d8e15887473c0a0eb9a3ae5ff2196946f9",
+      "bytes": 185328
     },
     {
       "path": "memguard/api/server.py",
@@ -61,8 +61,8 @@
     {
       "path": "memguard/web/dashboard.py",
       "present": true,
-      "sha256": "64dfc0ab2e2f74a310f4376f276972a62db43e22451f245a1b8a3376df37329b",
-      "bytes": 212376
+      "sha256": "6bf917c26387ff7ae7e7270414345f0d6eefdc197d2c612172abc4898f64a6cf",
+      "bytes": 212416
     },
     {
       "path": "memguard/integrations/openhands_adapter.py",
@@ -73,14 +73,14 @@
     {
       "path": "memguard/integrations/openhands_runner.py",
       "present": true,
-      "sha256": "d7b77b07930e5e161a53f9c16c620bd21b8a6f47a5ac63469c706de3a0f8470b",
-      "bytes": 35940
+      "sha256": "84ef160105198a1c83fc0ae680d151128cadbce65fb7d37b51535ce9f5d74335",
+      "bytes": 41559
     },
     {
       "path": "memguard/retrieval/hybrid.py",
       "present": true,
-      "sha256": "5947d1ade785679d29bf510978ef882535a9b393ac60a3396edcc76e7a73a7b5",
-      "bytes": 28503
+      "sha256": "a23e218ab10493eb4574d42830ea141d101da44ec579da8bb855f2c5c217e97c",
+      "bytes": 28499
     },
     {
       "path": "memguard/retrieval/kylin_sdk.py",
@@ -97,8 +97,8 @@
     {
       "path": "memguard/store/sqlite_meta.py",
       "present": true,
-      "sha256": "11a753439f18e1106e72ae97aa920a2f96d5cecc6f16629737c814690260b49d",
-      "bytes": 88025
+      "sha256": "48bc95040fcfd9e7a33a435e361c18cf6da479aaad0b7bf98377ff64ac0d584b",
+      "bytes": 89164
     },
     {
       "path": "memguard/extraction/semantic.py",
@@ -133,14 +133,14 @@
     {
       "path": "scripts/run_security_scan.py",
       "present": true,
-      "sha256": "fc93b75c608263d66388c4682371b689b0b373c00b16272b35ef1a3ce3fc647b",
-      "bytes": 15934
+      "sha256": "7bc9375d6026e2821c6c6822c20a03d57151f1d5664d5987b3eddac7f8657f02",
+      "bytes": 15931
     },
     {
       "path": "scripts/collect_openkylin_evidence.sh",
       "present": true,
-      "sha256": "cf3baccf82fbfdbd3a2f5b07a59b3fe906ab02356fb20b6bc0c942073a1a7960",
-      "bytes": 21806
+      "sha256": "12aca30e8be6e337bba0d79852b777058636a439af5c93f20e9d5968c3f1d33c",
+      "bytes": 21494
     },
     {
       "path": "scripts/verify_deb_package_set.sh",
@@ -169,8 +169,8 @@
     {
       "path": "native/ukui/peony-memguard/memguard_peony_plugin.cpp",
       "present": true,
-      "sha256": "ef4540438e9fd73dee763669c2961cab8ee05e80e8595e7d930c0da6faf87dda",
-      "bytes": 31652
+      "sha256": "38e36b11e160b52dea7d44442781c6ba6b146ed2b7110fa24204353deebe5bd2",
+      "bytes": 37250
     },
     {
       "path": "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp",

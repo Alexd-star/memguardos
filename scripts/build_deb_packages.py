@@ -6,14 +6,18 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import shlex
 import shutil
 import stat
 import subprocess
+import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.release_inventory import project_version  # noqa: E402
 
 
 def build_package_plan(version: str, architecture: str, multiarch: str) -> Dict[str, Dict[str, object]]:
@@ -398,9 +402,8 @@ class DebianPackageBuilder:
 
 
 def _project_version(root: Path) -> str:
-    text = (root / "pyproject.toml").read_text(encoding="utf-8")
-    match = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
-    return match.group(1) if match else "0.1.0"
+    del root
+    return project_version()
 
 
 def _command_output(command: Iterable[str], fallback: str) -> str:

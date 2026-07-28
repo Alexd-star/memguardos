@@ -68,9 +68,9 @@ def _steps(*, include_package: bool) -> list[tuple[str, list[str]]]:
                 py,
                 "scripts/check_competition_ready.py",
                 "--output",
-                "docs/competition_ready.json",
+                "output/competition_ready.json",
                 "--markdown",
-                "docs/竞赛就绪自检报告.md",
+                "output/competition_ready.md",
             ],
         ),
     ]

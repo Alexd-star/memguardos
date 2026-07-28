@@ -1,3 +1,0 @@
-$ bash scripts/ukui_notify_smoke.sh MemGuardOS 验证 用户行为、审计和精准遗忘链路已通过验证。
-
-ukui notification sent via notify-send

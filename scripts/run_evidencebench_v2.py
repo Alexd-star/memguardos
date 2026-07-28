@@ -806,8 +806,8 @@ def to_markdown(result: dict) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run MemGuardOS EvidenceBench v2")
-    parser.add_argument("--output", default=str(ROOT / "docs" / "eval_v2_result.json"))
-    parser.add_argument("--markdown", default=str(ROOT / "docs" / "eval_v2_report.md"))
+    parser.add_argument("--output", default=str(ROOT / "output" / "eval_v2_result.json"))
+    parser.add_argument("--markdown", default=str(ROOT / "output" / "eval_v2_report.md"))
     parser.add_argument("--latency-queries", type=int, default=30)
     args = parser.parse_args()
     result = run(output=args.output, markdown=args.markdown, latency_queries=args.latency_queries)

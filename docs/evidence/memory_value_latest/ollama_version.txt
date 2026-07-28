@@ -1,3 +1,0 @@
-$ ollama --version
-
-ollama version is 0.30.10

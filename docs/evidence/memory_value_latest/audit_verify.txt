@@ -1,7 +1,0 @@
-$ env MEMGUARD_HOME=/tmp/memguardos-memory-value-audit-20260620_131531 .venv/bin/python -m memguard.cli.memctl verify-audit
-
-{
-  "ok": true,
-  "checked": 1,
-  "head_hash": "43e27e16dad24bf5c4de20254288bb1ac662e96f8f23543973b3f355c09b21ba"
-}

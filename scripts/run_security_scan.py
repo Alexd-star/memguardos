@@ -431,7 +431,7 @@ def _render_markdown(report: dict[str, Any]) -> str:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run MemGuardOS security scan gates")
     parser.add_argument("--output", default="docs/security_scan.json")
-    parser.add_argument("--markdown", default="docs/安全扫描报告.md")
+    parser.add_argument("--markdown", default="output/security_scan.md")
     parser.add_argument(
         "--allow-missing-tools",
         action="store_true",

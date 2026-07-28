@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "memguardos"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Local agent memory extraction, governed retrieval and precise forgetting for Linux and openKylin"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,7 +13,7 @@ license-files = ["LICENSE"]
 authors = [{name = "MemGuardOS Project"}]
 keywords = ["agent-memory", "openkylin", "linux", "rag", "privacy", "precise-forgetting"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
@@ -37,7 +37,7 @@ memctl = "memguard.cli.memctl:main"
 memguardd = "memguard.daemon:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6,<0.16"]
+dev = ["build>=1.2", "pytest>=8", "pytest-cov>=5", "ruff>=0.6,<0.16"]
 security = ["bandit>=1.7", "pip-audit>=2.7"]
 agent-openhands = [
     "openhands-sdk==1.28.1",
@@ -48,6 +48,9 @@ agent-openhands = [
 [tool.setuptools.packages.find]
 include = ["memguard*"]
 exclude = ["data*", "docs*", "scripts*", "tests*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "memguard.__version__"}
 
 [tool.setuptools.package-data]
 "memguard.resources" = ["*.json"]

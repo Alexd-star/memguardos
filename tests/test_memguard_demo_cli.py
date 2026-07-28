@@ -1,6 +1,12 @@
 from pathlib import Path
 
-from memguard.cli.memguard import _forget, _friendly_agent_error, _memory_mode, _user_setting
+from memguard.cli.memguard import (
+    _compare_live,
+    _forget,
+    _friendly_agent_error,
+    _memory_mode,
+    _user_setting,
+)
 from memguard.integrations.events import AgentInteractionEvent
 from memguard.integrations.openhands_runner import (
     OpenHandsMemoryRunner,
@@ -62,6 +68,22 @@ def test_memory_mode_is_explicit_and_reversible(capsys):
     assert _memory_mode("/memory on", state) == 0
     assert state["memory_enabled"] is True
     assert "已开启" in capsys.readouterr().out
+
+
+def test_compare_live_runs_memory_off_before_memory_on(monkeypatch, capsys):
+    modes = []
+
+    def fake_run(_service, task, state):
+        assert task == "检查项目"
+        modes.append(state["memory_enabled"])
+        return 0
+
+    monkeypatch.setattr("memguard.cli.memguard._run_agent_task", fake_run)
+    assert _compare_live(object(), "检查项目", workspace=".", model="test-model") == 0
+    assert modes == [False, True]
+    output = capsys.readouterr().out
+    assert "对照组：关闭记忆" in output
+    assert "实验组：开启记忆" in output
 
 
 def test_memory_off_runner_builds_empty_context_and_does_not_persist(tmp_path):

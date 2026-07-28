@@ -9,7 +9,7 @@ NAMESPACE="${MEMGUARD_AGENT_EVIDENCE_NAMESPACE:-realagent-demo}"
 SESSION_A="${MEMGUARD_AGENT_SESSION_A:-real-agent-session-a2}"
 SESSION_B="${MEMGUARD_AGENT_SESSION_B:-real-agent-session-b5}"
 STAMP="$(date +%Y%m%d_%H%M%S)"
-OUT_DIR="${1:-docs/evidence/agent_${STAMP}}"
+OUT_DIR="${1:-output/evidence/agent_${STAMP}}"
 export OLLAMA_HOST="${OLLAMA_HOST:-127.0.0.1:11434}"
 export OLLAMA_MODELS="${OLLAMA_MODELS:-${HOME}/.local/share/ollama/models}"
 

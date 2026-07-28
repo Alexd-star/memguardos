@@ -42,7 +42,8 @@ echo "[7/11] tests"
 python3 -m pytest -q
 
 echo "[8/11] eval"
-python3 -m memguard.eval.run_eval --output docs/eval_result.json --markdown docs/eval_report.md
+mkdir -p output
+python3 -m memguard.eval.run_eval --output output/eval_result.json --markdown output/eval_report.md
 
 echo "[9/11] auditd rule preview"
 python3 -m memguard.cli.memctl auditd-rules --format auditctl

@@ -1,22 +1,0 @@
-$ sudo apt install --reinstall -y ./dist/memguardos_0.1.0_amd64.deb
-
-WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
-
-正在读取软件包列表...
-正在分析软件包的依赖关系树...
-正在读取状态信息...
-下列软件包是自动安装的并且现在不需要了：
-  archdetect-deb cifs-utils dmeventd fdisk finalrd libaio1t64
-  libdebian-installer4 libdevmapper-event1.02.1 liblvm2cmd2.03
-  localechooser-data lvm2 user-setup
-使用'sudo apt autoremove'来卸载它(它们)。
-升级了 0 个软件包，新安装了 0 个软件包，重新安装了 1 个软件包，要卸载 0 个软件包，有 15 个软件包未被升级。
-需要下载 0 B/33.0 MB 的归档。
-解压缩后会消耗 0 B 的额外空间。
-获取:1 /home/luo/memguardos/dist/memguardos_0.1.0_amd64.deb memguardos amd64 0.1.0 [33.0 MB]
-debconf: 因为并未安装 apt-utils，所以软件包的设定过程将被推迟
-(正在读取数据库 ... (正在读取数据库 ... 5%(正在读取数据库 ... 10%(正在读取数据库 ... 15%(正在读取数据库 ... 20%(正在读取数据库 ... 25%(正在读取数据库 ... 30%(正在读取数据库 ... 35%(正在读取数据库 ... 40%(正在读取数据库 ... 45%(正在读取数据库 ... 50%(正在读取数据库 ... 55%(正在读取数据库 ... 60%(正在读取数据库 ... 65%(正在读取数据库 ... 70%(正在读取数据库 ... 75%(正在读取数据库 ... 80%(正在读取数据库 ... 85%(正在读取数据库 ... 90%(正在读取数据库 ... 95%(正在读取数据库 ... 100%(正在读取数据库 ... 系统当前共安装有 200177 个文件和目录。)
-准备解压 .../memguardos_0.1.0_amd64.deb  ...
-正在解压 memguardos (0.1.0) 并覆盖 (0.1.0) ...
-正在设置 memguardos (0.1.0) ...
-正在处理用于 libc-bin (2.38-1ok6.16) 的触发器 ...

@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-OUT_DIR="${1:-docs/evidence/latest}"
+OUT_DIR="${1:-output/evidence/bpf_lsm}"
 POLICY_JSON="${2:-}"
 mkdir -p "${OUT_DIR}"
 LOG="${OUT_DIR}/bpf_lsm_enforcer.txt"

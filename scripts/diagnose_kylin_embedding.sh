@@ -37,7 +37,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 if [ -z "$OUT_DIR" ]; then
-  OUT_DIR="docs/evidence/kylin_embedding_diag_$(date +%Y%m%d_%H%M%S)"
+  OUT_DIR="output/evidence/kylin_embedding_diag_$(date +%Y%m%d_%H%M%S)"
 fi
 mkdir -p "$OUT_DIR"
 

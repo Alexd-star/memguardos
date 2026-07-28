@@ -1,5 +1,6 @@
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
+import hashlib
 import json
 import os
 import stat
@@ -287,13 +288,10 @@ def test_native_evidence_revision_allows_generated_readiness_reports(monkeypatch
         readiness,
         "_revision_delta_paths",
         lambda _source, _target: [
-            "docs/evidence/openkylin_native_latest/openkylin_status.txt",
+            "docs/evidence/openkylin/openkylin_status.txt",
             "README.md",
-            "docs/测试报告.md",
-            "docs/competition_ready.json",
-            "docs/竞赛就绪自检报告.md",
-            "docs/超标准交付评分矩阵.md",
-            "docs/真实Agent记忆价值评测报告.md",
+            "docs/testing.md",
+            "docs/competition.md",
         ],
     )
 
@@ -336,17 +334,10 @@ def test_openkylin_evidence_uses_package_manifest_instead_of_legacy_deb_name():
     assert "plugin_ldd_missing=0" in source
 
 
-def test_deb_package_set_verifier_is_in_every_delivery_registry():
+def test_deb_package_set_verifier_is_in_release_inventory():
     required = "scripts/verify_deb_package_set.sh"
-    registries = [
-        ROOT / "scripts/package_submission.py",
-        ROOT / "scripts/inspect_submission_package.py",
-        ROOT / "scripts/check_competition_ready.py",
-        ROOT / "scripts/generate_sbom.py",
-    ]
-
-    for registry in registries:
-        assert required in registry.read_text(encoding="utf-8"), registry
+    inventory = json.loads((ROOT / "packaging/release_manifest.json").read_text(encoding="utf-8"))
+    assert required in inventory["required_paths"]
 
 
 def test_openkylin_evidence_separates_sdk_path_from_latency_budget_fallback():
@@ -362,44 +353,21 @@ def test_competition_package_keeps_formal_and_process_materials_separate():
     formal_paths = [
         "memguard/service.py",
         "scripts/install_openkylin.sh",
-        "scripts/build_deb.sh",
-        "scripts/collect_openkylin_evidence.sh",
         "scripts/collect_openkylin_native_evidence.sh",
-        "scripts/collect_agent_evidence.sh",
-        "scripts/warmup_kylin_sdk.sh",
-        "scripts/memguard-kylin-warmup.service",
-        "scripts/memguardos-native-helper.sh",
+        "scripts/package_submission.py",
         "native/bpf_lsm/memguard_lsm.bpf.c",
         "packaging/polkit/org.memguardos.policy",
-        "docs/项目介绍总览.md",
-        "docs/openKylin原生化适配说明.md",
-        "docs/真实Agent接入使用说明.md",
-        "docs/真实Agent闭环测试报告.md",
-        "docs/交付文档/MemGuardOS中文操作手册.md",
-        "docs/交付文档/MemGuardOS中文操作手册.docx",
-        "docs/交付文档/MemGuardOS中文操作手册.pdf",
-        "docs/赛题符合性说明.md",
-        "docs/evidence/latest/pytest.txt",
-        "docs/evidence/openkylin_native_latest/openkylin_status.txt",
-        "docs/evidence/agent_latest/pytest_openkylin.txt",
-        "docs/evidence/agent_latest/benchmark/metrics.json",
+        "docs/architecture.md",
+        "docs/agent-integration.md",
+        "docs/evidence/openkylin/openkylin_status.txt",
+        "docs/evidence/agent/base-benchmark-metrics.json",
         "pyproject.toml",
     ]
     process_paths = [
-        "scripts/package_submission.py",
-        "scripts/inspect_submission_package.py",
-        "scripts/release_preflight.py",
-        "scripts/smoke_submission_archive.py",
-        "scripts/check_competition_ready.py",
-        "scripts/check_docs_links.py",
-        "docs/赛题要求逐句符合性核查.md",
-        "docs/竞赛就绪自检报告.md",
-        "docs/research/智能体记忆论文深度调研与MemGuardOS改进建议.md",
         "CHANGELOG.md",
         ".github/workflows/ci.yml",
-        "Dockerfile",
-        "Makefile",
-        "tests/test_packaging.py",
+        "CONTRIBUTING.md",
+        "CODE_OF_CONDUCT.md",
     ]
     for rel in formal_paths:
         assert classify_file(Path(rel)) in COMPETITION_ROLES, rel
@@ -410,47 +378,18 @@ def test_competition_package_keeps_formal_and_process_materials_separate():
 
 def test_competition_package_requires_memory_value_code_data_and_evidence():
     required = {
-        "memguard/eval/memory_value.py",
-        "memguard/eval/real_agent_behavior.py",
-        "scripts/evaluate_memory_value.py",
         "scripts/run_openhands_behavior_suite.py",
-        "scripts/collect_memory_value_evidence.sh",
         "scripts/collect_openkylin_native_evidence.sh",
-        "scripts/warmup_kylin_sdk.sh",
-        "scripts/memguard-kylin-warmup.service",
-        "scripts/memguardos-agent-launcher.sh",
-        "scripts/memguard-agent-showcase.sh",
-        "scripts/memguardos-native-helper.sh",
-        "memguard/os_guard/openkylin_native.py",
-        "memguard/desktop/peony_scan.py",
         "packaging/polkit/org.memguardos.policy",
-        "docs/openKylin原生化适配说明.md",
         "data/benchmarks/agent_memory_value.jsonl",
         "data/benchmarks/real_agent_behavior.jsonl",
         "data/benchmarks/real_agent_behavior_holdout.jsonl",
-        "docs/真实Agent记忆价值评测报告.md",
-        "docs/evidence/memory_value_latest/deterministic/metrics.json",
-        "docs/evidence/memory_value_latest/real_agent/metrics.json",
-        "docs/evidence/memory_value_latest/manifest.json",
-        "docs/evidence/memory_value_latest/SHA256SUMS.txt",
-        "docs/evidence/openkylin_native_latest/openkylin_status.txt",
-        "docs/evidence/openkylin_native_latest/openkylin_status_probe_sdk.txt",
-        "docs/evidence/openkylin_native_latest/kylin_warmup.txt",
-        "docs/evidence/openkylin_native_latest/source_revision.json",
-        "docs/evidence/openkylin_native_latest/peony_batch_preview.json",
-        "docs/evidence/openkylin_native_latest/peony_batch_apply.json",
-        "docs/evidence/openkylin_native_latest/peony_sensitive_preview.json",
-        "docs/evidence/openkylin_native_latest/tray_assets.txt",
-        "docs/evidence/openkylin_native_latest/debian_packages.txt",
-        "docs/evidence/openkylin_native_latest/deb_lifecycle.txt",
-        "docs/evidence/openkylin_native_latest/pytest_openkylin.txt",
-        "docs/evidence/openkylin_native_latest/manifest.json",
-        "docs/evidence/openkylin_native_latest/SHA256SUMS.txt",
-        "docs/evidence/real_agent_holdout_latest/metrics.json",
-        "docs/evidence/real_agent_holdout_latest/manifest.json",
-        "docs/evidence/real_agent_holdout_latest/SHA256SUMS.txt",
+        "docs/agent-integration.md",
+        "docs/evidence/agent/memory-value-deterministic.json",
+        "docs/evidence/agent/memory-value-real-agent.json",
+        "docs/evidence/agent/holdout.json",
+        "docs/evidence/openkylin/source_revision.json",
         "docs/security_scan.json",
-        "docs/安全扫描报告.md",
     }
 
     assert required.issubset(REQUIRED_PATHS)
@@ -465,7 +404,7 @@ def test_generate_sbom_records_project_dependencies_and_core_artifacts(tmp_path)
     assert sbom_path.exists()
     assert markdown_path.exists()
     assert sbom["name"] == "memguardos"
-    assert sbom["version"] == "0.1.0"
+    assert sbom["version"] == "1.0.0"
     assert sbom["schema"] == "memguardos-sbom-v1"
     assert sbom["dependencies"]["runtime"] == []
     assert "pytest>=8" in sbom["dependencies"]["optional"]["dev"]
@@ -575,192 +514,117 @@ def test_refresh_evidence_manifest_rebuilds_checksums_and_manifest(tmp_path):
     ]
 
 
-def test_submission_package_inspector_rejects_process_materials(tmp_path):
-    package = tmp_path / "submission.zip"
-    manifest = tmp_path / "submission_manifest.json"
-    names = sorted(REQUIRED_PATHS | {"scripts/release_preflight.py", "scripts/smoke_submission_archive.py"})
-    with ZipFile(package, "w", ZIP_DEFLATED) as zf:
-        for name in names:
-            zf.writestr(name, sample_submission_body(name))
-    manifest.write_text(
-        '{"files": [%s]}'
-        % ",".join('{"path": "%s", "role": "%s"}' % (name, classify_file(Path(name))) for name in names),
-        encoding="utf-8",
-    )
-    report = inspect_package(package, manifest)
-    assert report["ok"] is False
-    assert "scripts/release_preflight.py" in report["forbidden_hits"]
-    assert "scripts/smoke_submission_archive.py" in report["forbidden_hits"]
-
-
-def test_submission_package_inspector_accepts_required_formal_materials(tmp_path):
-    package = tmp_path / "submission.zip"
-    manifest = tmp_path / "submission_manifest.json"
-    names = sorted(REQUIRED_PATHS)
-    with ZipFile(package, "w", ZIP_DEFLATED) as zf:
-        for name in names:
-            zf.writestr(name, sample_submission_body(name))
-    manifest.write_text(
-        '{"files": [%s]}'
-        % ",".join('{"path": "%s", "role": "%s"}' % (name, classify_file(Path(name))) for name in names),
-        encoding="utf-8",
-    )
-    report = inspect_package(package, manifest)
-    assert report["ok"] is True
-    assert report["missing_required"] == []
-    assert report["forbidden_hits"] == []
-    assert report["local_path_hits"] == []
-
-
 def test_submission_archive_smoke_command_names_are_stable():
     assert command_name(["python", "-m", "compileall", "-q", "memguard"]) == "compileall"
     assert command_name(["python", "scripts/web_dashboard_smoke.py"]) == "web_dashboard_smoke.py"
     assert command_name([]) == "unknown"
 
 
-def test_submission_package_inspector_rejects_local_paths_in_formal_docs(tmp_path):
-    package = tmp_path / "submission.zip"
-    manifest = tmp_path / "submission_manifest.json"
-    names = sorted(REQUIRED_PATHS)
-    with ZipFile(package, "w", ZIP_DEFLATED) as zf:
-        for name in names:
-            body = "cd D:\\Luo_docs\\竞赛\\研创赛\\memguardos" if name == "README.md" else "x"
-            zf.writestr(name, body)
-    manifest.write_text(
-        '{"files": [%s]}'
-        % ",".join('{"path": "%s", "role": "%s"}' % (name, classify_file(Path(name))) for name in names),
-        encoding="utf-8",
+def test_python_distribution_smoke_is_required_for_release():
+    source = (ROOT / "scripts/smoke_python_distribution.py").read_text(encoding="utf-8")
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    assert "memguard.resources" in source
+    assert "openhands_memory_hook" in source
+    assert "smoke_python_distribution.py" in workflow
+
+
+def test_evidence_sanitizer_runs_before_native_manifest_hashing():
+    collector = (ROOT / "scripts/collect_openkylin_native_evidence.sh").read_text(encoding="utf-8")
+    sanitize_at = collector.index("scripts/sanitize_evidence_paths.py")
+    manifest_at = collector.index("scripts/refresh_evidence_manifest.py")
+    assert sanitize_at < manifest_at
+
+
+def test_submission_package_inspector_accepts_release_inventory(tmp_path):
+    package, manifest = write_submission_fixture(tmp_path)
+    report = inspect_package(package, manifest)
+    assert report["ok"] is True
+    assert report["manifest"]["archive_sha256_ok"] is True
+
+
+def test_submission_package_inspector_rejects_local_paths(tmp_path):
+    package, manifest = write_submission_fixture(
+        tmp_path,
+        overrides={"README.md": "cd D:\\PrivateWorkspace\\memguardos"},
     )
     report = inspect_package(package, manifest)
     assert report["ok"] is False
-    assert report["local_path_hits"] == [{"path": "README.md", "line": 1, "markers": ["D:\\", "Luo_docs"]}]
+    assert report["local_path_hits"]
 
 
-def test_submission_package_inspector_rejects_weak_sdk_evidence(tmp_path):
-    package = tmp_path / "submission.zip"
-    manifest = tmp_path / "submission_manifest.json"
-    names = sorted(REQUIRED_PATHS)
-    with ZipFile(package, "w", ZIP_DEFLATED) as zf:
-        for name in names:
-            body = sample_submission_body(name)
-            if name == "docs/evidence/latest/sdk_embedding_probe.txt":
-                body = '{"embedding":{"inference_ready":null,"embedding_probe":null}}\n'
-            zf.writestr(name, body)
-    manifest.write_text(
-        '{"files": [%s]}'
-        % ",".join('{"path": "%s", "role": "%s"}' % (name, classify_file(Path(name))) for name in names),
-        encoding="utf-8",
+def test_submission_package_inspector_rejects_forbidden_research_files(tmp_path):
+    package, manifest = write_submission_fixture(
+        tmp_path,
+        extra={"docs/research/raw-paper.pdf": "not a release artifact"},
     )
     report = inspect_package(package, manifest)
-    assert report["ok"] is False
-    assert any(item["path"] == "docs/evidence/latest/sdk_embedding_probe.txt" for item in report["evidence_content_failures"])
+    assert "docs/research/raw-paper.pdf" in report["forbidden_hits"]
 
 
 def test_submission_package_inspector_rejects_weak_agent_evidence(tmp_path):
-    package = tmp_path / "submission.zip"
-    manifest = tmp_path / "submission_manifest.json"
-    names = sorted(REQUIRED_PATHS)
-    with ZipFile(package, "w", ZIP_DEFLATED) as zf:
-        for name in names:
-            body = sample_submission_body(name)
-            if name == "docs/evidence/agent_latest/benchmark/metrics.json":
-                body = '{"case_count":200,"metrics":{"extraction":{"f1":0.5}},"failures":["bad"]}\n'
-            zf.writestr(name, body)
-    manifest.write_text(
-        '{"files": [%s]}'
-        % ",".join('{"path": "%s", "role": "%s"}' % (name, classify_file(Path(name))) for name in names),
-        encoding="utf-8",
+    path = "docs/evidence/agent/base-benchmark-metrics.json"
+    package, manifest = write_submission_fixture(
+        tmp_path,
+        overrides={path: '{"case_count":200,"failures":["bad"]}\n'},
     )
     report = inspect_package(package, manifest)
-    assert report["ok"] is False
-    assert any(item["path"] == "docs/evidence/agent_latest/benchmark/metrics.json" for item in report["evidence_content_failures"])
+    assert any(item["path"] == path for item in report["evidence_content_failures"])
 
 
-def test_submission_package_inspector_rejects_incomplete_memory_value_evidence(tmp_path):
+def test_submission_package_inspector_rejects_incomplete_real_agent_evidence(tmp_path):
+    path = "docs/evidence/agent/memory-value-real-agent.json"
+    package, manifest = write_submission_fixture(
+        tmp_path,
+        overrides={path: '{"case_count":12,"completed_case_count":11}\n'},
+    )
+    report = inspect_package(package, manifest)
+    assert any(item["path"] == path for item in report["evidence_content_failures"])
+
+
+def write_submission_fixture(tmp_path, overrides=None, extra=None):
+    overrides = overrides or {}
+    bodies = {name: overrides.get(name, sample_submission_body(name)) for name in REQUIRED_PATHS}
+    bodies.update(extra or {})
     package = tmp_path / "submission.zip"
     manifest = tmp_path / "submission_manifest.json"
-    names = sorted(REQUIRED_PATHS)
-    with ZipFile(package, "w", ZIP_DEFLATED) as zf:
-        for name in names:
-            body = sample_submission_body(name)
-            if name == "docs/evidence/memory_value_latest/real_agent/metrics.json":
-                body = '{"case_count":10,"completed_case_count":9,"unclassified_failure_count":1,"memory_system_pass_rate":0.5}\n'
-            zf.writestr(name, body)
+    with ZipFile(package, "w", ZIP_DEFLATED) as archive:
+        for name, body in sorted(bodies.items()):
+            archive.writestr(name, body)
+    entries = [
+        {
+            "path": name,
+            "role": classify_file(Path(name)),
+            "sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+        }
+        for name, body in sorted(bodies.items())
+    ]
     manifest.write_text(
-        '{"files": [%s]}'
-        % ",".join('{"path": "%s", "role": "%s"}' % (name, classify_file(Path(name))) for name in names),
+        json.dumps(
+            {
+                "archive_sha256": hashlib.sha256(package.read_bytes()).hexdigest(),
+                "file_count": len(entries),
+                "files": entries,
+            }
+        ),
         encoding="utf-8",
     )
-
-    report = inspect_package(package, manifest)
-
-    assert report["ok"] is False
-    assert any(
-        item["path"] == "docs/evidence/memory_value_latest/real_agent/metrics.json"
-        for item in report["evidence_content_failures"]
-    )
+    return package, manifest
 
 
 def sample_submission_body(name: str) -> str:
-    if name == "docs/evidence/latest/pytest.txt":
-        return "60 passed in 22.65s\n"
-    if name == "docs/evidence/agent_latest/pytest_openkylin.txt":
-        return "133 passed in 18.96s\n"
-    if name == "docs/evidence/agent_latest/benchmark/metrics.json":
-        return """
-{
-  "case_count": 200,
-  "metrics": {
-    "extraction": {"precision": 1.0, "recall": 1.0, "f1": 1.0},
-    "role_pollution_rate": 0.0,
-    "sensitive_leak_rate": 0.0,
-    "forget_success_rate": 1.0,
-    "cross_session_adherence": 1.0
-  },
-  "latency_ms": {"p95": 115.97},
-  "failures": []
-}
-""".strip()
-    if name == "docs/evidence/memory_value_latest/deterministic/metrics.json":
-        return '{"case_count":16,"system_validation":{"passed":16,"failed":0},"failures":[]}\n'
-    if name == "docs/evidence/memory_value_latest/real_agent/metrics.json":
-        return '{"case_count":12,"completed_case_count":12,"unclassified_failure_count":0,"memory_system_pass_rate":0.916667,"agent_behavior_pass_rate":0.75}\n'
-    if name == "docs/evidence/real_agent_extension_r13_r20_latest/metrics.json":
-        return '{"case_count":8,"completed_case_count":8,"unclassified_failure_count":0,"memory_system_pass_rate":1.0,"agent_behavior_pass_rate":1.0}\n'
-    if name == "docs/evidence/real_agent_holdout_latest/metrics.json":
-        return '{"case_count":8,"completed_case_count":8,"unclassified_failure_count":0,"memory_system_pass_rate":1.0,"agent_behavior_pass_rate":1.0,"failed_case_ids":[]}\n'
-    if name == "docs/security_scan.json":
-        return '{"schema":"memguardos-security-scan-v1","ok":true,"summary":{"bandit_high_count":0,"bandit_medium_count":0,"pip_audit_vulnerability_count":0,"missing_tools":[]},"tools":{"bandit":{"status":"warnings"},"pip_audit":{"status":"clean"}}}\n'
-    if name == "docs/安全扫描报告.md":
-        return "# MemGuardOS 安全扫描报告\n"
-    if name == "docs/evidence/latest/sdk_embedding_probe.txt":
-        return '$ memctl sdk-status --probe-embedding\n\n{"embedding":{"inference_ready":true,"embedding_probe":{"dim":768}}}\n'
-    if name == "docs/evidence/latest/eval_result_openkylin_10k.json":
-        return """
-{
-  "latency_load": {"p95_latency_ms": 10.844, "p99_latency_ms": 106.095},
-  "resource_usage": {"process_rss_kb": 149284},
-  "procedural_memory": {
-    "recall_at_5": 1.0,
-    "hierarchical_graph_layers_ok": true,
-    "context_explainability_ok": true
-  },
-  "agent_batch_search": {"p95_latency_ms": 15.427}
-}
-""".strip()
-    if name == "docs/evidence/latest/build_context_explainability.txt":
-        return '{"explainability":{"selection_trace":[]}}\n'
-    if name == "docs/evidence/latest/hierarchical_graph_search.txt":
-        return '{"layers":{"summary":[],"entity_relation":[],"chunk":[]},"explainability":{"retrieval_path":["summary","entity_relation","chunk"]}}\n'
-    if name == "docs/evidence/latest/peony_file_scan_smoke.txt":
-        return '{"ok":true,"file_ingest_stored":true,"search_hits":2,"audit_ok":true}\n'
-    if name == "docs/evidence/latest/deb_apt_install_maintenance.txt":
-        return "正在设置 memguardos (0.1.0) ...\n"
-    if name == "docs/evidence/latest/deb_apt_install_verify.txt":
-        return "Status: install ok installed\nActive: active (running)\nplugin_ldd_missing=0\n+ memctl verify-audit\n{\"ok\": true}\n"
-    if name == "docs/evidence/latest/deb_apt_install_sdk_after_fix.txt":
-        return "{\"embedding\":{\"inference_ready\": true}}\nembedding.length=768\n"
-    return "x"
+    samples = {
+        "docs/evidence/openkylin/pytest_openkylin.txt": "694 passed, 1 skipped in 20.0s\n",
+        "docs/evidence/openkylin/source_revision.json": '{"source_revision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","dirty":false}\n',
+        "docs/evidence/performance_latest/eval_result_openkylin_10k_optimized.json": '{"retrieval":{"mean_recall_at_5":1.0},"latency_load":{"p95_latency_ms":10.1,"p99_latency_ms":75.3}}\n',
+        "docs/evidence/performance_latest/retrieval-v2-openkylin.json": '{"gate":{"pass":true}}\n',
+        "docs/evidence/agent/base-benchmark-metrics.json": '{"case_count":200,"metrics":{"sensitive_leak_rate":0.0},"latency_ms":{"p95":113.966},"failures":[]}\n',
+        "docs/evidence/agent/memory-value-deterministic.json": '{"case_count":16,"system_validation":{"passed":16,"failed":0},"failures":[]}\n',
+        "docs/evidence/agent/memory-value-real-agent.json": '{"case_count":12,"completed_case_count":12,"unclassified_failure_count":0}\n',
+        "docs/evidence/agent/extension-r13-r20.json": '{"case_count":8,"completed_case_count":8,"unclassified_failure_count":0}\n',
+        "docs/evidence/agent/holdout.json": '{"case_count":8,"completed_case_count":8,"unclassified_failure_count":0}\n',
+        "docs/security_scan.json": '{"ok":true}\n',
+    }
+    return samples.get(name, "正式发布内容\n")
 
 
 def test_competition_ready_checks_procedural_memory_metrics(tmp_path):

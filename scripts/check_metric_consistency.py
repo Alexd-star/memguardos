@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Fail when a document claims a metric value the result files do not support.
-
-Documents drift: a number gets copied into a table, the evaluation is re-run,
-and the table keeps the old figure. That is how a repository ends up claiming
-"全线 1.0000" on one page and "0.7333" on another. This check pins the
-retrieval/forgetting headline metrics to the generated result files.
-"""
+"""Check public headline metrics against the curated openKylin result JSON."""
 from __future__ import annotations
 
 import json
@@ -16,34 +10,31 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # 文档中出现这些"权威指标"时，紧跟其后的反引号数字必须与结果 JSON 一致。
 TRACKED_METRICS = {
-    "recall_at_5": "Recall@5",
-    "recall_at_1": "Recall@1",
-    "cross_language_recall_at_5": "跨语言 Recall@5",
-    "cross_language_recall_at_1": "跨语言 Recall@1",
-    "forget_precision": "遗忘精确率",
-    "forget_recall": "遗忘召回率",
+    ("retrieval", "mean_recall_at_5"): "Recall@5",
+    ("retrieval", "cross_language_recall_at_5"): "跨语言 Recall@5",
+    ("forgetting", "candidate_precision"): "遗忘候选精确率",
+    ("forgetting", "candidate_recall"): "遗忘候选召回率",
 }
 
 # 只检查会被评委当作正式结论引用的文档。
 CHECKED_DOCS = (
-    "docs/赛题要求逐句符合性核查.md",
-    "docs/超标准交付评分矩阵.md",
-    "docs/eval_v2_report.md",
+    "README.md",
+    "docs/testing.md",
+    "docs/competition.md",
 )
 
 VALUE_PATTERN = r"\s*[`]([01]\.\d{4})[`]"
 
 
-def load_v2_metrics() -> dict:
-    path = ROOT / "docs" / "eval_v2_report.json"
+def load_metrics() -> dict:
+    path = ROOT / "docs/evidence/performance_latest/eval_result_openkylin_10k_optimized.json"
     if not path.exists():
         return {}
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return {}
-    metrics = payload.get("metrics")
-    return metrics if isinstance(metrics, dict) else payload
+    return payload
 
 
 def claimed_values(text: str, label: str) -> list:
@@ -60,27 +51,23 @@ def claimed_values(text: str, label: str) -> list:
 
 
 def main() -> int:
-    metrics = load_v2_metrics()
+    metrics = load_metrics()
     if not metrics:
-        print("skip: docs/eval_v2_report.json 不存在；先运行 scripts/run_evidencebench_v2.py")
-        return 0
+        print("缺少精选 openKylin 评测结果")
+        return 1
 
     problems = []
     for relative in CHECKED_DOCS:
         path = ROOT / relative
         if not path.exists():
             continue
-        # 只校验明确标注 EvidenceBench v2 的行：同名指标在 v1 集、消融基线、
-        # 遗忘门禁集上取值本就不同，混在一起比较会产生假告警。
-        text = "\n".join(
-            line
-            for line in path.read_text(encoding="utf-8").splitlines()
-            if "v2" in line.lower()
-        )
-        for metric_key, label in TRACKED_METRICS.items():
-            if metric_key not in metrics:
+        text = path.read_text(encoding="utf-8")
+        for metric_path, label in TRACKED_METRICS.items():
+            section, metric_key = metric_path
+            section_payload = metrics.get(section, {})
+            if metric_key not in section_payload:
                 continue
-            expected = float(metrics[metric_key])
+            expected = float(section_payload[metric_key])
             for raw in claimed_values(text, label):
                 if abs(float(raw) - expected) > 1e-6:
                     problems.append(

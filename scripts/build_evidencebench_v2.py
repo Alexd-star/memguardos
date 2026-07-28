@@ -1047,7 +1047,7 @@ def rebuild_baseline_dataset() -> int:
         "所有敏感信息均为合成样例，不包含真实 API Key、真实个人信息或私有竞品数据。",
         "holdout 目录至少占全量样例 20%，用于说明规则调优与最终复验之间的隔离口径。",
         "",
-        "运行方式：`python scripts/run_evidencebench_v2.py --output docs/eval_v2_result.json --markdown docs/eval_v2_report.md`。",
+        "运行方式：`python scripts/run_evidencebench_v2.py --output output/eval_v2_result.json --markdown output/eval_v2_report.md`。",
         "",
     ]
     with (BENCH / "README.md").open("w", encoding="utf-8", newline="\n") as fh:

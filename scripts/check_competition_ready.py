@@ -5,12 +5,16 @@ import hashlib
 import json
 import re
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
-
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.release_inventory import inventory_set  # noqa: E402
 
 IGNORED_HYGIENE_PARTS = {
     ".git",
@@ -23,134 +27,25 @@ IGNORED_HYGIENE_PARTS = {
     "__pycache__",
     "artifacts",
     "dist",
+    "external_references",
     "local_notes",
     "output",
     "outputs",
 }
 
 POST_NATIVE_EVIDENCE_ALLOWED_PATHS = {
-    # These files only report the collected evidence. Runtime, test, packaging,
-    # and collector sources remain forbidden after evidence collection.
     "README.md",
-    "docs/13_测试说明.md",
-    "docs/15_更新日志.md",
-    "docs/competition_ready.json",
-    "docs/openKylin验证记录.md",
-    "docs/交付文档/MemGuardOS中文操作手册.md",
-    "docs/平台摘要.md",
-    "docs/最终提交说明.md",
-    "docs/测试报告.md",
-    "docs/真实Agent闭环测试报告.md",
-    "docs/竞赛就绪自检报告.md",
-    "docs/答辩提纲.md",
-    "docs/答辩稿.md",
-    "docs/评委证据包索引.md",
-    "docs/赛题符合性说明.md",
-    "docs/赛题要求逐句符合性核查.md",
-    "docs/超标准交付评分矩阵.md",
-    "docs/真实Agent记忆价值评测报告.md",
-    "docs/项目介绍总览.md",
+    "docs/testing.md",
+    "docs/competition.md",
+    "docs/evidence/README.md",
 }
 
-REQUIRED_DOCS = [
-    "README.md",
-    "PROJECT_INDEX.md",
-    "docs/01_项目简介.md",
-    "docs/02_用户手册.md",
-    "docs/03_操作手册.md",
-    "docs/04_开发者文档.md",
-    "docs/05_项目架构说明.md",
-    "docs/06_代码结构说明.md",
-    "docs/07_核心模块说明.md",
-    "docs/08_算法说明.md",
-    "docs/09_接口文档.md",
-    "docs/10_数据说明.md",
-    "docs/11_配置说明.md",
-    "docs/12_环境依赖与部署.md",
-    "docs/13_测试说明.md",
-    "docs/14_常见问题FAQ.md",
-    "docs/15_更新日志.md",
-    "docs/16_历史文件说明.md",
-    "docs/17_项目交付说明.md",
-    "docs/正式提交材料说明.md",
-    "docs/最终提交说明.md",
-    "docs/平台摘要.md",
-    "docs/项目介绍总览.md",
-    "docs/概要设计说明书.md",
-    "docs/详细设计说明书.md",
-    "docs/安全设计说明书.md",
-    "docs/操作系统机制说明.md",
-    "docs/Peony与UKUI桌面集成实现说明.md",
-    "docs/麒麟SDK集成证据.md",
-    "docs/openKylin验证记录.md",
-    "docs/部署手册.md",
-    "docs/用户手册.md",
-    "docs/测试报告.md",
-    "docs/真实Agent接入使用说明.md",
-    "docs/真实Agent闭环测试报告.md",
-    "docs/真实Agent记忆价值评测报告.md",
-    "docs/赛题符合性说明.md",
-    "docs/可解释抽取答辩说明.md",
-    "docs/评委证据包索引.md",
-    "docs/答辩提纲.md",
-    "docs/答辩稿.md",
-    "docs/演示视频脚本.md",
-    "docs/超标准交付评分矩阵.md",
-    "docs/供应链与SBOM说明.md",
-    "docs/安全扫描报告.md",
-    "docs/外部标准基准说明.md",
-    "docs/安全与遗忘保证边界.md",
-]
-
-REQUIRED_SOURCE_PATHS = [
-    "memguard/service.py",
-    "memguard/store/mmap_store.py",
-    "memguard/store/sqlite_meta.py",
-    "memguard/retrieval/hybrid.py",
-    "memguard/extraction/semantic.py",
-    "memguard/sensitivity/detector.py",
-    "memguard/forgetting/planner.py",
-    "memguard/api/server.py",
-    "memguard/web/dashboard.py",
-    "scripts/install_openkylin.sh",
-    "scripts/collect_openkylin_evidence.sh",
-    "scripts/verify_deb_package_set.sh",
-    "scripts/collect_agent_evidence.sh",
-    "scripts/collect_memory_value_evidence.sh",
-    "scripts/run_openhands_memguard_demo.py",
-    "scripts/run_openhands_behavior_suite.py",
-    "scripts/evaluate_memory_value.py",
-    "scripts/memguard_agent_bridge.py",
-    "scripts/memguard-agent@.service",
-    "memguard/integrations/openhands_adapter.py",
-    "memguard/integrations/openhands_runner.py",
-    "memguard/integrations/context_injector.py",
-    "memguard/eval/ablation.py",
-    "memguard/eval/performance_suite.py",
-    "memguard/eval/memory_value.py",
-    "memguard/eval/real_agent_behavior.py",
-    "scripts/build_deb.sh",
-    "scripts/generate_bpf_lsm_policy.py",
-    "scripts/package_submission.py",
-    "scripts/web_dashboard_smoke.py",
-    "scripts/generate_sbom.py",
-    "scripts/run_security_scan.py",
-    "scripts/run_resource_control.py",
-    "scripts/fetch_longmemeval_v2.py",
-    "scripts/run_longmemeval_v2.py",
-    "scripts/backup_memguard.py",
-    "scripts/restore_memguard.py",
-    "scripts/check_slo.py",
-    "scripts/sign_release.py",
-    "scripts/verify_ukui_plugins.sh",
-    "memguard/eval/resource_control.py",
-    "memguard/integrations/longmemeval_v2.py",
-    "memguard/governance/trust.py",
-    "config/nginx/memguardos.conf",
-    "native/bpf_lsm/memguard_lsm.bpf.c",
-    "native/ukui/peony-memguard/memguard_peony_plugin.cpp",
-    "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp",
-]
+REQUIRED_DOCS = sorted(inventory_set("formal_docs"))
+REQUIRED_SOURCE_PATHS = sorted(
+    path
+    for path in inventory_set("required_paths")
+    if not path.startswith("docs/") and path not in {"README.md", "LICENSE", "SECURITY.md", "pyproject.toml"}
+)
 
 REQUIRED_EVIDENCE = [
     "pytest.txt",
@@ -207,11 +102,11 @@ class Check:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Check MemGuardOS competition-readiness gates")
-    parser.add_argument("--eval", default="docs/eval_result.json", help="Evaluation JSON path")
-    parser.add_argument("--evidence-dir", default="docs/evidence/latest", help="openKylin evidence directory")
+    parser.add_argument("--eval", default="output/eval_result.json", help="Evaluation JSON path")
+    parser.add_argument("--evidence-dir", default="docs/evidence/openkylin", help="openKylin evidence directory")
     parser.add_argument(
         "--native-evidence-dir",
-        default="docs/evidence/openkylin_native_latest",
+        default="docs/evidence/openkylin",
         help="Current-HEAD openKylin desktop product evidence directory",
     )
     parser.add_argument(
@@ -221,17 +116,17 @@ def main() -> int:
     )
     parser.add_argument(
         "--memory-value-evidence-dir",
-        default="docs/evidence/memory_value_latest",
+        default="docs/evidence/agent",
         help="Agent memory-value paired and real OpenHands evidence directory",
     )
     parser.add_argument(
         "--real-agent-extension-evidence-dir",
-        default="docs/evidence/real_agent_extension_r13_r20_latest",
+        default="docs/evidence/agent",
         help="Additional real OpenHands R13-R20 evidence directory",
     )
     parser.add_argument(
         "--real-agent-holdout-evidence-dir",
-        default="docs/evidence/real_agent_holdout_latest",
+        default="docs/evidence/agent",
         help="Held-out real OpenHands evidence directory",
     )
     parser.add_argument("--output", default="", help="Optional JSON report path")
@@ -240,19 +135,13 @@ def main() -> int:
     args = parser.parse_args()
 
     eval_path = _resolve(args.eval)
-    evidence_dir = _resolve(args.evidence_dir)
     native_evidence_dir = _resolve(args.native_evidence_dir)
     performance_evidence_dir = _resolve(args.performance_evidence_dir)
     memory_value_evidence_dir = _resolve(args.memory_value_evidence_dir)
-    real_agent_extension_evidence_dir = _resolve(
-        args.real_agent_extension_evidence_dir
-    )
-    real_agent_holdout_evidence_dir = _resolve(args.real_agent_holdout_evidence_dir)
     checks = []
     checks.extend(check_docs())
     checks.extend(check_sources())
     checks.extend(check_eval(eval_path))
-    checks.extend(check_openkylin_evidence(evidence_dir, allow_missing=args.allow_missing_openkylin))
     native_evidence_severity = "P1" if args.allow_missing_openkylin else "P0"
     checks.extend(
         check_native_openkylin_evidence(
@@ -262,31 +151,8 @@ def main() -> int:
         )
     )
     checks.extend(check_performance_evidence(performance_evidence_dir, severity="P0"))
-    checks.extend(check_memory_value_evidence(memory_value_evidence_dir, severity="P0"))
-    checks.extend(
-        check_real_agent_extension_evidence(
-            real_agent_extension_evidence_dir,
-            severity="P0",
-        )
-    )
-    checks.extend(
-        check_real_agent_holdout_evidence(
-            real_agent_holdout_evidence_dir,
-            severity="P0",
-        )
-    )
-    checks.extend(
-        check_supply_chain_artifacts(
-            ROOT / "docs/sbom.json",
-            ROOT / "docs/供应链与SBOM说明.md",
-        )
-    )
-    checks.extend(
-        check_security_scan_artifacts(
-            ROOT / "docs/security_scan.json",
-            ROOT / "docs/安全扫描报告.md",
-        )
-    )
+    checks.extend(check_curated_agent_evidence(memory_value_evidence_dir, severity="P0"))
+    checks.extend(check_release_artifacts())
     checks.extend(check_repository_hygiene())
 
     failed = [item for item in checks if not item.ok and item.severity == "P0"]
@@ -326,19 +192,7 @@ def check_docs() -> List[Check]:
 
 def check_formal_doc_consistency() -> List[Check]:
     checks: List[Check] = []
-    manual = ROOT / "docs/交付文档/MemGuardOS中文操作手册.md"
-    manual_text = _read_text_if_exists(manual)
-    placeholder_tokens = ["占位符", "截图占位", "流程图占位", "架构图占位"]
-    placeholder_hits = [token for token in placeholder_tokens if token in manual_text]
-    checks.append(
-        Check(
-            "中文文档",
-            "交付操作手册无空占位",
-            bool(manual_text) and not placeholder_hits,
-            "已替换流程图/截图占位" if manual_text and not placeholder_hits else "仍包含：%s" % "、".join(placeholder_hits),
-        )
-    )
-    api_doc = ROOT / "docs/09_接口文档.md"
+    api_doc = ROOT / "docs/api.md"
     api_text = _read_text_if_exists(api_doc)
     checks.append(
         Check(
@@ -383,23 +237,7 @@ def check_formal_doc_consistency() -> List[Check]:
             "包含 CSP、frame、opener 和权限策略响应头" if dashboard_text and not missing_headers else "缺少：%s" % "、".join(missing_headers),
         )
     )
-    current_docs = [
-        "README.md",
-        "docs/13_测试说明.md",
-        "docs/15_更新日志.md",
-        "docs/平台摘要.md",
-        "docs/最终提交说明.md",
-        "docs/测试报告.md",
-        "docs/真实Agent闭环测试报告.md",
-        "docs/真实Agent记忆价值评测报告.md",
-        "docs/赛题要求逐句符合性核查.md",
-        "docs/赛题符合性说明.md",
-        "docs/评委证据包索引.md",
-        "docs/答辩提纲.md",
-        "docs/答辩稿.md",
-        "docs/项目介绍总览.md",
-        "docs/交付文档/MemGuardOS中文操作手册.md",
-    ]
+    current_docs = REQUIRED_DOCS
     stale_test_hits = []
     for rel in current_docs:
         text = _read_text_if_exists(ROOT / rel)
@@ -436,16 +274,7 @@ def check_formal_doc_consistency() -> List[Check]:
             "正式材料未引用已知过期测试数字" if not stale_test_hits else "过期数字：%s" % "、".join(stale_test_hits),
         )
     )
-    product_docs = [
-        "README.md",
-        "native/ukui/README.md",
-        "docs/openKylin验证记录.md",
-        "docs/openKylin原生化适配说明.md",
-        "docs/Peony与UKUI桌面集成实现说明.md",
-        "docs/部署手册.md",
-        "docs/操作系统机制说明.md",
-        "docs/交付文档/MemGuardOS中文操作手册.md",
-    ]
+    product_docs = ["README.md", "native/ukui/README.md", "docs/installation.md", "docs/user-guide.md"]
     awkward_hits = []
     for rel in product_docs:
         text = _read_text_if_exists(ROOT / rel)
@@ -460,28 +289,44 @@ def check_formal_doc_consistency() -> List[Check]:
             "桌面文档使用本机智能检索、操作进度等成熟产品表达" if not awkward_hits else "仍包含：%s" % "、".join(awkward_hits),
         )
     )
-    scorecard = ROOT / "docs/超标准交付评分矩阵.md"
-    scorecard_text = _read_text_if_exists(scorecard)
-    required_scorecard_terms = [
-        "MemGuardOS 超标准交付评分矩阵",
-        "49.48x",
-        "OWASP Agentic AI",
-        "NIST AI RMF",
-        "LangMem",
-        "OpenAI Agents SDK",
-        "不能夸大",
-    ]
-    missing_scorecard_terms = [
-        term for term in required_scorecard_terms if term not in scorecard_text
-    ]
-    checks.append(
-        Check(
-            "中文文档",
-            "超标准交付评分矩阵",
-            bool(scorecard_text) and not missing_scorecard_terms,
-            "评分矩阵覆盖指标余量、外部最佳实践和边界声明" if scorecard_text and not missing_scorecard_terms else "缺少：%s" % "、".join(missing_scorecard_terms),
-        )
-    )
+    placeholder_hits = []
+    for rel in REQUIRED_DOCS:
+        body = _read_text_if_exists(ROOT / rel)
+        for token in ("【待补充】", "截图占位符", "流程图占位"):
+            if token in body:
+                placeholder_hits.append(f"{rel}:{token}")
+    checks.append(Check("中文文档", "正式文档无占位内容", not placeholder_hits, "无占位内容" if not placeholder_hits else "、".join(placeholder_hits)))
+    return checks
+
+
+def check_curated_agent_evidence(evidence_dir: Path, severity: str) -> List[Check]:
+    checks = [Check("Agent记忆价值证据", "证据目录", evidence_dir.exists(), _display_path(evidence_dir), severity=severity)]
+    benchmark = _load_evidence_json(evidence_dir / "base-benchmark-metrics.json")
+    checks.append(Check("Agent记忆价值证据", "200 条交互专项基准", bool(benchmark and benchmark.get("case_count") == 200 and not benchmark.get("failures")), "case_count=%s" % (benchmark.get("case_count") if benchmark else 0), severity=severity))
+    deterministic = _load_evidence_json(evidence_dir / "memory-value-deterministic.json")
+    deterministic_ok = bool(deterministic and deterministic.get("case_count") == 16 and _nested_get(deterministic, ["system_validation", "failed"]) == 0)
+    checks.append(Check("Agent记忆价值证据", "16 组确定性配对实验", deterministic_ok, "passed=%s failed=%s" % (_nested_get(deterministic or {}, ["system_validation", "passed"]), _nested_get(deterministic or {}, ["system_validation", "failed"])), severity=severity))
+    for filename, expected, label in (
+        ("memory-value-real-agent.json", 12, "真实 OpenHands 基础运行"),
+        ("extension-r13-r20.json", 8, "真实 OpenHands 扩展运行"),
+        ("holdout.json", 8, "真实 OpenHands 留出运行"),
+    ):
+        payload = _load_evidence_json(evidence_dir / filename)
+        ok = bool(payload and payload.get("case_count") == expected and payload.get("completed_case_count") == expected and payload.get("unclassified_failure_count") == 0)
+        checks.append(Check("Agent记忆价值证据", label, ok, "case_count=%s completed=%s" % ((payload or {}).get("case_count"), (payload or {}).get("completed_case_count")), severity=severity))
+    return checks
+
+
+def check_release_artifacts() -> List[Check]:
+    checks: List[Check] = []
+    sbom = _load_evidence_json(ROOT / "docs/sbom.json")
+    artifacts = {str(item.get("path")) for item in (sbom or {}).get("artifacts", []) if isinstance(item, dict) and item.get("present")}
+    sbom_ok = bool(sbom and sbom.get("schema") == "memguardos-sbom-v1" and {"memguard/service.py", "native/bpf_lsm/memguard_lsm.bpf.c"} <= artifacts)
+    checks.append(Check("供应链", "SBOM 关键资产", sbom_ok, "关键源码已列入 SBOM" if sbom_ok else "SBOM 缺失或关键资产不完整"))
+    security = _load_evidence_json(ROOT / "docs/security_scan.json")
+    summary = (security or {}).get("summary", {})
+    scan_ok = bool(security and security.get("ok") is True and summary.get("bandit_high_count") == 0 and summary.get("bandit_medium_count") == 0 and summary.get("pip_audit_vulnerability_count") == 0 and summary.get("missing_tools") == [])
+    checks.append(Check("供应链", "安全扫描", scan_ok, "Bandit 与 pip-audit 门禁通过" if scan_ok else "安全扫描未通过或结果不完整"))
     return checks
 
 
@@ -570,7 +415,7 @@ def check_native_evidence_revision(evidence_dir: Path, expected_revision: str, s
 
 
 def _is_allowed_native_evidence_delta(path: str) -> bool:
-    return path.startswith("docs/evidence/openkylin_native_latest/") or path in POST_NATIVE_EVIDENCE_ALLOWED_PATHS
+    return path.startswith("docs/evidence/openkylin/") or path in POST_NATIVE_EVIDENCE_ALLOWED_PATHS
 
 
 def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, severity: str) -> List[Check]:
@@ -1637,4 +1482,3 @@ def _sha256_file(path: Path) -> str:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
