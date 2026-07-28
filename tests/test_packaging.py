@@ -4,6 +4,8 @@ import hashlib
 import json
 import os
 import stat
+import subprocess
+import sys
 
 from scripts.inspect_submission_package import REQUIRED_PATHS, inspect_package
 from scripts.package_submission import COMPETITION_ROLES, ROOT, classify_file, should_skip
@@ -543,6 +545,28 @@ def test_evidence_sanitizer_runs_before_native_manifest_hashing():
     sanitize_at = collector.index("scripts/sanitize_evidence_paths.py")
     manifest_at = collector.index("scripts/refresh_evidence_manifest.py")
     assert sanitize_at < manifest_at
+
+
+def test_evidence_sanitizer_redacts_api_tokens(tmp_path):
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    sample = evidence / "preview.json"
+    sample.write_text(
+        '{"preview":"OPENAI_API_KEY=sk-test-example1234567890"}\n',
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "sanitize_evidence_paths.py"), str(evidence)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "sk-test-example1234567890" not in sample.read_text(encoding="utf-8")
+    assert "<API_TOKEN_REDACTED>" in sample.read_text(encoding="utf-8")
 
 
 def test_submission_package_inspector_accepts_release_inventory(tmp_path):

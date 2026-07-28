@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import re
 
 
 TEXT_SUFFIXES = {".json", ".md", ".txt", ".log", ".stdout"}
 SKIP_NAMES = {"manifest.json", "SHA256SUMS.txt"}
+SECRET_PATTERNS = (
+    (re.compile(r"\bsk-[A-Za-z0-9_-]{12,}\b"), "<API_TOKEN_REDACTED>"),
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -35,8 +39,11 @@ def main(argv: list[str] | None = None) -> int:
             updated = original
             for old, new in replacements:
                 updated = updated.replace(old, new)
+            for pattern, placeholder in SECRET_PATTERNS:
+                updated = pattern.sub(placeholder, updated)
             if updated != original:
-                path.write_text(updated, encoding="utf-8", newline="\n")
+                with path.open("w", encoding="utf-8", newline="\n") as handle:
+                    handle.write(updated)
                 changed.append(path.as_posix())
     print(f"sanitized_files={len(changed)}")
     for path in changed:
