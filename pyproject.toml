@@ -1,13 +1,35 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "memguardos"
 version = "0.1.0"
-description = "Linux-oriented agent memory extraction and precise forgetting prototype"
+description = "Local agent memory extraction, governed retrieval and precise forgetting for Linux and openKylin"
+readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "MemGuardOS Project"}]
+keywords = ["agent-memory", "openkylin", "linux", "rag", "privacy", "precise-forgetting"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: System :: Operating System",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/Alexd-star/memguardos"
+Repository = "https://github.com/Alexd-star/memguardos"
+Documentation = "https://github.com/Alexd-star/memguardos/tree/main/docs"
+Issues = "https://github.com/Alexd-star/memguardos/issues"
 
 [project.scripts]
 memguard = "memguard.cli.memguard:main"
@@ -26,6 +48,9 @@ agent-openhands = [
 [tool.setuptools.packages.find]
 include = ["memguard*"]
 exclude = ["data*", "docs*", "scripts*", "tests*"]
+
+[tool.setuptools.package-data]
+"memguard.resources" = ["*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

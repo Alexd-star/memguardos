@@ -962,10 +962,8 @@ def create_openhands_conversation(**kwargs: Any) -> Any:
         agent = agent.model_copy(update={"tools": terminal_tools})
 
     context_file = Path(kwargs["context_file"]).resolve()
-    hook_script = Path(__file__).resolve().parents[2] / "scripts" / "openhands_memory_hook.py"
-    hook_command = "%s %s --context-file %s" % (
+    hook_command = "%s -m memguard.integrations.openhands_memory_hook --context-file %s" % (
         shlex.quote(sys.executable),
-        shlex.quote(str(hook_script)),
         shlex.quote(str(context_file)),
     )
     hooks = HookConfig(

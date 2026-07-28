@@ -194,7 +194,7 @@ def build_parser() -> argparse.ArgumentParser:
     evidence.add_argument("--output-dir", default="", help="Evidence output directory. Defaults to ~/MemGuardOS-openKylin-evidence")
     evidence.add_argument("--probe-sdk", action="store_true", help="Include a real Kylin SDK inference probe")
     evidence.add_argument("--probe-timeout", type=float, default=90.0, help="Timeout in seconds for the optional SDK probe")
-    evidence.add_argument("--include-readiness", action="store_true", help="Run scripts/check_competition_ready.py when available")
+    evidence.add_argument("--include-readiness", action="store_true", help="Run the release readiness check from a source checkout when available")
     evidence.add_argument("--include-pytest", action="store_true", help="Run local pytest when a source checkout with tests is available")
     evidence.add_argument("--timeout", type=float, default=300.0, help="Timeout in seconds for optional readiness/pytest commands")
 
@@ -1047,21 +1047,33 @@ def _collect_openkylin_evidence(args: argparse.Namespace, service: MemGuardServi
         },
     )
 
-    if args.include_readiness:
+    source_root = _source_checkout_root()
+    readiness_script = source_root / "scripts/check_competition_ready.py" if source_root else None
+    if args.include_readiness and readiness_script is not None:
         _write_command_capture(
             output_dir / "readiness.txt",
-            [sys.executable, "scripts/check_competition_ready.py"],
+            [sys.executable, str(readiness_script)],
             timeout=args.timeout,
-            cwd=Path.cwd(),
-            require_path=Path("scripts/check_competition_ready.py"),
+            cwd=source_root,
+            require_path=readiness_script,
         )
-    if args.include_pytest:
+    elif args.include_readiness:
+        (output_dir / "readiness.txt").write_text(
+            "Release readiness requires a source checkout. Set MEMGUARD_SOURCE_ROOT to the checkout path.\n",
+            encoding="utf-8",
+        )
+    if args.include_pytest and source_root is not None:
         _write_command_capture(
             output_dir / "pytest.txt",
             [sys.executable, "-m", "pytest", "-q"],
             timeout=args.timeout,
-            cwd=Path.cwd(),
-            require_path=Path("tests"),
+            cwd=source_root,
+            require_path=source_root / "tests",
+        )
+    elif args.include_pytest:
+        (output_dir / "pytest.txt").write_text(
+            "Full pytest requires a source checkout. Set MEMGUARD_SOURCE_ROOT to the checkout path.\n",
+            encoding="utf-8",
         )
 
     manifest = _write_evidence_manifest(output_dir)
@@ -1109,6 +1121,18 @@ def _source_revision_payload() -> dict[str, object]:
         "status": "not_available",
         "note": "Git metadata was not available in this runtime. Run from the source checkout or set MEMGUARD_SOURCE_REVISION for final contest evidence.",
     }
+
+
+def _source_checkout_root() -> Path | None:
+    configured = os.environ.get("MEMGUARD_SOURCE_ROOT", "").strip()
+    if configured:
+        candidate = Path(configured).expanduser().resolve()
+        return candidate if (candidate / "pyproject.toml").is_file() else None
+    current = Path.cwd().resolve()
+    for candidate in (current, *current.parents):
+        if (candidate / "pyproject.toml").is_file() and (candidate / "memguard").is_dir():
+            return candidate
+    return None
 
 
 def _os_release_fields() -> dict[str, str]:

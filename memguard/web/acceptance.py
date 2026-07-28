@@ -3,8 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
+import os
 import subprocess
 import sys
+import tempfile
 
 from memguard.json_support import jsonable
 from memguard.service import MemGuardService
@@ -226,22 +228,46 @@ def _diagnostics(service: MemGuardService) -> tuple[str, bool, str, dict[str, ob
 
 
 def _pytest(_: MemGuardService) -> tuple[str, bool, str, dict[str, object]]:
-    output = _run_fixed_command([sys.executable, "-m", "pytest", "-q"], timeout=180)
+    root = _source_checkout_root()
+    if root is None or not (root / "tests").is_dir():
+        return "warning", True, "当前为安装版，完整源码测试请在项目源码目录运行。", {"source_checkout": False}
+    output = _run_fixed_command([sys.executable, "-m", "pytest", "-q"], timeout=180, cwd=root)
     ok = output["returncode"] == 0
     return ("passed" if ok else "failed", ok, "自动测试通过。" if ok else "自动测试未通过。", output)
 
 
 def _ready(_: MemGuardService) -> tuple[str, bool, str, dict[str, object]]:
-    script = Path("scripts/check_competition_ready.py")
-    if not script.exists():
-        return "warning", True, "当前目录没有交付就绪检查脚本。", {"script": str(script)}
-    output = _run_fixed_command([sys.executable, str(script), "--output", "docs/competition_ready.json", "--markdown", "docs/竞赛就绪自检报告.md"], timeout=60)
+    root = _source_checkout_root()
+    script = root / "scripts/check_competition_ready.py" if root else None
+    if script is None or not script.exists():
+        return "warning", True, "当前为安装版，交付就绪检查只在发布源码中提供。", {"source_checkout": False}
+    output_dir = Path(tempfile.gettempdir()) / "memguardos-readiness"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output = _run_fixed_command(
+        [
+            sys.executable,
+            str(script),
+            "--output",
+            str(output_dir / "competition_ready.json"),
+            "--markdown",
+            str(output_dir / "competition_ready.md"),
+        ],
+        timeout=60,
+        cwd=root,
+    )
     ok = output["returncode"] == 0
     return ("passed" if ok else "failed", ok, "交付就绪检查通过。" if ok else "交付就绪检查未通过。", output)
 
 
 def _evidence_dir(_: MemGuardService) -> tuple[str, bool, str, dict[str, object]]:
-    evidence = Path("docs/evidence/openkylin_native_latest")
+    configured = os.environ.get("MEMGUARD_EVIDENCE_ROOT", "").strip()
+    if configured:
+        evidence = Path(configured).expanduser()
+    else:
+        installed = Path("/usr/share/doc/memguardos-doc/evidence/openkylin")
+        root = _source_checkout_root()
+        source_evidence = root / "docs/evidence/openkylin_native_latest" if root else None
+        evidence = installed if installed.exists() else (source_evidence or installed)
     manifest = evidence / "manifest.json"
     sha = evidence / "SHA256SUMS.txt"
     details = {
@@ -255,9 +281,21 @@ def _evidence_dir(_: MemGuardService) -> tuple[str, bool, str, dict[str, object]
     return ("passed" if ok else "failed", ok, "证据目录和哈希清单存在。" if ok else "证据目录不完整。", details)
 
 
-def _run_fixed_command(command: list[str], timeout: int) -> dict[str, object]:
+def _source_checkout_root() -> Path | None:
+    configured = os.environ.get("MEMGUARD_SOURCE_ROOT", "").strip()
+    if configured:
+        candidate = Path(configured).expanduser().resolve()
+        return candidate if (candidate / "pyproject.toml").is_file() else None
+    current = Path.cwd().resolve()
+    for candidate in (current, *current.parents):
+        if (candidate / "pyproject.toml").is_file() and (candidate / "memguard").is_dir():
+            return candidate
+    return None
+
+
+def _run_fixed_command(command: list[str], timeout: int, *, cwd: Path | None = None) -> dict[str, object]:
     try:
-        completed = subprocess.run(command, capture_output=True, text=True, timeout=timeout, check=False)
+        completed = subprocess.run(command, capture_output=True, text=True, timeout=timeout, check=False, cwd=cwd)
     except FileNotFoundError as exc:
         return {"returncode": 127, "stdout": "", "stderr": str(exc)}
     except subprocess.TimeoutExpired as exc:

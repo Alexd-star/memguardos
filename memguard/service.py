@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import perf_counter
 from typing import Dict, List, Optional, Tuple, Union
 import json
+import os
 import re
 
 from memguard.config import (
@@ -1132,18 +1133,27 @@ class MemGuardService:
         return self.estimate_tokens(" ".join(parts))
 
     def memory_value_evidence(self) -> Dict[str, object]:
-        """Validated paired-experiment numbers, if the evidence file is present."""
+        """Read optional benchmark evidence explicitly configured by the operator.
 
-        path = (
-            Path(__file__).resolve().parents[1]
-            / "docs"
-            / "evidence"
-            / "memory_value_latest"
-            / "deterministic"
-            / "metrics.json"
-        )
+        Product behavior never depends on repository documentation.  A deployment
+        that wants to expose archived benchmark numbers can point to a verified
+        metrics file with ``MEMGUARD_MEMORY_VALUE_EVIDENCE``.
+        """
+
+        configured = os.environ.get("MEMGUARD_MEMORY_VALUE_EVIDENCE", "").strip()
+        if not configured:
+            return {
+                "available": False,
+                "reason": "benchmark evidence is not configured",
+                "configuration": "MEMGUARD_MEMORY_VALUE_EVIDENCE",
+            }
+        path = Path(configured).expanduser()
         if not path.exists():
-            return {"available": False, "reason": "benchmark evidence file not found"}
+            return {
+                "available": False,
+                "reason": "configured benchmark evidence file was not found",
+                "path": str(path),
+            }
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
@@ -1160,7 +1170,7 @@ class MemGuardService:
                 "结果来自人工编写的固定场景，用于可复现机制回归；"
                 "不能替代真实 Agent 独立运行的因果证据。"
             ),
-            "source": "docs/evidence/memory_value_latest/deterministic/metrics.json",
+            "source": str(path),
         }
 
     def run_feedback_replay(

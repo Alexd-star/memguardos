@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from collections import OrderedDict
+from importlib.resources import files
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 import hashlib
@@ -34,13 +35,11 @@ TRANSLATION_HINTS = {
     "先给命令": ["command first"],
 }
 
-_TECHNICAL_ALIAS_PATH = Path(__file__).resolve().parents[2] / "data" / "lexicons" / "technical_aliases.json"
-
-
 @lru_cache(maxsize=1)
 def _technical_aliases() -> Dict[str, List[str]]:
     try:
-        data = json.loads(_TECHNICAL_ALIAS_PATH.read_text(encoding="utf-8"))
+        resource = files("memguard.resources").joinpath("technical_aliases.json")
+        data = json.loads(resource.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         data = {}
     aliases: Dict[str, List[str]] = {}

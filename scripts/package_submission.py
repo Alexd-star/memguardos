@@ -3,10 +3,15 @@ from __future__ import annotations
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from zipfile import ZIP_DEFLATED, ZipFile
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 import argparse
 import fnmatch
+import hashlib
 import json
+import os
+import stat
+import subprocess
+import time
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -250,23 +255,58 @@ def should_skip(path: Path) -> bool:
 
 
 def iter_files() -> list[Path]:
+    """Return versioned files only, never arbitrary local workspace content."""
+
+    completed = subprocess.run(
+        ["git", "ls-files", "-z"],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError("submission packaging requires a Git source checkout")
     files: list[Path] = []
-    for path in ROOT.rglob("*"):
+    for raw in completed.stdout.split(b"\0"):
+        if not raw:
+            continue
+        relative = raw.decode("utf-8", errors="surrogateescape")
+        path = ROOT / relative
         if path.is_file() and not should_skip(path):
             files.append(path)
-    return sorted(files)
+    return sorted(files, key=lambda item: item.relative_to(ROOT).as_posix())
 
 
 def write_package(package_path: Path, manifest_path: Path, files: list[Path], package_type: str) -> None:
-    with ZipFile(package_path, "w", ZIP_DEFLATED) as zf:
+    source_revision = _git_output(["rev-parse", "HEAD"], "unknown")
+    source_epoch = _source_date_epoch()
+    zip_time = time.gmtime(max(source_epoch, 315532800))[:6]
+    with ZipFile(package_path, "w", ZIP_DEFLATED, compresslevel=9) as zf:
         for path in files:
-            zf.write(path, path.relative_to(ROOT).as_posix())
+            relative = path.relative_to(ROOT).as_posix()
+            info = ZipInfo(relative, date_time=zip_time)
+            info.compress_type = ZIP_DEFLATED
+            mode = path.stat().st_mode
+            permissions = 0o755 if mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH) else 0o644
+            info.external_attr = permissions << 16
+            zf.writestr(info, path.read_bytes())
 
-    file_entries = [{"path": path.relative_to(ROOT).as_posix(), "role": classify_file(path)} for path in files]
+    file_entries = [
+        {
+            "path": path.relative_to(ROOT).as_posix(),
+            "role": classify_file(path),
+            "bytes": path.stat().st_size,
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+        for path in files
+    ]
     role_summary = dict(sorted(Counter(entry["role"] for entry in file_entries).items()))
     manifest = {
         "package": package_path.name,
         "package_type": package_type,
+        "source_revision": source_revision,
+        "source_date_epoch": source_epoch,
+        "archive_sha256": hashlib.sha256(package_path.read_bytes()).hexdigest(),
         "file_count": len(files),
         "excluded_dirs": sorted(EXCLUDED_DIRS),
         "excluded_patterns": EXCLUDED_PATTERNS,
@@ -282,6 +322,32 @@ def write_package(package_path: Path, manifest_path: Path, files: list[Path], pa
     print("角色汇总")
     for role, count in role_summary.items():
         print(f"- {role}: {count}")
+
+
+def _source_date_epoch() -> int:
+    configured = os.environ.get("SOURCE_DATE_EPOCH", "").strip()
+    if configured:
+        try:
+            return int(configured)
+        except ValueError as exc:
+            raise ValueError("SOURCE_DATE_EPOCH must be an integer") from exc
+    value = _git_output(["show", "-s", "--format=%ct", "HEAD"], "315532800")
+    try:
+        return int(value)
+    except ValueError:
+        return 315532800
+
+
+def _git_output(arguments: list[str], fallback: str) -> str:
+    completed = subprocess.run(
+        ["git", *arguments],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    return completed.stdout.strip() or fallback
 
 
 def _parser() -> argparse.ArgumentParser:
