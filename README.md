@@ -12,6 +12,10 @@
 ![Tests](https://img.shields.io/badge/openKylin%20tests-705%20passed-138A72)
 ![License](https://img.shields.io/badge/License-MIT-4B5563)
 
+![Local First](https://img.shields.io/badge/Local--first-memory%20stays%20on%20device-168A72)
+![Precise Forgetting](https://img.shields.io/badge/Precise%20forgetting-preview%20%2B%20verify-D97706)
+![Agent Event](https://img.shields.io/badge/AgentEvent-open%20integration%20contract-7C3AED)
+
 [快速体验](#快速体验) · [核心能力](#核心能力) · [真实-agent-接入](#真实-agent-接入) · [系统架构](#系统架构) · [验证结果](#验证结果) · [完整文档](#完整文档)
 
 </div>
@@ -31,7 +35,62 @@ MemGuardOS 是部署在本机的 OS Agent 记忆层。它接收用户与 Agent �
   </tr>
 </table>
 
-## 它解决什么问题
+<a id="系统架构"></a>
+
+## 🧭 系统架构总览
+
+MemGuardOS 位于 Agent 与 openKylin 之间：向上提供记忆与上下文，向下使用本地存储、审计和系统安全能力。核心链路不依赖特定聊天界面，OpenHands 只是已经完成真实验证的第一方适配器之一。
+
+```mermaid
+flowchart LR
+    U["用户与 Agent 交互<br/>消息 · 纠正 · 工具结果"]
+    E["统一事件与记忆提取<br/>AgentEvent · 质量 · 来源"]
+    M["本地记忆治理<br/>版本 · 冲突 · 敏感保护"]
+    R["混合检索与分阶段上下文<br/>FTS · 向量 · 图谱 · Kylin SDK"]
+    A["Agent 行为改善<br/>规划 · 工具选择 · 回答"]
+    F["精准遗忘<br/>预览 · 确认 · 清理 · 验证"]
+    O["openKylin 系统能力<br/>systemd · cgroup · auditd · BPF LSM"]
+
+    U --> E --> M --> R --> A
+    A -. "新交互继续学习" .-> E
+    F --> M
+    O -. "资源、安全与审计" .-> M
+
+    classDef interaction fill:#EAF4FF,stroke:#1677C8,color:#0B3558,stroke-width:1.5px;
+    classDef extraction fill:#EEF2FF,stroke:#6366F1,color:#312E81,stroke-width:1.5px;
+    classDef memory fill:#E8F7F1,stroke:#138A72,color:#0B4F43,stroke-width:1.5px;
+    classDef retrieval fill:#FFF6E5,stroke:#D97706,color:#7C3F00,stroke-width:1.5px;
+    classDef outcome fill:#F3ECFF,stroke:#7C3AED,color:#4C1D95,stroke-width:1.5px;
+    classDef forgetting fill:#FFF0F1,stroke:#D14343,color:#7F1D1D,stroke-width:1.5px;
+    classDef os fill:#F3F4F6,stroke:#64748B,color:#263442,stroke-width:1.5px;
+
+    class U interaction;
+    class E extraction;
+    class M memory;
+    class R retrieval;
+    class A outcome;
+    class F forgetting;
+    class O os;
+```
+
+### 技术亮点
+
+<table>
+  <tr>
+    <td align="center" width="33%">🧠<br><b>交互记忆提取</b><br>从用户纠正、工具调用和执行结果中沉淀长期经验</td>
+    <td align="center" width="33%">⚡<br><b>多信号混合检索</b><br>融合 FTS、向量、图谱、时间和工具行为信号</td>
+    <td align="center" width="33%">🎯<br><b>三阶段上下文</b><br>分别服务 Agent 的规划、工具选择和回答生成</td>
+  </tr>
+  <tr>
+    <td align="center">🧹<br><b>可验证精准遗忘</b><br>先预览影响，再清理全部受管检索表面并验证残留</td>
+    <td align="center">🔐<br><b>本地敏感治理</b><br>凭据写入前阻断，个人信息脱敏，来源全程可追溯</td>
+    <td align="center">🐧<br><b>openKylin 原生交付</b><br>UKUI、Peony、托盘、systemd、cgroup 与五个 Debian 包</td>
+  </tr>
+</table>
+
+更完整的模块关系、存储结构和精准遗忘数据流见后文[技术实现与关键设计](#技术实现与关键设计)。
+
+## 🎯 它解决什么问题
 
 OS Agent 会反复处理命令、文件、工具和系统状态。只有聊天记录时，Agent 很难稳定区分长期偏好、一次性指令、工具失败经验和敏感数据；传统向量库虽然能找回文本，却通常没有完整的来源追踪、冲突治理和遗忘验证。
 
@@ -46,7 +105,7 @@ MemGuardOS 将“记住、用好、忘干净”串成一个可验证的本地闭
 | 遗忘 | 全量删除容易误伤，只删数据库又可能留下索引残留 | 先预览影响，再按主题、类型、时间、来源或编号精准遗忘 |
 | 审计 | 难以回答“为什么记住、何时使用、是否删净” | 保留来源、使用记录、哈希链审计和残留验证结果 |
 
-### 一次真实使用会发生什么
+### 🔄 一次真实使用会发生什么
 
 1. 用户告诉 Agent：“以后搜索代码优先使用 `rg`，回答先给结论。”
 2. MemGuardOS 将用户消息归一化为标准事件，提取“搜索工具偏好”和“回答格式偏好”。
@@ -55,7 +114,9 @@ MemGuardOS 将“记住、用好、忘干净”串成一个可验证的本地闭
 5. 用户提出“忘掉搜索工具偏好”，系统先列出候选，确认后只删除工具偏好，回答格式偏好仍保留。
 6. 再次执行任务时，已遗忘偏好不再进入检索和上下文；审计记录可以说明发生了什么。
 
-## 核心能力
+<a id="核心能力"></a>
+
+## ✨ 核心能力
 
 | 能力 | 实现方式 | 用户可见结果 |
 |---|---|---|
@@ -68,7 +129,7 @@ MemGuardOS 将“记住、用好、忘干净”串成一个可验证的本地闭
 | openKylin 原生集成 | UKUI 设置插件、Peony 右键、托盘通知、systemd、cgroup、auditd、Polkit、BPF LSM | 普通用户和管理员都能从系统原生入口完成操作 |
 | 可复现交付 | 五个 Debian 包、版本清单、SHA-256、SBOM、CI、实机证据和发布门禁 | 可安装、可复验、可追溯到明确 Git 修订 |
 
-## 使用入口
+## 👥 使用入口
 
 | 使用者 | 推荐入口 | 适合完成的操作 |
 |---|---|---|
@@ -80,9 +141,11 @@ MemGuardOS 将“记住、用好、忘干净”串成一个可验证的本地闭
 
 Web 工作台是本机记忆治理界面，不是替代 Agent 的聊天窗口；真实自然语言任务由已经接入的 Agent 执行。
 
-## 快速体验
+<a id="快速体验"></a>
 
-### 路径一：三分钟体验记忆闭环
+## 🚀 快速体验
+
+### ① 三分钟体验记忆闭环
 
 Python 3.10 及以上环境可以直接从源码安装：
 
@@ -117,7 +180,7 @@ memguard audit
 
 `forget` 默认只预览候选；只有带 `--yes` 才会执行，`--compact` 会继续整理追加式段文件。
 
-### 路径二：在 openKylin 安装完整桌面版
+### ② 在 openKylin 安装完整桌面版
 
 从仓库发行版下载五个 `.deb` 文件后，在同一目录执行：
 
@@ -140,7 +203,7 @@ sudo bash scripts/install_openkylin.sh "$(pwd)"
 
 安装桌面包后，可以从开始菜单打开“MemGuardOS 记忆安全”，或在 UKUI 系统设置的安全分类中进入记忆安全中心。完整环境依赖、安装验证、升级和卸载步骤见 [安装部署](docs/installation.md)。
 
-### 打开本地工作台
+### ③ 打开本地工作台
 
 ```bash
 memctl web --host 127.0.0.1 --port 8765
@@ -148,7 +211,9 @@ memctl web --host 127.0.0.1 --port 8765
 
 浏览器访问 `http://127.0.0.1:8765`。工作台默认只监听本机地址，不应直接暴露到公网。
 
-## 真实 Agent 接入
+<a id="真实-agent-接入"></a>
+
+## 🤖 真实 Agent 接入
 
 MemGuardOS 不要求 Agent 使用特定界面。接入方只需发送统一事件，并在规划、工具选择或回答生成前请求上下文。当前完成端到端实机验证的第一方适配器是 OpenHands；其他 Agent 可以按相同协议接入，但需要实现并验证各自的事件映射层。
 
@@ -195,7 +260,9 @@ MemGuardOS 事件接入 -> 提取与治理 -> 检索与上下文 -> 事件回写
 
 标准事件包含会话、序号、角色、事件类型、工具名称、工具参数、执行结果和来源。接入协议、事件示例、OpenHands 配置和安全注意事项见 [Agent 接入](docs/agent-integration.md) 与 [接口参考](docs/api.md)。
 
-## 系统架构
+<a id="技术实现与关键设计"></a>
+
+## 🧩 技术实现与关键设计
 
 ```mermaid
 flowchart TB
@@ -250,6 +317,18 @@ flowchart TB
     F --> R
     F --> Z
     Z --> UI
+
+    classDef event fill:#EAF4FF,stroke:#1677C8,color:#0B3558,stroke-width:1.4px;
+    classDef form fill:#EEF2FF,stroke:#6366F1,color:#312E81,stroke-width:1.4px;
+    classDef store fill:#E8F7F1,stroke:#138A72,color:#0B4F43,stroke-width:1.4px;
+    classDef use fill:#FFF6E5,stroke:#D97706,color:#7C3F00,stroke-width:1.4px;
+    classDef govern fill:#FFF0F1,stroke:#D14343,color:#7F1D1D,stroke-width:1.4px;
+
+    class U,A,O event;
+    class E,Q,P,X,V form;
+    class M,D,G,R,H store;
+    class C,UI use;
+    class F,Z govern;
 ```
 
 ### 关键设计
@@ -263,7 +342,7 @@ flowchart TB
 
 详细模块边界、数据结构与时序见 [系统架构](docs/architecture.md) 和 [开发者指南](docs/developer-guide.md)。
 
-## openKylin 原生能力
+## 🐧 openKylin 原生能力
 
 | 组件 | 作用 | 交付状态 |
 |---|---|---|
@@ -286,7 +365,9 @@ flowchart TB
 
 桌面包可以单独卸载，不影响核心服务；默认卸载保留用户数据，清理数据需要单独确认。
 
-## 验证结果
+<a id="验证结果"></a>
+
+## 📊 验证结果
 
 以下数字均可追溯到仓库中的原始结果文件。不同数据集、确定性实验和真实模型运行分开报告，不将口径不同的结果拼成一个“总分”。
 
@@ -315,7 +396,7 @@ python scripts/web_dashboard_smoke.py
 
 量化评测、openKylin 原生采集、发布包审计和每个指标的含义见 [测试与评测](docs/testing.md)。
 
-## 项目结构
+## 🗂️ 项目结构
 
 ```text
 memguard/                  Python 核心、CLI、服务、Agent 适配与 Web 工作台
@@ -337,7 +418,9 @@ docs/                      正式文档、截图与精选可复核证据
 
 仓库不会跟踪虚拟环境、构建缓存、临时输出、历史大归档和开发过程草稿；正式发布物通过发行版和 SHA-256 清单单独交付。
 
-## 完整文档
+<a id="完整文档"></a>
+
+## 📚 完整文档
 
 | 文档 | 适合读者 | 内容 |
 |---|---|---|
@@ -353,7 +436,7 @@ docs/                      正式文档、截图与精选可复核证据
 | [赛题符合性](docs/competition.md) | 竞赛评审 | 赛题逐项要求、实现位置和验证证据 |
 | [证据索引](docs/evidence/README.md) | 审计与验收人员 | 精选证据、来源修订、命令和 SHA-256 |
 
-## 安全与适用边界
+## 🔐 安全与适用边界
 
 MemGuardOS 的精准遗忘覆盖它管理的事件、元数据、FTS、图谱、向量缓存、结果缓存和追加式段文件。它不会自动擦除外部 Agent 会话、模型服务日志、shell history、备份、虚拟机快照或存储介质的物理残留；这些副本必须由对应系统的生命周期策略处理。
 
@@ -361,7 +444,7 @@ BPF LSM 提供敏感路径的内核强制策略，不宣称在内核态识别任
 
 发现安全问题时请按 [SECURITY.md](SECURITY.md) 私下报告，不要在公开 Issue 中提交真实凭据或个人信息。
 
-## 贡献与开源
+## 🤝 贡献与开源
 
 项目采用 [MIT License](LICENSE)。提交问题或补丁前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)，新增功能应同时提供测试、用户可理解的错误反馈和必要文档。
 
