@@ -1,4 +1,4 @@
-$ <PROJECT_ROOT>/.venv/bin/python scripts/evaluate_retrieval_v2.py --rounds 3 --size 1000 --queries 120 --workers 6 --output docs/evidence/openkylin/retrieval_v2.json
+$ .venv/bin/python scripts/evaluate_retrieval_v2.py --rounds 3 --size 1000 --queries 120 --workers 6 --output docs/evidence/openkylin/retrieval_v2.json
 {
   "pass": true,
   "failures": [],

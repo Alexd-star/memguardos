@@ -20,56 +20,56 @@ UKUI desktop build completed:
 native/ukui/build/ukcc-memguard/libmemguardos-ukcc-plugin.so
 native/ukui/build/peony-memguard/libpeony-menu-plugin-memguardos.so
 native/ukui/build/tray/memguardos-tray
-dpkg-deb: 正在 '<PROJECT_ROOT>/dist/memguardos-core_0.1.0-2_amd64.deb' 中构建软件包 'memguardos-core'。
-dpkg-deb: 正在 '<PROJECT_ROOT>/dist/memguardos-ukui_0.1.0-2_amd64.deb' 中构建软件包 'memguardos-ukui'。
-dpkg-deb: 正在 '<PROJECT_ROOT>/dist/memguardos-agent-bridge_0.1.0-2_amd64.deb' 中构建软件包 'memguardos-agent-bridge'。
-dpkg-deb: 正在 '<PROJECT_ROOT>/dist/memguardos-doc_0.1.0-2_all.deb' 中构建软件包 'memguardos-doc'。
-dpkg-deb: 正在 '<PROJECT_ROOT>/dist/memguardos_0.1.0-2_all.deb' 中构建软件包 'memguardos'。
+dpkg-deb: 正在 '<PROJECT_ROOT>/dist/memguardos-core_1.0.0-2_amd64.deb' 中构建软件包 'memguardos-core'。
+dpkg-deb: 正在 '<PROJECT_ROOT>/dist/memguardos-ukui_1.0.0-2_amd64.deb' 中构建软件包 'memguardos-ukui'。
+dpkg-deb: 正在 '<PROJECT_ROOT>/dist/memguardos-agent-bridge_1.0.0-2_amd64.deb' 中构建软件包 'memguardos-agent-bridge'。
+dpkg-deb: 正在 '<PROJECT_ROOT>/dist/memguardos-doc_1.0.0-2_all.deb' 中构建软件包 'memguardos-doc'。
+dpkg-deb: 正在 '<PROJECT_ROOT>/dist/memguardos_1.0.0-2_all.deb' 中构建软件包 'memguardos'。
 {
   "schema": "memguardos-debian-package-set-v1",
-  "version": "0.1.0-2",
+  "version": "1.0.0-2",
   "architecture": "amd64",
   "multiarch": "x86_64-linux-gnu",
   "packages": [
     {
       "package": "memguardos-core",
-      "version": "0.1.0-2",
+      "version": "1.0.0-2",
       "architecture": "amd64",
-      "path": "<PROJECT_ROOT>/dist/memguardos-core_0.1.0-2_amd64.deb",
-      "bytes": 224352,
-      "sha256": "fbbba27dfe23a80268c632af58205b3e221d1283c6593011ecf504d0e17e5478"
+      "path": "<PROJECT_ROOT>/dist/memguardos-core_1.0.0-2_amd64.deb",
+      "bytes": 224576,
+      "sha256": "211efd05bf262dfb51779de70f367b2cbc9c2856545b5b77ecc03514ed8b10da"
     },
     {
       "package": "memguardos-ukui",
-      "version": "0.1.0-2",
+      "version": "1.0.0-2",
       "architecture": "amd64",
-      "path": "<PROJECT_ROOT>/dist/memguardos-ukui_0.1.0-2_amd64.deb",
-      "bytes": 151700,
-      "sha256": "caeb480735f473f0f46b8a217e05f2ddeea7d817d2015b721f9079130d2ee514"
+      "path": "<PROJECT_ROOT>/dist/memguardos-ukui_1.0.0-2_amd64.deb",
+      "bytes": 151376,
+      "sha256": "29f47dde4515155938bb0330ad898b38324e1e155be7e5b08a1ef7f5431d8276"
     },
     {
       "package": "memguardos-agent-bridge",
-      "version": "0.1.0-2",
+      "version": "1.0.0-2",
       "architecture": "amd64",
-      "path": "<PROJECT_ROOT>/dist/memguardos-agent-bridge_0.1.0-2_amd64.deb",
-      "bytes": 8864,
-      "sha256": "ff06eac29c84887b92b975aaa9fae4cc3b2b6d69e313c7d9914ffd986af304bb"
+      "path": "<PROJECT_ROOT>/dist/memguardos-agent-bridge_1.0.0-2_amd64.deb",
+      "bytes": 9380,
+      "sha256": "54ea52636d67e87a7c26d159fa3d196d4be6b372f8bc46756635ce7701d9a6f2"
     },
     {
       "package": "memguardos-doc",
-      "version": "0.1.0-2",
+      "version": "1.0.0-2",
       "architecture": "all",
-      "path": "<PROJECT_ROOT>/dist/memguardos-doc_0.1.0-2_all.deb",
-      "bytes": 228284,
-      "sha256": "cdbb0f42004654d33601245572705b397c168a3ae6cc36db70cb7eba8f998e54"
+      "path": "<PROJECT_ROOT>/dist/memguardos-doc_1.0.0-2_all.deb",
+      "bytes": 39704,
+      "sha256": "85095a03dab3d1ef476d5fa232b610d0bcc8440950d44917a3a5286e3faa1923"
     },
     {
       "package": "memguardos",
-      "version": "0.1.0-2",
+      "version": "1.0.0-2",
       "architecture": "all",
-      "path": "<PROJECT_ROOT>/dist/memguardos_0.1.0-2_all.deb",
-      "bytes": 884,
-      "sha256": "3d9dc2e6eae203c583ba87b2a945ed6cacb361c5f8b231d5531e33fdf75e2c04"
+      "path": "<PROJECT_ROOT>/dist/memguardos_1.0.0-2_all.deb",
+      "bytes": 888,
+      "sha256": "e301598fe9c5e55a6a43df2777e28931a22fd2d84503f3a4c45c550a58787b6d"
     }
   ]
 }

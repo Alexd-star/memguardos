@@ -1,11 +1,11 @@
 {
   "schema": "memguardos-desktop-scan-manifest-v1",
   "ok": true,
-  "manifest_id": "74f8c586-4d5b-49ca-ad12-db8a363668d0",
-  "nonce": "hJUWLJtwgXGcZ72DJxqYMhCssOLpYd5O",
+  "manifest_id": "de834cb8-8bfc-4af5-a775-494c03d21008",
+  "nonce": "dAUEnf7a3IzIbLhlIwJCLcjStNgYq15r",
   "namespace": "default",
-  "created_at": 1785171943.6245036,
-  "expires_at": 1785172243.6245036,
+  "created_at": 1785227843.889907,
+  "expires_at": 1785228143.889907,
   "used": false,
   "limits": {
     "max_files": 100,
@@ -16,7 +16,7 @@
   "items": [
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.JeB51KFpvs/peony_secret.env",
+      "path": "/var/tmp/tmp.Cmfup6q9RT/peony_secret.env",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 41,
@@ -41,7 +41,7 @@
           "final_action": "block"
         }
       },
-      "preview": "OPENAI_API_KEY=sk-test-example1234567890",
+      "preview": "OPENAI_API_KEY=<API_TOKEN_REDACTED>",
       "warnings": [
         "检测到高风险敏感内容，默认不写入长期记忆。"
       ],
@@ -60,13 +60,13 @@
       "fingerprint": {
         "exists": true,
         "device": 2053,
-        "inode": 1861620,
+        "inode": 348,
         "size": 41,
-        "mtime_ns": 1785171942820530605,
+        "mtime_ns": 1785227843321189259,
         "mode": 33204
       }
     }
   ],
-  "signature": "b1a4b883b66fb7b2c49833aaa47b660590c4d4d7e2b6e64082f18701999084eb",
-  "manifest_path": "/var/tmp/memguardos-native-home.vkeWI1/desktop-scans/74f8c586-4d5b-49ca-ad12-db8a363668d0.json"
+  "signature": "9eeec7c2d1d6d1893366652c64bd3c98621285ca6776f6218e4dbe5abaf7fba0",
+  "manifest_path": "/var/tmp/memguardos-native-home.At2UjR/desktop-scans/de834cb8-8bfc-4af5-a775-494c03d21008.json"
 }

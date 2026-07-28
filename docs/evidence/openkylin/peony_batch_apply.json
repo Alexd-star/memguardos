@@ -1,7 +1,7 @@
 {
   "schema": "memguardos-desktop-scan-apply-v1",
   "ok": true,
-  "manifest_id": "809ef58f-59e9-44dc-b5b7-fa55693d7ea4",
+  "manifest_id": "ccc605e4-cc6d-4a47-883c-23ee77b761c4",
   "summary": {
     "selected": 2,
     "stored": 2,
@@ -12,7 +12,7 @@
   "results": [
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.JeB51KFpvs/peony_preference.md",
+      "path": "/var/tmp/tmp.Cmfup6q9RT/peony_preference.md",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 57,
@@ -43,11 +43,11 @@
         "feedback": {
           "schema": "memguardos-memory-change-summary-v1",
           "namespace": "default",
-          "session_id": "/var/tmp/tmp.JeB51KFpvs/peony_preference.md",
+          "session_id": "/var/tmp/tmp.Cmfup6q9RT/peony_preference.md",
           "source": "peony_file",
           "new_memories": [
             {
-              "memory_id": "mem_4bbb9cada6e7423c",
+              "memory_id": "mem_c5ac18a483e34e6b",
               "type": "preference",
               "subtype": "tool_preference",
               "tier": "long_term",
@@ -83,7 +83,7 @@
         },
         "sensitive_notice": null,
         "audit_event_id": "audit-26",
-        "memory_id": "mem_4bbb9cada6e7423c",
+        "memory_id": "mem_c5ac18a483e34e6b",
         "type": "preference",
         "subtype": "tool_preference",
         "tier": "long_term"
@@ -94,7 +94,7 @@
     },
     {
       "schema": "memguardos-peony-scan-report-v1",
-      "path": "/var/tmp/tmp.JeB51KFpvs/peony_knowledge.txt",
+      "path": "/var/tmp/tmp.Cmfup6q9RT/peony_knowledge.txt",
       "exists": true,
       "file_kind": "file",
       "size_bytes": 61,
@@ -125,11 +125,11 @@
         "feedback": {
           "schema": "memguardos-memory-change-summary-v1",
           "namespace": "default",
-          "session_id": "/var/tmp/tmp.JeB51KFpvs/peony_knowledge.txt",
+          "session_id": "/var/tmp/tmp.Cmfup6q9RT/peony_knowledge.txt",
           "source": "peony_file",
           "new_memories": [
             {
-              "memory_id": "mem_e0e704ff45794994",
+              "memory_id": "mem_0845e9cac7dc4fcb",
               "type": "knowledge",
               "subtype": "fact",
               "tier": "long_term",
@@ -165,7 +165,7 @@
         },
         "sensitive_notice": null,
         "audit_event_id": "audit-29",
-        "memory_id": "mem_e0e704ff45794994",
+        "memory_id": "mem_0845e9cac7dc4fcb",
         "type": "knowledge",
         "subtype": "fact",
         "tier": "long_term"
@@ -178,11 +178,11 @@
   "memory_change_summary": {
     "schema": "memguardos-memory-change-summary-v1",
     "namespace": "default",
-    "session_id": "809ef58f-59e9-44dc-b5b7-fa55693d7ea4",
+    "session_id": "ccc605e4-cc6d-4a47-883c-23ee77b761c4",
     "source": "peony",
     "new_memories": [
       {
-        "memory_id": "mem_4bbb9cada6e7423c",
+        "memory_id": "mem_c5ac18a483e34e6b",
         "type": "preference",
         "subtype": "tool_preference",
         "tier": "long_term",
@@ -201,7 +201,7 @@
         ]
       },
       {
-        "memory_id": "mem_e0e704ff45794994",
+        "memory_id": "mem_0845e9cac7dc4fcb",
         "type": "knowledge",
         "subtype": "fact",
         "tier": "long_term",
@@ -240,7 +240,7 @@
   "audit_chain": {
     "ok": true,
     "checked": 32,
-    "head_hash": "988294f111df9820a886f7ff7a2dbbd07f48a43f483377155dad85e3b833138d"
+    "head_hash": "f16d686d34e7613794de9c02df8850d6dd3a14c142bce4eff3f81aa3eb895c54"
   },
   "audit_event_id": "32"
 }
