@@ -2,7 +2,7 @@
   "schema": "memguardos-sbom-v1",
   "name": "memguardos",
   "version": "1.0.0",
-  "generated_at": "2026-07-28T07:53:38+00:00",
+  "generated_at": "2026-07-29T17:39:56+00:00",
   "source": {
     "root": "project-root",
     "license": "MIT License",
@@ -17,6 +17,7 @@
         "browser-use==0.11.13"
       ],
       "dev": [
+        "build>=1.2",
         "pytest>=8",
         "pytest-cov>=5",
         "ruff>=0.6,<0.16"
@@ -31,8 +32,8 @@
     {
       "path": "pyproject.toml",
       "present": true,
-      "sha256": "633e8bc7418278dfb32b450ef7d04802c79048fba91dec305508daab5732ff50",
-      "bytes": 1827
+      "sha256": "472f7aaec025e41fd45d79eb061c4aa26968eb5d64256d1096752ca2614a1993",
+      "bytes": 1841
     },
     {
       "path": "LICENSE",
@@ -43,44 +44,44 @@
     {
       "path": "README.md",
       "present": true,
-      "sha256": "a4c9fe7a25463c1c42bbb3697c67ebb747141a52d1e20aa9ef0ccbc918ae0031",
-      "bytes": 9131
+      "sha256": "06fc04ed6405ed654fc3cc363159a2c084bc7b4913c7069e4b741854ce47c797",
+      "bytes": 27006
     },
     {
       "path": "memguard/service.py",
       "present": true,
-      "sha256": "0d576f3b71b1b640db8ad84c9de256d8e15887473c0a0eb9a3ae5ff2196946f9",
-      "bytes": 185328
+      "sha256": "b63b9b2da4a5953969f35eb5a2840c112d19152b7e341aeb310181925ef8c747",
+      "bytes": 194322
     },
     {
       "path": "memguard/api/server.py",
       "present": true,
-      "sha256": "73a1d03ff5048ad2ba39d09eeb649a191478ab6770b963cbd6668ae661c8031b",
-      "bytes": 21369
+      "sha256": "23fde135a36aef995e697b26c8583ca8eb53726254e7a08572c58dc8d971fdf9",
+      "bytes": 22266
     },
     {
       "path": "memguard/web/dashboard.py",
       "present": true,
-      "sha256": "6bf917c26387ff7ae7e7270414345f0d6eefdc197d2c612172abc4898f64a6cf",
-      "bytes": 212416
+      "sha256": "99214f3b428e2535eb685080f110ac44f36f0465a344e7bad07f1c826fffecb4",
+      "bytes": 222165
     },
     {
       "path": "memguard/integrations/openhands_adapter.py",
       "present": true,
-      "sha256": "0454ee0507c91d14f16aea64737ccf7ebd2ad8a3ff1523fa630df47d0346c84e",
-      "bytes": 11446
+      "sha256": "f91b15d8dda352d1b24da4e5cf3c09ccee58b36feab6058547ecb041b9f5f3d3",
+      "bytes": 11784
     },
     {
       "path": "memguard/integrations/openhands_runner.py",
       "present": true,
-      "sha256": "84ef160105198a1c83fc0ae680d151128cadbce65fb7d37b51535ce9f5d74335",
-      "bytes": 41559
+      "sha256": "aff4f6fbf8feb7c5efdb037acfc804b787871e6e56e0d49de4278b04b42cb974",
+      "bytes": 55072
     },
     {
       "path": "memguard/retrieval/hybrid.py",
       "present": true,
-      "sha256": "a23e218ab10493eb4574d42830ea141d101da44ec579da8bb855f2c5c217e97c",
-      "bytes": 28499
+      "sha256": "f0ce091bfaaa6e1acbac7eb0e10b7bbcd0deea7e038b45fc8fbfc412ae589286",
+      "bytes": 29939
     },
     {
       "path": "memguard/retrieval/kylin_sdk.py",
@@ -97,20 +98,20 @@
     {
       "path": "memguard/store/sqlite_meta.py",
       "present": true,
-      "sha256": "48bc95040fcfd9e7a33a435e361c18cf6da479aaad0b7bf98377ff64ac0d584b",
-      "bytes": 89164
+      "sha256": "ad15b5159e314c624fe2f69b0631b306e3724b5debc2f544a946332ad477445e",
+      "bytes": 89336
     },
     {
       "path": "memguard/extraction/semantic.py",
       "present": true,
-      "sha256": "b99e3ff27c73ac32f0d50f9ec1cb6335a8604155046d1d35db57eb7ff27eef7d",
-      "bytes": 11777
+      "sha256": "efc7799d3b6afe0295487e4baad8b78327393df507eea904f75af356c82ebb32",
+      "bytes": 13323
     },
     {
       "path": "memguard/forgetting/planner.py",
       "present": true,
-      "sha256": "663b422ebd9a55c84ab544005be2971e2aad8ee5191cb62e3da371a26ede4cb9",
-      "bytes": 17178
+      "sha256": "e1a2d54556414b56278881908a50e9bbd8377667ca3923ec015218566f1de683",
+      "bytes": 18445
     },
     {
       "path": "memguard/eval/memory_value.py",
@@ -139,8 +140,8 @@
     {
       "path": "scripts/collect_openkylin_evidence.sh",
       "present": true,
-      "sha256": "12aca30e8be6e337bba0d79852b777058636a439af5c93f20e9d5968c3f1d33c",
-      "bytes": 21494
+      "sha256": "6a9b08d01ff6c965e6fe1bcad97296dc8da843b4e742162a8d32d25b7c1a4b5c",
+      "bytes": 21508
     },
     {
       "path": "scripts/verify_deb_package_set.sh",
@@ -151,8 +152,8 @@
     {
       "path": "scripts/collect_memory_value_evidence.sh",
       "present": true,
-      "sha256": "19653b5d5ee75b5b58e5e5d49326b3fdac13aaf6bf8d4677d5f1a6e3bc961599",
-      "bytes": 5453
+      "sha256": "d0544b82c246de5c182bf2fc2e01569c7f121a7a7d9a28fe880f6af78d67a6f6",
+      "bytes": 5455
     },
     {
       "path": "scripts/build_deb.sh",

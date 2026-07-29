@@ -1,7 +1,7 @@
 {
   "schema": "memguardos-security-scan-v1",
   "ok": true,
-  "elapsed_s": 4.001,
+  "elapsed_s": 4.893,
   "policy": {
     "bandit_high_severity_allowed": 0,
     "bandit_medium_severity_allowed": 0,
@@ -12,7 +12,7 @@
   "summary": {
     "bandit_high_count": 0,
     "bandit_medium_count": 0,
-    "bandit_low_count": 99,
+    "bandit_low_count": 115,
     "pip_audit_vulnerability_count": 0,
     "missing_tools": []
   },
@@ -33,8 +33,8 @@
       "returncode": 1,
       "high_count": 0,
       "medium_count": 0,
-      "low_count": 99,
-      "issue_count": 99,
+      "low_count": 115,
+      "issue_count": 115,
       "issues": [
         {
           "filename": "memguard\\cli\\memctl.py",
@@ -46,7 +46,7 @@
         },
         {
           "filename": "memguard\\cli\\memctl.py",
-          "line_number": 1093,
+          "line_number": 1105,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B607",
@@ -54,7 +54,7 @@
         },
         {
           "filename": "memguard\\cli\\memctl.py",
-          "line_number": 1093,
+          "line_number": 1105,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
@@ -62,7 +62,7 @@
         },
         {
           "filename": "memguard\\cli\\memctl.py",
-          "line_number": 1096,
+          "line_number": 1108,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B607",
@@ -70,7 +70,7 @@
         },
         {
           "filename": "memguard\\cli\\memctl.py",
-          "line_number": 1096,
+          "line_number": 1108,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
@@ -78,11 +78,35 @@
         },
         {
           "filename": "memguard\\cli\\memctl.py",
-          "line_number": 1155,
+          "line_number": 1179,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
           "issue_text": "subprocess call - check for execution of untrusted input."
+        },
+        {
+          "filename": "memguard\\cli\\memguard.py",
+          "line_number": 202,
+          "severity": "LOW",
+          "confidence": "MEDIUM",
+          "test_id": "B105",
+          "issue_text": "Possible hardcoded password: '密码或口令'"
+        },
+        {
+          "filename": "memguard\\cli\\memguard.py",
+          "line_number": 203,
+          "severity": "LOW",
+          "confidence": "MEDIUM",
+          "test_id": "B105",
+          "issue_text": "Possible hardcoded password: '密码或口令'"
+        },
+        {
+          "filename": "memguard\\cli\\memguard.py",
+          "line_number": 205,
+          "severity": "LOW",
+          "confidence": "MEDIUM",
+          "test_id": "B105",
+          "issue_text": "Possible hardcoded password: '访问凭据'"
         },
         {
           "filename": "memguard\\daemon.py",
@@ -142,7 +166,7 @@
         },
         {
           "filename": "memguard\\extraction\\semantic.py",
-          "line_number": 161,
+          "line_number": 163,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
@@ -155,6 +179,22 @@
           "confidence": "HIGH",
           "test_id": "B404",
           "issue_text": "Consider possible security implications associated with the subprocess module."
+        },
+        {
+          "filename": "memguard\\integrations\\openhands_runner.py",
+          "line_number": 128,
+          "severity": "LOW",
+          "confidence": "MEDIUM",
+          "test_id": "B105",
+          "issue_text": "Possible hardcoded password: '0'"
+        },
+        {
+          "filename": "memguard\\integrations\\openhands_runner.py",
+          "line_number": 1265,
+          "severity": "LOW",
+          "confidence": "HIGH",
+          "test_id": "B603",
+          "issue_text": "subprocess call - check for execution of untrusted input."
         },
         {
           "filename": "memguard\\integrations\\preference_enhancer.py",
@@ -238,7 +278,7 @@
         },
         {
           "filename": "memguard\\os_guard\\openkylin_native.py",
-          "line_number": 648,
+          "line_number": 659,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B603",
@@ -390,54 +430,14 @@
         },
         {
           "filename": "memguard\\service.py",
-          "line_number": 3651,
+          "line_number": 3952,
           "severity": "LOW",
           "confidence": "HIGH",
           "test_id": "B110",
           "issue_text": "Try, Except, Pass detected."
-        },
-        {
-          "filename": "memguard\\web\\acceptance.py",
-          "line_number": 6,
-          "severity": "LOW",
-          "confidence": "HIGH",
-          "test_id": "B404",
-          "issue_text": "Consider possible security implications associated with the subprocess module."
-        },
-        {
-          "filename": "memguard\\web\\acceptance.py",
-          "line_number": 260,
-          "severity": "LOW",
-          "confidence": "HIGH",
-          "test_id": "B603",
-          "issue_text": "subprocess call - check for execution of untrusted input."
-        },
-        {
-          "filename": "memguard\\web\\dashboard.py",
-          "line_number": 22,
-          "severity": "LOW",
-          "confidence": "MEDIUM",
-          "test_id": "B107",
-          "issue_text": "Possible hardcoded password: ''"
-        },
-        {
-          "filename": "scripts\\backup_memguard.py",
-          "line_number": 10,
-          "severity": "LOW",
-          "confidence": "HIGH",
-          "test_id": "B404",
-          "issue_text": "Consider possible security implications associated with the subprocess module."
-        },
-        {
-          "filename": "scripts\\backup_memguard.py",
-          "line_number": 87,
-          "severity": "LOW",
-          "confidence": "HIGH",
-          "test_id": "B607",
-          "issue_text": "Starting a process with a partial executable path"
         }
       ],
-      "stderr_tail": "[tester]\tWARNING\tnosec encountered (B108), but no failed test on file memguard\\os_guard\\openkylin_native.py:265\n"
+      "stderr_tail": "[tester]\tWARNING\tnosec encountered (B108), but no failed test on file memguard\\os_guard\\openkylin_native.py:265\n[manager]\tWARNING\tTest in comment: only is not a test name or id, ignoring\n[manager]\tWARNING\tTest in comment: parameter is not a test name or id, ignoring\n[manager]\tWARNING\tTest in comment: placeholders is not a test name or id, ignoring\n[manager]\tWARNING\tTest in comment: are is not a test name or id, ignoring\n[manager]\tWARNING\tTest in comment: interpolated is not a test name or id, ignoring\n"
     },
     "pip_audit": {
       "status": "clean",

@@ -182,7 +182,16 @@ memguard audit
 
 ### ② 在 openKylin 安装完整桌面版
 
-从仓库发行版下载五个 `.deb` 文件后，在同一目录执行：
+需要复现当前 `main` 的最新代码时，建议在 openKylin 构建机准备 `qmake`、`pkg-config`、`libpeony-dev`、`libukcc-dev` 和 Qt5 开发包，然后直接从源码构建并安装五包：
+
+```bash
+git clone https://github.com/Alexd-star/memguardos.git
+cd memguardos
+bash scripts/build_ukui_plugins.sh
+bash scripts/install_deb_package_set.sh
+```
+
+`install_deb_package_set.sh` 会重新构建五包，通过生成清单确认包名和路径，使用 APT 安装，并复核 systemd、CLI、Polkit、托盘入口和审计链。若使用 GitHub Release 中的已发布稳定快照，可下载五个 `.deb` 文件后在同一目录执行：
 
 ```bash
 sudo apt install ./memguardos-core_*.deb \
@@ -195,11 +204,15 @@ systemctl status memguardd --no-pager
 memguard status
 ```
 
-安装完成后，`memguardd` 会由 systemd 自动启动并设置为开机运行。日常使用不需要进入源码目录，也不需要手动启动服务；`memguard`、`memctl` 和桌面入口可从任意工作目录使用。也可以从源码执行：
+安装完成后，`memguardd` 会由 systemd 自动启动并设置为开机运行。日常使用不需要进入源码目录，也不需要手动启动服务；`memguard`、`memctl` 和桌面入口可从任意工作目录使用。
+
+如果只需要核心服务、源码和 systemd 单元，不需要 UKUI、Peony、托盘与 Debian 分包，可以执行轻量源码部署：
 
 ```bash
 sudo bash scripts/install_openkylin.sh "$(pwd)"
 ```
+
+该轻量脚本不等同于完整桌面五包安装；用于评审复现或其他 openKylin 机器部署时，优先采用上面的 `install_deb_package_set.sh`。
 
 安装桌面包后，可以从开始菜单打开“MemGuardOS 记忆安全”，或在 UKUI 系统设置的安全分类中进入记忆安全中心。完整环境依赖、安装验证、升级和卸载步骤见 [安装部署](docs/installation.md)。
 

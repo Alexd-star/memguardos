@@ -128,10 +128,12 @@ def test_openhands_action_and_observation_map_tool_trace():
 
     assert tool_call.event_type == "tool_call"
     assert tool_call.tool_args == {"command": "rg build_context"}
+    assert adapter.tool_call_id_for(tool_call.event_id) == "call-1"
     assert tool_result.event_type == "tool_result"
     assert tool_result.tool_result == "memguard/service.py:1310"
     assert tool_result.exit_code == 0
     assert tool_result.turn_id == tool_call.turn_id
+    assert adapter.tool_call_id_for(tool_result.event_id) == "call-1"
 
 
 def test_openhands_adapter_ignores_unknown_events_without_raising():

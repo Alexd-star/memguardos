@@ -29,6 +29,7 @@ class OpenHandsEventAdapter:
         self.sequence = 0
         self.current_turn = 0
         self.tool_turns: Dict[str, str] = {}
+        self.event_tool_call_ids: Dict[str, str] = {}
         self.internal_feedback = set()
 
     def register_internal_feedback(self, content: str) -> None:
@@ -93,8 +94,6 @@ class OpenHandsEventAdapter:
             tool_args = json.loads(raw_arguments) if isinstance(raw_arguments, str) else dict(raw_arguments or {})
         except (json.JSONDecodeError, TypeError, ValueError):
             tool_args = {"raw_arguments": str(raw_arguments)}
-        if tool_call_id:
-            tool_args["tool_call_id"] = tool_call_id
         return self._event(
             raw_event,
             event_type="tool_call",
@@ -116,7 +115,6 @@ class OpenHandsEventAdapter:
             event_type="tool_result",
             role="tool",
             tool_name=str(getattr(raw_event, "tool_name", "")),
-            tool_args={"tool_call_id": tool_call_id} if tool_call_id else {},
             tool_result=_content_text(getattr(observation, "content", [])),
             exit_code=exit_code,
             turn_id=self.tool_turns.get(tool_call_id, self._turn_id()),
@@ -177,6 +175,9 @@ class OpenHandsEventAdapter:
     def _event(self, raw_event: Any, **values: Any) -> AgentInteractionEvent:
         self.sequence += 1
         raw_id = str(getattr(raw_event, "id", "event-%s" % self.sequence))
+        tool_call_id = str(getattr(raw_event, "tool_call_id", "") or "").strip()
+        if tool_call_id:
+            self.event_tool_call_ids[raw_id] = tool_call_id
         return AgentInteractionEvent(
             agent_name="openhands",
             agent_version=self.agent_version,
@@ -190,6 +191,9 @@ class OpenHandsEventAdapter:
             task_type=self.task_type,
             **values,
         )
+
+    def tool_call_id_for(self, event_id: str) -> str:
+        return self.event_tool_call_ids.get(str(event_id), "")
 
     def _turn_id(self) -> str:
         return "turn-%s" % max(1, self.current_turn)
