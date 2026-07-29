@@ -300,8 +300,20 @@ class ErasureIntentCompiler:
             return "response_verbosity"
         if "测试命令" in target_text or "单元测试" in target_text:
             return "test_runner_command"
+        preference_marked = any(
+            marker in target_text for marker in ("偏好", "习惯", "默认选择")
+        )
+        response_concepts = {
+            "response_order": ("回答顺序", "输出顺序", "回复顺序"),
+            "response_language": ("回答语言", "回复语言", "语言偏好"),
+            "response_verbosity": ("回答长度", "详细程度"),
+        }
         for canonical, aliases in PREFERENCE_TOPIC_ALIASES.items():
-            if any(alias.lower() in lowered for alias in aliases):
+            alias_matched = any(alias.lower() in lowered for alias in aliases)
+            concept_matched = any(
+                marker in target_text for marker in response_concepts.get(canonical, ())
+            )
+            if alias_matched and (preference_marked or concept_matched):
                 return canonical
         if "偏好" in target_text:
             return topic
@@ -333,12 +345,6 @@ class ErasureIntentCompiler:
             aliases.append(topic)
         if preference_topic and preference_topic in PREFERENCE_TOPIC_ALIASES:
             aliases.extend(PREFERENCE_TOPIC_ALIASES[preference_topic])
-        lowered = text.lower()
-        for canonical, values in PREFERENCE_TOPIC_ALIASES.items():
-            if canonical == preference_topic:
-                continue
-            if any(value.lower() in lowered for value in values):
-                aliases.extend(values)
         unique: List[str] = []
         for alias in aliases:
             if alias and alias not in unique:

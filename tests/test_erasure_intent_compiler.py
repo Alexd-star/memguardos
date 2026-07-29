@@ -78,12 +78,7 @@ def test_compiler_stops_topic_before_counted_memory_phrase():
 
     assert result["topic"] == "journalctl"
     assert result["target_phrase"] == "journalctl"
-    assert result["topic_aliases"] == [
-        "journalctl",
-        "服务日志",
-        "日志工具",
-        "日志命令",
-    ]
+    assert result["topic_aliases"] == ["journalctl"]
 
 
 def test_compiler_exposes_plain_language_target_phrase_without_command_words():
