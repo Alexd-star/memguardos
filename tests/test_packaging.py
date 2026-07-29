@@ -451,7 +451,7 @@ def test_generate_sbom_records_project_dependencies_and_core_artifacts(tmp_path)
     assert sbom_path.exists()
     assert markdown_path.exists()
     assert sbom["name"] == "memguardos"
-    assert sbom["version"] == "1.0.0"
+    assert sbom["version"] == "1.0.1"
     assert sbom["schema"] == "memguardos-sbom-v1"
     assert sbom["dependencies"]["runtime"] == []
     assert "pytest>=8" in sbom["dependencies"]["optional"]["dev"]

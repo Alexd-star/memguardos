@@ -9,7 +9,7 @@
 让 Agent 从用户纠正、工具调用和执行结果中持续学习，同时让每一条记忆可查看、可追溯、可控制、可遗忘。
 
 <p>
-  <img src="https://img.shields.io/badge/version-1.0.0-0F6CBD" alt="Version 1.0.0"> <img src="https://img.shields.io/badge/openKylin-2.0%20SP2-1683C4" alt="openKylin 2.0 SP2"> <img src="https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB" alt="Python 3.10, 3.11, 3.12"> <img src="https://img.shields.io/badge/openKylin%20tests-705%20passed-138A72" alt="705 openKylin tests passed"> <img src="https://img.shields.io/badge/License-MIT-4B5563" alt="MIT License">
+  <img src="https://img.shields.io/badge/version-1.0.1-0F6CBD" alt="Version 1.0.1"> <img src="https://img.shields.io/badge/openKylin-2.0%20SP2-1683C4" alt="openKylin 2.0 SP2"> <img src="https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB" alt="Python 3.10, 3.11, 3.12"> <img src="https://img.shields.io/badge/openKylin%20tests-705%20passed-138A72" alt="705 openKylin tests passed"> <img src="https://img.shields.io/badge/License-MIT-4B5563" alt="MIT License">
 </p>
 <p>
   <a href="https://github.com/Alexd-star/memguardos/actions/workflows/ci.yml"><img src="https://github.com/Alexd-star/memguardos/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a> <a href="https://github.com/Alexd-star/memguardos/releases/latest"><img src="https://img.shields.io/github/v/release/Alexd-star/memguardos?label=release&amp;color=6C5CE7" alt="Latest release"></a> <img src="https://img.shields.io/badge/Debian%20packages-5-DB4B4B" alt="Five Debian packages"> <img src="https://img.shields.io/badge/GPU-not%20required-546E7A" alt="No GPU required">
