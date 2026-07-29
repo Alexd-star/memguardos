@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -295,30 +296,34 @@ def _context(service: MemGuardService, task: str, limit: int = 5, token_budget: 
 def _forget(service: MemGuardService, request: str, confirm: bool = False, compact: bool = False) -> int:
     result = service.forget(request, confirm=confirm, compact=compact or confirm)
     if confirm:
-        _section("精准遗忘")
-        forgotten = list(
-            result.get("forgotten") or result.get("forgotten_memory_ids") or []
-        )
-        if forgotten:
-            print("[已完成] 已遗忘 %d 条目标记忆。" % len(forgotten))
-        else:
-            print("[未变更] 没有找到需要遗忘的目标记忆。")
-        report = result.get("verification_report") or {}
-        steps = list(report.get("verification_steps") or [])
-        if steps:
-            print("验证结果")
-            labels = {"passed": "通过", "failed": "需检查", "skipped": "未执行"}
-            for step in steps:
-                print("- %s：%s" % (
-                    step.get("name", "验证项"),
-                    labels.get(step.get("status"), step.get("status", "未知")),
-                ))
-        if report.get("user_summary"):
-            print("结论：%s" % report.get("user_summary"))
-        print("边界说明：只清理 MemGuardOS 受管数据；外部 Agent 日志和备份需在对应系统中另行处理。")
-        print("下一步：输入 /preferences 查看保留偏好，或 /search 关键词复核目标内容已不可检索。")
-        return 0
+        return _print_confirmed_forget(result)
     _print_forget_preview(result, interactive=False)
+    return 0
+
+
+def _print_confirmed_forget(result: dict) -> int:
+    _section("精准遗忘")
+    forgotten = list(
+        result.get("forgotten") or result.get("forgotten_memory_ids") or []
+    )
+    if forgotten:
+        print("[已完成] 已遗忘 %d 条目标记忆。" % len(forgotten))
+    else:
+        print("[未变更] 没有找到需要遗忘的目标记忆。")
+    report = result.get("verification_report") or {}
+    steps = list(report.get("verification_steps") or [])
+    if steps:
+        print("验证结果")
+        labels = {"passed": "通过", "failed": "需检查", "skipped": "未执行"}
+        for step in steps:
+            print("- %s：%s" % (
+                step.get("name", "验证项"),
+                labels.get(step.get("status"), step.get("status", "未知")),
+            ))
+    if report.get("user_summary"):
+        print("结论：%s" % report.get("user_summary"))
+    print("边界说明：只清理 MemGuardOS 受管数据；外部 Agent 日志和备份需在对应系统中另行处理。")
+    print("下一步：输入 /preferences 查看保留偏好，或 /search 关键词复核目标内容已不可检索。")
     return 0
 
 
@@ -333,7 +338,11 @@ def _print_forget_preview(result: dict, interactive: bool) -> None:
     else:
         print("没有发现候选。")
     if interactive and candidates:
-        print("候选正确时直接输入 yes 或 确认；输入 no 或 取消停止。")
+        if len(candidates) == 1:
+            print("输入 yes 或 确认执行；输入 no 或 取消停止。")
+        else:
+            print("请输入候选编号选择，例如 `1` 或 `1,3`；输入“全部”可选择所有候选。")
+            print("选择后输入 yes 或 确认执行；输入 no 或 取消停止。")
     elif interactive:
         print("没有需要确认的内容，你可以换一种更具体的说法。")
     else:
@@ -543,6 +552,7 @@ SHELL_COMMANDS = (
 
 _FORGET_CONFIRM_WORDS = {"yes", "y", "确认", "确定", "是", "继续"}
 _FORGET_CANCEL_WORDS = {"no", "n", "取消", "不要", "否", "返回"}
+_FORGET_ALL_WORDS = {"all", "全部", "全选", "全部候选"}
 
 
 def _shell(service: MemGuardService, prompt: str, workspace: str = "", model: str = "") -> int:
@@ -572,7 +582,7 @@ def _shell(service: MemGuardService, prompt: str, workspace: str = "", model: st
         if line == "/help":
             print("可用操作：" + SHELL_COMMANDS)
             print("说明：/run 只运行真实 Agent；/demo 是明确标注的本地事件回放。")
-            print("遗忘可以直接说“忘掉……”，预览后输入 yes/确认；输入 no/取消则停止。")
+            print("遗忘可以直接说“忘掉……”。单候选输入 yes；多候选先输入编号或“全部”，再确认。")
             continue
         if line == "/guide":
             _shell_guide(state)
@@ -612,8 +622,22 @@ def _dispatch_shell_line(service: MemGuardService, line: str, state: dict) -> in
             state["pending_forget"] = None
             print("已取消本次遗忘，任何记忆都没有改变。")
             return 0
+        if answer in _FORGET_ALL_WORDS:
+            pending["selected_ids"] = list(pending.get("memory_ids") or [])
+            state["pending_forget"] = pending
+            _print_forget_selection(pending)
+            return 0
+        selection = _parse_forget_selection(normalized, len(pending.get("memory_ids") or []))
+        if selection is not None:
+            if not selection:
+                print("没有可用的候选编号，请按列表中的编号重新选择。")
+                return 0
+            pending["selected_ids"] = [pending["memory_ids"][index - 1] for index in selection]
+            state["pending_forget"] = pending
+            _print_forget_selection(pending)
+            return 0
         print("当前有一项遗忘等待确认，本次输入未执行。")
-        print("输入 yes 或 确认 执行；输入 no 或 取消 停止。")
+        _print_forget_pending_help(pending)
         return 0
     if answer in _FORGET_CONFIRM_WORDS | _FORGET_CANCEL_WORDS:
         print("当前没有等待确认的遗忘操作。请先输入“忘掉……”查看影响范围。")
@@ -639,8 +663,9 @@ def _dispatch_shell_line(service: MemGuardService, line: str, state: dict) -> in
         request = line[len("/forget "):].strip()
         for flag in (" --yes", " --confirm"):
             if request.endswith(flag):
-                state["pending_forget"] = None
-                return _forget(service, request[: -len(flag)].strip(), confirm=True, compact=True)
+                clean_request = request[: -len(flag)].strip()
+                _preview_forget_in_shell(service, clean_request, state)
+                return _confirm_pending_forget(service, state)
         return _preview_forget_in_shell(service, request, state)
     if _looks_like_forget_request(line):
         print("已识别为精准遗忘请求。")
@@ -687,7 +712,12 @@ def _preview_forget_in_shell(service: MemGuardService, request: str, state: dict
     candidates = list(result.get("candidates") or [])
     memory_ids = [str(item.get("memory_id") or "") for item in candidates if item.get("memory_id")]
     if memory_ids:
-        state["pending_forget"] = {"request": request, "memory_ids": memory_ids}
+        state["pending_forget"] = {
+            "request": request,
+            "memory_ids": memory_ids,
+            "candidates": candidates,
+            "selected_ids": list(memory_ids) if len(memory_ids) == 1 else [],
+        }
     else:
         state["pending_forget"] = None
     return 0
@@ -697,10 +727,17 @@ def _confirm_pending_forget(service: MemGuardService, state: dict) -> int:
     pending = dict(state.get("pending_forget") or {})
     request = str(pending.get("request") or "").strip()
     expected_ids = [str(item) for item in pending.get("memory_ids") or [] if str(item)]
+    selected_ids = [str(item) for item in pending.get("selected_ids") or [] if str(item)]
     if not request or not expected_ids:
         state["pending_forget"] = None
         print("待确认信息已失效，请重新输入遗忘请求。")
         return 0
+    if len(expected_ids) > 1 and not selected_ids:
+        print("检测到多条候选，尚未选择要遗忘的内容，本次没有执行。")
+        _print_forget_pending_help(pending)
+        return 0
+    if not selected_ids:
+        selected_ids = list(expected_ids)
 
     refreshed = service.forget(request, confirm=False, compact=False)
     refreshed_ids = [
@@ -708,16 +745,66 @@ def _confirm_pending_forget(service: MemGuardService, state: dict) -> int:
         for item in refreshed.get("candidates") or []
         if item.get("memory_id")
     ]
-    if refreshed_ids != expected_ids:
+    if set(refreshed_ids) != set(expected_ids):
         print("候选内容在确认前发生了变化，为避免误删，本次没有执行。")
         _print_forget_preview(refreshed, interactive=True)
         state["pending_forget"] = (
-            {"request": request, "memory_ids": refreshed_ids} if refreshed_ids else None
+            {
+                "request": request,
+                "memory_ids": refreshed_ids,
+                "candidates": list(refreshed.get("candidates") or []),
+                "selected_ids": list(refreshed_ids) if len(refreshed_ids) == 1 else [],
+            }
+            if refreshed_ids
+            else None
         )
         return 0
 
+    if any(memory_id not in refreshed_ids for memory_id in selected_ids):
+        state["pending_forget"] = None
+        print("已选择的候选不再有效，本次没有执行，请重新发起遗忘。")
+        return 0
+
     state["pending_forget"] = None
-    return _forget(service, request, confirm=True, compact=True)
+    result = service.forget_memory_ids(selected_ids, reason=request, compact=True)
+    result["verification_report"] = service.forget_verification_report(
+        result,
+        request=request,
+        dry_run=False,
+    )
+    return _print_confirmed_forget(result)
+
+
+def _parse_forget_selection(text: str, candidate_count: int) -> list[int] | None:
+    compact = str(text or "").strip()
+    compact = re.sub(r"^(?:请选择|选择|选)", "", compact).strip()
+    compact = compact.replace("和", ",")
+    compact = re.sub(r"[第条项个号]", "", compact)
+    if not compact or not re.fullmatch(r"\d+(?:\s*[,，、\s]\s*\d+)*", compact):
+        return None
+    numbers = [int(item) for item in re.findall(r"\d+", compact)]
+    if any(number < 1 or number > candidate_count for number in numbers):
+        return []
+    return list(dict.fromkeys(numbers))
+
+
+def _print_forget_selection(pending: dict) -> None:
+    selected = set(str(item) for item in pending.get("selected_ids") or [])
+    candidates = list(pending.get("candidates") or [])
+    print("已选择 %d 条候选：" % len(selected))
+    for index, item in enumerate(candidates, 1):
+        if str(item.get("memory_id") or "") in selected:
+            print("- %d. %s" % (index, item.get("summary") or item.get("memory_id")))
+    print("输入 yes 或 确认执行；输入其他编号可重新选择；输入 no 或 取消停止。")
+
+
+def _print_forget_pending_help(pending: dict) -> None:
+    count = len(pending.get("memory_ids") or [])
+    if count > 1:
+        print("输入候选编号选择，例如 `1` 或 `1,3`；输入“全部”选择所有候选。")
+        print("完成选择后输入 yes 或 确认执行；输入 no 或 取消停止。")
+    else:
+        print("输入 yes 或 确认执行；输入 no 或 取消停止。")
 
 
 def _run_shell_line(service: MemGuardService, line: str) -> int:

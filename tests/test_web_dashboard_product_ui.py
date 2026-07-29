@@ -422,6 +422,11 @@ def test_dashboard_requires_a_current_forget_preview_before_confirmation():
     assert "preview_token:confirmForget ? forgetPreview.previewToken : ''" in page
     assert "preview_token:confirmForget ? agentForgetPreview.previewToken : ''" in page
     assert "候选数量" in page
+    assert "selected_memory_ids:confirmForget ? forgetPreview.selectedIds : []" in page
+    assert "data-forget-memory-id" in page
+    assert "全选候选" in page
+    assert "清空选择" in page
+    assert "未选择的候选将继续保留" in page
     assert "请先重新预览影响范围" in page
     assert "externalResidueMessage" in page
     assert "residue.user_explanation" in page

@@ -188,6 +188,9 @@ def test_operator_can_ingest_and_preview_but_only_admin_confirms_forgetting(tmp_
                 "request": "忘掉回答语言偏好",
                 "confirm": True,
                 "compact": True,
+                "selected_memory_ids": [
+                    item["memory_id"] for item in preview["result"]["candidates"]
+                ],
                 "preview_token": preview["result"]["preview_token"],
             },
         )
@@ -266,6 +269,65 @@ def test_confirm_forgetting_requires_a_matching_unexpired_preview_receipt(tmp_pa
         assert confirmed["ok"] is True
         assert replay_status == 409
         assert replay["error"] == "forget_preview_required"
+    finally:
+        service.close()
+
+
+def test_web_forgetting_requires_and_honors_subset_selection(tmp_path):
+    service, base = start_dashboard(tmp_path)
+    try:
+        for text in (
+            "记住：蓝河项目部署目录是 /srv/blue-river。",
+            "记住：蓝河项目日志目录是 /var/log/blue-river。",
+        ):
+            status, body = request_json(
+                base + "/api/ingest",
+                "operator-secret",
+                method="POST",
+                payload={"text": text, "source_kind": "manual"},
+            )
+            assert status == 200 and body["ok"] is True
+
+        preview_status, preview = request_json(
+            base + "/api/forget",
+            "operator-secret",
+            method="POST",
+            payload={"request": "忘掉蓝河项目", "confirm": False},
+        )
+        candidates = preview["result"]["candidates"]
+        token = preview["result"]["preview_token"]
+        no_selection_status, no_selection = request_json(
+            base + "/api/forget",
+            "admin-secret",
+            method="POST",
+            payload={
+                "request": "忘掉蓝河项目",
+                "confirm": True,
+                "compact": True,
+                "preview_token": token,
+            },
+        )
+        selected_id = candidates[0]["memory_id"]
+        confirm_status, confirmed = request_json(
+            base + "/api/forget",
+            "admin-secret",
+            method="POST",
+            payload={
+                "request": "忘掉蓝河项目",
+                "confirm": True,
+                "compact": True,
+                "selected_memory_ids": [selected_id],
+                "preview_token": token,
+            },
+        )
+
+        assert preview_status == 200
+        assert len(candidates) == 2
+        assert no_selection_status == 409
+        assert no_selection["error"] == "forget_selection_required"
+        assert confirm_status == 200
+        assert confirmed["result"]["forgotten_memory_ids"] == [selected_id]
+        assert len(confirmed["result"]["requested_memory_ids"]) == 1
     finally:
         service.close()
 

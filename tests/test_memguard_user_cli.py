@@ -97,8 +97,65 @@ def test_interactive_shell_routes_natural_forgetting_and_accepts_yes(monkeypatch
     out = capsys.readouterr().out
     assert code == 0
     assert "已识别为精准遗忘请求" in out
-    assert "候选正确时直接输入 yes 或 确认" in out
+    assert "输入 yes 或 确认执行" in out
     assert "已遗忘 1 条目标记忆" in out
+
+
+def test_interactive_shell_requires_selection_for_multiple_forget_candidates(
+    monkeypatch, tmp_path, capsys
+):
+    store = tmp_path / "memory.segment"
+    db = tmp_path / "memguard.sqlite3"
+    commands = iter([
+        "记住：蓝河项目部署目录是 /srv/blue-river。",
+        "记住：蓝河项目日志目录是 /var/log/blue-river。",
+        "忘掉蓝河项目",
+        "yes",
+        "选择第1条",
+        "yes",
+        "/exit",
+    ])
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(commands))
+
+    assert memguard.main([
+        "--store", str(store), "--db", str(db), "shell",
+    ]) == 0
+
+    out = capsys.readouterr().out
+    assert "检测到多条候选，尚未选择" in out
+    assert "已选择 1 条候选" in out
+    assert "已遗忘 1 条目标记忆" in out
+
+    service = memguard.MemGuardService(store, db)
+    try:
+        remaining = [row for row in service.list_memories() if "蓝河项目" in row["content"]]
+        assert len(remaining) == 1
+    finally:
+        service.close()
+
+
+def test_interactive_shell_can_explicitly_select_all_forget_candidates(
+    monkeypatch, tmp_path, capsys
+):
+    store = tmp_path / "memory.segment"
+    db = tmp_path / "memguard.sqlite3"
+    commands = iter([
+        "记住：蓝河项目部署目录是 /srv/blue-river。",
+        "记住：蓝河项目日志目录是 /var/log/blue-river。",
+        "忘掉蓝河项目",
+        "全部",
+        "确认",
+        "/exit",
+    ])
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(commands))
+
+    assert memguard.main([
+        "--store", str(store), "--db", str(db), "shell",
+    ]) == 0
+
+    out = capsys.readouterr().out
+    assert "已选择 2 条候选" in out
+    assert "已遗忘 2 条目标记忆" in out
 
 
 def test_interactive_shell_intercepts_forgetting_mistakenly_prefixed_with_run(monkeypatch, tmp_path, capsys):

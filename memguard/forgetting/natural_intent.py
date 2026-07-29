@@ -39,11 +39,12 @@ PREFERENCE_TOPIC_ALIASES = {
         "安全确认",
         "高风险安全策略",
     ),
-    "code_search_tool": ("查代码", "代码搜索", "rg", "grep", "ripgrep"),
-    "response_order": ("先给命令", "先给结论", "先命令后解释", "回答顺序"),
-    "response_language": ("中文回答", "用中文", "中文"),
-    "response_verbosity": ("简洁回答", "简短", "少废话"),
-    "test_runner_command": ("pytest", "测试命令", "单元测试"),
+    "code_search_tool": ("查代码", "代码搜索", "搜索工具", "rg", "grep", "ripgrep"),
+    "response_order": ("先给命令", "先给结论", "先命令后解释", "回答顺序", "输出顺序", "回复顺序"),
+    "response_language": ("中文回答", "英文回答", "用中文", "回答语言", "回复语言", "语言偏好"),
+    "response_verbosity": ("简洁回答", "详细回答", "简短", "少废话", "回答长度", "详细程度"),
+    "test_runner_command": ("pytest", "测试命令", "单元测试", "测试工具"),
+    "service_log_tool": ("journalctl", "服务日志", "日志工具", "日志命令"),
 }
 
 
@@ -299,6 +300,9 @@ class ErasureIntentCompiler:
             return "response_verbosity"
         if "测试命令" in target_text or "单元测试" in target_text:
             return "test_runner_command"
+        for canonical, aliases in PREFERENCE_TOPIC_ALIASES.items():
+            if any(alias.lower() in lowered for alias in aliases):
+                return canonical
         if "偏好" in target_text:
             return topic
         return ""

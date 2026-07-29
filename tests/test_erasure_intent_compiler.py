@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+import pytest
+
 from memguard.forgetting.natural_intent import ErasureIntentCompiler
 from memguard.service import MemGuardService
 
@@ -76,7 +78,12 @@ def test_compiler_stops_topic_before_counted_memory_phrase():
 
     assert result["topic"] == "journalctl"
     assert result["target_phrase"] == "journalctl"
-    assert result["topic_aliases"] == ["journalctl"]
+    assert result["topic_aliases"] == [
+        "journalctl",
+        "服务日志",
+        "日志工具",
+        "日志命令",
+    ]
 
 
 def test_compiler_exposes_plain_language_target_phrase_without_command_words():
@@ -167,6 +174,24 @@ def test_compiler_understands_natural_tool_habit_forgetting():
         assert result["preference_topic"] == "code_search_tool"
         assert result["normalized_preference_topic"] == "code_search_tool"
         assert result["requires_confirm"] is True
+
+
+@pytest.mark.parametrize(
+    ("text", "topic"),
+    [
+        ("忘掉回答语言偏好", "response_language"),
+        ("忘掉回复顺序偏好", "response_order"),
+        ("忘掉回答长度偏好", "response_verbosity"),
+        ("忘掉测试工具偏好", "test_runner_command"),
+        ("忘掉服务日志工具偏好", "service_log_tool"),
+    ],
+)
+def test_common_preference_topics_compile_to_structured_keys(text, topic):
+    result = compile_request(text)
+
+    assert result["memory_types"] == ["preference"]
+    assert result["preference_topic"] == topic
+    assert result["normalized_preference_topic"] == topic
 
 
 def test_service_exposes_intent_compiler_and_routes_to_agent_forgetting(tmp_path):

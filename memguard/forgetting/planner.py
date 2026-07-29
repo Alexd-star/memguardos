@@ -113,6 +113,20 @@ class ForgetPlanner:
         distinctive_keywords = [keyword for keyword in keywords if keyword not in GENERIC_MATCH_TERMS]
         corpus = list(records)
         ranked = self.retriever.rank(" ".join(keywords) or request, corpus, limit=limit)
+        ranked_ids = {str(record.get("memory_id") or "") for _, record in ranked}
+        if preference_topic:
+            for record in corpus:
+                memory_id = str(record.get("memory_id") or "")
+                if (
+                    memory_id
+                    and memory_id not in ranked_ids
+                    and preference_topic == str(record.get("preference_topic") or "")
+                ):
+                    # Structured topic identity is stronger than lexical
+                    # similarity. Keep it in the candidate pool even when the
+                    # user's Chinese label does not occur in the stored text.
+                    ranked.append((1.0, record))
+                    ranked_ids.add(memory_id)
         if not ranked:
             return []
         # 锚点判别度按全语料的文档频次计算；只统计已排序的 top-N 会因查询相关而有偏。
@@ -135,6 +149,11 @@ class ForgetPlanner:
                 continue
             matched = [keyword for keyword in keywords if keyword and keyword.lower() in text.lower()]
             matched_distinctive = [keyword for keyword in distinctive_keywords if keyword and keyword.lower() in text.lower()]
+            preference_topic_match = bool(preference_topic) and (
+                preference_topic == str(record.get("preference_topic") or "")
+                or preference_topic in text.lower()
+                or _preference_topic_matches(preference_topic, text)
+            )
             matched_aliases: List[str] = []
             if aliases:
                 matched_aliases = [
@@ -145,19 +164,14 @@ class ForgetPlanner:
                     for alias in matched_aliases
                     if alias not in matched_distinctive
                 )
-                if not matched_aliases and not _alias_fallback_passes(
+                if not matched_aliases and not preference_topic_match and not _alias_fallback_passes(
                     intent,
                     target_phrase,
                     text,
                 ):
                     continue
-            if not matched and not matched_aliases:
+            if not matched and not matched_aliases and not preference_topic_match:
                 continue
-            preference_topic_match = bool(preference_topic) and (
-                preference_topic == str(record.get("preference_topic") or "")
-                or preference_topic in text.lower()
-                or _preference_topic_matches(preference_topic, text)
-            )
             if preference_topic_match:
                 matched_distinctive.append(preference_topic)
             if distinctive_keywords and not matched_distinctive:
@@ -297,10 +311,11 @@ def _preference_topic_matches(preference_topic: str, text: str) -> bool:
     mapping = {
         "high_risk_confirmation": ["高风险命令", "危险操作", "二次确认", "安全策略"],
         "code_search_tool": ["代码搜索", "查代码", " rg", "grep", "ripgrep"],
-        "response_order": ["先给命令", "先给结论", "回答顺序"],
-        "response_language": ["中文回答", "用中文"],
-        "response_verbosity": ["简洁回答", "简短"],
-        "test_runner_command": ["pytest", "测试命令"],
+        "response_order": ["先给命令", "先给结论", "回答顺序", "输出顺序", "回复顺序"],
+        "response_language": ["中文回答", "英文回答", "用中文", "使用中文", "使用英文", "回答语言", "回复语言"],
+        "response_verbosity": ["简洁回答", "详细回答", "简短", "回答长度", "详细程度"],
+        "test_runner_command": ["pytest", "测试命令", "单元测试", "测试工具"],
+        "service_log_tool": ["journalctl", "服务日志", "日志工具", "日志命令"],
     }
     return any(marker.lower() in lowered for marker in mapping.get(preference_topic, []))
 

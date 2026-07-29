@@ -551,6 +551,11 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                     "request": request_text,
                     "confirm": bool(payload.get("confirm", False)),
                     "compact": bool(payload.get("compact", False)),
+                    "selected_memory_ids": (
+                        payload.get("selected_memory_ids")
+                        if isinstance(payload.get("selected_memory_ids"), list)
+                        else []
+                    ),
                 },
                 kind="forget",
                 identity={"request": request_text},
@@ -749,8 +754,62 @@ class _DashboardHandler(BaseHTTPRequestHandler):
             )
             return
 
+        execution_request = request
+        if kind == "forget":
+            current_memory_ids = [
+                item[len("memory:"):]
+                for item in current_ids
+                if item.startswith("memory:")
+            ]
+            raw_selected = request.get("selected_memory_ids")
+            selected_ids = (
+                list(dict.fromkeys(str(item).strip() for item in raw_selected if str(item).strip()))
+                if isinstance(raw_selected, list)
+                else []
+            )
+            if not current_memory_ids:
+                self._send_json(
+                    {
+                        "ok": False,
+                        "error": "forget_no_candidates",
+                        "message": "当前预览没有可遗忘候选，请调整条件后重新预览。",
+                    },
+                    status=409,
+                )
+                return
+            if not selected_ids and len(current_memory_ids) == 1:
+                selected_ids = list(current_memory_ids)
+            if not selected_ids:
+                self._send_json(
+                    {
+                        "ok": False,
+                        "error": "forget_selection_required",
+                        "message": "检测到多条候选，请先选择要遗忘的记忆。",
+                        "candidate_count": len(current_memory_ids),
+                    },
+                    status=409,
+                )
+                return
+            invalid_ids = [item for item in selected_ids if item not in current_memory_ids]
+            if invalid_ids:
+                self._send_json(
+                    {
+                        "ok": False,
+                        "error": "forget_selection_invalid",
+                        "message": "所选内容不属于本次预览，请重新预览后选择。",
+                    },
+                    status=409,
+                )
+                return
+            execution_request = {
+                "command": "forget_memory_ids",
+                "memory_ids": selected_ids,
+                "reason": str(request.get("request") or "user forget"),
+                "compact": bool(request.get("compact", True)),
+            }
+
         self._discard_preview_receipt(preview_token)
-        response = self._api_response(request)
+        response = self._api_response(execution_request)
         self._send_json(response, status=200 if response.get("ok") else 400)
 
     def _store_preview_receipt(
@@ -2542,15 +2601,41 @@ def _dashboard_html() -> str:
     function rememberForgetPreview(payload) {
       const result = (payload || {}).result || {};
       const count = Number(result.preview_candidate_count || 0);
+      const candidateIds = (result.candidates || []).map(item => String(item.memory_id || '')).filter(Boolean);
       forgetPreview = {
         request:forgetRequest.value,
         previewToken:String(result.preview_token || ''),
-        candidateCount:count
+        candidateCount:count,
+        candidateIds:candidateIds,
+        selectedIds:count === 1 ? candidateIds.slice(0, 1) : []
       };
-      forgetConfirmButton.disabled = !forgetPreview.previewToken || count < 1 || currentRoleRank < roleRanks.admin;
-      forgetConfirmButton.textContent = count > 0
-        ? '确认遗忘（候选数量：' + count + '）'
+      updateForgetSelectionState();
+    }
+    function updateForgetSelectionState() {
+      if (!forgetPreview) {
+        forgetConfirmButton.disabled = true;
+        forgetConfirmButton.textContent = '确认遗忘并整理存储';
+        return;
+      }
+      const selectedCount = (forgetPreview.selectedIds || []).length;
+      forgetConfirmButton.disabled = !forgetPreview.previewToken || selectedCount < 1 || currentRoleRank < roleRanks.admin;
+      forgetConfirmButton.textContent = forgetPreview.candidateCount > 0
+        ? '确认遗忘（已选 ' + selectedCount + ' 条）'
         : '没有可遗忘候选';
+    }
+    function toggleForgetCandidate(input) {
+      if (!forgetPreview) return;
+      const memoryId = String(input.dataset.forgetMemoryId || '');
+      const selected = new Set(forgetPreview.selectedIds || []);
+      if (input.checked) selected.add(memoryId); else selected.delete(memoryId);
+      forgetPreview.selectedIds = forgetPreview.candidateIds.filter(id => selected.has(id));
+      updateForgetSelectionState();
+    }
+    function selectAllForgetCandidates(selectAll) {
+      if (!forgetPreview) return;
+      forgetPreview.selectedIds = selectAll ? forgetPreview.candidateIds.slice() : [];
+      document.querySelectorAll('[data-forget-memory-id]').forEach(input => { input.checked = Boolean(selectAll); });
+      updateForgetSelectionState();
     }
     function rememberAgentForgetPreview(payload) {
       const result = (payload || {}).result || {};
@@ -2637,9 +2722,14 @@ def _dashboard_html() -> str:
         + '<div class="memory-id" title="' + esc(item.memory_id || '') + '">记忆编号 ' + esc(shortMemoryId(item.memory_id || '')) + '</div>'
         + '<div class="muted">' + esc(item.summary || item.memory_id) + '</div>'
         + '<div class="muted">匹配依据：' + esc((item.matched_keywords || []).join(', ') || '语义和作用域匹配') + '</div>'
-        + '<div class="mini-actions"><button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(item.memory_id || '') + '">查看记忆</button></div></div>'
+        + '<div class="mini-actions">'
+        + (!confirmed ? '<span class="secondary"><input type="checkbox" aria-label="选择候选记忆 ' + (idx + 1) + '" data-forget-memory-id="' + esc(item.memory_id || '') + '" onchange="toggleForgetCandidate(this)"' + (candidates.length === 1 ? ' checked' : '') + '> 选择此记忆</span>' : '')
+        + '<button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(item.memory_id || '') + '">查看记忆</button></div></div>'
       ).join('') : (confirmed ? '' : '<div class="empty-state"><strong>未发现候选</strong><span>可以换用更具体的主题、项目名称或时间范围。</span></div>');
-      document.getElementById('forgetCards').innerHTML = candidateHtml + renderVerificationReport(plan.verification_report);
+      const selectionTools = !confirmed && candidates.length > 1
+        ? '<div class="actions" style="margin-bottom:10px"><button class="secondary" onclick="selectAllForgetCandidates(true)">全选候选</button><button class="secondary" onclick="selectAllForgetCandidates(false)">清空选择</button><span class="muted">请只选择确实需要遗忘的内容。</span></div>'
+        : '';
+      document.getElementById('forgetCards').innerHTML = selectionTools + candidateHtml + renderVerificationReport(plan.verification_report);
     }
     function renderVerificationReport(report) {
       if (!report) return '';
@@ -3501,14 +3591,15 @@ def _dashboard_html() -> str:
         return null;
       }
       if (confirmForget && !window.confirm(
-        '确认遗忘本次预览的 ' + forgetPreview.candidateCount
-        + ' 条候选记忆并整理存储文件？'
+        '确认遗忘已选择的 ' + forgetPreview.selectedIds.length
+        + ' 条记忆并整理存储文件？未选择的候选将继续保留。'
       )) return null;
       return withMutation(event, '精准遗忘', async () => {
         const payload = await postJson('/api/forget', {
           request: forgetRequest.value,
           confirm: confirmForget,
           compact: confirmForget,
+          selected_memory_ids:confirmForget ? forgetPreview.selectedIds : [],
           preview_token:confirmForget ? forgetPreview.previewToken : ''
         });
         renderForgetCards(payload, confirmForget);
