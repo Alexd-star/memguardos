@@ -83,9 +83,10 @@ def test_sensitive_cli_feedback_is_user_readable(tmp_path, capsys):
     assert "sensitive_block" not in output
 
 
-def test_video_preflight_accepts_verified_revision_file(tmp_path):
+def test_video_preflight_accepts_verified_revision_file(tmp_path, monkeypatch):
     revision = "a" * 40
     (tmp_path / ".source_revision").write_text(revision + "\n", encoding="utf-8")
+    monkeypatch.delenv("MEMGUARD_SOURCE_REVISION", raising=False)
 
     assert _source_revision(tmp_path) == (revision, "revision_file")
 

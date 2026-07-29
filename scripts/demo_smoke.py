@@ -25,7 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    args = build_parser().parse_args([] if argv is None else argv)
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         service = MemGuardService(store_path=root / "memory.segment", db_path=root / "memguard.sqlite3")
