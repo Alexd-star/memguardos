@@ -1174,6 +1174,17 @@ def _dashboard_html() -> str:
     .timeline-row.forgotten .timeline-dot { background:var(--faint); }
     .timeline-meta { margin-bottom:3px; font-size:12px; color:var(--muted); }
     .timeline-body { padding-bottom:10px; border-bottom:1px solid #edf1f6; line-height:1.6; word-break:break-word; font-size:13px; }
+    .session-list { display:grid; gap:10px; }
+    .session-group { border:1px solid var(--line); border-radius:8px; background:#fff; overflow:hidden; }
+    .session-group > summary { display:flex; align-items:center; gap:12px; min-height:58px; padding:10px 14px; cursor:pointer; list-style:none; }
+    .session-group > summary::-webkit-details-marker { display:none; }
+    .session-group > summary::before { content:'›'; color:var(--muted); font-size:20px; line-height:1; transition:transform .16s ease; }
+    .session-group[open] > summary::before { transform:rotate(90deg); }
+    .session-title { min-width:0; flex:1; }
+    .session-title strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; }
+    .session-title span { display:block; margin-top:3px; color:var(--muted); font-size:12px; }
+    .session-body { padding:2px 14px 4px; border-top:1px solid var(--line); }
+    .session-body .timeline { margin-top:12px; }
     .stage-columns { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
     .stage-column { min-width:0; padding:12px; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:0 0 var(--radius-sm) var(--radius-sm); background:var(--panel); }
     .stage-column h3 { margin:0 0 6px; font-size:14px; }
@@ -1498,7 +1509,7 @@ def _dashboard_html() -> str:
         </div>
         <div id="agentMetrics" class="grid four" style="margin-top:14px"></div>
         <div class="grid two" style="margin-top:14px">
-          <div class="panel"><div class="health"><div class="item-title">交互记录</div></div><div id="agentTimeline" class="timeline" style="margin-top:12px"></div></div>
+          <div class="panel"><div class="health"><div><div class="item-title">最近会话</div><div class="muted">按任务归组，展开后查看用户请求、实际操作和最终答复</div></div></div><div id="agentTimeline" class="session-list" style="margin-top:12px"></div></div>
           <div class="panel"><div class="health"><div class="item-title">偏好依据</div></div><div id="agentPreferences" class="list" style="margin-top:12px"></div></div>
         </div>
         <div class="panel" style="margin-top:14px"><div class="item-title">三阶段上下文对比</div><div id="agentContexts" class="stage-columns" style="margin-top:12px"></div></div>
@@ -2182,6 +2193,11 @@ def _dashboard_html() -> str:
       const event = item || {};
       if (event.forgotten)
         return '该内容已完成遗忘，仅保留不可还原的核验信息。';
+      if (event.event_type === 'tool_action') {
+        const command = String(event.command || '').trim();
+        const state = Number(event.exit_code || 0) === 0 ? '执行成功' : '执行未完成';
+        return state + (command ? '：' + command : '。');
+      }
       if (event.event_type === 'tool_call') {
         const args = event.tool_args && typeof event.tool_args === 'object' ? event.tool_args : {};
         const command = String(args.command || '').trim();
@@ -2199,16 +2215,78 @@ def _dashboard_html() -> str:
     function agentTimelineMarkup(items) {
       return items.map(item => {
         const classes = ['timeline-row'];
-        if (item.event_type === 'tool_call' || item.event_type === 'tool_result') classes.push('tool');
+        if (item.event_type === 'tool_call' || item.event_type === 'tool_result' || item.event_type === 'tool_action') classes.push('tool');
         if (item.forgotten) classes.push('forgotten');
         const body = formatAgentEventBody(item);
         const displayBody = body.length > 360 ? body.slice(0, 360) + '…' : body;
-        const session = String(item.session_id || '').trim();
-        const sessionLabel = session ? ' · 会话 ' + shortMemoryId(session) : '';
         return '<div class="' + classes.join(' ') + '"><span class="timeline-dot"></span>'
-          + '<div class="timeline-meta">第 ' + esc(item.sequence) + ' 步 · ' + esc(eventRoleLabel(item.role)) + ' · ' + esc(eventTypeLabel(item.event_type)) + esc(sessionLabel) + '</div>'
+          + '<div class="timeline-meta">' + esc(eventRoleLabel(item.role)) + ' · ' + esc(item.event_type === 'tool_action' ? '实际操作' : eventTypeLabel(item.event_type)) + '</div>'
           + '<div class="timeline-body">' + esc(displayBody) + '</div></div>';
       }).join('');
+    }
+    function visibleSessionEvents(events) {
+      const ordered = events.slice().sort((left, right) =>
+        Number(left.sequence || 0) - Number(right.sequence || 0)
+          || String(left.timestamp || '').localeCompare(String(right.timestamp || ''))
+      );
+      const visible = [];
+      const hasAssistantReply = ordered.some(item => item.event_type === 'assistant_message');
+      ordered.forEach((item, index) => {
+        if (item.event_type === 'policy_decision' || item.event_type === 'system_message' || item.event_type === 'tool_result') return;
+        if (item.event_type === 'tool_call') {
+          const toolName = String(item.tool_name || '');
+          const result = ordered.slice(index + 1).find(candidate =>
+            candidate.event_type === 'tool_result' && String(candidate.tool_name || '') === toolName
+          );
+          if (toolName === 'finish') {
+            if (!hasAssistantReply && result && Number(result.exit_code || 0) === 0) {
+              visible.push({event_type:'assistant_message', role:'assistant', content:String(result.tool_result || (item.tool_args || {}).message || ''), sequence:item.sequence});
+            }
+            return;
+          }
+          visible.push({
+            event_type:'tool_action', role:'tool', sequence:item.sequence,
+            command:String(((item.tool_args || {}).command) || ''),
+            exit_code:result ? result.exit_code : 1
+          });
+          return;
+        }
+        if (item.event_type === 'user_message' || item.event_type === 'assistant_message') visible.push(item);
+      });
+      return visible;
+    }
+    function sessionStatus(events) {
+      const completed = events.some(item => item.event_type === 'assistant_message')
+        || events.some(item => item.event_type === 'tool_result' && item.tool_name === 'finish' && Number(item.exit_code || 0) === 0);
+      if (completed) return {label:'已完成', css:'ok'};
+      const failed = events.some(item => item.event_type === 'tool_result' && Number(item.exit_code || 0) !== 0);
+      return failed ? {label:'需要处理', css:'bad'} : {label:'进行中', css:'warn'};
+    }
+    function agentSessionMarkup(items) {
+      const sessions = new Map();
+      items.forEach(item => {
+        const id = String(item.session_id || '未分配会话');
+        if (!sessions.has(id)) sessions.set(id, []);
+        sessions.get(id).push(item);
+      });
+      const groups = Array.from(sessions.entries()).map(([id, events]) => {
+        const ordered = events.slice().sort((left, right) => String(left.timestamp || '').localeCompare(String(right.timestamp || '')));
+        const userEvent = ordered.find(item => item.event_type === 'user_message');
+        const task = String((userEvent || {}).content || 'Agent 交互任务').trim();
+        return {id, events:ordered, task, latest:String((ordered[ordered.length - 1] || {}).timestamp || '')};
+      }).sort((left, right) => right.latest.localeCompare(left.latest));
+      const shown = groups.slice(0, 4);
+      const markup = shown.map((group, index) => {
+        const status = sessionStatus(group.events);
+        const visible = visibleSessionEvents(group.events);
+        const title = group.task.length > 52 ? group.task.slice(0, 52) + '…' : group.task;
+        return '<details class="session-group"' + (index === 0 ? ' open' : '') + '><summary>'
+          + '<div class="session-title"><strong>' + esc(title) + '</strong><span>会话 ' + esc(shortMemoryId(group.id)) + ' · ' + esc(visible.length) + ' 项可见记录</span></div>'
+          + '<span class="badge ' + status.css + '">' + status.label + '</span></summary>'
+          + '<div class="session-body"><div class="timeline">' + agentTimelineMarkup(visible) + '</div></div></details>';
+      }).join('');
+      const older = groups.length - shown.length;
+      return markup + (older > 0 ? '<div class="muted" style="padding:4px 2px">另有 ' + esc(older) + ' 个较早会话，可通过会话编号筛选查看。</div>' : '');
     }
     function topicLabel(value) {
       const labels = {
@@ -2579,16 +2657,9 @@ def _dashboard_html() -> str:
       document.getElementById('agentMetrics').innerHTML = metricItems.map(([name,value]) =>
         '<div class="panel"><div class="muted">' + esc(name) + '</div><div class="metric">' + esc(value) + '</div></div>'
       ).join('');
-      const timeline = (result.timeline || []).slice().sort((left, right) =>
-        String(left.timestamp || '').localeCompare(String(right.timestamp || ''))
-      );
-      const recentTimeline = timeline.slice(-8);
-      const olderTimeline = timeline.slice(0, Math.max(0, timeline.length - recentTimeline.length));
+      const timeline = (result.timeline || []).slice();
       document.getElementById('agentTimeline').innerHTML = timeline.length
-        ? agentTimelineMarkup(recentTimeline)
-          + (olderTimeline.length
-            ? '<details class="more-results"><summary>查看较早的 ' + esc(olderTimeline.length) + ' 条记录</summary><div style="margin-top:12px">' + agentTimelineMarkup(olderTimeline) + '</div></details>'
-            : '')
+        ? agentSessionMarkup(timeline)
         : '<div class="muted">当前筛选范围内没有 Agent 交互记录。</div>';
       const preferences = result.preference_aggregates || [];
       document.getElementById('agentPreferences').innerHTML = preferences.length ? preferences.map(item =>

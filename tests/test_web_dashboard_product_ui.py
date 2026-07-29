@@ -69,6 +69,18 @@ def test_dashboard_uses_available_desktop_width_without_unbounded_ultrawide_stre
     assert "max-width:1180px;" not in page
 
 
+def test_agent_history_is_grouped_by_session_and_hides_internal_policy_rows():
+    page = _dashboard_html()
+
+    assert "最近会话" in page
+    assert "function agentSessionMarkup(items)" in page
+    assert "function visibleSessionEvents(events)" in page
+    assert "function sessionStatus(events)" in page
+    assert "item.event_type === 'policy_decision'" in page
+    assert "实际操作" in page
+    assert "已完成" in page
+
+
 def test_dashboard_operations_have_user_feedback_without_debug_timestamps():
     page = _dashboard_html()
 
