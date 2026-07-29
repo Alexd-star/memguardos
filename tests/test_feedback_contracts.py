@@ -95,6 +95,33 @@ def test_merged_memory_change_summary_deduplicates_same_memory_id():
     assert merged["new_memories"] == [item]
 
 
+def test_procedural_feedback_uses_readable_command_summary():
+    summary = build_memory_change_summary(
+        {
+            "stored": True,
+            "record": {
+                "memory_id": "mem-procedure-readable",
+                "type": "procedure",
+                "subtype": "procedural_trace",
+                "tier": "session",
+                "scope": "demo",
+                "summary": "知识记忆：Tool result: command=grep -R -n target . status=success",
+                "content": (
+                    "Tool result: command=grep -R -n target . status=success exit_code=0 "
+                    "cwd=/home/luo/memguardos duration_ms=0.000 stdout_summary=memguard/service.py:1"
+                ),
+            },
+        }
+    )
+
+    item = summary.to_dict()["new_memories"][0]
+    assert item["category_label"] == "操作经验"
+    assert item["summary_for_user"] == (
+        "已验证操作：grep -R -n target .，执行成功；可在同类任务中作为经验参考。"
+    )
+    assert "Tool result" not in item["summary_for_user"]
+
+
 def test_sensitive_block_notice_proves_not_stored_or_entered_rag():
     notice = build_sensitive_block_notice(
         {

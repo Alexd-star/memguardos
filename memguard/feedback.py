@@ -459,6 +459,8 @@ def _memory_item(record: Any, result: Mapping[str, Any]) -> dict[str, Any]:
 def memory_summary_for_user(row: Mapping[str, Any]) -> str:
     topic = str(row.get("preference_topic") or "")
     value = str(row.get("preference_value") or "")
+    subtype = str(row.get("subtype") or "")
+    memory_type = str(row.get("type") or "")
     parsed_scope = ""
     if not topic or not value:
         raw_summary = " ".join(str(row.get("summary") or row.get("content") or "").split())
@@ -499,6 +501,22 @@ def memory_summary_for_user(row: Mapping[str, Any]) -> str:
         if topic == "high_risk_confirmation":
             return "安全策略：高风险操作必须先获得确认，适用于%s。" % scope_label
         return "交互偏好：%s 为 %s，适用于%s。" % (topic, value, scope_label)
+    if memory_type == "procedure" or subtype in {
+        "procedural",
+        "procedural_trace",
+        "tool_failure_case",
+        "workflow",
+    }:
+        raw_content = " ".join(str(row.get("content") or row.get("summary") or "").split())
+        tool_result = re.search(
+            r"Tool result:\s*command=(?P<command>.+?)\s+status=(?P<status>success|failure)\b",
+            raw_content,
+            flags=re.IGNORECASE,
+        )
+        if tool_result:
+            command = tool_result.group("command").strip()
+            status = "执行成功" if tool_result.group("status").lower() == "success" else "执行未成功"
+            return "已验证操作：%s，%s；可在同类任务中作为经验参考。" % (command[:180], status)
     summary = str(row.get("summary") or row.get("content") or "").strip()
     return " ".join(summary.split())[:240] or "已形成一条受控记忆。"
 
