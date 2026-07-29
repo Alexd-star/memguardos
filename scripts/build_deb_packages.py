@@ -68,6 +68,7 @@ def build_package_plan(version: str, architecture: str, multiarch: str) -> Dict[
                 "/lib/systemd/system/memguard-agent@.service",
                 "/usr/lib/memguardos/memguardos-agent-launcher.sh",
                 "/usr/bin/memguard-agent-showcase",
+                "/usr/bin/memguard-agent-setup",
                 "/opt/memguardos/scripts/memguard_agent_bridge.py",
             ],
         },
@@ -206,6 +207,11 @@ class DebianPackageBuilder:
         self._copy_file(
             self.root / "scripts/memguard-agent-showcase.sh",
             stage / "usr/bin/memguard-agent-showcase",
+            executable=True,
+        )
+        self._copy_file(
+            self.root / "scripts/install_agent_extras_openkylin.sh",
+            stage / "usr/bin/memguard-agent-setup",
             executable=True,
         )
         for name in ("memguard_agent_bridge.py", "run_openhands_memguard_demo.py", "run_openhands_behavior_suite.py"):
@@ -385,7 +391,13 @@ class DebianPackageBuilder:
     def _write_wrapper(path: Path, module: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
-            "#!/bin/sh\nexport PYTHONPATH=/opt/memguardos${PYTHONPATH:+:$PYTHONPATH}\nexec /usr/bin/python3 -m " + module + ' "$@"\n',
+            "#!/bin/sh\n"
+            "set -eu\n"
+            "export PYTHONPATH=/opt/memguardos${PYTHONPATH:+:$PYTHONPATH}\n"
+            "export PYTHONNOUSERSITE=1\n"
+            "unset PYTHONHOME\n"
+            "cd /opt/memguardos\n"
+            "exec /usr/bin/python3 -m " + module + ' "$@"\n',
             encoding="utf-8",
         )
         path.chmod(0o755)

@@ -114,6 +114,7 @@ def test_split_debian_package_plan_has_enterprise_ownership_boundaries():
     assert "/lib/systemd/system/memguard-agent@.service" in plan["memguardos-agent-bridge"]["files"]
     assert "/usr/lib/memguardos/memguardos-agent-launcher.sh" in plan["memguardos-agent-bridge"]["files"]
     assert "/usr/bin/memguard-agent-showcase" in plan["memguardos-agent-bridge"]["files"]
+    assert "/usr/bin/memguard-agent-setup" in plan["memguardos-agent-bridge"]["files"]
     assert "/usr/share/doc/memguardos-doc/README.md" in plan["memguardos-doc"]["files"]
     assert validate_no_overlap(plan) == []
     assert (ROOT / "scripts/verify_deb_lifecycle.sh").exists()
@@ -153,11 +154,45 @@ def test_debian_package_set_has_real_apt_install_gate():
     assert "install_deb_package_set.sh --no-build" in collector
 
 
-def test_agent_showcase_prefers_current_user_source_tree_over_installed_copy():
+def test_agent_showcase_prefers_installed_product_and_guides_first_run_setup():
     launcher = (ROOT / "scripts/memguard-agent-showcase.sh").read_text(encoding="utf-8")
-    assert 'for candidate in "${HOME}/memguardos" /opt/memguardos' in launcher
+    assert 'for candidate in /opt/memguardos "${HOME}/memguardos"' in launcher
+    assert "memguard-agent-setup" in launcher
+    assert "agent-venv/bin/python" in launcher
+    assert 'WORKSPACE="$(cd "${WORKSPACE}" && pwd -P)"' in launcher
+    assert 'cd "${SOURCE_ROOT}"' in launcher
+    assert "export PYTHONNOUSERSITE=1" in launcher
     assert "OPENHANDS_SUPPRESS_BANNER=1" in launcher
     assert "LITELLM_LOCAL_MODEL_COST_MAP=True" in launcher
+
+
+def test_installed_python_wrappers_are_isolated_from_callers_working_directory(tmp_path):
+    builder = DebianPackageBuilder(
+        root=ROOT,
+        output_dir=tmp_path / "dist",
+        build_root=tmp_path / "build",
+        version="0.1.0-2",
+        architecture="amd64",
+        multiarch="x86_64-linux-gnu",
+    )
+    wrapper = tmp_path / "memguard"
+    builder._write_wrapper(wrapper, "memguard.cli.memguard")
+    content = wrapper.read_text(encoding="utf-8")
+
+    assert "export PYTHONPATH=/opt/memguardos" in content
+    assert "export PYTHONNOUSERSITE=1" in content
+    assert "unset PYTHONHOME" in content
+    assert "cd /opt/memguardos" in content
+    assert "python3 -m memguard.cli.memguard" in content
+
+
+def test_agent_setup_supports_installed_product_and_user_scoped_runtime():
+    setup = (ROOT / "scripts/install_agent_extras_openkylin.sh").read_text(encoding="utf-8")
+
+    assert "PROJECT_ROOT=/opt/memguardos" in setup
+    assert "XDG_DATA_HOME" in setup
+    assert "python3.12 python3" in setup
+    assert "memguard-agent-showcase [工作目录]" in setup
 
 
 def test_agent_bridge_package_migrates_only_the_known_legacy_systemd_copy(tmp_path):

@@ -21,20 +21,19 @@ MemGuardOS 不修改 OpenHands 核心源码。适配层位于 `memguard/integrat
 
 ## 1.1 一键进入真实 Agent 记忆工作台
 
-源码部署或比赛演示环境中，推荐直接运行：
+五包安装后，第一次使用真实 Agent 时运行：
 
 ```bash
-cd "$HOME/memguardos"
-bash scripts/memguard-agent-showcase.sh
+memguard-agent-setup
 ```
 
-五包安装后的对应入口为：
+以后可以从任意目录启动，并把需要 Agent 操作的目录作为参数传入：
 
 ```bash
-memguard-agent-showcase
+memguard-agent-showcase "$HOME/要操作的项目"
 ```
 
-启动器会优先使用当前用户目录中的 MemGuardOS 源码和 `.venv-agent`，没有开发目录时再使用 `/opt/memguardos` 安装副本；它会自动读取 `~/.config/memguardos/` 下权限为 `600` 的模型配置，关闭 OpenHands 调试横幅，并进入带 `/guide`、`/memory on|off`、`/run` 和 `/forget` 的中文工作台。模型凭据不会写入项目目录、Git 或演示输出。需要直接录制两轮对照时，可运行 `memguard --model <模型> compare-live "<任务>"`。
+启动器优先使用 `/opt/memguardos` 中经过安装包管理的程序，并从用户数据目录加载独立的 OpenHands 运行环境；源码开发目录只作为未安装产品时的后备。它会自动读取 `~/.config/memguardos/` 下权限为 `600` 的模型配置，关闭 OpenHands 调试横幅，并进入带 `/guide`、`/memory on|off`、`/run` 和 `/forget` 的中文工作台。用户不需要执行 `cd ~/memguardos`，模型凭据也不会写入项目目录、Git 或演示输出。需要直接录制两轮对照时，可运行 `memguard --model <模型> compare-live "<任务>"`。
 
 ## 2. 主要组件
 
@@ -52,7 +51,13 @@ memguard-agent-showcase
 
 ## 3. 安装可选 Agent 环境
 
-核心 MemGuardOS 不依赖 OpenHands。只有需要运行真实 Agent 闭环时才安装可选环境：
+核心 MemGuardOS 不依赖 OpenHands。只有需要运行真实 Agent 闭环时才安装可选环境。产品安装用户执行：
+
+```bash
+memguard-agent-setup
+```
+
+该命令使用 Python 3.12 或更高版本，在 `~/.local/share/memguardos/agent-venv` 创建用户级运行环境，不修改系统 Python。源码开发者也可以显式传入项目目录，继续使用仓库内虚拟环境：
 
 ```bash
 cd ~/memguardos

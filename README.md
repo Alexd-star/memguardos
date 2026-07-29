@@ -135,7 +135,7 @@ MemGuardOS 将“记住、用好、忘干净”串成一个可验证的本地闭
 |---|---|---|
 | openKylin 普通用户 | UKUI“记忆安全中心”、系统托盘 | 查看服务状态、最近学习内容、偏好、通知和遗忘结果 |
 | 文件管理用户 | Peony 右键“检查记忆内容” | 扫描一个或多个文件，预览候选和敏感风险，确认后导入 |
-| Agent 使用者 | `memguard shell` | 用自然语言运行真实 Agent，切换记忆开关，观察学习和复用 |
+| Agent 使用者 | `memguard-agent-showcase` | 用自然语言运行真实 Agent，切换记忆开关，观察学习和复用 |
 | 本机管理员 | Web 工作台“系统维护”、`memctl` | 校验审计链、SDK、systemd、cgroup、安全策略和诊断包 |
 | Agent 开发者 | Python API、JSON/JSONL、Unix socket | 写入标准事件、构建上下文、执行遗忘和读取审计结果 |
 
@@ -195,7 +195,7 @@ systemctl status memguardd --no-pager
 memguard status
 ```
 
-也可以从源码执行：
+安装完成后，`memguardd` 会由 systemd 自动启动并设置为开机运行。日常使用不需要进入源码目录，也不需要手动启动服务；`memguard`、`memctl` 和桌面入口可从任意工作目录使用。也可以从源码执行：
 
 ```bash
 sudo bash scripts/install_openkylin.sh "$(pwd)"
@@ -219,12 +219,19 @@ MemGuardOS 不要求 Agent 使用特定界面。接入方只需发送统一事�
 
 ### 使用 OpenHands 运行自然语言任务
 
-安装可选依赖并按 [Agent 接入指南](docs/agent-integration.md) 配置模型后：
+OpenHands 是运行自然语言 Agent 的可选适配器，不影响本地记忆管理、文件扫描、检索、遗忘和审计。五包安装后，首次使用真实 Agent 时执行一次：
 
 ```bash
-python -m pip install -e ".[agent-openhands]"
-memguard --workspace "$(pwd)" --model "<模型名称>" shell
+memguard-agent-setup
 ```
+
+配置模型后，可以在任意目录指定 Agent 的工作区，无需手动进入 MemGuardOS 源码目录：
+
+```bash
+memguard-agent-showcase "$HOME/要操作的项目"
+```
+
+启动原版 OpenHands 不会自动接入 MemGuardOS；应通过上述入口启动，或为其他 Agent 实现标准事件与上下文适配层。源码开发环境也可直接使用 `memguard --workspace "$(pwd)" --model "<模型名称>" shell`。
 
 交互工作台内可以完成一轮清晰的记忆效果对照：
 
