@@ -12,6 +12,11 @@
 ![Tests](https://img.shields.io/badge/openKylin%20tests-705%20passed-138A72)
 ![License](https://img.shields.io/badge/License-MIT-4B5563)
 
+[![CI](https://github.com/Alexd-star/memguardos/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Alexd-star/memguardos/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Alexd-star/memguardos?label=release&color=6C5CE7)](https://github.com/Alexd-star/memguardos/releases/latest)
+![Debian packages](https://img.shields.io/badge/Debian%20packages-5-DB4B4B)
+![No GPU required](https://img.shields.io/badge/GPU-not%20required-546E7A)
+
 ![Local First](https://img.shields.io/badge/Local--first-memory%20stays%20on%20device-168A72)
 ![Precise Forgetting](https://img.shields.io/badge/Precise%20forgetting-preview%20%2B%20verify-D97706)
 ![Agent Event](https://img.shields.io/badge/AgentEvent-open%20integration%20contract-7C3AED)
@@ -23,6 +28,15 @@
 MemGuardOS 是部署在本机的 OS Agent 记忆层。它接收用户与 Agent 的交互事件，提取长期偏好、知识和工具经验，在下一次任务中按需提供上下文；当用户要求遗忘时，系统先展示候选和影响范围，再清理受管存储、检索索引、图谱、缓存和段文件中的目标内容。
 
 系统默认离线运行，不要求 GPU，也不会把原始记忆上传到云端。openKylin 用户可以从 UKUI 系统设置、Peony 文件右键菜单、系统托盘和本地工作台使用；Agent 开发者可以通过 Python API、标准事件 JSON、JSONL 或 Unix socket 接入。
+
+<table>
+  <tr>
+    <td align="center" width="25%"><b>真实 Agent 复用</b><br>新会话自动采用工具与回答偏好，并记录实际行为证明</td>
+    <td align="center" width="25%"><b>精准遗忘闭环</b><br>自然语言预览、编号确认、多检索表面清理与残留复核</td>
+    <td align="center" width="25%"><b>端侧高效检索</b><br>10k 记忆负载 P95 10.105 ms，支持延迟预算与透明回退</td>
+    <td align="center" width="25%"><b>openKylin 原生交付</b><br>UKUI、Peony、托盘、系统服务与五包安装链路</td>
+  </tr>
+</table>
 
 <table>
   <tr>
@@ -77,14 +91,14 @@ flowchart LR
 
 <table>
   <tr>
-    <td align="center" width="33%">🧠<br><b>交互记忆提取</b><br>从用户纠正、工具调用和执行结果中沉淀长期经验</td>
-    <td align="center" width="33%">⚡<br><b>多信号混合检索</b><br>融合 FTS、向量、图谱、时间和工具行为信号</td>
-    <td align="center" width="33%">🎯<br><b>三阶段上下文</b><br>分别服务 Agent 的规划、工具选择和回答生成</td>
+    <td align="center" width="33%">🧠<br><b>交互记忆提取</b><br>统一 AgentEvent 承载用户纠正、工具调用与执行结果，形成偏好、知识和程序性经验</td>
+    <td align="center" width="33%">⚡<br><b>多信号混合检索</b><br>融合 FTS、向量、图谱、时间、来源和工具行为信号，并受端侧延迟预算约束</td>
+    <td align="center" width="33%">🎯<br><b>三阶段上下文</b><br>为规划、工具选择和回答生成分别检索，按 token 预算过滤无关记忆</td>
   </tr>
   <tr>
-    <td align="center">🧹<br><b>可验证精准遗忘</b><br>先预览影响，再清理全部受管检索表面并验证残留</td>
-    <td align="center">🔐<br><b>本地敏感治理</b><br>凭据写入前阻断，个人信息脱敏，来源全程可追溯</td>
-    <td align="center">🐧<br><b>openKylin 原生交付</b><br>UKUI、Peony、托盘、systemd、cgroup 与五个 Debian 包</td>
+    <td align="center">🧹<br><b>可验证精准遗忘</b><br>自然语言生成 ErasurePlan，先看候选和影响，再清理正文、索引、图谱与缓存</td>
+    <td align="center">🔐<br><b>本地敏感治理</b><br>凭据写入前阻断，个人信息脱敏，来源、版本、使用和遗忘过程均可审计</td>
+    <td align="center">🐧<br><b>openKylin 原生交付</b><br>UKUI、Peony、托盘、systemd、cgroup、Polkit 与五个 Debian 包协同工作</td>
   </tr>
 </table>
 
@@ -110,9 +124,9 @@ MemGuardOS 将“记住、用好、忘干净”串成一个可验证的本地闭
 1. 用户告诉 Agent：“以后搜索代码优先使用 `rg`，回答先给结论。”
 2. MemGuardOS 将用户消息归一化为标准事件，提取“搜索工具偏好”和“回答格式偏好”。
 3. 用户开启新会话，只描述任务，不再重复上述偏好。
-4. Agent 在规划和工具选择前收到与当前任务相关的记忆，优先调用 `rg`，并按偏好组织答复。
-5. 用户提出“忘掉搜索工具偏好”，系统先列出候选，确认后只删除工具偏好，回答格式偏好仍保留。
-6. 再次执行任务时，已遗忘偏好不再进入检索和上下文；审计记录可以说明发生了什么。
+4. Agent 在规划和工具选择前收到与当前任务相关的记忆，优先调用 `rg`，并按偏好组织答复；系统同时记录采用的记忆、实际命令和偏好遵循结果。
+5. 用户提出“忘掉搜索工具偏好”，系统先列出候选、记忆编号和匹配依据，确认后只删除工具偏好，回答格式偏好仍保留。
+6. 系统继续复核主记录、FTS、图谱、向量与结果缓存、追加式段文件和 Agent 上下文；再次执行任务时，已遗忘偏好不再参与生成，审计链保留必要的操作证明。
 
 <a id="核心能力"></a>
 
@@ -397,12 +411,12 @@ flowchart TB
 | 验证层 | 数据与环境 | 代表性结果 | 证据入口 |
 |---|---|---|---|
 | openKylin 回归测试 | openKylin 2.0 SP2 实机 | `705 passed, 1 skipped` | [实机 pytest 摘要](docs/evidence/openkylin/pytest_openkylin.txt) |
-| 通用功能 | 217 条可复现种子与用例 | Recall@5、跨语言 Recall@5、敏感阻断 F1、遗忘候选精确率与召回率均为 1.0000 | [测试与评测](docs/testing.md) |
+| 通用功能 | 217 条可复现种子与用例 | Recall@5、跨语言 Recall@5、敏感阻断 F1 与遗忘候选召回率为 1.0000；遗忘候选精确率为 0.9425 | [测试与评测](docs/testing.md) |
 | Agent 交互专项 | 200 条，其中 60 条匿名化真实风格、140 条合成边界样例 | 跨会话偏好遵循率 1.0000，敏感泄漏率 0，P95 113.966 ms | [Agent 证据](docs/evidence/agent/) |
 | 真实 OpenHands | 基础 12 次、扩展 8 次、留出 8 次 | 28 次运行均保留上下文、工具事件与结果记录 | [真实 Agent 说明](docs/testing.md#6-记忆价值实验) |
 | openKylin 10k 负载 | 10,000 条记忆、150 次查询 | P95 10.105 ms，P99 75.255 ms，RSS 低于 256 MB 目标 | [性能证据](docs/evidence/performance_latest/) |
 | 检索 v2 三轮 | openKylin、1,000 条、120 次查询、6 worker | 三轮 Recall@5 均为 1.0000；质量路径和并发路径 P99 均低于 500 ms | [三轮门禁摘要](docs/evidence/openkylin/retrieval_v2.txt) |
-| 发布门禁 | 代码、文档、证据、五包、SBOM、安全扫描与哈希 | 140/140 通过，Warning count 为 0 | [证据索引](docs/evidence/README.md) |
+| 持续集成与发布门禁 | Python 3.10、3.11、3.12 | 编译、静态检查、完整测试、隔离安装、文档链接、安全扫描、Web 烟测、评测与提交包复验全部通过 | [GitHub Actions](https://github.com/Alexd-star/memguardos/actions/workflows/ci.yml) |
 
 这些结果能够证明指定数据集和 openKylin 环境中的功能正确性、检索质量、延迟和交付完整性；它们不能证明所有模型、开放表达、硬件或外部 Agent 都必然得到相同结果。`Recall@5` 只判断目标记忆是否进入前五，不等同于最终回答质量；真实 Agent 效果应结合工具调用、任务完成和偏好遵循一起判断。
 
@@ -415,6 +429,10 @@ python -m pytest -q
 python scripts/check_docs_links.py
 python scripts/check_metric_consistency.py
 python scripts/web_dashboard_smoke.py
+python scripts/smoke_python_distribution.py
+python scripts/package_submission.py
+python scripts/inspect_submission_package.py
+python scripts/smoke_submission_archive.py
 ```
 
 量化评测、openKylin 原生采集、发布包审计和每个指标的含义见 [测试与评测](docs/testing.md)。
