@@ -2,7 +2,7 @@
   "schema": "memguardos-sbom-v1",
   "name": "memguardos",
   "version": "1.0.0",
-  "generated_at": "2026-07-29T17:47:01+00:00",
+  "generated_at": "2026-07-29T17:53:27+00:00",
   "source": {
     "root": "project-root",
     "license": "MIT License",
@@ -32,8 +32,8 @@
     {
       "path": "pyproject.toml",
       "present": true,
-      "sha256": "472f7aaec025e41fd45d79eb061c4aa26968eb5d64256d1096752ca2614a1993",
-      "bytes": 1841
+      "sha256": "967570a198d02416a29675887c915ec9e7d2d9e26a4fdca98d9e342d8cb977a3",
+      "bytes": 1903
     },
     {
       "path": "LICENSE",
@@ -44,8 +44,8 @@
     {
       "path": "README.md",
       "present": true,
-      "sha256": "5710e4b44479b8a6288f60edb96cad8d9e13234459a47959bf2c804650c60802",
-      "bytes": 28768
+      "sha256": "5c019155335ccf978c1afbbf86b284e7e0bcc7384b76c5a093532105d07cdab1",
+      "bytes": 28675
     },
     {
       "path": "memguard/service.py",
@@ -56,8 +56,8 @@
     {
       "path": "memguard/api/server.py",
       "present": true,
-      "sha256": "23fde135a36aef995e697b26c8583ca8eb53726254e7a08572c58dc8d971fdf9",
-      "bytes": 22266
+      "sha256": "bb8a3ddacd45a8d2e465d84f544a852a7fc60672f7526c660462fadae438309b",
+      "bytes": 21832
     },
     {
       "path": "memguard/web/dashboard.py",
@@ -110,8 +110,8 @@
     {
       "path": "memguard/forgetting/planner.py",
       "present": true,
-      "sha256": "e1a2d54556414b56278881908a50e9bbd8377667ca3923ec015218566f1de683",
-      "bytes": 18445
+      "sha256": "f5951a3c3ca22d8ade257a4cfc292b6687aa44d52c4ddd5092b05177501ec020",
+      "bytes": 18079
     },
     {
       "path": "memguard/eval/memory_value.py",
@@ -176,8 +176,8 @@
     {
       "path": "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp",
       "present": true,
-      "sha256": "c6a15324b24ce880b5d35a296e503b3836e76197ccf72657eec90e681a29862d",
-      "bytes": 105988
+      "sha256": "bb2128fafa49d761cae9f11a57914e8a1c87931e82c04c59f1b80327bf6ddee8",
+      "bytes": 104120
     },
     {
       "path": "data/benchmarks/agent_memory_value.jsonl",
