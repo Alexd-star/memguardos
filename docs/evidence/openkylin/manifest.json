@@ -1,7 +1,12 @@
 {
   "schema_version": "1.0",
-  "file_count": 28,
+  "file_count": 29,
   "files": [
+    {
+      "path": "dashboard_ui_tests.txt",
+      "bytes": 371,
+      "sha256": "ce78212d281e9c4b987533946cdde09c1e8cad7f98fe48a515a856cc14c46abe"
+    },
     {
       "path": "deb_apt_install.txt",
       "bytes": 3940,
@@ -115,7 +120,7 @@
     {
       "path": "source_revision.json",
       "bytes": 172,
-      "sha256": "a982b8801c69f56b9d118455db8febec3b990263008fefe301a8386aae42792e"
+      "sha256": "fae9512a14537e10acac45da6fcc13e547e6294a12756558e74386599c9d5819"
     },
     {
       "path": "storage_permissions.txt",
