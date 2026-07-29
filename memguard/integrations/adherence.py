@@ -12,6 +12,8 @@ import sys
 def detect_adherence_issues(
     stages: Dict[str, object],
     events: list[Dict[str, object]],
+    *,
+    task: str = "",
 ) -> list[Dict[str, str]]:
     preferences = selected_preferences(stages)
     commands = successful_terminal_commands(events)
@@ -25,7 +27,7 @@ def detect_adherence_issues(
     conflicting_search_tools = [
         tool for tool in observed_search_tools if tool != preferred_search
     ]
-    if preferred_search and (
+    if preferred_search and code_search_preference_applicable(task) and (
         preferred_search not in observed_search_tools or conflicting_search_tools
     ):
         issues.append(
@@ -77,6 +79,48 @@ def detect_adherence_issues(
                 }
             )
     return issues
+
+
+def code_search_preference_applicable(task: str) -> bool:
+    """Return whether a code-text search preference applies to this task."""
+
+    text = str(task or "").strip().lower()
+    if not text:
+        return True
+    code_markers = (
+        "代码",
+        "源码",
+        "函数",
+        "定义",
+        "符号",
+        "调用",
+        "引用",
+        "文本内容",
+        "关键字",
+        "code",
+        "source",
+        "function",
+        "definition",
+        "symbol",
+        "reference",
+    )
+    filesystem_markers = (
+        "文件夹",
+        "目录在哪",
+        "文件在哪",
+        "路径在哪",
+        "定位目录",
+        "定位文件",
+        "folder",
+        "directory",
+        "file path",
+        "locate file",
+    )
+    if any(marker in text for marker in code_markers):
+        return True
+    if any(marker in text for marker in filesystem_markers):
+        return False
+    return True
 
 
 def build_adherence_repair_message(

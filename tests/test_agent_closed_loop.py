@@ -19,6 +19,7 @@ from memguard.integrations.openhands_runner import (
 )
 from memguard.integrations.adherence import (
     _pytest_python_executable,
+    code_search_preference_applicable,
     parse_natural_search_intent,
 )
 from memguard.integrations.openhands_memory_hook import violates_code_search_preference
@@ -1509,6 +1510,39 @@ def test_formatted_agent_context_turns_structured_preferences_into_clear_directi
     assert "Python 测试必须优先使用 `python -m pytest`" in formatted
     assert "用户服务日志优先使用 `journalctl --user -u memguard-agent@luo.service`" in formatted
     assert "最终回答第一行必须先给出本次实际命令或明确结论" in formatted
+
+
+def test_code_search_preference_does_not_override_filesystem_location_tasks():
+    assert code_search_preference_applicable("查找 forget_agent_interactions 的定义位置") is True
+    assert code_search_preference_applicable("查找 MemGuardOS 演示录制文件夹在哪") is False
+
+    stages = {
+        "planning": {"context": "", "memories": []},
+        "tool_selection": {
+            "context": "",
+            "memories": [
+                {
+                    "preference_topic": "code_search_tool",
+                    "preference_value": "grep",
+                }
+            ],
+        },
+        "response_generation": {"context": "", "memories": []},
+    }
+    task = "查找 MemGuardOS 演示录制文件夹在哪"
+    formatted = format_agent_context("ctx-filesystem", stages, task=task)
+    events = [
+        {
+            "event_type": "tool_call",
+            "tool_name": "terminal",
+            "tool_args": {"command": "find /home/luo -type d -name 'MemGuardOS演示录制'"},
+        },
+        {"event_type": "tool_result", "tool_name": "terminal", "exit_code": 0},
+        {"event_type": "assistant_message", "content": "结论：目录已找到。"},
+    ]
+
+    assert "代码搜索必须使用 `grep`" not in formatted
+    assert detect_adherence_issues(stages, events, task=task) == []
 
 
 def test_formatted_agent_context_turns_tool_history_into_reuse_and_avoid_guidance():
