@@ -78,7 +78,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
               "is_symlink": false,
               "is_socket": true,
               "device": 2053,
-              "inode": 720
+              "inode": 92
             },
             "parent_directory": {
               "owner": 1000,
@@ -88,7 +88,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
               "is_symlink": false,
               "is_socket": false,
               "device": 2053,
-              "inode": 57,
+              "inode": 68,
               "path": "/tmp/.kylin-ai-runtime-unix/1000"
             },
             "parent_directory_warning": false,
@@ -101,7 +101,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
             "peer_credentials": {
               "supported": true,
               "verified": true,
-              "pid": 15485,
+              "pid": 4087,
               "uid": 1000,
               "gid": 1000
             },
@@ -126,7 +126,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
               "is_symlink": false,
               "is_socket": true,
               "device": 2053,
-              "inode": 719
+              "inode": 86
             },
             "parent_directory": {
               "owner": 1000,
@@ -136,7 +136,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
               "is_symlink": false,
               "is_socket": false,
               "device": 2053,
-              "inode": 57,
+              "inode": 68,
               "path": "/tmp/.kylin-ai-runtime-unix/1000"
             },
             "parent_directory_warning": false,
@@ -149,7 +149,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
             "peer_credentials": {
               "supported": true,
               "verified": true,
-              "pid": 15485,
+              "pid": 4087,
               "uid": 1000,
               "gid": 1000
             },
@@ -205,7 +205,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
       "product_state": {
         "installed": true,
         "last_probe_success": true,
-        "last_success_at": "2026-07-28T16:37:22+08:00",
+        "last_success_at": "2026-07-29T12:38:15+08:00",
         "last_success_dim": 768,
         "last_success_model": "ensemble-embd_gte-base_uint8-text",
         "last_failure_at": "",
@@ -257,7 +257,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
           "is_symlink": false,
           "is_socket": true,
           "device": 2053,
-          "inode": 1861552
+          "inode": 1859253
         },
         "parent_directory": {
           "owner": 0,
@@ -280,7 +280,7 @@ $ python3 -m memguard.cli.memctl openkylin-status
         "peer_credentials": {
           "supported": true,
           "verified": true,
-          "pid": 10809,
+          "pid": 2326,
           "uid": 1000,
           "gid": 1000
         },
@@ -340,21 +340,21 @@ $ python3 -m memguard.cli.memctl openkylin-status
     "diagnosis_code": "ready",
     "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": "15949824",
+      "cgroup_memory_current": "16306176",
       "cgroup_memory_max": "536870912"
     },
     "cpu": {
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 306967,
-        "user_usec": 198273,
-        "system_usec": 108693,
+        "usage_usec": 221532,
+        "user_usec": 154627,
+        "system_usec": 66904,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 94,
-        "nr_throttled": 2,
-        "throttled_usec": 96619,
+        "nr_periods": 37,
+        "nr_throttled": 3,
+        "throttled_usec": 95183,
         "nr_bursts": 0,
         "burst_usec": 0
       }
@@ -364,13 +364,13 @@ $ python3 -m memguard.cli.memctl openkylin-status
   "namespace": {
     "namespace": "default",
     "is_default": true,
-    "home": "/var/tmp/memguardos-native-home.At2UjR",
+    "home": "/var/tmp/memguardos-native-home.kmPYyr",
     "home_exists": true,
-    "namespace_home": "/var/tmp/memguardos-native-home.At2UjR",
+    "namespace_home": "/var/tmp/memguardos-native-home.kmPYyr",
     "namespace_home_exists": true,
-    "store_path": "/var/tmp/memguardos-native-home.At2UjR/memory.segment",
-    "db_path": "/var/tmp/memguardos-native-home.At2UjR/memguard.sqlite3",
-    "custom_patterns_path": "/var/tmp/memguardos-native-home.At2UjR/sensitive_patterns.json",
+    "store_path": "/var/tmp/memguardos-native-home.kmPYyr/memory.segment",
+    "db_path": "/var/tmp/memguardos-native-home.kmPYyr/memguard.sqlite3",
+    "custom_patterns_path": "/var/tmp/memguardos-native-home.kmPYyr/sensitive_patterns.json",
     "store_exists": false,
     "db_exists": false,
     "custom_patterns_exists": false,

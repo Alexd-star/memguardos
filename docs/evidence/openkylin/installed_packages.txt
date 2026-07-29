@@ -1,3 +1,4 @@
+$ dpkg-query -W memguardos*
 memguardos 1.0.0-2 install ok installed
 memguardos-agent-bridge 1.0.0-2 install ok installed
 memguardos-core 1.0.0-2 install ok installed

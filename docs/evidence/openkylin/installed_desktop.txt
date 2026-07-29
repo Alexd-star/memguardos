@@ -1,4 +1,5 @@
+$ desktop install inspection
 /usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so
 /usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so
 /usr/bin/memguardos-tray
-3993 /usr/bin/memguardos-tray
+4159 /usr/bin/memguardos-tray
