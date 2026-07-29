@@ -1026,7 +1026,13 @@ def _dashboard_html() -> str:
     nav button.active::before { content:""; position:absolute; left:0; top:9px; bottom:9px; width:3px; border-radius:3px; background:var(--accent); }
 
     /* ====== 页面区块 ====== */
-    section { display:none; padding:22px 28px 40px; max-width:1180px; }
+    section {
+      display:none;
+      width:100%;
+      max-width:1680px;
+      margin-inline:auto;
+      padding:22px clamp(24px,2.2vw,40px) 40px;
+    }
     section.active { display:block; animation:pageIn .18s ease; }
     @keyframes pageIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
     h2 { margin:0; font-size:20px; font-weight:700; letter-spacing:.2px; }

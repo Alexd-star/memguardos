@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 import sys
 from types import SimpleNamespace
+import pytest
 
 from memguard.integrations.openhands_runner import (
     OpenHandsMemoryRunner,
@@ -12,6 +13,7 @@ from memguard.integrations.openhands_runner import (
     recover_misrouted_preferred_tool_intent,
     format_agent_context,
     repair_failed_preferred_tool_intent,
+    verify_openhands_hook_contract,
     _direct_high_risk_command,
     _selected_values_for_stage,
 )
@@ -19,6 +21,7 @@ from memguard.integrations.adherence import (
     _pytest_python_executable,
     parse_natural_search_intent,
 )
+from memguard.integrations.openhands_memory_hook import violates_code_search_preference
 from memguard.ingestion.tool_result import ToolResult
 from memguard.api.server import handle_request
 from memguard.cli.memctl import main as memctl_main
@@ -1182,6 +1185,43 @@ def test_adherence_requires_successful_preferred_tool_after_policy_denial():
     }
 
 
+def test_adherence_rejects_competing_search_tool_even_after_preferred_tool_succeeds():
+    stages = {
+        "planning": {"memories": []},
+        "tool_selection": {
+            "memories": [
+                {
+                    "preference_topic": "code_search_tool",
+                    "preference_value": "grep",
+                }
+            ]
+        },
+        "response_generation": {"memories": []},
+    }
+    events = [
+        {
+            "event_type": "tool_call",
+            "tool_name": "terminal",
+            "tool_args": {"command": "rg -n target ."},
+        },
+        {"event_type": "tool_result", "tool_name": "terminal", "exit_code": 0},
+        {
+            "event_type": "tool_call",
+            "tool_name": "terminal",
+            "tool_args": {"command": "grep -R -n target ."},
+        },
+        {"event_type": "tool_result", "tool_name": "terminal", "exit_code": 0},
+    ]
+
+    assert detect_adherence_issues(stages, events) == [
+        {
+            "topic": "code_search_tool",
+            "expected_value": "grep",
+            "reason": "观察到与当前偏好冲突的代码搜索工具：rg",
+        }
+    ]
+
+
 def test_failed_rg_repair_drops_files_mode_and_preserves_only_query():
     repaired = repair_failed_preferred_tool_intent(
         [
@@ -1468,7 +1508,7 @@ def test_formatted_agent_context_turns_structured_preferences_into_clear_directi
     assert "高风险操作必须先获得用户确认" in formatted
     assert "Python 测试必须优先使用 `python -m pytest`" in formatted
     assert "用户服务日志优先使用 `journalctl --user -u memguard-agent@luo.service`" in formatted
-    assert "最终回答必须先给命令或结论，再解释原因" in formatted
+    assert "最终回答第一行必须先给出本次实际命令或明确结论" in formatted
 
 
 def test_formatted_agent_context_turns_tool_history_into_reuse_and_avoid_guidance():
@@ -1494,6 +1534,33 @@ def test_formatted_agent_context_turns_tool_history_into_reuse_and_avoid_guidanc
     assert "不要重复执行 `fd service.py`" in formatted
 
 
+def test_explicit_search_preference_suppresses_conflicting_procedural_command():
+    stages = {
+        "planning": {"context": "", "memories": []},
+        "tool_selection": {
+            "context": (
+                "Tool result: command=rg -n target . status=success exit_code=0\n"
+                "Tool result: command=grep -R -n target . status=success exit_code=0"
+            ),
+            "memories": [
+                {
+                    "preference_topic": "code_search_tool",
+                    "preference_value": "grep",
+                },
+                {"subtype": "procedural_trace"},
+            ],
+        },
+        "response_generation": {"context": "", "memories": []},
+    }
+
+    formatted = format_agent_context("ctx-preference-wins", stages)
+
+    assert "显式用户偏好优先于下方历史工具轨迹" in formatted
+    assert "不要自行改用 `rg`" in formatted
+    assert "优先直接复用 `rg -n target .`" not in formatted
+    assert "优先直接复用 `grep -R -n target .`" in formatted
+
+
 def test_selected_values_include_procedural_command_executables():
     result = {
         "memories": [{"subtype": "procedural_trace"}],
@@ -1504,6 +1571,98 @@ def test_selected_values_include_procedural_command_executables():
     }
 
     assert "rg" in _selected_values_for_stage(result)
+
+
+def test_openhands_hook_contract_probes_injection_allow_and_preference_deny(tmp_path):
+    stages = {
+        "planning": {"context": "", "memories": []},
+        "tool_selection": {
+            "context": "",
+            "memories": [
+                {
+                    "memory_id": "mem-grep",
+                    "preference_topic": "code_search_tool",
+                    "preference_value": "grep",
+                }
+            ],
+        },
+        "response_generation": {"context": "", "memories": []},
+    }
+    context_file = tmp_path / "hook-contract.json"
+    context_file.write_text(
+        json.dumps(
+            {
+                "additional_context": "受管测试上下文",
+                "allowed_tools": [],
+                "stages": stages,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = verify_openhands_hook_contract(context_file, stages)
+
+    assert result["ok"] is True
+    assert result["context_injection"] is True
+    assert result["benign_tool"] is True
+    assert result["preference_enforcement"] is True
+
+
+@pytest.mark.parametrize(
+    ("command", "preferred", "expected"),
+    [
+        ("rg -n target .", "grep", True),
+        ("sudo env LC_ALL=C command rg -n target .", "grep", True),
+        ("printf 'rg is installed'", "grep", False),
+        ("grep -R -n target .", "rg", True),
+        ("git grep -n target", "rg", True),
+        ("echo grep", "rg", False),
+        ("printf x | rg -n target", "grep", True),
+        ("printf x | grep -n target", "rg", True),
+        ("bash -lc 'rg -n target .'", "grep", True),
+        ("find . -type f -exec rg -n target {} +", "grep", True),
+        ("printf target | xargs rg -n", "grep", True),
+        ("timeout 5 rg -n target .", "grep", True),
+    ],
+)
+def test_code_search_preference_guard_handles_wrappers_pipelines_and_plain_text(
+    command,
+    preferred,
+    expected,
+):
+    assert violates_code_search_preference(command, preferred) is expected
+
+
+def test_real_runner_fails_closed_before_model_when_hook_contract_is_broken(
+    tmp_path,
+    monkeypatch,
+):
+    service = make_service(tmp_path)
+    factory_called = []
+
+    def conversation_factory(**kwargs):
+        factory_called.append(kwargs)
+        return FakeConversation(kwargs["callback"])
+
+    runner = OpenHandsMemoryRunner(
+        service=service,
+        session_id="session-hook-fail-closed",
+        workspace=tmp_path / "workspace",
+        state_dir=tmp_path / "state",
+        conversation_factory=conversation_factory,
+    )
+    runner.verify_hook_contract = True
+    monkeypatch.setattr(
+        "memguard.integrations.openhands_runner.verify_openhands_hook_contract",
+        lambda *_args, **_kwargs: {"ok": False, "reason": "模块不可导入"},
+    )
+    try:
+        with pytest.raises(RuntimeError, match="Hook 运行契约检查失败"):
+            runner.run("查找函数定义")
+        assert factory_called == []
+    finally:
+        service.close()
 
 
 def test_openhands_hook_injects_context_and_blocks_high_risk_commands(tmp_path):

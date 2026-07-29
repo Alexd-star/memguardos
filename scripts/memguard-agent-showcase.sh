@@ -52,6 +52,12 @@ export OPENHANDS_SUPPRESS_BANNER=1
 export LOG_LEVEL=WARNING
 export LITELLM_LOCAL_MODEL_COST_MAP=True
 
+if ! "${PYTHON}" -c 'import memguard.integrations.openhands_memory_hook' >/dev/null 2>&1; then
+  echo "无法启动真实 Agent：MemGuardOS Hook 模块不可用。" >&2
+  echo "请完整同步或重新安装 memguardos-agent-bridge，不能只复制单个启动脚本。" >&2
+  exit 78
+fi
+
 printf '%s\n' "MemGuardOS 真实 Agent 演示"
 printf '%s\n' "记忆空间：${NAMESPACE}"
 printf '%s\n' "工作区：${WORKSPACE}"

@@ -17,14 +17,27 @@ def detect_adherence_issues(
     commands = successful_terminal_commands(events)
     issues = []
     preferred_search = preferences.get("code_search_tool", "")
-    if preferred_search and not any(
-        command_executable(command) == preferred_search for command in commands
+    observed_search_tools = [
+        command_executable(command)
+        for command in commands
+        if command_executable(command) in {"rg", "grep"}
+    ]
+    conflicting_search_tools = [
+        tool for tool in observed_search_tools if tool != preferred_search
+    ]
+    if preferred_search and (
+        preferred_search not in observed_search_tools or conflicting_search_tools
     ):
         issues.append(
             {
                 "topic": "code_search_tool",
                 "expected_value": preferred_search,
-                "reason": "未观察到成功执行的当前偏好工具命令",
+                "reason": (
+                    "观察到与当前偏好冲突的代码搜索工具：%s"
+                    % "、".join(dict.fromkeys(conflicting_search_tools))
+                    if conflicting_search_tools
+                    else "未观察到成功执行的当前偏好工具命令"
+                ),
             }
         )
     final_output = final_visible_output(events)
@@ -52,10 +65,9 @@ def detect_adherence_issues(
         )
     if preferences.get("response_order") == "command_then_explanation":
         successful_commands = successful_terminal_commands(events)
-        if successful_commands and not any(
-            command in final_output
-            or command_executable(command) in final_output
-            for command in successful_commands
+        if successful_commands and not response_starts_with_command_or_conclusion(
+            final_output,
+            successful_commands,
         ):
             issues.append(
                 {
@@ -79,9 +91,10 @@ def build_adherence_repair_message(
     for issue in issues:
         if issue["topic"] == "code_search_tool":
             preferred = issue["expected_value"]
+            alternative = "grep" if preferred == "rg" else "rg"
             lines.append(
                 "- 代码文本搜索必须使用 `%s`。请用 `%s -n '目标符号' .` "
-                "完成当前任务，不要改用 grep。" % (preferred, preferred)
+                "完成当前任务，不要改用 `%s`。" % (preferred, preferred, alternative)
             )
         elif issue["topic"] == "response_order":
             commands = successful_terminal_commands(events)
@@ -134,32 +147,34 @@ def successful_terminal_commands(
     events: list[Dict[str, object]],
 ) -> list[str]:
     commands = []
-    pending = []
-    pending_policy = {}
+    pending: Dict[str, list[str]] = {}
+    pending_policy: Dict[str, Dict[str, bool]] = {}
     for event in events:
         event_type = str(event.get("event_type") or "")
+        tool_name = str(event.get("tool_name") or "terminal")
         if event_type == "policy_decision":
             policy = dict(event.get("tool_args") or {})
             denied = (
                 str(policy.get("decision") or "").lower() == "deny"
                 or int(event.get("exit_code") or 0) == 2
             )
-            pending_policy = {"denied": denied}
+            pending_policy[tool_name] = {"denied": denied}
         elif event_type == "tool_call":
-            if str(event.get("tool_name") or "") not in {"", "terminal"}:
-                pending_policy = {}
+            if tool_name != "terminal":
+                pending_policy.pop(tool_name, None)
                 continue
             command = " ".join(
                 str(dict(event.get("tool_args") or {}).get("command") or "").split()
             )
-            if command and not pending_policy.get("denied"):
-                pending.append(command)
-            pending_policy = {}
-        elif event_type == "tool_result" and pending:
-            if int(event.get("exit_code") or 0) == 0:
-                commands.append(pending.pop(0))
-            else:
-                pending.pop(0)
+            policy = pending_policy.pop(tool_name, {})
+            if command and not policy.get("denied"):
+                pending.setdefault(tool_name, []).append(command)
+        elif event_type == "tool_result":
+            queue = pending.get(tool_name) or []
+            if queue:
+                command = queue.pop(0)
+                if int(event.get("exit_code") or 0) == 0:
+                    commands.append(command)
     return commands
 
 
@@ -210,6 +225,25 @@ def command_executable(command: str) -> str:
     while parts and parts[0] in {"sudo", "env", "command"}:
         parts.pop(0)
     return Path(parts[0]).name if parts else ""
+
+
+def response_starts_with_command_or_conclusion(
+    output: str,
+    commands: list[str] | tuple[str, ...] = (),
+) -> bool:
+    clean = str(output or "").lstrip()
+    if clean.startswith(("命令", "结论", "Command", "Conclusion", "$")):
+        return True
+    first_line = clean.splitlines()[0].strip() if clean else ""
+    for command in commands:
+        executable = command_executable(command)
+        if first_line.startswith(command):
+            return True
+        if executable and first_line.startswith(
+            (executable + " ", "`" + executable + " ", "$ " + executable + " ")
+        ):
+            return True
+    return False
 
 
 def parse_structured_tool_intent(

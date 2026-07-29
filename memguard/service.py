@@ -37,6 +37,11 @@ from memguard.ingestion.quality import assess_text_quality
 from memguard.ingestion.tool_preference import ToolPreferenceMiner
 from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.events import AgentInteractionEvent
+from memguard.integrations.adherence import (
+    final_visible_output,
+    response_starts_with_command_or_conclusion,
+    successful_terminal_commands,
+)
 from memguard.integrations.context_injector import (
     stage_allows_memory,
     stage_allows_preference,
@@ -623,27 +628,25 @@ class MemGuardService:
             for stage in ("planning", "tool_selection", "response_generation")
         }
         effect_proofs = []
+        successful_commands = successful_terminal_commands(timeline)
+        final_response = final_visible_output(timeline)
         for stage, context in contexts.items():
             for memory in context.get("memories", []):
                 if not memory.get("preference_topic"):
                     continue
                 actual: Dict[str, object] = {}
                 if stage == "tool_selection":
-                    for event in timeline:
-                        if event["event_type"] != "tool_call":
-                            continue
-                        args = event.get("tool_args") if isinstance(event.get("tool_args"), dict) else {}
-                        actual = {
-                            "tool_name": event.get("tool_name", ""),
-                            "command": args.get("command", ""),
-                            "event_id": event.get("event_id", ""),
-                        }
-                        break
+                    if successful_commands:
+                        actual = {"tool_name": "terminal", "command": successful_commands[0]}
                 elif stage == "response_generation":
-                    for event in timeline:
-                        if event["event_type"] in {"assistant_message", "task_complete"}:
-                            actual = {"response": event.get("content", ""), "event_id": event.get("event_id", "")}
-                            break
+                    if final_response:
+                        actual = {
+                            "response": final_response,
+                            "command_first": response_starts_with_command_or_conclusion(
+                                final_response,
+                                successful_commands,
+                            ),
+                        }
                 proof = build_preference_effect_proof(
                     task=clean_task,
                     agent_name=agent_name,
@@ -897,25 +900,26 @@ class MemGuardService:
                 if not any(str(item.get("event_id")) == str(event.get("event_id")) for item in observed_events):
                     observed_events.append(event)
         actual: Dict[str, object] = {}
-        for event in observed_events:
-            event_type = str(event.get("event_type") or "")
-            if stage == "tool_selection" and event_type == "tool_call":
-                tool_args = event.get("tool_args") if isinstance(event.get("tool_args"), dict) else {}
-                actual = {
-                    "tool_name": event.get("tool_name", ""),
-                    "command": tool_args.get("command", ""),
-                    "event_id": event.get("event_id", ""),
-                }
-                break
-            if stage == "response_generation" and event_type in {"assistant_message", "task_complete"}:
-                actual = {
-                    "response": event.get("content", ""),
-                    "event_id": event.get("event_id", ""),
-                }
-                break
-            if stage == "planning" and event_type in {"user_message", "assistant_message"}:
-                actual = {"response": event.get("content", ""), "event_id": event.get("event_id", "")}
-                break
+        successful_commands = successful_terminal_commands(observed_events)
+        final_response = final_visible_output(observed_events)
+        if stage == "tool_selection" and successful_commands:
+            actual = {"tool_name": "terminal", "command": successful_commands[0]}
+        elif stage == "response_generation" and final_response:
+            actual = {
+                "response": final_response,
+                "command_first": response_starts_with_command_or_conclusion(
+                    final_response,
+                    successful_commands,
+                ),
+            }
+        elif stage == "planning":
+            for event in observed_events:
+                if str(event.get("event_type") or "") in {"user_message", "assistant_message"}:
+                    actual = {
+                        "response": event.get("content", ""),
+                        "event_id": event.get("event_id", ""),
+                    }
+                    break
         proof = build_preference_effect_proof(
             task=task,
             agent_name=agent_name,

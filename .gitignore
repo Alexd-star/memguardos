@@ -17,3 +17,5 @@ output/
 .tmp/
 local_notes/
 artifacts/
+.source_manifest.json
+.source_revision

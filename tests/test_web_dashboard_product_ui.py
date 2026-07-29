@@ -60,6 +60,15 @@ def test_dashboard_has_visual_product_affordances_not_only_text_blocks():
     assert "任意命令" not in page
 
 
+def test_dashboard_uses_available_desktop_width_without_unbounded_ultrawide_stretch():
+    page = _dashboard_html()
+
+    assert "width:100%;" in page
+    assert "max-width:1680px;" in page
+    assert "margin-inline:auto;" in page
+    assert "max-width:1180px;" not in page
+
+
 def test_dashboard_operations_have_user_feedback_without_debug_timestamps():
     page = _dashboard_html()
 

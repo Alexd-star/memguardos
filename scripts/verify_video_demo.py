@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,7 @@ if str(ROOT) not in sys.path:
 
 from memguard.cli.memguard import _demo_result  # noqa: E402
 from memguard.integrations.openhands_adapter import detect_openhands_runtime  # noqa: E402
+from memguard.integrations.openhands_runner import verify_openhands_hook_contract  # noqa: E402
 from memguard.service import MemGuardService  # noqa: E402
 
 
@@ -64,6 +66,53 @@ def main(argv: list[str] | None = None) -> int:
             )
         finally:
             service.close()
+
+        hook_stages = {
+            "planning": {"context": "", "memories": []},
+            "tool_selection": {
+                "context": "",
+                "memories": [
+                    {
+                        "memory_id": "preflight-tool-preference",
+                        "preference_topic": "code_search_tool",
+                        "preference_value": "grep",
+                    }
+                ],
+            },
+            "response_generation": {
+                "context": "",
+                "memories": [
+                    {
+                        "memory_id": "preflight-response-preference",
+                        "preference_topic": "response_order",
+                        "preference_value": "command_then_explanation",
+                    }
+                ],
+            },
+        }
+        hook_context = root / "openhands-hook-contract.json"
+        hook_context.write_text(
+            json.dumps(
+                {
+                    "schema_version": "1.0",
+                    "additional_context": "MemGuardOS Hook 运行契约预检。",
+                    "allowed_tools": [],
+                    "stages": hook_stages,
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        hook_health = verify_openhands_hook_contract(hook_context, hook_stages)
+        add(
+            "OpenHands Hook 运行契约",
+            bool(hook_health.get("ok")),
+            (
+                "上下文注入、正常工具放行和冲突偏好拦截均通过"
+                if hook_health.get("ok")
+                else str(hook_health.get("reason") or "运行契约检查失败")
+            ),
+        )
 
     runtime = detect_openhands_runtime()
     add(
@@ -121,7 +170,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     head, revision_mode = _source_revision(ROOT)
-    dirty = _source_dirty(ROOT, revision_mode)
+    dirty = _source_dirty(ROOT, revision_mode, head)
     add(
         "Git 工作树",
         not dirty,
@@ -135,7 +184,7 @@ def main(argv: list[str] | None = None) -> int:
         required=args.require_current_evidence,
     )
     source_revision = _load_json(ROOT / "docs" / "evidence" / "openkylin" / "source_revision.json").get("source_revision", "")
-    revision_ok = bool(head and source_revision and head == source_revision)
+    revision_ok = bool(not dirty and head and source_revision and head == source_revision)
     add(
         "证据修订一致性",
         revision_ok,
@@ -200,9 +249,9 @@ def _source_revision(root: Path) -> tuple[str, str]:
     return "", "unknown"
 
 
-def _source_dirty(root: Path, revision_mode: str) -> bool:
+def _source_dirty(root: Path, revision_mode: str, revision: str = "") -> bool:
     if revision_mode in {"environment", "revision_file"}:
-        return False
+        return not _source_manifest_valid(root, revision)
     if revision_mode != "git":
         return True
     try:
@@ -216,6 +265,32 @@ def _source_dirty(root: Path, revision_mode: str) -> bool:
     except (OSError, subprocess.CalledProcessError):
         return True
     return bool(completed.stdout.strip())
+
+
+def _source_manifest_valid(root: Path, revision: str) -> bool:
+    manifest = _load_json(root / ".source_manifest.json")
+    if manifest.get("schema") != "memguardos-source-manifest-v1":
+        return False
+    if not revision or str(manifest.get("source_revision") or "") != revision:
+        return False
+    files = manifest.get("files")
+    if not isinstance(files, list) or not files:
+        return False
+    for item in files:
+        if not isinstance(item, dict):
+            return False
+        relative = str(item.get("path") or "")
+        expected = str(item.get("sha256") or "")
+        path = (root / relative).resolve()
+        try:
+            path.relative_to(root.resolve())
+        except ValueError:
+            return False
+        if not path.is_file() or not re.fullmatch(r"[0-9a-f]{64}", expected):
+            return False
+        if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+            return False
+    return True
 
 
 if __name__ == "__main__":

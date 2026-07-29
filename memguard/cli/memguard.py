@@ -9,6 +9,15 @@ from pathlib import Path
 from memguard.service import MemGuardService
 
 
+_ANSI_RESET = "\033[0m"
+_ANSI_BLUE = "\033[1;34m"
+_ANSI_CYAN = "\033[1;36m"
+_ANSI_GREEN = "\033[1;32m"
+_ANSI_YELLOW = "\033[1;33m"
+_ANSI_RED = "\033[1;31m"
+_ANSI_DIM = "\033[2m"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="memguard",
@@ -451,7 +460,11 @@ def _shell(service: MemGuardService, prompt: str, workspace: str = "", model: st
     print("当前记忆辅助：[开启]  输入 /help 查看全部操作。")
     while True:
         try:
-            line = input(prompt).strip()
+            try:
+                raw_line = input(_prompt_text(prompt))
+            finally:
+                _restore_terminal_color()
+            line = raw_line.strip()
         except EOFError:
             print()
             return 0
@@ -546,7 +559,7 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
     runtime = detect_openhands_runtime()
     _section("真实 Agent 运行")
     if not runtime.get("available"):
-        print("[未开始] 当前环境不能运行 OpenHands。")
+        print(_color("[未开始] 当前环境不能运行 OpenHands。", _ANSI_RED))
         print("处理方法：安装 Agent 桥接依赖后重试；仅验证机制可单独输入 /demo。")
         return 2
 
@@ -556,7 +569,7 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
         return 0
     api_key = _user_setting("OPENHANDS_API_KEY", "openhands_api_key", secret=True)
     if not api_key:
-        print("[未开始] 尚未配置模型访问凭据。")
+        print(_color("[未开始] 尚未配置模型访问凭据。", _ANSI_RED))
         print("处理方法：从权限受限的本地配置文件加载 OPENHANDS_API_KEY 后重试。")
         return 2
 
@@ -583,16 +596,15 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
     print("任务：%s" % task)
     print("记忆辅助：%s" % ("开启（会检索并学习）" if memory_enabled else "关闭（本次不读取或写入记忆）"))
     print("工作区：%s" % workspace)
-    print("[1/3] 正在准备 Agent 和记忆上下文…")
-    print("[2/3] Agent 正在执行自然语言任务…")
+    print(_color("[1/3] 正在准备 Agent 和记忆上下文…", _ANSI_CYAN))
+    print(_color("[2/3] Agent 正在执行自然语言任务…", _ANSI_CYAN))
     try:
         result = runner.run(task)
     except Exception as exc:
-        print("[未完成] Agent 运行失败：%s" % _friendly_agent_error(exc))
+        print(_color("[未完成] Agent 运行失败：%s" % _friendly_agent_error(exc), _ANSI_RED))
         print("工作台仍可继续使用。检查网络、模型名称和工作区后重新运行 /run。")
         return 2
 
-    print("[3/3] 已完成运行并整理结果。")
     context = result.get("context") or {}
     selected_ids = {
         memory_id
@@ -601,52 +613,101 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
         if memory_id
     }
     summary = result.get("event_summary") or {}
-    print("\n结果概览")
-    print("- 任务状态：%s" % ("完成" if result.get("ok") else "完成，但有项目需要检查"))
-    print("- 采用记忆：%d 条" % len(selected_ids))
-    print("- 工具调用：%d 次；成功返回：%d 次" % (
-        summary.get("tool_calls", 0),
-        max(0, summary.get("tool_results", 0) - summary.get("task_errors", 0)),
-    ))
     trace = result.get("execution_trace") or []
     commands = [
         item
         for item in trace
-        if item.get("event_type") == "tool_call" and item.get("tool_name") != "finish"
+        if item.get("event_type") == "tool_call"
+        and item.get("tool_name") != "finish"
+        and item.get("status") == "success"
     ]
+    blocked_commands = [
+        item
+        for item in trace
+        if item.get("event_type") == "tool_call" and item.get("status") == "blocked"
+    ]
+    failed_commands = [
+        item
+        for item in trace
+        if item.get("event_type") == "tool_call"
+        and item.get("tool_name") == "terminal"
+        and item.get("status") == "failure"
+    ]
+    final_messages = [
+        str(item.get("message") or "").strip()
+        for item in trace
+        if (
+            item.get("event_type") == "assistant_message"
+            or (
+                item.get("event_type") == "tool_call"
+                and item.get("tool_name") == "finish"
+            )
+        )
+    ]
+    final_messages = [message for message in final_messages if message]
+    execution_observed = bool(
+        commands
+        or final_messages
+        or any(item.get("event_type") == "task_complete" for item in trace)
+    )
+    run_ok = bool(result.get("ok")) and execution_observed
+    if run_ok:
+        print(_color("[3/3] 已完成运行并整理结果。", _ANSI_GREEN))
+    else:
+        print(_color("[未完成] Agent 没有产生可验证的任务结果。", _ANSI_RED))
+        completion = result.get("task_completion") or {}
+        if completion.get("reason"):
+            print("原因：%s" % completion["reason"])
+        if not execution_observed:
+            print("处理方法：检查上方 Hook、模型或工具错误，修复后重新运行本任务。")
+    _subsection("结果概览")
+    print("- 任务状态：%s" % ("完成" if run_ok else "未完成，需要检查"))
+    print("- 采用记忆：%d 条" % len(selected_ids))
+    print("- 终端命令：尝试 %d 次；成功 %d 次；失败 %d 次；策略阻止 %d 次" % (
+        summary.get("terminal_command_attempts", 0),
+        summary.get("successful_terminal_commands", 0),
+        summary.get("failed_terminal_commands", 0),
+        summary.get("blocked_tool_attempts", 0),
+    ))
     if commands:
-        print("\nAgent 实际操作")
+        _subsection("Agent 实际操作")
         for index, item in enumerate(commands[:6], 1):
             command = item.get("command") or "（%s 工具调用）" % (item.get("tool_name") or "未知")
             print("%d. %s" % (index, command))
         if len(commands) > 6:
             print("   另有 %d 次工具调用已折叠，可在审计记录中查看。" % (len(commands) - 6))
-    final_messages = [
-        str(item.get("message") or "").strip()
-        for item in trace
-        if item.get("event_type") == "tool_call" and item.get("tool_name") == "finish"
-    ]
-    final_messages = [message for message in final_messages if message]
+    if blocked_commands:
+        _subsection("已阻止的 Agent 尝试")
+        for item in blocked_commands[:3]:
+            command = item.get("command") or "（%s 工具调用）" % (item.get("tool_name") or "未知")
+            print("- %s" % command)
+        print("这些尝试没有进入真实工具执行，也不会作为成功经验沉淀。")
+    if failed_commands:
+        _subsection("未成功的 Agent 操作")
+        for item in failed_commands[:3]:
+            command = item.get("command") or "（终端命令）"
+            print("- %s（退出码 %s）" % (command, item.get("exit_code", "未知")))
+        print("这些操作不会作为成功经验沉淀；若任务最终完成，说明 Agent 已自动换用可行方案。")
     if final_messages:
-        print("\nAgent 最终答复")
+        _subsection("Agent 最终答复")
         print(final_messages[-1])
 
     changes = result.get("memory_change_summary") or {}
     learned = list(changes.get("new_memories") or []) + list(changes.get("updated_memories") or [])
     if memory_enabled:
-        print("\n本次记忆变化")
+        _subsection("本次记忆变化")
         if learned:
             for item in learned[:5]:
                 print("- %s" % (item.get("summary_for_user") or item.get("summary") or item.get("memory_id")))
         else:
             print("- 没有形成新的长期记忆；已有记忆仍可继续使用。")
     else:
-        print("\n本次记忆变化")
+        _subsection("本次记忆变化")
         print("- 记忆辅助已关闭，本次运行没有读取或写入长期记忆。")
 
     proofs = result.get("preference_effect_proofs", []) or []
     if proofs:
-        print("\n偏好作用验证")
+        _subsection("偏好作用验证")
     for proof in proofs:
         preference = proof.get("preference", {})
         print("- 偏好 %s = %s：%s" % (
@@ -656,14 +717,14 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
                 proof.get("compliance"), proof.get("compliance")
             ),
         ))
-    print("\n下一步")
+    _subsection("下一步")
     if memory_enabled:
         print("- 输入 /preferences 查看已形成的偏好。")
         print("- 开启新一轮 /run 且不重复偏好要求，观察 Agent 是否自动遵循。")
     else:
         print("- 输入 /memory on 后运行同一任务，可直观看到记忆辅助前后差异。")
     print("- 输入 /audit 查看本次记忆操作记录。")
-    return 0
+    return 0 if run_ok else 2
 
 
 def _memory_mode(line: str, state: dict) -> int:
@@ -752,9 +813,43 @@ def _user_setting(
 
 
 def _section(title: str) -> None:
-    print("\n%s" % ("─" * 54))
-    print(title)
-    print("%s" % ("─" * 54))
+    divider = "─" * 54
+    print("\n%s" % _color(divider, _ANSI_DIM))
+    print(_color(title, _ANSI_BLUE))
+    print(_color(divider, _ANSI_DIM))
+
+
+def _subsection(title: str) -> None:
+    print("\n%s" % _color(title, _ANSI_CYAN))
+
+
+def _prompt_text(prompt: str) -> str:
+    if not _colors_enabled():
+        return prompt
+    # Keep the input color active until input() returns so the command the user
+    # types is visually distinct from the result printed on the following lines.
+    return "%s%s" % (_ANSI_BLUE, prompt)
+
+
+def _restore_terminal_color() -> None:
+    if not _colors_enabled():
+        return
+    sys.stdout.write(_ANSI_RESET)
+    sys.stdout.flush()
+
+
+def _color(text: str, code: str) -> str:
+    if not _colors_enabled():
+        return text
+    return "%s%s%s" % (code, text, _ANSI_RESET)
+
+
+def _colors_enabled() -> bool:
+    if os.environ.get("NO_COLOR") is not None or os.environ.get("TERM") == "dumb":
+        return False
+    if os.environ.get("FORCE_COLOR") == "1":
+        return True
+    return bool(getattr(sys.stdout, "isatty", lambda: False)())
 
 
 def _compact_json(value: object) -> str:

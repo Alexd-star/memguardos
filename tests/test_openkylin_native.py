@@ -30,6 +30,21 @@ def test_openkylin_status_cli_has_native_operational_schema(tmp_path, monkeypatc
     assert isinstance(payload["recommendations"], list)
 
 
+def test_security_status_treats_protected_audit_path_as_unavailable(monkeypatch):
+    original_exists = Path.exists
+
+    def protected_exists(path):
+        if str(path) == "/etc/audit/rules.d":
+            raise PermissionError("protected")
+        return original_exists(path)
+
+    monkeypatch.setattr(Path, "exists", protected_exists)
+    status = openkylin_native._security_status()
+
+    assert status["auditd"]["rules_directory_accessible"] is False
+    assert isinstance(status["auditd"]["rules_tool_available"], bool)
+
+
 def test_memctl_feedback_home_exposes_recent_user_facing_memory_data(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("MEMGUARD_HOME", str(tmp_path / "home"))
     monkeypatch.delenv("MEMGUARD_NAMESPACE", raising=False)

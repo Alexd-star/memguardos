@@ -5,6 +5,7 @@ import argparse
 from pathlib import Path
 import json
 import re
+import shlex
 import sys
 
 
@@ -62,25 +63,76 @@ def deny(reason, category, **details):
 
 
 def violates_code_search_preference(command, preferred_tool):
-    normalized = " ".join(str(command).strip().split())
-    if not normalized:
-        return False
+    executables = _shell_command_executables(command)
     if preferred_tool == "rg":
-        return bool(
-            re.search(
-                r"(^|(?:\|\||&&|[|;])\s*)(?:sudo\s+)?"
-                r"(?:grep|egrep|fgrep|git\s+grep)\b",
-                normalized,
-            )
-        )
+        return any(item in {"grep", "egrep", "fgrep", "git grep"} for item in executables)
     if preferred_tool == "grep":
-        return bool(
-            re.search(
-                r"(^|(?:\|\||&&|[|;])\s*)(?:sudo\s+)?rg\b",
-                normalized,
-            )
-        )
+        return "rg" in executables
     return False
+
+
+def _shell_command_executables(command):
+    normalized = " ".join(str(command or "").strip().split())
+    if not normalized:
+        return []
+    executables = []
+    for segment in re.split(r"(?:&&|\|\||[;|])", normalized):
+        try:
+            tokens = shlex.split(segment.strip())
+        except ValueError:
+            tokens = segment.strip().split()
+        while tokens:
+            name = Path(tokens[0]).name
+            if name == "sudo":
+                tokens.pop(0)
+                while tokens and tokens[0].startswith("-"):
+                    tokens.pop(0)
+                continue
+            if name == "env":
+                tokens.pop(0)
+                while tokens and (tokens[0].startswith("-") or "=" in tokens[0]):
+                    tokens.pop(0)
+                continue
+            if name == "command":
+                tokens.pop(0)
+                continue
+            if name in {"time", "nice", "nohup", "timeout"}:
+                tokens.pop(0)
+                while tokens and tokens[0].startswith("-"):
+                    tokens.pop(0)
+                if name == "timeout" and tokens:
+                    tokens.pop(0)
+                continue
+            break
+        if not tokens:
+            continue
+        executable = Path(tokens[0]).name
+        if executable in {"bash", "sh", "dash", "zsh"}:
+            command_flag = next(
+                (
+                    index
+                    for index, token in enumerate(tokens[1:], start=1)
+                    if token.startswith("-") and "c" in token[1:]
+                ),
+                -1,
+            )
+            if command_flag >= 0 and command_flag + 1 < len(tokens):
+                executables.extend(
+                    _shell_command_executables(tokens[command_flag + 1])
+                )
+                continue
+        if executable == "git" and len(tokens) > 1 and tokens[1] == "grep":
+            executable = "git grep"
+        executables.append(executable)
+        if executable == "xargs":
+            candidates = [item for item in tokens[1:] if not item.startswith("-")]
+            if candidates:
+                executables.append(Path(candidates[0]).name)
+        if executable == "find" and "-exec" in tokens:
+            index = tokens.index("-exec")
+            if index + 1 < len(tokens):
+                executables.append(Path(tokens[index + 1]).name)
+    return executables
 
 
 def violates_test_runner_preference(command, preferred_command):

@@ -17,6 +17,7 @@ from memguard.integrations.adherence import (
     build_adherence_repair_message,
     command_executable,
     detect_adherence_issues,
+    final_visible_output,
     parse_inline_search_intent,
     parse_natural_search_intent,
     parse_structured_tool_intent,
@@ -24,9 +25,11 @@ from memguard.integrations.adherence import (
     recover_failed_test_runner_intent,
     recover_misrouted_preferred_tool_intent,
     repair_failed_preferred_tool_intent,
+    response_starts_with_command_or_conclusion,
     recoverable_tool_schema_error_count,
     selected_preferences,
     successful_terminal_commands,
+    terminal_commands,
 )
 from memguard.integrations.openhands_adapter import OpenHandsEventAdapter
 from memguard.integrations.events import AgentInteractionEvent
@@ -79,6 +82,7 @@ class OpenHandsMemoryRunner:
         self.tool_profile = tool_profile
         self.memory_enabled = bool(memory_enabled)
         self.allow_in_place_workspace = bool(allow_in_place_workspace)
+        self.verify_hook_contract = conversation_factory is None
         self.conversation_factory = conversation_factory or create_openhands_conversation
         self.structured_intent_executor = (
             structured_intent_executor or subprocess.run
@@ -200,6 +204,19 @@ class OpenHandsMemoryRunner:
         self._validate_workspace()
         self.workspace.mkdir(parents=True, exist_ok=True)
         context_bundle = self.prepare_context(task)
+        hook_health = (
+            verify_openhands_hook_contract(
+                Path(str(context_bundle["context_file"])),
+                context_bundle["stages"],
+            )
+            if self.verify_hook_contract
+            else {"ok": True, "mode": "in_process_test_factory"}
+        )
+        if not hook_health.get("ok"):
+            raise RuntimeError(
+                "MemGuardOS OpenHands Hook 运行契约检查失败：%s"
+                % hook_health.get("reason", "未知原因")
+            )
         conversation = self.conversation_factory(
             callback=self.on_event,
             workspace=self.workspace,
@@ -266,6 +283,15 @@ class OpenHandsMemoryRunner:
             recoverable_tool_schema_error_count(self._live_events),
             recoverable_task_error_slots,
         )
+        observed_terminal_commands = terminal_commands(self._live_events)
+        successful_commands = successful_terminal_commands(self._live_events)
+        blocked_tool_attempts = sum(
+            1
+            for event in self._live_events
+            if str(event.get("event_type") or "") == "policy_decision"
+            and str(dict(event.get("tool_args") or {}).get("decision") or "").lower()
+            == "deny"
+        )
         context_summary = {
             "trace_id": context_bundle["trace_id"],
             "stage_budgets": {
@@ -314,19 +340,35 @@ class OpenHandsMemoryRunner:
             agent_name="openhands",
             session_id=self.session_id,
         )
+        task_completion = evaluate_task_completion(
+            str(task).strip(),
+            self._live_events,
+            natural_high_risk_block=natural_high_risk_block,
+            task_type=self.task_type,
+        )
+        execution_trace = _execution_trace(self._live_events)
+        failed_terminal_commands = sum(
+            1
+            for item in execution_trace
+            if item.get("event_type") == "tool_call"
+            and item.get("tool_name") == "terminal"
+            and item.get("status") == "failure"
+        )
         return {
             "ok": (
                 blocked == 0
                 and task_errors == recovered_task_errors
                 and not remaining_issues
+                and task_completion["passed"]
             ),
             "session_id": self.session_id,
             "trace_id": context_bundle["trace_id"],
             "context_file": context_bundle["context_file"],
+            "hook_health": hook_health,
             "duration_ms": round((perf_counter() - started) * 1000.0, 3),
             "memory_enabled": self.memory_enabled,
             "context": context_summary,
-            "execution_trace": _execution_trace(self._live_events),
+            "execution_trace": execution_trace,
             "structured_intent_recovery": structured_recovery,
             "natural_high_risk_block": natural_high_risk_block,
             "procedural_memory_fallback": procedural_fallback,
@@ -337,12 +379,17 @@ class OpenHandsMemoryRunner:
                 "remaining_issues": remaining_issues,
                 "passed": not remaining_issues,
             },
+            "task_completion": task_completion,
             "event_summary": {
                 "stored": stored,
                 "duplicate": duplicate,
                 "blocked": blocked,
                 "tool_calls": self._event_types["tool_call"],
                 "tool_results": self._event_types["tool_result"],
+                "terminal_command_attempts": len(observed_terminal_commands),
+                "successful_terminal_commands": len(successful_commands),
+                "failed_terminal_commands": failed_terminal_commands,
+                "blocked_tool_attempts": blocked_tool_attempts,
                 "procedural_memories": len(self._procedural_memories),
                 "procedural_memory_ids": list(self._procedural_memories),
                 "task_errors": task_errors,
@@ -669,34 +716,177 @@ def _execution_trace(events: list[Dict[str, object]]) -> list[Dict[str, object]]
     """Return a compact user-facing trace without tool output or message bodies."""
 
     trace = []
+    pending_policy: Dict[str, Dict[str, object]] = {}
+    pending_calls: Dict[str, list[int]] = {}
     for event in events:
         event_type = str(event.get("event_type") or "")
-        if event_type == "tool_call":
+        tool_name = str(event.get("tool_name") or "")
+        if event_type == "policy_decision":
+            policy = dict(event.get("tool_args") or {})
+            pending_policy[tool_name] = {
+                "blocked": str(policy.get("decision") or "").lower() == "deny",
+                "reason": str(policy.get("reason") or event.get("content") or ""),
+            }
+        elif event_type == "tool_call":
             args = event.get("tool_args") if isinstance(event.get("tool_args"), dict) else {}
             command = _redact_command(" ".join(str(args.get("command") or "").split()))
             message = _redact_command(
                 str(args.get("message") or args.get("summary") or "").strip()
             )
+            policy = pending_policy.pop(tool_name, {})
+            status = "blocked" if policy.get("blocked") else "attempted"
             trace.append(
                 {
                     "event_type": event_type,
-                    "tool_name": str(event.get("tool_name") or ""),
+                    "tool_name": tool_name,
                     "command": command[:240],
                     "message": message[:1200],
+                    "status": status,
+                    "policy_reason": str(policy.get("reason") or "")[:240],
                 }
             )
+            if status != "blocked":
+                pending_calls.setdefault(tool_name, []).append(len(trace) - 1)
         elif event_type == "tool_result":
+            outcome = "success" if int(event.get("exit_code") or 0) == 0 else "failure"
+            queue = pending_calls.get(tool_name) or []
+            if queue:
+                call = trace[queue.pop(0)]
+                call["status"] = outcome
+                call["exit_code"] = event.get("exit_code")
             trace.append(
                 {
                     "event_type": event_type,
-                    "tool_name": str(event.get("tool_name") or ""),
+                    "tool_name": tool_name,
                     "exit_code": event.get("exit_code"),
-                    "outcome": "success" if int(event.get("exit_code") or 0) == 0 else "failure",
+                    "outcome": outcome,
                 }
             )
+        elif event_type == "assistant_message":
+            message = _redact_command(" ".join(str(event.get("content") or "").split()))
+            if message:
+                trace.append(
+                    {
+                        "event_type": event_type,
+                        "message": message[:1200],
+                    }
+                )
         elif event_type in {"task_complete", "task_error"}:
             trace.append({"event_type": event_type})
     return trace
+
+
+def evaluate_task_completion(
+    task: str,
+    events: list[Dict[str, object]],
+    *,
+    natural_high_risk_block: Dict[str, object] | None = None,
+    task_type: str = "",
+) -> Dict[str, object]:
+    """Evaluate completion from observable behavior, not SDK status alone."""
+
+    successful_commands = successful_terminal_commands(events)
+    final_response = final_visible_output(events).strip()
+    requires_terminal = task_requires_terminal_evidence(task, task_type=task_type)
+    safely_blocked = bool((natural_high_risk_block or {}).get("blocked"))
+    if safely_blocked:
+        return {
+            "passed": True,
+            "mode": "safe_policy_block",
+            "requires_terminal": False,
+            "successful_commands": len(successful_commands),
+            "final_response": bool(final_response),
+            "reason": "高风险请求已由本地策略明确阻止。",
+        }
+    if requires_terminal:
+        passed = bool(successful_commands and final_response)
+        if not successful_commands:
+            reason = "任务需要操作工作区，但没有观察到成功执行的终端命令。"
+        elif not final_response:
+            reason = "工具操作已完成，但没有形成用户可见的最终答复。"
+        else:
+            reason = "成功命令和最终答复均已形成。"
+    else:
+        passed = bool(final_response)
+        reason = (
+            "已形成用户可见的最终答复。"
+            if passed
+            else "没有形成用户可见的最终答复。"
+        )
+    return {
+        "passed": passed,
+        "mode": "terminal_and_response" if requires_terminal else "response",
+        "requires_terminal": requires_terminal,
+        "successful_commands": len(successful_commands),
+        "final_response": bool(final_response),
+        "reason": reason,
+    }
+
+
+def task_requires_terminal_evidence(task: str, *, task_type: str = "") -> bool:
+    text = str(task or "").strip().lower()
+    if not text:
+        return False
+    if str(task_type or "").strip().lower() in {
+        "code_assistance",
+        "code_search",
+        "debugging",
+        "testing",
+        "workspace_operation",
+    }:
+        return True
+    action_markers = (
+        "查找",
+        "搜索",
+        "检索",
+        "定位",
+        "运行",
+        "执行",
+        "测试",
+        "检查",
+        "修复",
+        "修改",
+        "创建",
+        "新增",
+        "更新",
+        "读取",
+        "分析",
+        "查看日志",
+        "报告文件路径",
+        "find ",
+        "search ",
+        "locate ",
+        "run ",
+        "execute ",
+        "test ",
+        "fix ",
+        "modify ",
+        "create ",
+        "update ",
+        "read ",
+        "analyze ",
+    )
+    project_markers = (
+        "项目",
+        "代码",
+        "文件",
+        "函数",
+        "定义",
+        "工作区",
+        "仓库",
+        "日志",
+        "project",
+        "code",
+        "file",
+        "function",
+        "workspace",
+        "repository",
+        "repo",
+        "log",
+    )
+    return any(marker in text for marker in action_markers) and any(
+        marker in text for marker in project_markers
+    )
 
 
 def _runtime_preference_effect_proofs(
@@ -720,13 +910,19 @@ def _runtime_preference_effect_proofs(
             "response_verbosity",
         },
     }
-    terminal_command = ""
+    successful_commands = successful_terminal_commands(events)
+    if not successful_commands and not any(
+        str(event.get("event_type") or "") in {"policy_decision", "tool_result"}
+        for event in events
+    ):
+        successful_commands = terminal_commands(events)
+    terminal_command = successful_commands[0] if successful_commands else ""
     final_response = ""
     for event in events:
         event_type = str(event.get("event_type") or "")
         args = event.get("tool_args") if isinstance(event.get("tool_args"), dict) else {}
-        if event_type == "tool_call" and not terminal_command:
-            terminal_command = str(args.get("command") or "")
+        if event_type == "assistant_message":
+            final_response = str(event.get("content") or final_response)
         if event_type == "tool_call" and str(event.get("tool_name") or "") == "finish":
             final_response = str(args.get("message") or args.get("summary") or "")
 
@@ -747,8 +943,9 @@ def _runtime_preference_effect_proofs(
             else:
                 actual = {
                     "response": final_response,
-                    "command_first": _response_starts_with_command_or_conclusion(
-                        final_response
+                    "command_first": response_starts_with_command_or_conclusion(
+                        final_response,
+                        successful_commands,
                     ),
                 } if final_response else {}
             proof = build_preference_effect_proof(
@@ -762,11 +959,6 @@ def _runtime_preference_effect_proofs(
             )
             proofs.append(proof.to_dict())
     return proofs
-
-
-def _response_starts_with_command_or_conclusion(response: str) -> bool:
-    clean = str(response or "").lstrip()
-    return clean.startswith(("命令", "结论", "`", "$", "Command", "Conclusion"))
 
 
 def _redact_command(command: str) -> str:
@@ -802,6 +994,9 @@ def format_agent_context(trace_id: str, stages: Dict[str, object]) -> str:
         parts.append(
             "在不与当前用户任务和系统安全规则冲突时，严格遵循以下偏好："
         )
+        parts.append(
+            "显式用户偏好优先于下方历史工具轨迹；两者冲突时，必须忽略旧工具命令。"
+        )
         parts.extend("- %s" % directive for directive in directives)
     for stage in ("planning", "tool_selection", "response_generation"):
         result = stages.get(stage) or {}
@@ -819,7 +1014,11 @@ def _preference_directives(stages: Dict[str, object]) -> list[str]:
             "rg",
         ): "代码搜索必须优先使用 `rg`，在当前工作区搜索文本时采用 `rg -n '关键词' .`，"
         "不要把只列文件名的 `rg --files` 当作文本搜索，也不要自行改用 `grep`。",
-        ("code_search_tool", "grep"): "代码搜索必须优先使用 `grep`。",
+        (
+            "code_search_tool",
+            "grep",
+        ): "代码搜索必须使用 `grep`，在当前工作区搜索文本时采用 "
+        "`grep -R -n '关键词' .`，不要自行改用 `rg`。",
         (
             "high_risk_confirmation",
             "required",
@@ -827,7 +1026,7 @@ def _preference_directives(stages: Dict[str, object]) -> list[str]:
         (
             "response_order",
             "command_then_explanation",
-        ): "最终回答必须先给命令或结论，再解释原因。",
+        ): "最终回答第一行必须先给出本次实际命令或明确结论，第二行后再解释原因。",
         ("response_language", "zh-CN"): "最终回答必须使用中文。",
         ("response_verbosity", "concise"): "最终回答必须简洁，只保留关键步骤。",
     }
@@ -875,6 +1074,7 @@ def _selected_values_for_stage(result: Dict[str, object]) -> list[str]:
 def _procedural_directives(stages: Dict[str, object]) -> list[str]:
     directives = []
     seen = set()
+    preferred_search = selected_preferences(stages).get("code_search_tool", "")
     for stage in ("planning", "tool_selection", "response_generation"):
         result = dict(stages.get(stage) or {})
         subtypes = {
@@ -890,6 +1090,13 @@ def _procedural_directives(stages: Dict[str, object]) -> list[str]:
         ):
             clean = " ".join(command.replace("`", "").split())[:180]
             if not clean or _is_high_risk_command(clean):
+                continue
+            executable = command_executable(clean)
+            if (
+                preferred_search
+                and executable in {"rg", "grep"}
+                and executable != preferred_search
+            ):
                 continue
             if status == "success":
                 directive = "历史证据已验证该方案成功，同类任务优先直接复用 `%s`。" % clean
@@ -938,6 +1145,136 @@ def _direct_high_risk_command(events: list[Dict[str, object]]) -> str:
     return ""
 
 
+def verify_openhands_hook_contract(
+    context_file: Path,
+    stages: Optional[Dict[str, object]] = None,
+) -> Dict[str, object]:
+    """Probe the exact subprocess contract used by OpenHands hooks.
+
+    OpenHands logs hook startup failures and may continue the conversation.  A
+    governed memory integration must instead fail before the model receives the
+    task when context injection or preference enforcement is unavailable.
+    """
+
+    path = Path(context_file).expanduser().resolve()
+    if not path.is_file():
+        return {"ok": False, "reason": "上下文文件不存在", "context_file": str(path)}
+    environment = _openhands_hook_environment()
+    command = [
+        sys.executable,
+        "-m",
+        "memguard.integrations.openhands_memory_hook",
+        "--context-file",
+        str(path),
+    ]
+
+    injection = _run_hook_probe(command, environment=environment)
+    injection_ok = bool(
+        injection.get("returncode") == 0
+        and injection.get("payload", {}).get("decision") == "allow"
+        and injection.get("payload", {}).get("continue") is True
+        and str(injection.get("payload", {}).get("additionalContext") or "").strip()
+    )
+    benign = _run_hook_probe(
+        command + ["--guard-tool"],
+        stdin={"tool_name": "terminal", "tool_input": {"command": "true"}},
+        environment=environment,
+    )
+    benign_ok = bool(
+        benign.get("returncode") == 0
+        and benign.get("payload", {}).get("decision") == "allow"
+    )
+
+    preferences = selected_preferences(stages or {})
+    preferred_search = preferences.get("code_search_tool", "")
+    enforcement_ok = True
+    if preferred_search in {"rg", "grep"}:
+        conflicting = "grep -R -n hook_probe ." if preferred_search == "rg" else "rg -n hook_probe ."
+        enforcement = _run_hook_probe(
+            command + ["--guard-tool"],
+            stdin={"tool_name": "terminal", "tool_input": {"command": conflicting}},
+            environment=environment,
+        )
+        enforcement_ok = bool(
+            enforcement.get("returncode") == 2
+            and enforcement.get("payload", {}).get("decision") == "deny"
+            and enforcement.get("payload", {}).get("expected_value") == preferred_search
+        )
+
+    ok = injection_ok and benign_ok and enforcement_ok
+    failed = []
+    if not injection_ok:
+        failed.append("上下文注入")
+    if not benign_ok:
+        failed.append("安全工具放行")
+    if not enforcement_ok:
+        failed.append("偏好工具拦截")
+    return {
+        "ok": ok,
+        "mode": "subprocess_contract_probe",
+        "context_file": str(path),
+        "context_injection": injection_ok,
+        "benign_tool": benign_ok,
+        "preference_enforcement": enforcement_ok,
+        "preferred_search_tool": preferred_search,
+        "reason": "、".join(failed) + "检查失败" if failed else "",
+    }
+
+
+def _run_hook_probe(
+    command: list[str],
+    *,
+    environment: Dict[str, str],
+    stdin: Optional[Dict[str, object]] = None,
+) -> Dict[str, object]:
+    try:
+        completed = subprocess.run(
+            command,
+            input=json.dumps(stdin, ensure_ascii=False) if stdin is not None else "",
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+            env=environment,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"returncode": -1, "payload": {}, "error": type(exc).__name__}
+    payload: Dict[str, object] = {}
+    for line in reversed(completed.stdout.splitlines()):
+        try:
+            candidate = json.loads(line)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            continue
+        if isinstance(candidate, dict):
+            payload = candidate
+            break
+    return {
+        "returncode": int(completed.returncode),
+        "payload": payload,
+        "stderr_present": bool(completed.stderr.strip()),
+    }
+
+
+def _openhands_hook_environment() -> Dict[str, str]:
+    environment = dict(os.environ)
+    source_root = str(Path(__file__).resolve().parents[2])
+    existing = str(environment.get("PYTHONPATH") or "").strip()
+    paths = [source_root]
+    if existing:
+        paths.extend(item for item in existing.split(os.pathsep) if item)
+    environment["PYTHONPATH"] = os.pathsep.join(dict.fromkeys(paths))
+    return environment
+
+
+def _openhands_hook_shell_command(context_file: Path) -> str:
+    pythonpath = _openhands_hook_environment()["PYTHONPATH"]
+    return "env PYTHONPATH=%s %s -m memguard.integrations.openhands_memory_hook --context-file %s" % (
+        shlex.quote(pythonpath),
+        shlex.quote(sys.executable),
+        shlex.quote(str(Path(context_file).resolve())),
+    )
+
+
 def create_openhands_conversation(**kwargs: Any) -> Any:
     """Create the real SDK conversation without importing OpenHands at module load."""
 
@@ -962,10 +1299,7 @@ def create_openhands_conversation(**kwargs: Any) -> Any:
         agent = agent.model_copy(update={"tools": terminal_tools})
 
     context_file = Path(kwargs["context_file"]).resolve()
-    hook_command = "%s -m memguard.integrations.openhands_memory_hook --context-file %s" % (
-        shlex.quote(sys.executable),
-        shlex.quote(str(context_file)),
-    )
+    hook_command = _openhands_hook_shell_command(context_file)
     hooks = HookConfig(
         user_prompt_submit=[
             HookMatcher(

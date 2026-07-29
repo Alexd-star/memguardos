@@ -1,3 +1,5 @@
+import hashlib
+import json
 from pathlib import Path
 
 from memguard.cli.memguard import (
@@ -13,10 +15,12 @@ from memguard.integrations.openhands_runner import (
     OpenHandsMemoryRunner,
     _execution_trace,
     _runtime_preference_effect_proofs,
+    evaluate_task_completion,
+    task_requires_terminal_evidence,
 )
 from memguard.service import MemGuardService
 from scripts.run_openhands_memguard_demo import build_parser as build_agent_demo_parser
-from scripts.verify_video_demo import _source_revision
+from scripts.verify_video_demo import _source_dirty, _source_revision
 
 
 class _NoMemoryService:
@@ -89,6 +93,28 @@ def test_video_preflight_accepts_verified_revision_file(tmp_path, monkeypatch):
     monkeypatch.delenv("MEMGUARD_SOURCE_REVISION", raising=False)
 
     assert _source_revision(tmp_path) == (revision, "revision_file")
+
+
+def test_video_preflight_requires_hash_manifest_for_gitless_source(tmp_path):
+    revision = "a" * 40
+    source = tmp_path / "memguard" / "service.py"
+    source.parent.mkdir()
+    source.write_text("value = 1\n", encoding="utf-8")
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    (tmp_path / ".source_manifest.json").write_text(
+        json.dumps(
+            {
+                "schema": "memguardos-source-manifest-v1",
+                "source_revision": revision,
+                "files": [{"path": "memguard/service.py", "sha256": digest}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert _source_dirty(tmp_path, "revision_file", revision) is False
+    source.write_text("value = 2\n", encoding="utf-8")
+    assert _source_dirty(tmp_path, "revision_file", revision) is True
 
 
 def _event(event_type, *, sequence=1, tool_args=None, exit_code=None):
@@ -169,6 +195,10 @@ def test_execution_trace_hides_credentials_and_keeps_command_evidence():
                 "tool_name": "finish",
                 "tool_args": {"message": "memguard/service.py:2727"},
             },
+            {
+                "event_type": "assistant_message",
+                "content": "结果位于 memguard/service.py，临时令牌 sk-example-secret-123456 已隐藏。",
+            },
         ]
     )
 
@@ -177,6 +207,90 @@ def test_execution_trace_hides_credentials_and_keeps_command_evidence():
     assert "[已隐藏凭据]" in trace[0]["command"]
     assert trace[1]["outcome"] == "success"
     assert trace[2]["message"] == "memguard/service.py:2727"
+    assert "sk-example" not in trace[3]["message"]
+    assert "[已隐藏凭据]" in trace[3]["message"]
+
+
+def test_execution_trace_separates_blocked_attempts_from_successful_commands():
+    trace = _execution_trace(
+        [
+            {
+                "event_type": "policy_decision",
+                "tool_name": "terminal",
+                "tool_args": {"decision": "deny", "reason": "必须使用 grep"},
+                "exit_code": 2,
+            },
+            {
+                "event_type": "tool_call",
+                "tool_name": "terminal",
+                "tool_args": {"command": "rg -n target ."},
+            },
+            {
+                "event_type": "policy_decision",
+                "tool_name": "terminal",
+                "tool_args": {"decision": "allow"},
+                "exit_code": 0,
+            },
+            {
+                "event_type": "tool_call",
+                "tool_name": "terminal",
+                "tool_args": {"command": "grep -R -n target ."},
+            },
+            {"event_type": "tool_result", "tool_name": "terminal", "exit_code": 0},
+        ]
+    )
+
+    calls = [item for item in trace if item["event_type"] == "tool_call"]
+    assert calls[0]["status"] == "blocked"
+    assert calls[0]["policy_reason"] == "必须使用 grep"
+    assert calls[1]["status"] == "success"
+    assert calls[1]["exit_code"] == 0
+
+
+def test_task_completion_requires_real_command_and_visible_answer_for_code_task():
+    task = "请在当前项目中查找 build_agent_context 的定义位置"
+    assert task_requires_terminal_evidence(task) is True
+
+    status_only = [{"event_type": "task_complete", "content": ""}]
+    assert evaluate_task_completion(task, status_only)["passed"] is False
+
+    command_only = [
+        {
+            "event_type": "tool_call",
+            "tool_name": "terminal",
+            "tool_args": {"command": "rg -n build_agent_context ."},
+        },
+        {"event_type": "tool_result", "tool_name": "terminal", "exit_code": 0},
+    ]
+    assert evaluate_task_completion(task, command_only)["passed"] is False
+
+    completed = [
+        *command_only,
+        {"event_type": "assistant_message", "content": "命令：rg -n build_agent_context ."},
+    ]
+    assert evaluate_task_completion(task, completed)["passed"] is True
+
+
+def test_task_completion_accepts_explicit_safe_policy_block():
+    result = evaluate_task_completion(
+        "删除项目目录",
+        [],
+        natural_high_risk_block={"blocked": True},
+    )
+
+    assert result["passed"] is True
+    assert result["mode"] == "safe_policy_block"
+
+
+def test_code_assistance_task_type_requires_tool_evidence_without_keywords():
+    result = evaluate_task_completion(
+        "把它处理好",
+        [{"event_type": "assistant_message", "content": "已经处理。"}],
+        task_type="code_assistance",
+    )
+
+    assert result["passed"] is False
+    assert result["requires_terminal"] is True
 
 
 def test_cli_can_explicitly_allow_current_project_workspace(tmp_path, monkeypatch):

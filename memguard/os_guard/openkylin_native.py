@@ -526,10 +526,14 @@ def _desktop_status() -> Dict[str, object]:
 
 
 def _security_status() -> Dict[str, object]:
+    audit_rules = Path("/etc/audit/rules.d")
     return {
         "auditd": {
             "available": bool(shutil.which("auditctl")),
-            "rules_tool_available": bool(shutil.which("auditctl") or Path("/etc/audit/rules.d").exists()),
+            "rules_tool_available": bool(
+                shutil.which("auditctl") or _safe_path_exists(audit_rules)
+            ),
+            "rules_directory_accessible": _safe_path_exists(audit_rules),
         },
         "bpf_lsm": {
             "source_available": Path("native/bpf_lsm/memguard_lsm.bpf.c").exists(),
@@ -542,6 +546,13 @@ def _security_status() -> Dict[str, object]:
             "policy_installed": Path("/usr/share/polkit-1/actions/org.memguardos.policy").exists(),
         },
     }
+
+
+def _safe_path_exists(path: Path) -> bool:
+    try:
+        return path.exists()
+    except OSError:
+        return False
 
 
 def _resource_status(namespace: str) -> Dict[str, object]:
