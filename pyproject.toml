@@ -26,10 +26,10 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/Alexd-star/memguardos"
-Repository = "https://github.com/Alexd-star/memguardos"
-Documentation = "https://github.com/Alexd-star/memguardos/tree/main/docs"
-Issues = "https://github.com/Alexd-star/memguardos/issues"
+Homepage = "https://www.gitlink.org.cn/lc263126/mxokdzntjytqyjzywjz"
+Repository = "https://www.gitlink.org.cn/lc263126/mxokdzntjytqyjzywjz"
+Documentation = "https://www.gitlink.org.cn/lc263126/mxokdzntjytqyjzywjz/tree/master/docs"
+Issues = "https://www.gitlink.org.cn/lc263126/mxokdzntjytqyjzywjz/issues"
 
 [project.scripts]
 memguard = "memguard.cli.memguard:main"

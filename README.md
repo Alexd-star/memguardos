@@ -12,8 +12,8 @@
 ![Tests](https://img.shields.io/badge/openKylin%20tests-705%20passed-138A72)
 ![License](https://img.shields.io/badge/License-MIT-4B5563)
 
-[![CI](https://github.com/Alexd-star/memguardos/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Alexd-star/memguardos/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/Alexd-star/memguardos?label=release&color=6C5CE7)](https://github.com/Alexd-star/memguardos/releases/latest)
+![CI](https://img.shields.io/badge/CI-Python%203.10%20%7C%203.11%20%7C%203.12%20passed-138A72)
+![Release](https://img.shields.io/badge/release-v1.0.0-6C5CE7)
 ![Debian packages](https://img.shields.io/badge/Debian%20packages-5-DB4B4B)
 ![No GPU required](https://img.shields.io/badge/GPU-not%20required-546E7A)
 
@@ -164,7 +164,7 @@ Web 工作台是本机记忆治理界面，不是替代 Agent 的聊天窗口；
 Python 3.10 及以上环境可以直接从源码安装：
 
 ```bash
-git clone https://github.com/Alexd-star/memguardos.git
+git clone https://www.gitlink.org.cn/lc263126/mxokdzntjytqyjzywjz.git
 cd memguardos
 python3 -m venv .venv
 source .venv/bin/activate
@@ -199,13 +199,13 @@ memguard audit
 需要复现当前 `main` 的最新代码时，建议在 openKylin 构建机准备 `qmake`、`pkg-config`、`libpeony-dev`、`libukcc-dev` 和 Qt5 开发包，然后直接从源码构建并安装五包：
 
 ```bash
-git clone https://github.com/Alexd-star/memguardos.git
+git clone https://www.gitlink.org.cn/lc263126/mxokdzntjytqyjzywjz.git
 cd memguardos
 bash scripts/build_ukui_plugins.sh
 bash scripts/install_deb_package_set.sh
 ```
 
-`install_deb_package_set.sh` 会重新构建五包，通过生成清单确认包名和路径，使用 APT 安装，并复核 systemd、CLI、Polkit、托盘入口和审计链。若使用 GitHub Release 中的已发布稳定快照，可下载五个 `.deb` 文件后在同一目录执行：
+`install_deb_package_set.sh` 会重新构建五包，通过生成清单确认包名和路径，使用 APT 安装，并复核 systemd、CLI、Polkit、托盘入口和审计链。若已经取得构建完成的五个 `.deb` 文件，也可以在同一目录直接执行：
 
 ```bash
 sudo apt install ./memguardos-core_*.deb \
@@ -416,7 +416,7 @@ flowchart TB
 | 真实 OpenHands | 基础 12 次、扩展 8 次、留出 8 次 | 28 次运行均保留上下文、工具事件与结果记录 | [真实 Agent 说明](docs/testing.md#6-记忆价值实验) |
 | openKylin 10k 负载 | 10,000 条记忆、150 次查询 | P95 10.105 ms，P99 75.255 ms，RSS 低于 256 MB 目标 | [性能证据](docs/evidence/performance_latest/) |
 | 检索 v2 三轮 | openKylin、1,000 条、120 次查询、6 worker | 三轮 Recall@5 均为 1.0000；质量路径和并发路径 P99 均低于 500 ms | [三轮门禁摘要](docs/evidence/openkylin/retrieval_v2.txt) |
-| 持续集成与发布门禁 | Python 3.10、3.11、3.12 | 编译、静态检查、完整测试、隔离安装、文档链接、安全扫描、Web 烟测、评测与提交包复验全部通过 | [GitHub Actions](https://github.com/Alexd-star/memguardos/actions/workflows/ci.yml) |
+| 持续集成与发布门禁 | Python 3.10、3.11、3.12 | 编译、静态检查、完整测试、隔离安装、文档链接、安全扫描、Web 烟测、评测与提交包复验全部通过 | [CI 配置](.github/workflows/ci.yml)与[证据索引](docs/evidence/README.md) |
 
 这些结果能够证明指定数据集和 openKylin 环境中的功能正确性、检索质量、延迟和交付完整性；它们不能证明所有模型、开放表达、硬件或外部 Agent 都必然得到相同结果。`Recall@5` 只判断目标记忆是否进入前五，不等同于最终回答质量；真实 Agent 效果应结合工具调用、任务完成和偏好遵循一起判断。
 
@@ -483,7 +483,7 @@ MemGuardOS 的精准遗忘覆盖它管理的事件、元数据、FTS、图谱、
 
 BPF LSM 提供敏感路径的内核强制策略，不宣称在内核态识别任意文件内容。Kylin embedding SDK 是可选增强，不是系统可用性的单点依赖；SDK 不可用或超出延迟预算时，系统会记录状态并回退到离线检索路径。
 
-发现安全问题时请按 [SECURITY.md](SECURITY.md) 私下报告，不要在公开 Issue 中提交真实凭据或个人信息。
+安全模型、受管范围和遗忘边界见[安全与遗忘边界](docs/security.md)。报告安全问题时请联系项目维护者，不要在公开 Issue 中提交真实凭据或个人信息。
 
 ## 🤝 贡献与开源
 

@@ -37,5 +37,5 @@
 
 首个工程快照，建立本地记忆卡片、mmap/SQLite 存储、混合检索、敏感检测、精准遗忘、审计链和基础 openKylin 部署路径。
 
-[1.0.0]: https://github.com/Alexd-star/memguardos/releases/tag/v1.0.0
-[0.1.0]: https://github.com/Alexd-star/memguardos/releases/tag/v0.1.0
+[1.0.0]: https://www.gitlink.org.cn/lc263126/mxokdzntjytqyjzywjz/tags/v1.0.0
+[0.1.0]: https://www.gitlink.org.cn/lc263126/mxokdzntjytqyjzywjz/tags/v0.1.0
