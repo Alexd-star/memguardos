@@ -1,7 +1,12 @@
 {
   "schema_version": "1.0",
-  "file_count": 29,
+  "file_count": 30,
   "files": [
+    {
+      "path": "agent_filesystem_scope.json",
+      "bytes": 1006,
+      "sha256": "d64af410b63e8e00028f5fe32b530b337f2684332b045108c06fb4bf09868a8a"
+    },
     {
       "path": "dashboard_ui_tests.txt",
       "bytes": 371,
@@ -120,7 +125,7 @@
     {
       "path": "source_revision.json",
       "bytes": 172,
-      "sha256": "fae9512a14537e10acac45da6fcc13e547e6294a12756558e74386599c9d5819"
+      "sha256": "27a1792c391326939542d9bd437b64c4953cfef9740b474110bf796cc0641020"
     },
     {
       "path": "storage_permissions.txt",
