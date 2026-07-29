@@ -33,7 +33,9 @@ memguard-agent-setup
 memguard-agent-showcase "$HOME/要操作的项目"
 ```
 
-启动器优先使用 `/opt/memguardos` 中经过安装包管理的程序，并从用户数据目录加载独立的 OpenHands 运行环境；源码开发目录只作为未安装产品时的后备。它会自动读取 `~/.config/memguardos/` 下权限为 `600` 的模型配置，关闭 OpenHands 调试横幅，并进入带 `/guide`、`/memory on|off`、`/run` 和 `/forget` 的中文工作台。用户不需要执行 `cd ~/memguardos`，模型凭据也不会写入项目目录、Git 或演示输出。需要直接录制两轮对照时，可运行 `memguard --model <模型> compare-live "<任务>"`。
+启动器优先使用 `/opt/memguardos` 中经过安装包管理的程序，并从用户数据目录加载独立的 OpenHands 运行环境；源码开发目录只作为未安装产品时的后备。它会自动读取 `~/.config/memguardos/` 下权限为 `600` 的模型配置，关闭 OpenHands 调试横幅，并进入带 `/guide`、`/memory on|off`、`/run` 和自然语言遗忘的中文工作台。用户可以直接输入“忘掉 grep 的习惯”，查看候选后输入 `yes`/“确认”或 `no`/“取消”；误写为 `/run 忘掉……` 时也会被安全转入遗忘预览。用户不需要执行 `cd ~/memguardos`，模型凭据也不会写入项目目录、Git 或演示输出。需要直接录制两轮对照时，可运行 `memguard --model <模型> compare-live "<任务>"`。
+
+工作台不会把任意一句话都默认为长期记忆。明确的“记住/保存/以后采用”进入记忆治理流程，普通任务使用 `/run`，语义不确定时界面同时给出两种可执行写法。该边界用于避免疑问句、代码说明和一次性操作被误判为长期偏好。自然语言保存、Web 保存和 Agent 事件接入最终共享同一套敏感检测、保留期限、来源治理和反馈结构；可选语义增强器只能补充分类，不能绕过本机敏感阻断和结构校验。
 
 ## 2. 主要组件
 

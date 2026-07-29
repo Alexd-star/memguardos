@@ -11,7 +11,7 @@ FORGET_VERBS = ("忘记", "忘掉", "遗忘", "删除", "清除")
 MEMORY_TYPE_PATTERNS = [
     ("all", ("所有记忆", "全部记忆", "全部", "所有")),
     ("security_policy", ("安全策略", "高风险安全", "安全确认策略")),
-    ("preference", ("工具偏好", "回答风格偏好", "风格偏好", "偏好")),
+    ("preference", ("工具偏好", "回答风格偏好", "风格偏好", "偏好", "习惯")),
     ("knowledge", ("修复流程的知识", "知识", "流程")),
     ("tool_trace", ("工具轨迹", "工具执行", "工具结果")),
 ]
@@ -277,13 +277,10 @@ class ErasureIntentCompiler:
             return "回答风格"
         if "pytest" in lowered and "偏好" in target_text:
             return "pytest"
-        if (
-            "rg" in lowered
-            and "工具偏好" in target_text
-            and "代码搜索" not in target_text
-            and "查代码" not in target_text
+        if any(tool in lowered for tool in ("rg", "grep", "ripgrep")) and any(
+            marker in target_text for marker in ("偏好", "习惯", "代码搜索", "查代码")
         ):
-            return "rg"
+            return "code_search_tool"
         if (
             "高风险命令" in target_text
             or "高风险操作" in target_text

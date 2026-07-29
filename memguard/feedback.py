@@ -23,6 +23,7 @@ class MemoryChangeSummary:
     updated_memories: list[dict[str, Any]] = field(default_factory=list)
     blocked_items: list[dict[str, Any]] = field(default_factory=list)
     skipped_items: list[dict[str, Any]] = field(default_factory=list)
+    observed_preferences: list[dict[str, Any]] = field(default_factory=list)
     effective_scopes: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
     audit_event_ids: list[str] = field(default_factory=list)
@@ -119,7 +120,13 @@ def build_memory_change_summary(
         audit_event_ids=[str(item) for item in audit_event_ids if str(item)],
     )
     record = result.get("record")
-    if result.get("duplicate") and record is not None:
+    withdrawal = result.get("preference_withdrawal")
+    if isinstance(withdrawal, Mapping):
+        item = _preference_withdrawal_item(withdrawal)
+        summary.updated_memories.append(item)
+        summary.effective_scopes.extend(item.get("where_it_will_apply") or [])
+        summary.suggested_next_actions.extend(["view", "undo_or_forget"])
+    elif result.get("duplicate") and record is not None:
         item = _memory_item(record, result)
         summary.skipped_items.append(
             {
@@ -152,10 +159,16 @@ def build_memory_change_summary(
             )
             summary.suggested_next_actions.append("view_audit")
         else:
+            reason = str(result.get("reason") or "not_stored")
+            message = {
+                "user_requested_no_memory": "已按你的要求跳过保存；本次内容不会进入长期记忆或检索上下文。",
+                "quality_reject": "内容未通过可复用性检查，因此没有保存为记忆。",
+                "interaction_not_promoted": "本轮内容已作为交互记录处理，但尚未形成稳定偏好或可复用经验。",
+            }.get(reason, "本次内容未形成可保存的记忆。")
             summary.skipped_items.append(
                 {
-                    "reason": str(result.get("reason") or "not_stored"),
-                    "summary_for_user": "本次内容未形成可保存的记忆。",
+                    "reason": reason,
+                    "summary_for_user": message,
                 }
             )
             summary.suggested_next_actions.append("review_input")
@@ -208,12 +221,27 @@ def merge_memory_change_summaries(
         merged.updated_memories.extend(item.get("updated_memories", []) or [])
         merged.blocked_items.extend(item.get("blocked_items", []) or [])
         merged.skipped_items.extend(item.get("skipped_items", []) or [])
+        merged.observed_preferences.extend(item.get("observed_preferences", []) or [])
         merged.effective_scopes.extend(str(value) for value in item.get("effective_scopes", []) or [])
         merged.suggested_next_actions.extend(str(value) for value in item.get("suggested_next_actions", []) or [])
         merged.audit_event_ids.extend(str(value) for value in item.get("audit_event_ids", []) or [])
     merged.effective_scopes = _unique(merged.effective_scopes)
     merged.suggested_next_actions = _unique(merged.suggested_next_actions)
     merged.audit_event_ids = _unique(merged.audit_event_ids)
+    unique_preferences = []
+    seen_preferences = set()
+    for item in merged.observed_preferences:
+        key = (
+            str(item.get("topic") or ""),
+            str(item.get("value") or ""),
+            str(item.get("scope") or ""),
+            str(item.get("status") or ""),
+        )
+        if key in seen_preferences:
+            continue
+        seen_preferences.add(key)
+        unique_preferences.append(item)
+    merged.observed_preferences = unique_preferences
     if merged.new_memories and "view" not in merged.suggested_next_actions:
         merged.suggested_next_actions.insert(0, "view")
     return merged.to_dict()
@@ -386,6 +414,9 @@ def _memory_item(record: Any, result: Mapping[str, Any]) -> dict[str, Any]:
     memory_type = str(row.get("type") or "memory")
     subtype = str(row.get("subtype") or "general")
     topic = str(row.get("preference_topic") or "")
+    category, category_label = _memory_category(memory_type, subtype, topic)
+    extraction = result.get("extraction") if isinstance(result.get("extraction"), Mapping) else {}
+    updated = bool(result.get("updated"))
     return {
         "memory_id": str(row.get("memory_id") or ""),
         "type": memory_type,
@@ -394,6 +425,12 @@ def _memory_item(record: Any, result: Mapping[str, Any]) -> dict[str, Any]:
         "scope": str(row.get("scope") or "user"),
         "preference_topic": topic,
         "preference_value": str(row.get("preference_value") or ""),
+        "category": category,
+        "category_label": category_label,
+        "change_kind": "updated" if updated else "saved",
+        "status_label": "已更新" if updated else "已保存",
+        "evidence_label": str(extraction.get("reason") or _evidence_label(row)),
+        "confidence": round(float(row.get("confidence") or 0.0), 3),
         "summary_for_user": memory_summary_for_user(row),
         "why_extracted": _why_extracted(memory_type, subtype, topic, result),
         "where_it_will_apply": _where_it_applies(row),
@@ -427,31 +464,23 @@ def memory_summary_for_user(row: Mapping[str, Any]) -> str:
             value = legacy_preference.group("value")
             parsed_scope = str(legacy_preference.group("scope") or "")
     if topic and value:
-        topic_label = {
-            "code_search_tool": "代码搜索工具",
-            "test_runner_command": "测试运行命令",
-            "service_log_tool": "服务日志工具",
-            "response_order": "回答顺序",
-            "response_language": "回答语言",
-            "response_verbosity": "回答详细度",
-            "high_risk_confirmation": "高风险操作确认",
-        }.get(topic, "交互偏好")
-        value_label = {
-            "command_then_explanation": "先给命令或结论，再说明原因",
-            "required": "操作前必须确认",
-            "zh-CN": "中文",
-            "concise": "简洁回答",
-        }.get(value, value)
         scope = str(parsed_scope or row.get("preference_scope") or row.get("scope") or "global")
-        scope_label = {
-            "global": "全部会话",
-            "agent": "当前 Agent",
-            "project": "当前项目",
-            "task_type": "同类任务",
-            "session": "当前会话",
-            "user": "当前用户",
-        }.get(scope, "相关任务")
-        return "用户偏好：%s为 %s，适用于%s。" % (topic_label, value_label, scope_label)
+        scope_label = _scope_label(scope)
+        if topic == "code_search_tool":
+            return "工具偏好：搜索项目代码时优先使用 %s，适用于%s。" % (value, scope_label)
+        if topic == "test_runner_command":
+            return "工具偏好：运行 Python 测试时优先使用 %s，适用于%s。" % (value, scope_label)
+        if topic == "service_log_tool":
+            return "工具偏好：查看服务日志时优先使用 %s，适用于%s。" % (value, scope_label)
+        if topic == "response_order":
+            return "回答偏好：先给可执行命令或明确结论，再说明原因，适用于%s。" % scope_label
+        if topic == "response_language":
+            return "回答偏好：使用中文回答，适用于%s。" % scope_label
+        if topic == "response_verbosity":
+            return "回答偏好：保持简洁并突出关键步骤，适用于%s。" % scope_label
+        if topic == "high_risk_confirmation":
+            return "安全策略：高风险操作必须先获得确认，适用于%s。" % scope_label
+        return "交互偏好：%s 为 %s，适用于%s。" % (topic, value, scope_label)
     summary = str(row.get("summary") or row.get("content") or "").strip()
     return " ".join(summary.split())[:240] or "已形成一条受控记忆。"
 
@@ -474,7 +503,80 @@ def _where_it_applies(row: Mapping[str, Any]) -> list[str]:
     scope = str(row.get("preference_scope") or row.get("scope") or "global")
     if topic:
         return ["Agent 规划", "工具选择", "回答生成"] if scope in {"global", "agent", "project", "task_type", "session"} else ["相关任务"]
+    if str(row.get("subtype") or "") == "user_habit":
+        return ["Agent 规划", "回答生成"]
     return ["相关检索任务"]
+
+
+def _memory_category(memory_type: str, subtype: str, topic: str) -> tuple[str, str]:
+    if topic in {"code_search_tool", "test_runner_command", "service_log_tool"}:
+        return "tool_preference", "工具偏好"
+    if topic in {"response_order", "response_language", "response_verbosity"}:
+        return "response_preference", "回答偏好"
+    if topic == "high_risk_confirmation" or memory_type == "sensitive_policy":
+        return "security_policy", "安全策略"
+    if memory_type == "procedure" or subtype in {"procedural", "procedural_trace", "tool_failure_case", "workflow"}:
+        return "procedural_experience", "操作经验"
+    if memory_type == "knowledge" or subtype in {"fact", "case", "template"}:
+        return "knowledge_memory", "知识记忆"
+    if memory_type == "preference":
+        return "user_preference", "用户偏好"
+    return "general_memory", "可复用记忆"
+
+
+def _scope_label(scope: str) -> str:
+    return {
+        "global": "全部会话",
+        "agent": "当前 Agent",
+        "project": "当前项目",
+        "task_type": "同类任务",
+        "session": "当前会话",
+        "user": "当前用户",
+    }.get(str(scope or ""), "相关任务")
+
+
+def _evidence_label(row: Mapping[str, Any]) -> str:
+    if row.get("preference_topic"):
+        return "本轮用户明确要求" if bool(row.get("preference_explicit", True)) else "多轮行为证据形成稳定习惯"
+    source = row.get("source") if isinstance(row.get("source"), Mapping) else {}
+    if str(source.get("kind") or "") == "tool_result":
+        return "本轮工具执行结果"
+    return "内容通过质量与安全检查"
+
+
+def _preference_withdrawal_item(withdrawal: Mapping[str, Any]) -> dict[str, Any]:
+    topic = str(withdrawal.get("topic") or "")
+    value = str(withdrawal.get("value") or "")
+    scope = str(withdrawal.get("scope") or "global")
+    memory_type = "sensitive_policy" if topic == "high_risk_confirmation" else "preference"
+    category, category_label = _memory_category(memory_type, "", topic)
+    summary = memory_summary_for_user(
+        {
+            "preference_topic": topic,
+            "preference_value": value,
+            "preference_scope": scope,
+        }
+    )
+    return {
+        "memory_id": str((withdrawal.get("retired_memory_ids") or [""])[0]),
+        "affected_memory_ids": [str(item) for item in withdrawal.get("retired_memory_ids") or []],
+        "type": memory_type,
+        "subtype": "preference_withdrawal",
+        "tier": "long_term",
+        "scope": scope,
+        "preference_topic": topic,
+        "preference_value": value,
+        "category": category,
+        "category_label": category_label,
+        "change_kind": "withdrawn",
+        "status_label": "已停止使用",
+        "evidence_label": "本轮用户明确撤回",
+        "confidence": 1.0,
+        "summary_for_user": summary.replace("：", "已停止：", 1),
+        "why_extracted": "检测到用户明确撤回已有偏好，已停止在后续任务中应用；历史审计仍保留。",
+        "where_it_will_apply": ["后续 Agent 任务不再应用该偏好"],
+        "actions": ["view", "forget"],
+    }
 
 
 def _sensitivity_dict(value: Any) -> dict[str, Any]:

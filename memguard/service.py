@@ -57,6 +57,7 @@ from memguard.integrations.preference_enhancer import PreferenceEnhancer
 from memguard.eval.live_comparison import STAGES as LIVE_COMPARISON_STAGES, build_comparison as build_live_comparison
 from memguard.integrations.normalizer import normalize_event, normalize_events
 from memguard.models import AuditInfo, MemoryRecord, MemorySource, VersionInfo, make_memory, new_id, stable_hash, utc_now
+from memguard.natural_language import explicitly_requests_no_store, infer_retention_tier
 from memguard.os_guard.events import parse_os_event
 from memguard.os_guard.cgroup import cgroup_status
 from memguard.os_guard.journald import JournaldLogger
@@ -231,6 +232,29 @@ class MemGuardService:
         }
 
     def ingest_text(self, text: str, source_kind: str = "manual", source_uri: str = "", tier: Optional[str] = None) -> Dict[str, object]:
+        if explicitly_requests_no_store(text):
+            audit = self._audit(
+                "user_no_store",
+                None,
+                {
+                    "source_kind": source_kind,
+                    "source_uri_hash": stable_hash(source_uri) if source_uri else "",
+                    "reason": "user explicitly requested that this content not be stored",
+                },
+            )
+            result = {
+                "stored": False,
+                "reason": "user_requested_no_memory",
+                "audit_event_id": _audit_event_id(audit),
+            }
+            result["feedback"] = build_memory_change_summary(
+                result,
+                namespace=self.namespace,
+                source=source_kind,
+                session_id=source_uri,
+                audit_event_ids=[result["audit_event_id"]],
+            ).to_dict()
+            return result
         clean_text, quality = assess_text_quality(text, source_kind=source_kind)
         if not quality.accepted:
             detail = {
@@ -319,6 +343,7 @@ class MemGuardService:
                     audit_event_ids=[result["audit_event_id"]],
                 ).to_dict()
                 return result
+        effective_tier = tier or infer_retention_tier(clean_text) or self._default_tier(memory_type, source_kind)
         record = make_memory(
             content=stored_text,
             memory_type=memory_type,
@@ -326,7 +351,7 @@ class MemGuardService:
             summary=extraction.summary,
             subtype=subtype,
             scope=self.namespace,
-            tier=tier or self._default_tier(memory_type, source_kind),
+            tier=effective_tier,
             sensitivity=sensitivity,
             trust_level=governance.trust_level,
             trust_score=governance.trust_score,
@@ -380,6 +405,82 @@ class MemGuardService:
         ).to_dict()
         return result
 
+    def ingest_natural_memory(
+        self,
+        text: str,
+        *,
+        source_kind: str = "user_cli",
+        source_uri: str = "memguard",
+        session_id: str = "natural-memory",
+        tier: Optional[str] = None,
+    ) -> Dict[str, object]:
+        """Ingest natural language through one semantic and safety decision path.
+
+        Actionable user preferences become structured Agent preferences rather
+        than generic text records.  Knowledge, cases and workflows continue
+        through the general extractor.  Both paths use the same sensitivity,
+        provenance and feedback contracts.
+        """
+
+        requested_tier = tier or infer_retention_tier(text)
+        event_text = str(text or "")
+        if requested_tier in {"working", "session"} and not any(
+            marker in event_text for marker in ("本轮", "本次会话", "当前会话", "这个会话")
+        ):
+            event_text = "%s（仅在本次会话生效）" % event_text
+        event = AgentInteractionEvent(
+            agent_name="memguardos",
+            agent_version="product",
+            session_id=str(session_id or "natural-memory"),
+            turn_id=new_id("turn"),
+            sequence=1,
+            event_type="user_message",
+            role="user",
+            content=event_text,
+            source_uri=str(source_uri or source_kind),
+            event_id=new_id("evt"),
+        )
+        extraction = extract_interaction_preferences(event)
+        if extraction.observations or not extraction.remember_allowed:
+            interaction = self.ingest_interaction(event)
+            memory_ids = [str(item) for item in interaction.get("memory_ids") or []]
+            records = [self.meta.get_memory(memory_id) for memory_id in memory_ids]
+            records = [record for record in records if record]
+            sensitivity = dict(interaction.get("sensitivity") or {})
+            reason = ""
+            if sensitivity.get("level") == "high":
+                reason = "sensitive_block"
+            elif not interaction.get("remember_allowed"):
+                reason = "user_requested_no_memory"
+            elif not memory_ids:
+                reason = "interaction_not_promoted"
+            return {
+                "stored": bool(memory_ids),
+                "event_stored": bool(interaction.get("stored")),
+                "reason": reason,
+                "record": records[0] if records else None,
+                "records": records,
+                "memory_ids": memory_ids,
+                "feedback": interaction.get("feedback") or {},
+                "sensitive_notice": interaction.get("sensitive_notice"),
+                "sensitivity": sensitivity,
+                "audit_event_id": interaction.get("audit_event_id", ""),
+                "preference_updates": interaction.get("preference_updates") or [],
+                "preference_withdrawals": interaction.get("preference_withdrawals") or [],
+                "natural_intent": "structured_preference",
+            }
+        result = self.ingest_text(
+            text,
+            source_kind=source_kind,
+            source_uri=source_uri,
+            tier=tier,
+        )
+        sensitivity = result.get("sensitivity")
+        if sensitivity is not None and not isinstance(sensitivity, dict):
+            result["sensitivity"] = dict(getattr(sensitivity, "__dict__", {}))
+        result["natural_intent"] = "memory_content"
+        return result
+
     def ingest_tool_result(self, tool_result: ToolResult, source_uri: str = "tool_result") -> Dict[str, object]:
         return self.ingest_text(
             tool_result.to_memory_text(),
@@ -418,11 +519,15 @@ class MemGuardService:
         # 偏好提取用原文，避免低风险打码（例如 systemd 单元名被邮箱规则命中）
         # 破坏正常抽取；写入记忆时再对偏好值单独脱敏，见 _store_preference_observation。
         extraction = extract_interaction_preferences(normalized)
-        extraction = self._augment_with_enhancer(extraction, normalized)
         safe_event, sensitivity = self._sanitize_interaction_event(
             normalized,
             remember_allowed=extraction.remember_allowed,
         )
+        # Optional semantic enhancement may invoke an external process/model.
+        # It must never receive an unclassified secret. High-risk content is
+        # blocked locally; medium/low findings are redacted before enhancement.
+        if sensitivity.level != "high":
+            extraction = self._augment_with_enhancer(extraction, safe_event)
         result = self.meta.insert_agent_event(safe_event)
         audit_type = "interaction_ingest" if result["stored"] else "interaction_duplicate"
         audit = self._audit(
@@ -445,10 +550,17 @@ class MemGuardService:
             },
         )
         memory_ids = []
+        memory_observations: Dict[str, PreferenceObservation] = {}
         preference_updates = []
+        preference_withdrawals = []
         if result["stored"] and extraction.remember_allowed and sensitivity.level != "high":
             for observation in extraction.observations:
                 self.meta.add_preference_observation(observation, safe_event)
+                if observation.polarity == "negative" and observation.explicit:
+                    withdrawal = self._adjudicate_preference_withdrawal(observation, safe_event)
+                    if withdrawal:
+                        preference_withdrawals.append(withdrawal)
+                    continue
                 aggregate_row = self._preference_aggregate(observation, safe_event)
                 if aggregate_row and aggregate_row["stable"] and not aggregate_row.get("promoted_memory_id"):
                     memory = self._store_preference_observation(observation, safe_event)
@@ -457,6 +569,7 @@ class MemGuardService:
                         self.link_memory_event(memory.memory_id, event_id, relation)
                     self.meta.mark_preference_promoted(aggregate_row, memory.memory_id)
                     memory_ids.append(memory.memory_id)
+                    memory_observations[memory.memory_id] = observation
                     update = self._adjudicate_preference_update(observation, memory, safe_event)
                     if update:
                         preference_updates.append(update)
@@ -464,15 +577,48 @@ class MemGuardService:
         for memory_id in memory_ids:
             row = self.meta.get_memory(memory_id)
             if row:
+                observation = memory_observations[memory_id]
+                update = next(
+                    (
+                        item
+                        for item in preference_updates
+                        if str(item.get("new_memory_id") or "") == memory_id
+                    ),
+                    None,
+                )
                 feedback_parts.append(
                     build_memory_change_summary(
-                        {"stored": True, "record": row},
+                        {
+                            "stored": update is None,
+                            "updated": update is not None,
+                            "record": row,
+                            "extraction": {
+                                "reason": (
+                                    "本轮用户明确要求"
+                                    if observation.explicit
+                                    else "多轮行为证据达到稳定阈值"
+                                ),
+                                "explicit": observation.explicit,
+                                "confidence": observation.confidence,
+                                "polarity": observation.polarity,
+                            },
+                        },
                         namespace=self.namespace,
                         source="agent",
                         session_id=safe_event.session_id,
                         audit_event_ids=[_audit_event_id(audit)],
                     ).to_dict()
                 )
+        for withdrawal in preference_withdrawals:
+            feedback_parts.append(
+                build_memory_change_summary(
+                    {"preference_withdrawal": withdrawal},
+                    namespace=self.namespace,
+                    source="agent",
+                    session_id=safe_event.session_id,
+                    audit_event_ids=[_audit_event_id(audit)],
+                ).to_dict()
+            )
         if feedback_parts:
             feedback = merge_memory_change_summaries(
                 feedback_parts,
@@ -481,10 +627,19 @@ class MemGuardService:
                 session_id=safe_event.session_id,
             )
         else:
+            skipped_reason = (
+                "sensitive_block"
+                if sensitivity.level == "high"
+                else (
+                    "user_requested_no_memory"
+                    if not extraction.remember_allowed
+                    else "interaction_not_promoted"
+                )
+            )
             feedback = build_memory_change_summary(
                 {
                     "stored": False,
-                    "reason": "sensitive_block" if sensitivity.level == "high" else "interaction_not_promoted",
+                    "reason": skipped_reason,
                     "sensitivity": sensitivity,
                 },
                 namespace=self.namespace,
@@ -492,6 +647,70 @@ class MemGuardService:
                 session_id=safe_event.session_id,
                 audit_event_ids=[_audit_event_id(audit)],
             ).to_dict()
+        observed_preferences = []
+        if extraction.remember_allowed and sensitivity.level != "high":
+            for observation in extraction.observations:
+                aggregate = self._preference_aggregate(observation, safe_event) or {}
+                created = next(
+                    (
+                        memory_id
+                        for memory_id, item in memory_observations.items()
+                        if item.topic == observation.topic
+                        and item.value == observation.value
+                        and item.scope == observation.scope
+                    ),
+                    "",
+                )
+                withdrawn = any(
+                    item.get("topic") == observation.topic
+                    and item.get("value") == observation.value
+                    and item.get("scope") == observation.scope
+                    for item in preference_withdrawals
+                )
+                if created:
+                    status = "updated" if any(
+                        str(item.get("new_memory_id") or "") == created
+                        for item in preference_updates
+                    ) else "saved"
+                elif withdrawn:
+                    status = "withdrawn"
+                elif aggregate.get("stable") and aggregate.get("promoted_memory_id"):
+                    status = "reinforced"
+                elif observation.polarity == "negative":
+                    status = "negative_observation"
+                else:
+                    status = "candidate"
+                observed_preferences.append(
+                    {
+                        "topic": observation.topic,
+                        "value": observation.value,
+                        "scope": observation.scope,
+                        "polarity": observation.polarity,
+                        "explicit": observation.explicit,
+                        "confidence": round(float(observation.confidence), 3),
+                        "evidence_count": int(aggregate.get("evidence_count") or 1),
+                        "distinct_sessions": int(aggregate.get("distinct_sessions") or 1),
+                        "status": status,
+                        "status_label": {
+                            "saved": "已保存",
+                            "updated": "已更新",
+                            "withdrawn": "已停止使用",
+                            "reinforced": "已加强依据",
+                            "negative_observation": "已记录撤回意向",
+                            "candidate": "正在观察",
+                        }[status],
+                        "category_label": _preference_category_label(observation.topic),
+                        "summary_for_user": memory_summary_for_user(
+                            {
+                                "preference_topic": observation.topic,
+                                "preference_value": observation.value,
+                                "preference_scope": observation.scope,
+                            }
+                        ),
+                        "memory_id": created or str(aggregate.get("promoted_memory_id") or ""),
+                    }
+                )
+        feedback["observed_preferences"] = observed_preferences
         return {
             **result,
             "agent_name": safe_event.agent_name,
@@ -500,6 +719,8 @@ class MemGuardService:
             "sequence": safe_event.sequence,
             "event_type": safe_event.event_type,
             "preference_updates": preference_updates,
+            "preference_withdrawals": preference_withdrawals,
+            "observed_preferences": observed_preferences,
             "remember_allowed": extraction.remember_allowed,
             "remember_reason": extraction.reason,
             "sensitivity": sensitivity.__dict__,
@@ -1460,6 +1681,59 @@ class MemGuardService:
         }
         self._audit("preference_update", memory.memory_id, update)
         return update
+
+    def _adjudicate_preference_withdrawal(
+        self,
+        observation: PreferenceObservation,
+        event: AgentInteractionEvent,
+    ) -> Optional[Dict[str, object]]:
+        """Deactivate an explicitly withdrawn preference without erasing history.
+
+        ``不要再用 grep`` changes future Agent behavior immediately, while
+        ``忘掉 grep 的习惯`` remains the separate, irreversible erasure flow.
+        Keeping those operations distinct gives users natural control without
+        silently destroying audit evidence.
+        """
+
+        topic = str(observation.topic or "").strip()
+        value = str(observation.value or "").strip()
+        scope = str(observation.scope or "global").strip()
+        if not topic or not value:
+            return None
+        retired: List[str] = []
+        for row in self.meta.list_memories(include_deleted=False, governance_state="active"):
+            memory_id = str(row.get("memory_id") or "")
+            if not memory_id:
+                continue
+            if str(row.get("preference_topic") or "") != topic:
+                continue
+            if str(row.get("preference_value") or "") != value:
+                continue
+            if str(row.get("preference_scope") or "global") != scope:
+                continue
+            self.meta.set_governance_state(
+                memory_id,
+                "superseded",
+                str(row.get("trust_level") or "normal"),
+                float(row.get("trust_score") or 0.0),
+                "withdrawn_by_user:%s" % event.event_id,
+            )
+            self.link_memory_event(memory_id, event.event_id, "withdrawn_by")
+            retired.append(memory_id)
+        if not retired:
+            return None
+        self._invalidate_search_cache()
+        result = {
+            "topic": topic,
+            "value": value,
+            "scope": scope,
+            "retired_memory_ids": retired,
+            "explicit": True,
+            "decided_by": "deterministic_rule",
+            "reason": "user explicitly withdrew this preference",
+        }
+        self._audit("preference_withdrawal", retired[0], result)
+        return result
 
     def _store_preference_observation(
         self,
@@ -2795,7 +3069,7 @@ class MemGuardService:
             memory_id = str(hit.get("memory_id") or "")
             if not memory_id or memory_id in seen:
                 continue
-            if hit.get("type") in {"preference", "sensitive_policy"}:
+            if hit.get("type") in {"preference", "sensitive_policy"} and hit.get("preference_topic"):
                 filtered.append(
                     {
                         "memory_id": memory_id,
@@ -4058,6 +4332,16 @@ class MemGuardService:
         if not recommendations:
             recommendations.append("当前分层、存储和淘汰状态健康，可继续按默认策略运行。")
         return recommendations
+
+
+def _preference_category_label(topic: str) -> str:
+    if topic in {"code_search_tool", "test_runner_command", "service_log_tool"}:
+        return "工具偏好"
+    if topic in {"response_order", "response_language", "response_verbosity"}:
+        return "回答偏好"
+    if topic == "high_risk_confirmation":
+        return "安全策略"
+    return "用户偏好"
 
 
 def _memory_heat_score(row: Dict[str, object]) -> float:

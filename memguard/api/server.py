@@ -276,31 +276,54 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         source_kind = _string_param(request, "source_kind", "api", max_chars=64)
         source_uri = _string_param(request, "source_uri", "local_socket", max_chars=1024)
         tier = request.get("tier")
-        result = service.ingest_text(text, source_kind=source_kind, source_uri=source_uri, tier=_string_param(request, "tier", "", max_chars=32) if tier else None)
+        selected_tier = _string_param(request, "tier", "", max_chars=32) if tier else None
+        result = (
+            service.ingest_natural_memory(
+                text,
+                source_kind=source_kind,
+                source_uri=source_uri,
+                session_id=_string_param(request, "session_id", "web-natural-memory", max_chars=256),
+                tier=selected_tier,
+            )
+            if bool(request.get("natural", False))
+            else service.ingest_text(
+                text,
+                source_kind=source_kind,
+                source_uri=source_uri,
+                tier=selected_tier,
+            )
+        )
         if result.get("stored"):
             record = result["record"]
+            record_value = record if isinstance(record, dict) else record.to_dict()
             return {
                 "ok": True,
                 "result": {
                     "stored": True,
-                    "memory_id": record.memory_id,
-                    "type": record.type,
-                    "subtype": record.subtype,
-                    "scope": record.scope,
+                    "memory_id": record_value.get("memory_id", ""),
+                    "memory_ids": result.get("memory_ids") or [record_value.get("memory_id", "")],
+                    "type": record_value.get("type", ""),
+                    "subtype": record_value.get("subtype", ""),
+                    "scope": record_value.get("scope", ""),
                     "namespace": service.namespace,
-                    "tier": record.tier,
+                    "tier": record_value.get("tier", ""),
                     "extraction": result.get("extraction"),
                     "feedback": result.get("feedback"),
                     "audit_event_id": result.get("audit_event_id"),
                 },
             }
         sensitivity = result.get("sensitivity")
+        sensitivity_value = (
+            dict(sensitivity)
+            if isinstance(sensitivity, dict)
+            else (sensitivity.__dict__ if sensitivity else None)
+        )
         return {
             "ok": True,
             "result": {
                 "stored": False,
                 "reason": result.get("reason"),
-                "sensitivity": sensitivity.__dict__ if sensitivity else None,
+                "sensitivity": sensitivity_value,
                 "feedback": result.get("feedback"),
                 "sensitive_notice": result.get("sensitive_notice"),
                 "audit_event_id": result.get("audit_event_id"),

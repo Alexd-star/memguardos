@@ -63,7 +63,8 @@ def test_memctl_feedback_home_exposes_recent_user_facing_memory_data(tmp_path, m
     assert payload["schema"] == "memguardos-feedback-home-v1"
     assert payload["recent_memories"]
     summary = payload["recent_memories"][0]["summary_for_user"]
-    assert "代码搜索工具" in summary
+    assert "工具偏好" in summary
+    assert "搜索项目代码" in summary
     assert "code_search_tool" not in summary
     assert "global" not in summary
 

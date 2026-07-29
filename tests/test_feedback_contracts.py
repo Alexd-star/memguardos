@@ -65,7 +65,9 @@ def test_memory_change_summary_translates_structured_preference_fields():
     )
 
     item = summary.to_dict()["new_memories"][0]
-    assert item["summary_for_user"] == "用户偏好：代码搜索工具为 rg，适用于全部会话。"
+    assert item["summary_for_user"] == "工具偏好：搜索项目代码时优先使用 rg，适用于全部会话。"
+    assert item["category_label"] == "工具偏好"
+    assert item["status_label"] == "已保存"
     assert item["preference_topic"] == "code_search_tool"
     assert item["preference_value"] == "rg"
     assert "code_search_tool" not in item["summary_for_user"]

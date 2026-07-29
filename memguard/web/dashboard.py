@@ -513,6 +513,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                     "source_kind": str(payload.get("source_kind", "dashboard")),
                     "source_uri": "web_dashboard",
                     "tier": payload.get("tier") or None,
+                    "natural": bool(payload.get("natural", True)),
                 }
             )
             return
@@ -1507,6 +1508,7 @@ def _dashboard_html() -> str:
           <div class="actions"><button class="primary" data-min-role="operator" onclick="runAgentTask(event)">运行任务</button><button class="secondary" onclick="loadAgentOverview(event)">查看已有记录</button><button class="secondary" onclick="exportDiagnostics(event)">导出系统报告</button></div>
           <p class="muted">本地回放用于检查完整记忆流程；只读预览不会写入新内容。真实 OpenHands 由已配置的 Agent 接入入口运行，本页不会把回放结果标成真实模型结果。</p>
         </div>
+        <div id="agentRunFeedback" class="list" style="margin-top:14px"></div>
         <div id="agentMetrics" class="grid four" style="margin-top:14px"></div>
         <div class="grid two" style="margin-top:14px">
           <div class="panel"><div class="health"><div><div class="item-title">最近会话</div><div class="muted">按任务归组，展开后查看用户请求、实际操作和最终答复</div></div></div><div id="agentTimeline" class="session-list" style="margin-top:12px"></div></div>
@@ -2123,6 +2125,7 @@ def _dashboard_html() -> str:
     function sourceLabel(value) {
       const labels = {
         manual:'手动输入',
+        user_cli:'终端自然语言输入',
         dashboard:'本地控制台',
         tool_result:'工具执行结果',
         user_behavior:'用户与 Agent 交互',
@@ -2141,7 +2144,7 @@ def _dashboard_html() -> str:
       return labels[String(value || '')] || '自动管理';
     }
     function sensitivityLabel(value) {
-      const labels = {none:'未发现敏感风险', low:'低风险', medium:'中等风险', high:'高风险', critical:'严重风险'};
+      const labels = {none:'未发现敏感风险', low:'低风险', medium:'中等风险', high:'高风险', critical:'严重风险', password_secret:'密码或口令', weak_password_hint_cn:'密码或口令', one_time_code:'验证码或一次性口令'};
       return labels[String(value || '').toLowerCase()] || '待确认';
     }
     function matchSourceLabel(value) {
@@ -2329,6 +2332,17 @@ def _dashboard_html() -> str:
       };
       return labels[String(value || '')] || '其他分类';
     }
+    function memoryCategoryLabel(item) {
+      const row = item || {};
+      const topic = String(row.preference_topic || '');
+      const subtype = String(row.subtype || '');
+      if (['code_search_tool','test_runner_command','service_log_tool'].includes(topic)) return '工具偏好';
+      if (['response_order','response_language','response_verbosity'].includes(topic)) return '回答偏好';
+      if (topic === 'high_risk_confirmation' || row.type === 'sensitive_policy') return '安全策略';
+      if (['procedural','procedural_trace','tool_failure_case','tool_trace','workflow'].includes(subtype)) return '操作经验';
+      if (subtype === 'user_habit') return '用户偏好';
+      return memoryTypeLabel(row.type || 'memory');
+    }
     function memorySummaryLabel(item) {
       const row = item || {};
       const preferenceSummary = row.preference_topic && row.preference_value
@@ -2370,7 +2384,7 @@ def _dashboard_html() -> str:
       return '<div class="memory-result-row">'
         + '<div><div class="memory-id" title="' + esc(memoryId) + '">' + esc(shortMemoryId(memoryId)) + '</div><div style="margin-top:7px">' + rankBadge + '</div></div>'
         + '<div><div class="memory-summary">' + esc(memorySummaryLabel(item)) + '</div>'
-        + '<div class="result-meta"><span>' + esc(memoryTypeLabel(item.type || 'memory')) + '</span><span>' + esc(source) + '</span><span>' + esc(scopeLabel(item.scope || item.preference_scope || 'default')) + '</span><span>' + esc(tierLabel(item.tier || '')) + '</span><span>' + esc(sensitivityLabel(sens)) + '</span>' + duplicateBadge + '</div>'
+        + '<div class="result-meta"><span>' + esc(memoryCategoryLabel(item)) + '</span><span>' + esc(source) + '</span><span>' + esc(scopeLabel(item.scope || item.preference_scope || 'default')) + '</span><span>' + esc(tierLabel(item.tier || '')) + '</span><span>' + esc(sensitivityLabel(sens)) + '</span>' + duplicateBadge + '</div>'
         + '<div class="result-reason">命中原因：' + esc(reason) + '</div></div>'
         + '<div class="result-actions"><button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(memoryId) + '">查看详情</button><button class="secondary" data-action="copy-memory-id" data-memory-id="' + esc(memoryId) + '">复制编号</button></div></div>';
     }
@@ -2733,11 +2747,35 @@ def _dashboard_html() -> str:
         const result = payload.result || {};
         if (result.session_id) document.getElementById('agentSession').value = result.session_id;
         setRawOutput('agentOut', payload);
+        renderAgentRunFeedback(result);
         if (result.truthful_note) setOperationStatus(result.truthful_note, result.ok ? 'ok' : 'warn');
         if (result.preference_effect_proofs) renderPreferenceProofs(result.preference_effect_proofs);
         if (result.ok) await loadAgentOverview(null);
         await loadFeedbackHome(null);
       });
+    }
+    function renderAgentRunFeedback(result) {
+      const box = document.getElementById('agentRunFeedback');
+      if (!box) return;
+      const feedback = result.memory_change_summary || {};
+      const items = (feedback.new_memories || []).concat(feedback.updated_memories || []);
+      const blocked = feedback.blocked_items || [];
+      const observed = (feedback.observed_preferences || []).filter(item => ['candidate','reinforced','negative_observation'].includes(item.status));
+      if (!items.length && !blocked.length && !observed.length) {
+        const mode = result.execution_mode === 'dry-run' ? '本次为只读预览，没有写入记忆。' : '任务已完成，本轮没有形成新的稳定偏好或可复用经验。';
+        box.innerHTML = '<div class="item"><div class="health"><div class="item-title">本次记忆结果</div><span class="badge">无新增</span></div><div class="muted">' + esc(mode) + '</div></div>';
+        return;
+      }
+      const itemMarkup = items.map(item => '<div class="list-row"><div><div class="item-title">'
+        + esc((item.category_label || '可复用记忆') + '：' + (item.summary_for_user || '已处理'))
+        + '</div><div class="muted">来源：' + esc(item.evidence_label || '已验证内容')
+        + ' · 后续用于：' + esc((item.where_it_will_apply || []).join('、') || '相关任务')
+        + '</div></div><span class="badge ok">' + esc(item.status_label || '已保存') + '</span></div>').join('');
+      const blockedMarkup = blocked.length
+        ? '<div class="list-row"><div><div class="item-title">内容保护</div><div class="muted">敏感内容没有进入长期记忆或检索上下文。</div></div><span class="badge bad">已阻止 ' + blocked.length + ' 项</span></div>'
+        : '';
+      const observedMarkup = observed.map(item => '<div class="list-row"><div><div class="item-title">检测到' + esc(item.category_label || '用户偏好') + '：' + esc(item.summary_for_user || '') + '</div><div class="muted">依据 ' + esc(item.evidence_count || 1) + ' 条 · 来自 ' + esc(item.distinct_sessions || 1) + ' 个会话</div></div><span class="badge warn">' + esc(item.status_label || '正在观察') + '</span></div>').join('');
+      box.innerHTML = '<div class="section-block"><div class="section-block-header"><strong>本次记忆结果</strong><span class="badge ok">已处理 ' + (items.length + observed.length) + ' 项</span></div><div class="section-block-body"><div class="linear-list">' + itemMarkup + observedMarkup + blockedMarkup + '</div></div></div>';
     }
     async function runJourney(event) {
       document.getElementById('agentTask').value = '查找 MemGuardService 的定义并说明如何验证记忆遗忘';
@@ -3340,7 +3378,7 @@ def _dashboard_html() -> str:
     }
     async function ingest(event) {
       return withMutation(event, '保存记忆', async () => {
-        const data = {text: ingestText.value, source_kind: sourceKind.value, tier: tier.value};
+        const data = {text: ingestText.value, source_kind: sourceKind.value, tier: tier.value, natural: true};
         const payload = await postJson('/api/ingest', data);
         setRawOutput('ingestOut', payload);
         renderIngestFeedback(payload);
@@ -3372,7 +3410,7 @@ def _dashboard_html() -> str:
         box.innerHTML = '<div class="item"><div class="item-title">本次没有形成可保存记忆</div><div class="muted">' + esc(((feedback.skipped_items || [])[0] || {}).summary_for_user || '请检查输入内容和保存策略。') + '</div></div>';
         return;
       }
-      box.innerHTML = '<div class="item"><div class="health"><div class="item-title">已学到：' + esc(item.summary_for_user) + '</div><span class="badge ok">已保存</span></div><div class="muted">为什么保存：' + esc(item.why_extracted) + '</div><div class="muted">适用范围：' + esc((item.where_it_will_apply || []).join('、')) + '</div><div class="mini-actions"><button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(item.memory_id || '') + '">查看详情</button><button class="secondary" data-action="preference-proof" data-memory-id="' + esc(item.memory_id || '') + '">测试生效</button></div></div>';
+      box.innerHTML = '<div class="item"><div class="health"><div class="item-title">' + esc(item.category_label || '可复用记忆') + '：' + esc(item.summary_for_user) + '</div><span class="badge ok">' + esc(item.status_label || '已保存') + '</span></div><div class="muted">来源：' + esc(item.evidence_label || item.why_extracted) + '</div><div class="muted">后续用于：' + esc((item.where_it_will_apply || []).join('、')) + '</div><div class="mini-actions"><button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(item.memory_id || '') + '">查看详情</button><button class="secondary" data-action="preference-proof" data-memory-id="' + esc(item.memory_id || '') + '">测试生效</button></div></div>';
     }
     async function explainExtraction(event) {
       return withBusy(event, async () => {

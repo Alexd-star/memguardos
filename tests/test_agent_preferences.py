@@ -1,3 +1,5 @@
+import pytest
+
 from memguard.integrations.events import AgentInteractionEvent
 from memguard.integrations.interaction_extractor import extract_interaction_preferences
 from memguard.service import MemGuardService
@@ -31,6 +33,50 @@ def test_user_message_is_split_into_independent_explicit_preferences():
     ]
     assert all(item.explicit for item in result.observations)
     assert all(item.scope == "global" for item in result.observations)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            "以后搜索项目代码优先使用 grep，并且回答时先给可复制命令，再解释结果。",
+            {("code_search_tool", "grep", "positive"), ("response_order", "command_then_explanation", "positive")},
+        ),
+        (
+            "今后查代码改用 rg；请先告诉我怎么做，然后说明原因。",
+            {("code_search_tool", "rg", "positive"), ("response_order", "command_then_explanation", "positive")},
+        ),
+        (
+            "在当前项目中默认用中文简短回答。",
+            {("response_language", "zh-CN", "positive"), ("response_verbosity", "concise", "positive")},
+        ),
+        (
+            "以后不要用中文回答，也不必先给命令再解释。",
+            {("response_language", "zh-CN", "negative"), ("response_order", "command_then_explanation", "negative")},
+        ),
+        (
+            "纠正一下：不要再用 grep，改用 rg。",
+            {("code_search_tool", "grep", "negative"), ("code_search_tool", "rg", "positive")},
+        ),
+    ],
+)
+def test_natural_preference_phrase_matrix(text, expected):
+    result = extract_interaction_preferences(event(text))
+
+    assert {(item.topic, item.value, item.polarity) for item in result.observations} == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "默认用 rg 还是 grep 好？",
+        "我忘记了 grep 的参数，你能解释一下吗？",
+        "请删除名为 grep-notes.txt 的文件。",
+        "解释为什么这条命令不能运行，然后给修复建议。",
+    ],
+)
+def test_non_preference_phrases_do_not_create_preferences(text):
+    assert extract_interaction_preferences(event(text)).observations == []
 
 
 def test_user_message_extracts_agent_test_runner_and_service_log_habits():
@@ -473,5 +519,35 @@ def test_latest_explicit_preference_uses_event_ingest_order_when_timestamps_tie(
             str(row.get("preference_value") or "") == "grep"
             for row in service.list_memories(governance_state="superseded")
         )
+    finally:
+        service.close()
+
+
+def test_explicit_withdrawal_stops_active_preference_without_erasing_history(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        original = service.ingest_interaction(
+            event("以后搜索项目代码优先使用 grep。", event_id="evt-withdraw-old")
+        )
+        withdrawn = service.ingest_interaction(
+            event(
+                "以后不要再用 grep 搜索项目代码。",
+                event_id="evt-withdraw-new",
+                session_id="session-b",
+            )
+        )
+
+        assert original["memory_ids"]
+        assert withdrawn["preference_withdrawals"][0]["retired_memory_ids"] == original["memory_ids"]
+        assert not [
+            item
+            for item in service.interaction_status()["preference_aggregates"]
+            if item["topic"] == "code_search_tool" and item["value"] == "grep" and item["stable"]
+        ]
+        assert service.meta.get_memory(original["memory_ids"][0])["deleted"] == 0
+        assert service.meta.get_memory(original["memory_ids"][0])["governance_state"] == "superseded"
+        feedback = withdrawn["feedback"]["updated_memories"][0]
+        assert feedback["category_label"] == "工具偏好"
+        assert feedback["status_label"] == "已停止使用"
     finally:
         service.close()

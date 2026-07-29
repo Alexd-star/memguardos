@@ -1,6 +1,7 @@
 import pytest
 
 from memguard.retrieval.fusion import QueryIntent, classify_query_intent, rrf_fuse
+from memguard.retrieval.hybrid import HybridRetriever
 from memguard.service import MemGuardService
 
 
@@ -265,3 +266,31 @@ def test_common_latin_term_is_not_misclassified_as_rare_exact_hit(tmp_path):
         )
     finally:
         service.close()
+
+
+def test_kylin_without_persisted_candidate_vector_keeps_grounded_fallback():
+    class QueryOnlyKylin:
+        def vector(self, text, timeout_seconds=None):
+            return [1.0, 0.0]
+
+    retriever = HybridRetriever("kylin")
+    retriever.kylin_provider = QueryOnlyKylin()
+    unrelated = {
+        "memory_id": "mem-unrelated-preference",
+        "type": "preference",
+        "subtype": "user_habit",
+        "summary": "用户偏好：我喜欢深色模式，通知保持静默。",
+        "content": "我喜欢深色模式，通知保持静默。",
+        "source_kind": "user_cli",
+        "sensitivity_level": "none",
+    }
+
+    ranked = retriever.rank(
+        "我的命令行颜色偏好",
+        [unrelated],
+        limit=5,
+        persisted_vectors={},
+    )
+
+    assert ranked == []
+    assert retriever.last_backend_used == "hash"

@@ -323,6 +323,19 @@ class HybridRetriever:
         summary_tokens = set(tokenize_literal(summary))
         content_tokens = set(tokenize_literal(content))
         lexical_hits = query_tokens & (summary_tokens | content_tokens)
+        generic_preference_tokens = {
+            "偏好",
+            "习惯",
+            "喜欢",
+            "我的",
+            "用户",
+            "设置",
+            "建议",
+            "按照",
+            "prefer",
+            "preference",
+        }
+        preference_grounded_hits = lexical_hits - generic_preference_tokens
         record_tokens = summary_tokens | content_tokens
         lexical_precision = len(lexical_hits) / float(len(record_tokens) or 1)
         original_lexical_hits = original_query_tokens & record_tokens
@@ -403,6 +416,7 @@ class HybridRetriever:
             "content_score": round(content_score, 4),
             "query_token_count": len(query_tokens),
             "lexical_hit_count": len(lexical_hits),
+            "preference_grounded_hit_count": len(preference_grounded_hits),
             "lexical_precision": round(lexical_precision, 4),
             "original_lexical_hit_count": len(original_lexical_hits),
             "original_lexical_precision": round(original_lexical_precision, 4),
@@ -417,6 +431,11 @@ class HybridRetriever:
             "scope_penalty": round(scope_penalty, 4),
             "routing_score": round(routing_score, 4),
             "routing_reasons": routing_reasons,
+            "preference_intent": _contains_any(
+                query_lower,
+                ["偏好", "习惯", "优先", "喜欢", "prefer", "preference"],
+            ),
+            "record_is_preference": record_type == "preference",
             "alias_expansion": expanded,
             "total": round(total, 4),
         }
@@ -505,7 +524,12 @@ class HybridRetriever:
             self.last_backend_used = "kylin_sdk_persisted"
             return reranked[:limit]
         self.last_backend_used = "hash"
-        return reranked[:limit]
+        # A Kylin query vector without a matching persisted candidate vector
+        # provides no semantic evidence for that candidate. Returning the
+        # broader semantic pool here would bypass the grounded hash threshold
+        # and surface unrelated memories only on openKylin. Fall back to the
+        # already-qualified hash results until vector persistence catches up.
+        return self._tag_backend(scored[:limit], "hash")
 
     @staticmethod
     def _hash_evidence_is_sufficient(breakdown: Dict[str, float | dict]) -> bool:
@@ -513,11 +537,20 @@ class HybridRetriever:
             return False
         if any(
             float(breakdown.get(key, 0.0)) > 0
-            for key in ("exact_phrase_score", "topic_score", "subtype_score")
+            for key in ("exact_phrase_score", "topic_score")
+        ):
+            return True
+        if (
+            float(breakdown.get("subtype_score", 0.0)) > 0
+            and int(breakdown.get("preference_grounded_hit_count", 0)) >= 1
         ):
             return True
         lexical_hits = int(breakdown.get("lexical_hit_count", 0))
         query_tokens = int(breakdown.get("query_token_count", 0))
+        if bool(breakdown.get("preference_intent")) and bool(
+            breakdown.get("record_is_preference")
+        ):
+            return int(breakdown.get("preference_grounded_hit_count", 0)) >= 1
         if lexical_hits >= 2:
             return True
         distinctive_latin_tokens = int(breakdown.get("distinctive_latin_token_count", 0))

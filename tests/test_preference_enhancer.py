@@ -125,3 +125,43 @@ def test_broken_enhancer_never_blocks_ingest(tmp_path, monkeypatch):
         assert "code_search_tool" in topics
     finally:
         service.close()
+
+
+def test_high_risk_interaction_is_blocked_before_optional_enhancer(tmp_path, monkeypatch):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    called = []
+
+    def should_not_run(*_args, **_kwargs):
+        called.append(True)
+        raise AssertionError("high-risk plaintext reached preference enhancer")
+
+    monkeypatch.setattr(service.preference_enhancer, "command", "configured")
+    monkeypatch.setattr(service.preference_enhancer, "suggest", should_not_run)
+    try:
+        result = service.ingest_interaction(_event("记住我的密码 11515", event_id="evt-secret-first"))
+
+        assert result["sensitivity"]["level"] == "high"
+        assert result["memory_ids"] == []
+        assert called == []
+    finally:
+        service.close()
+
+
+def test_medium_risk_interaction_is_redacted_before_optional_enhancer(tmp_path, monkeypatch):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    observed = []
+
+    def capture(event, _existing):
+        observed.append(event.content)
+        return [], ""
+
+    monkeypatch.setattr(service.preference_enhancer, "command", "configured")
+    monkeypatch.setattr(service.preference_enhancer, "suggest", capture)
+    try:
+        result = service.ingest_interaction(_event("我的联系电话是 13800138000。", event_id="evt-redact-first"))
+
+        assert result["sensitivity"]["level"] == "medium"
+        assert observed and "13800138000" not in observed[0]
+        assert "[REDACTED:phone_cn]" in observed[0]
+    finally:
+        service.close()

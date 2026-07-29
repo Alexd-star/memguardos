@@ -188,6 +188,54 @@ def test_sensitive_credential_is_blocked(tmp_path):
         service.close()
 
 
+def test_natural_language_short_password_and_one_time_code_are_blocked(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        password = service.ingest_text("记住我的密码 11515", source_kind="user_cli")
+        otp = service.ingest_text("本次登录验证码 010609", source_kind="user_cli")
+
+        assert password["stored"] is False
+        assert password["reason"] == "sensitive_block"
+        assert "password_secret" in password["sensitivity"].labels
+        assert otp["stored"] is False
+        assert "one_time_code" in otp["sensitivity"].labels
+        assert service.list_memories() == []
+    finally:
+        service.close()
+
+
+def test_password_policy_explanation_is_not_mistaken_for_a_secret(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        result = service.ingest_text("密码长度至少八位，并启用失败次数限制。")
+
+        assert result["stored"] is True
+        assert result["record"].sensitivity.level == "none"
+    finally:
+        service.close()
+
+
+def test_natural_language_retention_maps_to_session_and_no_store_is_respected(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        temporary = service.ingest_text(
+            "知识记忆：临时项目代号是蓝河，该信息只保留到本次演示结束。",
+            source_kind="user_cli",
+        )
+        skipped = service.ingest_text(
+            "不要保存这条：临时项目代号是青山。",
+            source_kind="user_cli",
+        )
+
+        assert temporary["stored"] is True
+        assert temporary["record"].tier == "session"
+        assert skipped["stored"] is False
+        assert skipped["reason"] == "user_requested_no_memory"
+        assert "不会进入长期记忆" in skipped["feedback"]["skipped_items"][0]["summary_for_user"]
+    finally:
+        service.close()
+
+
 def test_phone_is_redacted_and_stored(tmp_path):
     service = make_service(tmp_path)
     try:
@@ -2036,6 +2084,53 @@ def test_local_api_handler_and_unix_socket(tmp_path):
         oversized = json.loads(oversized_response)
         assert oversized["ok"] is False
         assert oversized["error"] == "payload_too_large"
+    finally:
+        service.close()
+
+
+def test_local_api_natural_ingest_enforces_product_memory_policy(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        blocked = handle_request(
+            service,
+            {
+                "command": "ingest",
+                "text": "记住我的密码 11515",
+                "source_kind": "dashboard",
+                "source_uri": "web_dashboard",
+                "natural": True,
+            },
+        )
+        temporary = handle_request(
+            service,
+            {
+                "command": "ingest",
+                "text": "项目代号是蓝河，只保留到本次演示结束。",
+                "source_kind": "dashboard",
+                "source_uri": "web_dashboard",
+                "natural": True,
+            },
+        )
+        preferences = handle_request(
+            service,
+            {
+                "command": "ingest",
+                "text": "记住：以后用中文简洁回答。",
+                "source_kind": "dashboard",
+                "source_uri": "web_dashboard",
+                "natural": True,
+            },
+        )
+
+        assert blocked["ok"] is True
+        assert blocked["result"]["stored"] is False
+        assert blocked["result"]["reason"] == "sensitive_block"
+        assert "password_secret" in blocked["result"]["sensitivity"]["labels"]
+        assert temporary["result"]["stored"] is True
+        assert temporary["result"]["tier"] == "session"
+        assert preferences["result"]["stored"] is True
+        assert len(preferences["result"]["memory_ids"]) == 2
+        assert len(preferences["result"]["feedback"]["new_memories"]) == 2
     finally:
         service.close()
 

@@ -7,6 +7,8 @@ import shlex
 import subprocess
 from typing import Any
 
+from memguard.natural_language import looks_like_question
+
 
 ALLOWED_TYPES = {"preference", "knowledge", "sensitive_policy"}
 ALLOWED_SUBTYPES = {
@@ -202,6 +204,7 @@ class HybridMemoryExtractor:
     @staticmethod
     def _signals(text: str, source_kind: str) -> list[str]:
         lowered = text.lower()
+        is_question = looks_like_question(text)
         signals: list[str] = []
         if source_kind:
             signals.append("source_%s" % source_kind)
@@ -209,14 +212,56 @@ class HybridMemoryExtractor:
             signals.append("source_tool_result")
         if "procedural_memory=state_action_result" in lowered or ("state_before=" in lowered and "state_after=" in lowered):
             signals.append("procedural_state_action_result")
-        if any(marker in text for marker in ["以后", "偏好", "请先", "请优先", "请总是", "必须", "不要"]):
+        if not is_question and any(
+            marker in text
+            for marker in (
+                "以后",
+                "偏好",
+                "请先",
+                "请优先",
+                "请总是",
+                "必须",
+                "不要",
+                "记住",
+                "喜欢",
+                "习惯",
+                "倾向",
+                "希望",
+                "常用",
+            )
+        ):
             signals.append("preference_intent")
-        if any(marker in lowered for marker in ["prefer", "always", "never", "style"]):
+        if not is_question and any(marker in lowered for marker in ["prefer", "always", "never", "style"]):
             signals.append("preference_intent")
-        if any(marker in lowered for marker in ["rg", "grep", "pytest", "tool", "工具", "命令", "shell"]):
+        if not is_question and any(marker in lowered for marker in ["rg", "grep", "pytest", "tool", "工具", "命令", "shell"]):
             signals.append("tool_preference_intent")
-        if any(marker in lowered for marker in ["简洁", "详细", "中文", "英文", "回答", "最短", "风险提醒", "证据边界", "口径", "材料"]):
+        style_directive = any(
+            marker in lowered
+            for marker in (
+                "以后",
+                "今后",
+                "默认",
+                "偏好",
+                "请",
+                "必须",
+                "应当",
+                "应该",
+                "不要",
+                "不应",
+                "一律",
+                "统一",
+                "先给",
+                "再给",
+                "放在前面",
+                "规则",
+                "规范",
+                "answer.style",
+            )
+        )
+        if not is_question and style_directive and any(marker in lowered for marker in ["简洁", "详细", "中文", "英文", "回答", "最短", "风险提醒", "证据边界", "口径", "材料"]):
             signals.append("style_intent")
+        if is_question:
+            signals.append("question_content")
         if any(marker in lowered for marker in ["安全策略", "不要保存", "脱敏", "访问令牌"]):
             signals.append("security_policy_intent")
         token_budget_context = "token 预算" in lowered or "token budget" in lowered or "tokens" in lowered
@@ -248,6 +293,10 @@ class HybridMemoryExtractor:
             "sensitive_policy": "安全策略",
         }.get(memory_type, "记忆")
         clean = " ".join(text.strip().split())
+        for existing in ("知识记忆：", "知识记忆:", "偏好记忆：", "偏好记忆:", "用户偏好：", "用户偏好:", "安全策略：", "安全策略:", "操作经验：", "操作经验:", "流程记忆：", "流程记忆:"):
+            if clean.startswith(existing):
+                clean = clean[len(existing):].strip()
+                break
         return "%s：%s" % (prefix, clean[:140])
 
     @staticmethod

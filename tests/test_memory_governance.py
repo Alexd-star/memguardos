@@ -100,6 +100,24 @@ def test_trusted_explicit_user_input_remains_active_by_default(tmp_path):
         service.close()
 
 
+def test_direct_product_entries_are_trusted_and_retrievable(tmp_path):
+    service = service_at(tmp_path)
+    try:
+        for source_kind in ("user_cli", "dashboard"):
+            result = service.ingest_text(
+                "我喜欢深色模式，通知保持静默。",
+                source_kind=source_kind,
+                source_uri=source_kind,
+            )
+
+            assert result["record"].trust_level == "trusted"
+            assert result["record"].governance_state == "active"
+
+        assert service.search("深色模式 静默通知")
+    finally:
+        service.close()
+
+
 def test_untrusted_policy_bypass_still_enters_quarantine(tmp_path):
     service = service_at(tmp_path)
     try:

@@ -6,6 +6,8 @@ import os
 import sys
 from pathlib import Path
 
+from memguard.feedback import memory_summary_for_user
+from memguard.natural_language import interpret_user_input, looks_like_forget_request
 from memguard.service import MemGuardService
 
 
@@ -126,30 +128,85 @@ def _status(service: MemGuardService) -> int:
 
 
 def _remember(service: MemGuardService, text: str) -> int:
-    result = service.ingest_text(text, source_kind="user_cli", source_uri="memguard")
+    result = service.ingest_natural_memory(
+        text,
+        source_kind="user_cli",
+        source_uri="memguard",
+        session_id="memguard-shell",
+    )
     _section("记忆写入")
     if result.get("stored"):
-        memory_id = str(getattr(result.get("record"), "memory_id", "") or "")
+        records = list(result.get("records") or [])
+        if not records and result.get("record") is not None:
+            records = [result["record"]]
+        memory_ids = [
+            str(record.get("memory_id") if isinstance(record, dict) else getattr(record, "memory_id", "") or "")
+            for record in records
+        ]
         feedback = result.get("feedback") or {}
         items = list(feedback.get("new_memories") or []) + list(feedback.get("updated_memories") or [])
-        first = items[0] if items else {}
-        summary = str(first.get("summary_for_user") if isinstance(first, dict) else getattr(first, "summary_for_user", "") or "")
-        if summary:
-            print("已学到：%s" % summary)
-        print("记忆编号：%s" % (memory_id or "可在 Web 控制台的最近记忆中查看"))
-        print("你可以用 `memguard search 关键词` 或在 Web 控制台查看这条记忆。")
+        print("检测到并保存 %d 项可复用内容。" % max(1, len(items) or len(records)))
+        for index, item in enumerate(items or [{}], 1):
+            summary = str(item.get("summary_for_user") or "已形成一条受控记忆。")
+            print("%d. [%s · %s] %s" % (
+                index,
+                item.get("category_label") or "可复用记忆",
+                item.get("status_label") or "已保存",
+                summary,
+            ))
+        tiers = {
+            str(record.get("tier") if isinstance(record, dict) else getattr(record, "tier", "") or "")
+            for record in records
+        }
+        tier_labels = {
+            "working": "当前任务",
+            "session": "当前会话",
+            "long_term": "长期保留",
+        }
+        if tiers:
+            print("保存时长：%s" % "、".join(tier_labels.get(tier, "自动管理") for tier in sorted(tiers)))
+        if tiers & {"working", "session"}:
+            print("说明：阶段性记忆不会被当作长期偏好；任务或会话结束后可统一清理。")
+        print("记忆编号：%s" % ("、".join(memory_ids) or "可在 Web 控制台的最近记忆中查看"))
+        print("下一步：输入 /memory 查看内容，或运行相关 Agent 任务验证是否生效。")
         return 0
     notice = result.get("sensitive_notice") or {}
     if isinstance(notice, dict) and notice.get("user_summary"):
         print(str(notice["user_summary"]))
         labels = [str(item) for item in notice.get("detected_labels") or [] if str(item)]
         if labels:
-            print("检测类型：%s" % "、".join(labels))
+            print("检测类型：%s" % "、".join(_sensitive_label(item) for item in labels))
         print("下一步：可在“内容保护”或审计记录中查看本次处理依据。")
     else:
-        print("本次内容未形成长期记忆：%s" % result.get("reason", "策略未允许"))
-        print("处理建议：检查内容是否过短、重复或缺少可复用信息。")
+        observed = list((result.get("feedback") or {}).get("observed_preferences") or [])
+        if observed:
+            for item in observed:
+                print("检测到%s：%s" % (item.get("category_label") or "用户偏好", item.get("summary_for_user") or ""))
+                print("当前状态：%s；已获得 %s 条依据，来自 %s 个会话。" % (
+                    item.get("status_label") or "正在观察",
+                    item.get("evidence_count", 1),
+                    item.get("distinct_sessions", 1),
+                ))
+            print("说明：一次性用法不会自动升级为长期偏好；明确说“以后”或“记住”可立即保存。")
+        elif result.get("reason") == "user_requested_no_memory":
+            print("已按你的要求跳过保存，本次内容不会进入长期记忆或检索上下文。")
+        else:
+            print("本次内容未形成记忆：%s" % result.get("reason", "策略未允许"))
+            print("处理建议：说明要保存的事实、偏好或可复用步骤，并注明适用范围或保存时长。")
     return 2
+
+
+def _sensitive_label(label: str) -> str:
+    return {
+        "password_secret": "密码或口令",
+        "weak_password_hint_cn": "密码或口令",
+        "one_time_code": "验证码或一次性口令",
+        "token_assignment": "访问凭据",
+        "api_key": "API 密钥",
+        "private_key": "私钥",
+        "jwt": "登录令牌",
+        "url_credentials": "链接中的账号凭据",
+    }.get(str(label or ""), "敏感信息")
 
 
 def _memory(service: MemGuardService, limit: int = 10) -> int:
@@ -160,10 +217,32 @@ def _memory(service: MemGuardService, limit: int = 10) -> int:
         print("下一步：输入 `memguard remember \"以后查代码优先用 rg\"` 写入一条偏好。")
         return 0
     for index, row in enumerate(rows, 1):
-        print("%d. %s" % (index, row.get("summary") or row.get("content") or row.get("memory_id")))
-        print("   类型：%s / %s  层级：%s" % (row.get("type", "-"), row.get("subtype", "-"), row.get("tier", "-")))
+        print("%d. %s" % (index, memory_summary_for_user(row)))
+        print("   分类：%s  保存时长：%s" % (
+            _memory_category_display(row),
+            {"working": "当前任务", "session": "当前会话", "long_term": "长期保留"}.get(
+                str(row.get("tier") or ""), "自动管理"
+            ),
+        ))
         print("   ID：%s" % row.get("memory_id", "-"))
     return 0
+
+
+def _memory_category_display(row: dict) -> str:
+    topic = str(row.get("preference_topic") or "")
+    subtype = str(row.get("subtype") or "")
+    memory_type = str(row.get("type") or "")
+    if topic in {"code_search_tool", "test_runner_command", "service_log_tool"}:
+        return "工具偏好"
+    if topic in {"response_order", "response_language", "response_verbosity"}:
+        return "回答偏好"
+    if topic == "high_risk_confirmation" or memory_type == "sensitive_policy":
+        return "安全策略"
+    if subtype in {"procedural", "procedural_trace", "tool_failure_case", "tool_trace", "workflow"}:
+        return "操作经验"
+    if memory_type == "preference":
+        return "用户偏好"
+    return "知识记忆"
 
 
 def _search(service: MemGuardService, query: str, limit: int = 5) -> int:
@@ -215,8 +294,8 @@ def _context(service: MemGuardService, task: str, limit: int = 5, token_budget: 
 
 def _forget(service: MemGuardService, request: str, confirm: bool = False, compact: bool = False) -> int:
     result = service.forget(request, confirm=confirm, compact=compact or confirm)
-    _section("精准遗忘")
     if confirm:
+        _section("精准遗忘")
         forgotten = list(
             result.get("forgotten") or result.get("forgotten_memory_ids") or []
         )
@@ -239,16 +318,26 @@ def _forget(service: MemGuardService, request: str, confirm: bool = False, compa
         print("边界说明：只清理 MemGuardOS 受管数据；外部 Agent 日志和备份需在对应系统中另行处理。")
         print("下一步：输入 /preferences 查看保留偏好，或 /search 关键词复核目标内容已不可检索。")
         return 0
+    _print_forget_preview(result, interactive=False)
+    return 0
+
+
+def _print_forget_preview(result: dict, interactive: bool) -> None:
+    _section("精准遗忘")
     print("影响范围预览")
-    candidates = result.get("candidates", [])
+    candidates = list(result.get("candidates") or [])
     if candidates:
         for index, item in enumerate(candidates, 1):
             print("%d. %s" % (index, item.get("summary") or item.get("memory_id")))
             print("   ID：%s  分数：%s" % (item.get("memory_id", "-"), item.get("score", "-")))
     else:
         print("没有发现候选。")
-    print("确认执行请追加 --yes；建议先在 Web 控制台查看候选卡片。")
-    return 0
+    if interactive and candidates:
+        print("候选正确时直接输入 yes 或 确认；输入 no 或 取消停止。")
+    elif interactive:
+        print("没有需要确认的内容，你可以换一种更具体的说法。")
+    else:
+        print("确认执行请追加 --yes；也可以进入交互工作台，在预览后直接输入 yes。")
 
 
 def _evidence(service: MemGuardService) -> int:
@@ -274,13 +363,17 @@ def _preferences(service: MemGuardService) -> int:
         print("下一步：在 Agent 工作台运行一次任务，或输入自然语言说明你的使用习惯。")
         return 0
     for index, item in enumerate(stable, 1):
-        print("%d. %s = %s" % (index, item.get("topic", ""), item.get("value", "")))
-        print("   作用范围：%s · 依据：%s 条 · 会话：%s 个" % (
-            item.get("preference_scope", "global"),
+        category, description = _preference_display(
+            str(item.get("topic") or ""),
+            str(item.get("value") or ""),
+        )
+        print("%d. [%s] %s" % (index, category, description))
+        print("   作用范围：%s · 依据：%s 条 · 来自 %s 个会话" % (
+            _scope_display(str(item.get("preference_scope") or "global")),
             item.get("evidence_count", 0),
             item.get("distinct_sessions", 0),
         ))
-    print("下一步：输入 `memguard context 任务` 查看这些偏好会进入哪一阶段。")
+    print("下一步：直接运行相关任务，系统会按适用阶段自动采用这些偏好。")
     return 0
 
 
@@ -445,8 +538,11 @@ def _json_default(value: object) -> object:
 
 SHELL_COMMANDS = (
     "/guide /status /memory /memory on|off /preferences /search 关键词 "
-    "/context 任务 /forget 请求 [--yes] /run 任务 /audit /evidence /demo /model /workspace /exit"
+    "/context 任务 /forget 请求 /run 任务 /audit /evidence /demo /model /workspace /exit"
 )
+
+_FORGET_CONFIRM_WORDS = {"yes", "y", "确认", "确定", "是", "继续"}
+_FORGET_CANCEL_WORDS = {"no", "n", "取消", "不要", "否", "返回"}
 
 
 def _shell(service: MemGuardService, prompt: str, workspace: str = "", model: str = "") -> int:
@@ -455,6 +551,7 @@ def _shell(service: MemGuardService, prompt: str, workspace: str = "", model: st
         "workspace": str(Path(workspace or Path.cwd()).expanduser()),
         "model": str(model or "未配置"),
         "memory_enabled": True,
+        "pending_forget": None,
     }
     print("用于体验 Agent 学习、复用和遗忘。输入 /guide 查看四步演示流程。")
     print("当前记忆辅助：[开启]  输入 /help 查看全部操作。")
@@ -475,7 +572,7 @@ def _shell(service: MemGuardService, prompt: str, workspace: str = "", model: st
         if line == "/help":
             print("可用操作：" + SHELL_COMMANDS)
             print("说明：/run 只运行真实 Agent；/demo 是明确标注的本地事件回放。")
-            print("遗忘先用 /forget 请求预览，确认无误后再追加 --yes。")
+            print("遗忘可以直接说“忘掉……”，预览后输入 yes/确认；输入 no/取消则停止。")
             continue
         if line == "/guide":
             _shell_guide(state)
@@ -505,6 +602,22 @@ def _shell(service: MemGuardService, prompt: str, workspace: str = "", model: st
 
 
 def _dispatch_shell_line(service: MemGuardService, line: str, state: dict) -> int:
+    normalized = " ".join(line.strip().split())
+    answer = normalized.casefold()
+    pending = state.get("pending_forget")
+    if pending:
+        if answer in _FORGET_CONFIRM_WORDS:
+            return _confirm_pending_forget(service, state)
+        if answer in _FORGET_CANCEL_WORDS:
+            state["pending_forget"] = None
+            print("已取消本次遗忘，任何记忆都没有改变。")
+            return 0
+        print("当前有一项遗忘等待确认，本次输入未执行。")
+        print("输入 yes 或 确认 执行；输入 no 或 取消 停止。")
+        return 0
+    if answer in _FORGET_CONFIRM_WORDS | _FORGET_CANCEL_WORDS:
+        print("当前没有等待确认的遗忘操作。请先输入“忘掉……”查看影响范围。")
+        return 0
     if line in {"/memory on", "/memory off", "/memory status"}:
         return _memory_mode(line, state)
     if line == "/preferences":
@@ -514,11 +627,97 @@ def _dispatch_shell_line(service: MemGuardService, line: str, state: dict) -> in
     if line == "/demo":
         return _demo(service, "查找精准遗忘的实现位置")
     if line.startswith("/run "):
-        return _run_agent_task(service, line[len("/run "):].strip(), state)
+        task = line[len("/run "):].strip()
+        if _looks_like_forget_request(task):
+            print("已识别为记忆管理请求，不会把它交给 Agent 当作普通任务执行。")
+            return _preview_forget_in_shell(service, task, state)
+        return _run_agent_task(service, task, state)
     if line == "/run":
         print("用法：/run 任务描述。当前模型：%s，工作区：%s" % (state.get("model"), state.get("workspace")))
         return 0
-    return _run_shell_line(service, line)
+    if line.startswith("/forget "):
+        request = line[len("/forget "):].strip()
+        for flag in (" --yes", " --confirm"):
+            if request.endswith(flag):
+                state["pending_forget"] = None
+                return _forget(service, request[: -len(flag)].strip(), confirm=True, compact=True)
+        return _preview_forget_in_shell(service, request, state)
+    if _looks_like_forget_request(line):
+        print("已识别为精准遗忘请求。")
+        return _preview_forget_in_shell(service, line, state)
+    action, payload = _natural_shell_intent(line)
+    if action == "memory_list":
+        print("已识别为记忆查看请求。")
+        return _memory(service)
+    if action == "preference_list":
+        print("已识别为偏好查看请求。")
+        return _preferences(service)
+    if action == "status":
+        print("已识别为状态查看请求。")
+        return _status(service)
+    if action == "search":
+        print("已识别为记忆搜索请求。")
+        return _search(service, payload)
+    if action == "remember":
+        print("已识别为记忆保存请求。")
+        return _remember(service, payload)
+    if action == "run":
+        print("已识别为 Agent 任务。")
+        return _run_agent_task(service, payload, state)
+    if line.startswith("/"):
+        return _run_shell_line(service, line)
+    print("本次输入尚未执行：请确认它是 Agent 任务还是要保存的记忆。")
+    print("- 运行任务：输入 `/run %s`" % line)
+    print("- 保存记忆：输入 `记住：%s`" % line)
+    return 0
+
+
+def _natural_shell_intent(text: str) -> tuple[str, str]:
+    decision = interpret_user_input(text)
+    return ("" if decision.action in {"empty", "ambiguous", "forget"} else decision.action, decision.payload)
+
+
+def _looks_like_forget_request(text: str) -> bool:
+    return looks_like_forget_request(text)
+
+
+def _preview_forget_in_shell(service: MemGuardService, request: str, state: dict) -> int:
+    result = service.forget(request, confirm=False, compact=False)
+    _print_forget_preview(result, interactive=True)
+    candidates = list(result.get("candidates") or [])
+    memory_ids = [str(item.get("memory_id") or "") for item in candidates if item.get("memory_id")]
+    if memory_ids:
+        state["pending_forget"] = {"request": request, "memory_ids": memory_ids}
+    else:
+        state["pending_forget"] = None
+    return 0
+
+
+def _confirm_pending_forget(service: MemGuardService, state: dict) -> int:
+    pending = dict(state.get("pending_forget") or {})
+    request = str(pending.get("request") or "").strip()
+    expected_ids = [str(item) for item in pending.get("memory_ids") or [] if str(item)]
+    if not request or not expected_ids:
+        state["pending_forget"] = None
+        print("待确认信息已失效，请重新输入遗忘请求。")
+        return 0
+
+    refreshed = service.forget(request, confirm=False, compact=False)
+    refreshed_ids = [
+        str(item.get("memory_id") or "")
+        for item in refreshed.get("candidates") or []
+        if item.get("memory_id")
+    ]
+    if refreshed_ids != expected_ids:
+        print("候选内容在确认前发生了变化，为避免误删，本次没有执行。")
+        _print_forget_preview(refreshed, interactive=True)
+        state["pending_forget"] = (
+            {"request": request, "memory_ids": refreshed_ids} if refreshed_ids else None
+        )
+        return 0
+
+    state["pending_forget"] = None
+    return _forget(service, request, confirm=True, compact=True)
 
 
 def _run_shell_line(service: MemGuardService, line: str) -> int:
@@ -697,10 +896,48 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
     if memory_enabled:
         _subsection("本次记忆变化")
         if learned:
-            for item in learned[:5]:
-                print("- %s" % (item.get("summary_for_user") or item.get("summary") or item.get("memory_id")))
+            categories = {}
+            for item in learned:
+                label = str(item.get("category_label") or "可复用记忆")
+                categories[label] = categories.get(label, 0) + 1
+            category_summary = "、".join("%s %d 项" % pair for pair in categories.items())
+            print("检测到并处理 %d 项可复用内容：%s。" % (len(learned), category_summary))
+            for index, item in enumerate(learned[:6], 1):
+                print("%d. [%s · %s]" % (
+                    index,
+                    item.get("category_label") or "可复用记忆",
+                    item.get("status_label") or "已保存",
+                ))
+                print("   %s" % (item.get("summary_for_user") or item.get("summary") or item.get("memory_id")))
+                evidence = str(item.get("evidence_label") or "").strip()
+                scopes = "、".join(str(value) for value in item.get("where_it_will_apply") or [])
+                if evidence or scopes:
+                    print("   来源：%s%s" % (
+                        evidence or "已验证内容",
+                        " · 后续用于：%s" % scopes if scopes else "",
+                    ))
+            if len(learned) > 6:
+                print("另有 %d 项已保存，可在记忆中心查看。" % (len(learned) - 6))
         else:
-            print("- 没有形成新的长期记忆；已有记忆仍可继续使用。")
+            print("- 本轮没有新增稳定偏好或可复用经验；任务记录仍可在审计页查看。")
+        blocked_items = list(changes.get("blocked_items") or [])
+        if blocked_items:
+            print("- 内容保护：%d 项敏感内容已阻止进入长期记忆和检索上下文。" % len(blocked_items))
+        observed = [
+            item
+            for item in changes.get("observed_preferences") or []
+            if item.get("status") in {"candidate", "reinforced", "negative_observation"}
+        ]
+        for item in observed[:4]:
+            print("- 检测到%s：%s" % (
+                item.get("category_label") or "用户偏好",
+                item.get("summary_for_user") or "",
+            ))
+            print("  状态：%s · 依据 %s 条 · 来自 %s 个会话" % (
+                item.get("status_label") or "正在观察",
+                item.get("evidence_count", 1),
+                item.get("distinct_sessions", 1),
+            ))
     else:
         _subsection("本次记忆变化")
         print("- 记忆辅助已关闭，本次运行没有读取或写入长期记忆。")
@@ -710,9 +947,13 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
         _subsection("偏好作用验证")
     for proof in proofs:
         preference = proof.get("preference", {})
-        print("- 偏好 %s = %s：%s" % (
-            preference.get("topic", ""),
-            preference.get("value", ""),
+        category, description = _preference_display(
+            str(preference.get("topic") or ""),
+            str(preference.get("value") or ""),
+        )
+        print("- [%s] %s：%s" % (
+            category,
+            description,
             {"passed": "已观察到并通过", "failed": "未遵循", "not_applicable": "暂无实际行为证据"}.get(
                 proof.get("compliance"), proof.get("compliance")
             ),
@@ -725,6 +966,34 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
         print("- 输入 /memory on 后运行同一任务，可直观看到记忆辅助前后差异。")
     print("- 输入 /audit 查看本次记忆操作记录。")
     return 0 if run_ok else 2
+
+
+def _preference_display(topic: str, value: str) -> tuple[str, str]:
+    if topic == "code_search_tool":
+        return "工具偏好", "搜索项目代码时优先使用 %s" % value
+    if topic == "test_runner_command":
+        return "工具偏好", "运行 Python 测试时优先使用 %s" % value
+    if topic == "service_log_tool":
+        return "工具偏好", "查看服务日志时优先使用 %s" % value
+    if topic == "response_order":
+        return "回答偏好", "先给可执行命令或明确结论，再说明原因"
+    if topic == "response_language":
+        return "回答偏好", "使用中文回答"
+    if topic == "response_verbosity":
+        return "回答偏好", "保持简洁并突出关键步骤"
+    if topic == "high_risk_confirmation":
+        return "安全策略", "高风险操作必须先获得确认"
+    return "用户偏好", "%s：%s" % (topic or "交互方式", value)
+
+
+def _scope_display(scope: str) -> str:
+    return {
+        "global": "全部会话",
+        "agent": "当前 Agent",
+        "project": "当前项目",
+        "task_type": "同类任务",
+        "session": "当前会话",
+    }.get(scope, "相关任务")
 
 
 def _memory_mode(line: str, state: dict) -> int:
@@ -771,7 +1040,7 @@ def _shell_guide(state: dict) -> None:
     print("1. 基线：/memory off，然后 /run 一个自然语言任务。")
     print("2. 学习：/memory on，再通过正常交互纠正工具或回答格式。")
     print("3. 复用：开启新一轮 /run，不重复偏好要求，观察 Agent 自动遵循。")
-    print("4. 遗忘：先 /forget 请求预览，再追加 --yes，随后重新运行任务。")
+    print("4. 遗忘：直接说“忘掉……”，查看预览后输入 yes/确认，随后重新运行任务。")
     print("当前模型：%s" % state.get("model", "未配置"))
     print("当前工作区：%s" % state.get("workspace", ""))
     print("当前记忆辅助：%s" % ("开启" if state.get("memory_enabled", True) else "关闭"))

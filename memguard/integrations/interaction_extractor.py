@@ -5,6 +5,7 @@ from typing import List
 import re
 
 from memguard.integrations.events import AgentInteractionEvent
+from memguard.natural_language import looks_like_question
 
 
 @dataclass(frozen=True)
@@ -46,29 +47,34 @@ def extract_interaction_preferences(event: AgentInteractionEvent) -> Interaction
     # 但不得作为显式声明单条晋升为稳定偏好。
     one_time = _is_one_time_instruction(text)
 
-    if _has_one_time_tool_exception(text, lowered):
+    one_time_tool_exception = _has_one_time_tool_exception(text, lowered)
+    if one_time_tool_exception:
         observations.append(_observation(event, "code_search_tool", "grep", scope="session"))
         observations.append(_observation(event, "code_search_tool", "rg", scope="global"))
-    elif _prefers_rg(text, lowered):
-        observations.append(
-            _observation(
-                event,
-                "code_search_tool",
-                "rg",
-                scope=_scope_for_text(text, lowered),
-                explicit=_explicit_tool_preference(text, lowered),
+    else:
+        # A correction may mention both values ("不要再用 grep，改用 rg").
+        # Keep the positive and negative observations separate so the service can
+        # retire only the old value and activate the replacement.
+        if _prefers_rg(text, lowered):
+            observations.append(
+                _observation(
+                    event,
+                    "code_search_tool",
+                    "rg",
+                    scope=_scope_for_text(text, lowered),
+                    explicit=_explicit_tool_preference(text, lowered),
+                )
             )
-        )
-    elif _prefers_grep(text, lowered):
-        observations.append(
-            _observation(
-                event,
-                "code_search_tool",
-                "grep",
-                scope=_scope_for_text(text, lowered),
-                explicit=_explicit_tool_preference(text, lowered),
+        if _prefers_grep(text, lowered):
+            observations.append(
+                _observation(
+                    event,
+                    "code_search_tool",
+                    "grep",
+                    scope=_scope_for_text(text, lowered),
+                    explicit=_explicit_tool_preference(text, lowered),
+                )
             )
-        )
 
     if _prefers_python_pytest(text, lowered):
         observations.append(
@@ -100,6 +106,14 @@ def extract_interaction_preferences(event: AgentInteractionEvent) -> Interaction
                 "response_order",
                 "command_then_explanation",
                 scope=_scope_for_text(text, lowered),
+                polarity=(
+                    "negative"
+                    if _preference_is_negated(
+                        text,
+                        ("先给", "先输出", "先列", "命令放前面", "步骤放前面", "结论放前面"),
+                    )
+                    else "positive"
+                ),
             )
         )
     if _prefers_chinese(text, lowered):
@@ -109,6 +123,7 @@ def extract_interaction_preferences(event: AgentInteractionEvent) -> Interaction
                 "response_language",
                 "zh-CN",
                 scope=_scope_for_text(text, lowered),
+                polarity="negative" if _preference_is_negated(text, ("中文",)) else "positive",
             )
         )
     if _prefers_concise(text, lowered):
@@ -118,6 +133,11 @@ def extract_interaction_preferences(event: AgentInteractionEvent) -> Interaction
                 "response_verbosity",
                 "concise",
                 scope=_scope_for_text(text, lowered),
+                polarity=(
+                    "negative"
+                    if _preference_is_negated(text, ("简洁", "简短", "精简"))
+                    else "positive"
+                ),
             )
         )
     if _requires_risk_confirmation(text, lowered):
@@ -136,12 +156,37 @@ def extract_interaction_preferences(event: AgentInteractionEvent) -> Interaction
             value=item.value,
             polarity="negative" if _value_is_negated(lowered, item.value) else item.polarity,
             scope=item.scope,
-            explicit=item.explicit and not one_time,
-            confidence=min(item.confidence, 0.72) if one_time else item.confidence,
+            explicit=item.explicit if item.scope == "session" else item.explicit and not one_time,
+            confidence=(
+                item.confidence
+                if item.scope == "session"
+                else (min(item.confidence, 0.72) if one_time else item.confidence)
+            ),
             evidence_event_id=item.evidence_event_id,
         )
         for item in observations
     ]
+    if one_time and not one_time_tool_exception:
+        # A one-time instruction must apply immediately in its session, while
+        # repeated choices across sessions are also useful implicit evidence of
+        # a possible long-term habit. Keep those two meanings as separate rows.
+        observations.extend(
+            PreferenceObservation(
+                topic=item.topic,
+                value=item.value,
+                polarity=item.polarity,
+                scope="global",
+                explicit=False,
+                confidence=min(item.confidence, 0.72),
+                evidence_event_id=item.evidence_event_id,
+            )
+            for item in list(observations)
+            if item.scope == "session" and item.topic in {
+                "code_search_tool",
+                "test_runner_command",
+                "service_log_tool",
+            }
+        )
     return InteractionExtractionResult(
         remember_allowed=True,
         observations=_dedupe_observations(observations),
@@ -155,11 +200,12 @@ def _observation(
     value: str,
     scope: str = "global",
     explicit: bool = True,
+    polarity: str = "positive",
 ) -> PreferenceObservation:
     return PreferenceObservation(
         topic=topic,
         value=value,
-        polarity="positive",
+        polarity=polarity,
         scope=scope,
         explicit=explicit,
         confidence=0.98 if explicit else 0.72,
@@ -167,39 +213,17 @@ def _observation(
     )
 
 
-# 只收明确的疑问标记。像"还是"这类词在"下次还是用 rg"里是延续语气而非提问，
-# 误判会把正常偏好整条丢掉。
-_QUESTION_MARKERS = ("吗", "呢", "是不是", "要不要", "哪个", "好不好", "该不该")
-
-
 def _is_question(text: str) -> bool:
-    stripped = text.strip()
-    if not stripped:
-        return False
-    lowered = stripped.lower()
-    if stripped.endswith(("?", "？")):
-        return True
-    if any(marker in stripped for marker in _QUESTION_MARKERS):
-        # 「以后默认用 rg」不是提问；只有缺少持久化副词时才按提问处理。
-        return not _has_persistent_marker(stripped, lowered)
-    return lowered.startswith(("should i", "which ", "what ", "how ", "why ", "do you", "can you"))
-
-
-def _has_persistent_marker(text: str, lowered: str) -> bool:
-    markers = ("以后", "默认", "每次", "总是", "一律", "统一", "长期", "今后", "下次", "仍然", "继续", "优先", "首选")
-    return any(marker in text for marker in markers) or any(
-        marker in lowered for marker in ("always", "by default", "from now on", "prefer")
-    )
+    return looks_like_question(text)
 
 
 def _is_one_time_instruction(text: str) -> bool:
-    lowered = text.lower()
-    if _has_persistent_marker(text, lowered):
-        return False
     # 一次性任务的判定以"明确的一次性时间/范围词"为准，不能仅凭"先看/帮我"这类
     # 祈使动词，否则"排查服务日志时先看 journalctl"这类操作习惯会被误拦。
     one_time = ("这次", "本次", "仅此一次", "临时", "现在", "马上", "立刻", "今晚", "今天之内", "just this once", "right now")
-    return any(marker in text for marker in one_time)
+    if any(marker in text for marker in one_time):
+        return True
+    return False
 
 
 _NEGATION_MARKERS = ("不要", "别再", "别用", "不用", "不再", "换掉", "停止使用", "don't use", "do not use", "stop using")
@@ -251,14 +275,44 @@ def _mentions_tool(lowered: str, tool: str) -> bool:
 def _prefers_rg(text: str, lowered: str) -> bool:
     return _mentions_tool(lowered, "rg") and any(
         marker in lowered
-        for marker in ("优先", "首选", "默认", "prefer", "use rg", "使用 rg", "用 rg")
+        for marker in (
+            "优先",
+            "首选",
+            "默认",
+            "改用",
+            "换成",
+            "继续用",
+            "还是用",
+            "记住",
+            "搜索用",
+            "查代码用",
+            "prefer",
+            "use rg",
+            "使用 rg",
+            "用 rg",
+        )
     )
 
 
 def _prefers_grep(text: str, lowered: str) -> bool:
     return _mentions_tool(lowered, "grep") and any(
         marker in lowered
-        for marker in ("优先", "首选", "默认", "prefer", "use grep", "使用 grep", "用 grep")
+        for marker in (
+            "优先",
+            "首选",
+            "默认",
+            "改用",
+            "换成",
+            "继续用",
+            "还是用",
+            "记住",
+            "搜索用",
+            "查代码用",
+            "prefer",
+            "use grep",
+            "使用 grep",
+            "用 grep",
+        )
     )
 
 
@@ -305,7 +359,33 @@ def _preferred_service_log_command(text: str) -> str:
 
 
 def _explicit_tool_preference(text: str, lowered: str) -> bool:
-    return any(marker in text for marker in ("以后", "默认", "优先", "首选", "每次", "总是", "本轮", "本次会话")) or any(
+    return any(
+        marker in text
+        for marker in (
+            "以后",
+            "今后",
+            "默认",
+            "优先",
+            "首选",
+            "每次",
+            "总是",
+            "统一",
+            "一律",
+            "改用",
+            "换成",
+            "继续用",
+            "不要再用",
+            "别再用",
+            "不再用",
+            "停止使用",
+            "记住",
+            "本轮",
+            "本次",
+            "这次",
+            "临时",
+            "本次会话",
+        )
+    ) or any(
         marker in lowered for marker in ("prefer", "always", "by default")
     )
 
@@ -330,7 +410,7 @@ def _explicit_command_preference(text: str, lowered: str) -> bool:
 
 
 def _scope_for_text(text: str, lowered: str) -> str:
-    if any(marker in text for marker in ("本轮", "本次会话", "这个会话")):
+    if any(marker in text for marker in ("本轮", "本次", "这次", "临时", "本次会话", "当前会话", "这个会话")):
         return "session"
     if any(marker in text for marker in ("当前项目", "这个项目", "本项目")):
         return "project"
@@ -342,20 +422,41 @@ def _scope_for_text(text: str, lowered: str) -> str:
 
 
 def _command_before_explanation(text: str, lowered: str) -> bool:
-    command_marker = any(
-        marker in text
-        for marker in ("先给命令", "命令放前面", "先输出命令", "先命令", "先写命令", "先列命令")
+    compact = re.sub(r"\s+", "", text)
+    command_marker = bool(
+        re.search(
+            r"(?:先(?:给|输出|写|列出?|告诉我|展示)[^，。；;]{0,12}"
+            r"(?:可复制|可执行)?(?:命令|步骤|操作方法|怎么做|结论)|"
+            r"(?:命令|步骤|操作方法|结论)(?:放|写|列)[^，。；;]{0,6}前面)",
+            compact,
+        )
     )
-    explanation_marker = any(
-        marker in text
-        for marker in ("再解释", "然后解释", "后解释", "再说明", "然后说明", "后说明", "再讲原因", "再给原因")
+    explanation_marker = bool(
+        re.search(
+            r"(?:再|然后|随后|最后)[^，。；;]{0,8}"
+            r"(?:解释|说明|分析|讲|给出)(?:原因|理由|结果|细节|依据|含义)?",
+            compact,
+        )
     )
     english = "command first" in lowered or "commands first" in lowered
     return (command_marker and explanation_marker) or english
 
 
 def _prefers_chinese(text: str, lowered: str) -> bool:
-    return any(marker in text for marker in ("用中文回答", "中文回复", "默认中文")) or "answer in chinese" in lowered
+    return any(
+        marker in text
+        for marker in (
+            "用中文回答",
+            "使用中文回答",
+            "用中文",
+            "使用中文",
+            "中文回复",
+            "用中文回复",
+            "默认中文",
+            "回答用中文",
+            "请说中文",
+        )
+    ) or "answer in chinese" in lowered
 
 
 def _prefers_concise(text: str, lowered: str) -> bool:
@@ -364,6 +465,9 @@ def _prefers_concise(text: str, lowered: str) -> bool:
         for marker in (
             "回答简洁",
             "尽量简洁",
+            "简短回答",
+            "回答简短",
+            "精简回答",
             "只给关键",
             "简洁列出",
             "简洁回答",
@@ -371,6 +475,28 @@ def _prefers_concise(text: str, lowered: str) -> bool:
             "不要长篇",
         )
     ) or "be concise" in lowered
+
+
+def _preference_is_negated(text: str, anchors: tuple[str, ...]) -> bool:
+    """Detect a local withdrawal without treating unrelated negation as global.
+
+    Examples: ``以后不要用中文回答`` and ``不必先给命令再解释``.  The
+    bounded window avoids letting a later phrase such as ``不要删除文件`` negate
+    an earlier response-style preference in the same message.
+    """
+
+    compact = re.sub(r"\s+", "", text)
+    for anchor in anchors:
+        start = compact.find(anchor)
+        while start >= 0:
+            window = compact[max(0, start - 8) : start]
+            if any(
+                marker in window
+                for marker in ("不要", "别再", "别", "不用", "不必", "无需", "取消", "不再")
+            ):
+                return True
+            start = compact.find(anchor, start + 1)
+    return False
 
 
 def _requires_risk_confirmation(text: str, lowered: str) -> bool:

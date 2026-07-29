@@ -413,7 +413,7 @@ def test_generic_forget_removes_target_preference_aggregate_only(tmp_path):
         }
         assert {"code_search_tool", "response_order"} <= before
 
-        result = service.forget("忘掉我关于代码搜索工具的偏好", confirm=True, compact=True)
+        result = service.forget("忘掉 grep 的习惯", confirm=True, compact=True)
         after = {
             item["topic"]
             for item in service.interaction_status()["preference_aggregates"]

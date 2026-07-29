@@ -98,7 +98,8 @@ def test_compiler_handles_broader_field_test_phrases():
     assert project["scope"] == {"level": "project", "project_root": "/repo/memguardos"}
     assert project["memory_types"] == ["preference"]
     assert project["topic"] == "rg"
-    assert project["preference_topic"] == "rg"
+    assert project["preference_topic"] == "code_search_tool"
+    assert project["normalized_preference_topic"] == "code_search_tool"
     assert project["time_range"]["source_text"] == "近7天"
     assert project["time_range"]["start_time"].startswith("2026-07-02T12:00:00")
 
@@ -156,6 +157,16 @@ def test_compiler_normalizes_high_risk_operation_confirmation_synonyms():
 
     assert result["normalized_preference_topic"] == "high_risk_confirmation"
     assert "高风险操作" in result["topic_aliases"]
+
+
+def test_compiler_understands_natural_tool_habit_forgetting():
+    for request in ("忘掉 grep 的习惯", "忘掉rg的习惯", "删除 ripgrep 工具偏好"):
+        result = compile_request(request)
+
+        assert result["memory_types"] == ["preference"]
+        assert result["preference_topic"] == "code_search_tool"
+        assert result["normalized_preference_topic"] == "code_search_tool"
+        assert result["requires_confirm"] is True
 
 
 def test_service_exposes_intent_compiler_and_routes_to_agent_forgetting(tmp_path):

@@ -12,6 +12,7 @@ STAGE_SUBTYPES: Dict[str, Set[str]] = {
         "template",
         "tool_failure_case",
         "workflow",
+        "user_habit",
     },
     "tool_selection": {
         "behavior_risk",
@@ -21,6 +22,7 @@ STAGE_SUBTYPES: Dict[str, Set[str]] = {
         "tool_preference",
         "tool_trace",
         "workflow",
+        "user_habit",
     },
     "response_generation": {
         "case",
@@ -29,6 +31,7 @@ STAGE_SUBTYPES: Dict[str, Set[str]] = {
         "security_policy",
         "template",
         "workflow",
+        "user_habit",
     },
 }
 

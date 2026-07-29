@@ -8,6 +8,8 @@ import re
 TRUSTED_SOURCE_KINDS = {
     "manual",
     "inline",
+    "user_cli",
+    "dashboard",
     "update",
     "rollback",
     "promote",

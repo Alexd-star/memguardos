@@ -98,6 +98,7 @@ class OpenHandsMemoryRunner:
         self._unknown_events = Counter()
         self._tool_commands: Dict[str, str] = {}
         self._procedural_memories = []
+        self._procedural_feedback = []
         self._live_events = []
 
     def prepare_context(self, task: str) -> Dict[str, object]:
@@ -198,6 +199,8 @@ class OpenHandsMemoryRunner:
                     self._procedural_memories.append(
                         memory_result["record"].memory_id
                     )
+                    if memory_result.get("feedback"):
+                        self._procedural_feedback.append(memory_result["feedback"])
 
     def run(self, task: str) -> Dict[str, object]:
         started = perf_counter()
@@ -401,7 +404,8 @@ class OpenHandsMemoryRunner:
                 "unknown_event_types": dict(self._unknown_events),
             },
             "memory_change_summary": merge_memory_change_summaries(
-                [item.get("feedback", {}) for item in self._event_results],
+                [item.get("feedback", {}) for item in self._event_results]
+                + list(self._procedural_feedback),
                 namespace=self.service.namespace,
                 source="agent",
                 session_id=self.session_id,
@@ -423,6 +427,7 @@ class OpenHandsMemoryRunner:
         self._unknown_events.clear()
         self._tool_commands.clear()
         self._procedural_memories.clear()
+        self._procedural_feedback.clear()
         self._live_events.clear()
         self.adapter.tool_turns.clear()
         self.adapter.internal_feedback.clear()

@@ -1590,7 +1590,9 @@ class SQLiteMetaStore:
             WHERE po.promoted_memory_id IS NULL
                OR EXISTS (
                     SELECT 1 FROM memory AS m
-                    WHERE m.memory_id = po.promoted_memory_id AND m.deleted = 0
+                    WHERE m.memory_id = po.promoted_memory_id
+                      AND m.deleted = 0
+                      AND m.governance_state = 'active'
                )
             GROUP BY topic, value, preference_scope, project_root, task_type, scope_agent_name, scope_session_id
             ORDER BY topic, value, preference_scope, project_root, task_type, scope_agent_name, scope_session_id
@@ -1613,7 +1615,9 @@ class SQLiteMetaStore:
                         promoted_memory_id IS NULL
                         OR EXISTS (
                             SELECT 1 FROM memory AS m
-                            WHERE m.memory_id = promoted_memory_id AND m.deleted = 0
+                            WHERE m.memory_id = promoted_memory_id
+                              AND m.deleted = 0
+                              AND m.governance_state = 'active'
                         )
                   )
                 """,
