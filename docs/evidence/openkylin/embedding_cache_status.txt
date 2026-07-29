@@ -1,11 +1,11 @@
-$ <PROJECT_ROOT>/.venv/bin/python -m memguard.cli.memctl embedding-cache status
+$ .venv-agent/bin/python -m memguard.cli.memctl embedding-cache status
 {
   "backend": "kylin_sdk",
   "model_revision": "kylin-sdk-v1",
-  "pending": 2,
+  "pending": 0,
   "ready": 0,
   "failed": 0,
-  "due": 2,
+  "due": 0,
   "retry_deferred": 0,
   "next_retry_at": null
 }

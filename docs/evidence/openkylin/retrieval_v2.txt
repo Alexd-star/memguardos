@@ -1,3 +1,4 @@
+$ .venv-agent/bin/python scripts/evaluate_retrieval_v2.py --rounds 3 --size 1000 --queries 120 --workers 6
 {
   "pass": true,
   "failures": [],
@@ -8,5 +9,8 @@
     "p95_latency_ms_exclusive_upper": 500.0,
     "p99_latency_ms_exclusive_upper": 500.0,
     "quality_p99_latency_ms_exclusive_upper": 500.0
+  }
+}
+_upper": 500.0
   }
 }

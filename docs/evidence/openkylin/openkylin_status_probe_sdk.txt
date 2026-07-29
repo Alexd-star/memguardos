@@ -1,5 +1,5 @@
 $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
-[1785299896249] [32minfo [0m Proxy init engine sessionId:1966344033.
+[1785313287104] [32minfo [0m Proxy init engine sessionId:116710832.
 {
   "schema": "memguardos-openkylin-native-status-v1",
   "system": {
@@ -82,7 +82,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
               "is_symlink": false,
               "is_socket": true,
               "device": 2053,
-              "inode": 92
+              "inode": 82
             },
             "parent_directory": {
               "owner": 1000,
@@ -92,7 +92,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
               "is_symlink": false,
               "is_socket": false,
               "device": 2053,
-              "inode": 68,
+              "inode": 69,
               "path": "/tmp/.kylin-ai-runtime-unix/1000"
             },
             "parent_directory_warning": false,
@@ -105,7 +105,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
             "peer_credentials": {
               "supported": true,
               "verified": true,
-              "pid": 4087,
+              "pid": 43018,
               "uid": 1000,
               "gid": 1000
             },
@@ -130,7 +130,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
               "is_symlink": false,
               "is_socket": true,
               "device": 2053,
-              "inode": 86
+              "inode": 70
             },
             "parent_directory": {
               "owner": 1000,
@@ -140,7 +140,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
               "is_symlink": false,
               "is_socket": false,
               "device": 2053,
-              "inode": 68,
+              "inode": 69,
               "path": "/tmp/.kylin-ai-runtime-unix/1000"
             },
             "parent_directory_warning": false,
@@ -153,7 +153,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
             "peer_credentials": {
               "supported": true,
               "verified": true,
-              "pid": 4087,
+              "pid": 43018,
               "uid": 1000,
               "gid": 1000
             },
@@ -347,7 +347,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
           0.011692
         ],
         "subprocess_returncode": 0,
-        "stderr_tail": "[1785299896314] \u001b[32minfo \u001b[0m Proxy init engine sessionId:729509944."
+        "stderr_tail": "[1785313287199] \u001b[32minfo \u001b[0m Proxy init engine sessionId:695984718."
       },
       "available": true,
       "inference_ready": true,
@@ -366,7 +366,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
       "product_state": {
         "installed": true,
         "last_probe_success": true,
-        "last_success_at": "2026-07-29T12:38:15+08:00",
+        "last_success_at": "2026-07-29T16:21:25+08:00",
         "last_success_dim": 768,
         "last_success_model": "ensemble-embd_gte-base_uint8-text",
         "last_failure_at": "",
@@ -409,7 +409,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
           "is_symlink": false,
           "is_socket": true,
           "device": 2053,
-          "inode": 1859253
+          "inode": 1866641
         },
         "parent_directory": {
           "owner": 0,
@@ -432,7 +432,7 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
         "peer_credentials": {
           "supported": true,
           "verified": true,
-          "pid": 2326,
+          "pid": 43060,
           "uid": 1000,
           "gid": 1000
         },
@@ -472,7 +472,8 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
   "security": {
     "auditd": {
       "available": true,
-      "rules_tool_available": true
+      "rules_tool_available": true,
+      "rules_directory_accessible": false
     },
     "bpf_lsm": {
       "source_available": true,
@@ -492,21 +493,21 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
     "diagnosis_code": "ready",
     "advice": "服务级 cgroup 资源状态正常。",
     "memory": {
-      "cgroup_memory_current": "16306176",
+      "cgroup_memory_current": "17170432",
       "cgroup_memory_max": "536870912"
     },
     "cpu": {
       "cpu_max": "50000 100000",
       "cpu_quota_per_sec_usec": "500ms",
       "cpu_stat": {
-        "usage_usec": 221560,
-        "user_usec": 154647,
-        "system_usec": 66912,
+        "usage_usec": 414610,
+        "user_usec": 240966,
+        "system_usec": 173643,
         "nice_usec": 0,
         "core_sched.force_idle_usec": 0,
-        "nr_periods": 37,
+        "nr_periods": 164,
         "nr_throttled": 3,
-        "throttled_usec": 95183,
+        "throttled_usec": 140886,
         "nr_bursts": 0,
         "burst_usec": 0
       }
@@ -516,13 +517,13 @@ $ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
   "namespace": {
     "namespace": "default",
     "is_default": true,
-    "home": "/var/tmp/memguardos-native-home.kmPYyr",
+    "home": "/var/tmp/memguardos-native-home.WEsptE",
     "home_exists": true,
-    "namespace_home": "/var/tmp/memguardos-native-home.kmPYyr",
+    "namespace_home": "/var/tmp/memguardos-native-home.WEsptE",
     "namespace_home_exists": true,
-    "store_path": "/var/tmp/memguardos-native-home.kmPYyr/memory.segment",
-    "db_path": "/var/tmp/memguardos-native-home.kmPYyr/memguard.sqlite3",
-    "custom_patterns_path": "/var/tmp/memguardos-native-home.kmPYyr/sensitive_patterns.json",
+    "store_path": "/var/tmp/memguardos-native-home.WEsptE/memory.segment",
+    "db_path": "/var/tmp/memguardos-native-home.WEsptE/memguard.sqlite3",
+    "custom_patterns_path": "/var/tmp/memguardos-native-home.WEsptE/sensitive_patterns.json",
     "store_exists": false,
     "db_exists": false,
     "custom_patterns_exists": false,

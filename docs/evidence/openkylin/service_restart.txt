@@ -1,5 +1,5 @@
 $ bash -c $'\nSTART_MS=$(date +%s%3N)\nif [ "$(id -u)" -eq 0 ]; then\n  systemctl restart memguardd.service\n  RC=$?\nelse\n  sudo -n systemctl restart memguardd.service\n  RC=$?\nfi\nEND_MS=$(date +%s%3N)\nELAPSED_MS=$((END_MS - START_MS))\necho restart_rc=${RC}\necho restart_ms=${ELAPSED_MS}\nsystemctl show memguardd.service --property=ActiveState,SubState --no-pager\ntest "${RC}" -eq 0\ntest "${ELAPSED_MS}" -le 5000\ntest "$(systemctl is-active memguardd.service)" = active'
 restart_rc=0
-restart_ms=893
+restart_ms=1927
 ActiveState=active
 SubState=running
