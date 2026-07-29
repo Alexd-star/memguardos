@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/assets/branding/memguardos-logo.png" alt="MemGuardOS 图标" width="168">
+
 # MemGuardOS
 
 **面向 openKylin 与 Linux OS Agent 的本地记忆提取、上下文增强与精准遗忘系统**

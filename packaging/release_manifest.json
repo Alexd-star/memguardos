@@ -91,6 +91,7 @@
     "docs/evidence/agent/holdout.json",
     "docs/evidence/agent/manifest.json",
     "docs/evidence/agent/SHA256SUMS.txt",
+    "docs/assets/branding/memguardos-logo.png",
     "docs/assets/screenshots/personal-workbench.png",
     "docs/assets/screenshots/system-maintenance.png"
   ],
