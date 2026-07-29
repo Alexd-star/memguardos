@@ -44,7 +44,7 @@ REQUIRED_DOCS = sorted(inventory_set("formal_docs"))
 REQUIRED_SOURCE_PATHS = sorted(
     path
     for path in inventory_set("required_paths")
-    if not path.startswith("docs/") and path not in {"README.md", "LICENSE", "SECURITY.md", "pyproject.toml"}
+    if not path.startswith("docs/") and path not in {"README.md", "LICENSE", "pyproject.toml"}
 )
 
 REQUIRED_EVIDENCE = [
