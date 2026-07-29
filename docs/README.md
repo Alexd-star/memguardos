@@ -19,7 +19,7 @@
 - [用户指南](user-guide.md)：CLI、Web、UKUI、Peony 和完整操作流程。
 - [Agent 接入](agent-integration.md)：标准事件协议、OpenHands 和第三方适配器。
 - [接口参考](api.md)：CLI、Python、Unix socket 和数据结构。
-- [开发者指南](developer-guide.md)：代码结构、扩展点、测试和发布约束。
+- [开发者指南](developer-guide.md)：代码结构、扩展点、测试和发布约束；专项工具可从 [`scripts/README.md`](../scripts/README.md) 按职责查找。
 - [安全与遗忘边界](security.md)：威胁模型、敏感治理、精准遗忘与准确边界。
 - [测试与评测](testing.md)：测试分层、数据集、指标含义、复现方法和限制。
 - [赛题符合性](competition.md)：赛题要求到代码、操作与证据的逐项映射。

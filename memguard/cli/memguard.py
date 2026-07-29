@@ -130,8 +130,16 @@ def _remember(service: MemGuardService, text: str) -> int:
         print("记忆编号：%s" % (memory_id or "可在 Web 控制台的最近记忆中查看"))
         print("你可以用 `memguard search 关键词` 或在 Web 控制台查看这条记忆。")
         return 0
-    print("未保存：%s" % result.get("reason", "策略未允许"))
-    print("处理建议：如果文本包含凭据或高风险信息，系统会阻断长期保存。")
+    notice = result.get("sensitive_notice") or {}
+    if isinstance(notice, dict) and notice.get("user_summary"):
+        print(str(notice["user_summary"]))
+        labels = [str(item) for item in notice.get("detected_labels") or [] if str(item)]
+        if labels:
+            print("检测类型：%s" % "、".join(labels))
+        print("下一步：可在“内容保护”或审计记录中查看本次处理依据。")
+    else:
+        print("本次内容未形成长期记忆：%s" % result.get("reason", "策略未允许"))
+        print("处理建议：检查内容是否过短、重复或缺少可复用信息。")
     return 2
 
 

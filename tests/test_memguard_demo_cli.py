@@ -5,6 +5,7 @@ from memguard.cli.memguard import (
     _forget,
     _friendly_agent_error,
     _memory_mode,
+    _remember,
     _user_setting,
 )
 from memguard.integrations.events import AgentInteractionEvent
@@ -14,6 +15,8 @@ from memguard.integrations.openhands_runner import (
     _runtime_preference_effect_proofs,
 )
 from memguard.service import MemGuardService
+from scripts.run_openhands_memguard_demo import build_parser as build_agent_demo_parser
+from scripts.verify_video_demo import _source_revision
 
 
 class _NoMemoryService:
@@ -41,6 +44,50 @@ class _ForgetService:
                 "user_summary": "目标记忆已从受管检索链路移除。",
             },
         }
+
+
+def test_one_shot_agent_demo_accepts_documented_iteration_limit(tmp_path):
+    args = build_agent_demo_parser().parse_args(
+        [
+            "--session-id",
+            "video-session",
+            "--workspace",
+            str(tmp_path),
+            "--max-iterations",
+            "6",
+            "--dry-init",
+        ]
+    )
+
+    assert args.workspace == str(tmp_path)
+    assert args.max_iterations == 6
+
+
+def test_sensitive_cli_feedback_is_user_readable(tmp_path, capsys):
+    service = MemGuardService(
+        store_path=tmp_path / "memory.segment",
+        db_path=tmp_path / "memory.sqlite3",
+        namespace="sensitive-cli",
+    )
+    try:
+        assert _remember(
+            service,
+            "请记住测试凭据 OPENAI_API_KEY=sk-test-only-1234567890",
+        ) == 2
+    finally:
+        service.close()
+
+    output = capsys.readouterr().out
+    assert "已保护敏感内容" in output
+    assert "检测类型" in output
+    assert "sensitive_block" not in output
+
+
+def test_video_preflight_accepts_verified_revision_file(tmp_path):
+    revision = "a" * 40
+    (tmp_path / ".source_revision").write_text(revision + "\n", encoding="utf-8")
+
+    assert _source_revision(tmp_path) == (revision, "revision_file")
 
 
 def _event(event_type, *, sequence=1, tool_args=None, exit_code=None):

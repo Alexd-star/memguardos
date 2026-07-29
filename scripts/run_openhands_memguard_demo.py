@@ -31,6 +31,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--api-key-env", default="OPENHANDS_API_KEY")
     parser.add_argument("--tool-profile", choices=["default", "terminal"], default="default")
     parser.add_argument(
+        "--max-iterations",
+        type=int,
+        default=8,
+        help="单次 Agent 运行的最大迭代次数，建议录制时保持在 4-8。",
+    )
+    parser.add_argument(
         "--dry-init",
         action="store_true",
         help="只初始化真实 OpenHands Agent、工具和 Hook，不向模型发送请求",
@@ -65,6 +71,7 @@ def main() -> int:
             api_key=api_key,
             base_url=args.base_url,
             tool_profile=args.tool_profile,
+            max_iterations=args.max_iterations,
         )
         if args.dry_init:
             workspace.mkdir(parents=True, exist_ok=True)
