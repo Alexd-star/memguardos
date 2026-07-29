@@ -161,21 +161,23 @@ class OpenHandsMemoryRunner:
     def _ingest_event(self, event: AgentInteractionEvent) -> None:
         self._live_events.append(event.to_dict())
         self._event_types[event.event_type] += 1
-        if event.event_type == "tool_call":
+        tool_call_id = str(event.tool_args.get("tool_call_id") or "").strip()
+        tool_key = tool_call_id or event.turn_id
+        if event.event_type == "tool_call" and event.tool_name in {"", "terminal"}:
             command = str(event.tool_args.get("command") or "").strip()
             if command:
-                self._tool_commands[event.turn_id] = command
+                self._tool_commands[tool_key] = command
         if not self.memory_enabled:
             return
         result = self.service.ingest_interaction(event)
         self._event_results.append(result)
         if not result.get("stored"):
             return
-        if event.event_type == "tool_result":
-            command = self._tool_commands.get(event.turn_id, "")
+        if event.event_type == "tool_result" and event.tool_name in {"", "terminal"}:
+            command = self._tool_commands.get(tool_key, "")
             if command:
                 result_key = (
-                    str(event.turn_id),
+                    str(tool_key),
                     " ".join(command.split()),
                     int(event.exit_code or 0),
                     " ".join(str(event.tool_result or "").split()),

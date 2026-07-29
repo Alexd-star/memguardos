@@ -135,6 +135,68 @@ class FakeDuplicateObservationConversation(FakeConversation):
         )
 
 
+class FakeMultipleToolsSameTurnConversation(FakeConversation):
+    def run(self):
+        self.callback(
+            fake_event(
+                "ActionEvent",
+                id="fake-terminal-action",
+                source="agent",
+                tool_name="terminal",
+                tool_call_id="call-terminal",
+                tool_call=SimpleNamespace(arguments='{"command":"grep -R -n target ."}'),
+                thought=[text("搜索定义")],
+            )
+        )
+        self.callback(
+            fake_event(
+                "ActionEvent",
+                id="fake-editor-action",
+                source="agent",
+                tool_name="file_editor",
+                tool_call_id="call-editor",
+                tool_call=SimpleNamespace(arguments='{"command":"view","path":"memguard/service.py"}'),
+                thought=[text("查看文件")],
+            )
+        )
+        self.callback(
+            fake_event(
+                "ObservationEvent",
+                id="fake-terminal-observation",
+                source="environment",
+                tool_name="terminal",
+                tool_call_id="call-terminal",
+                observation=SimpleNamespace(
+                    content=[text("memguard/service.py:3675")],
+                    is_error=False,
+                    exit_code=0,
+                ),
+            )
+        )
+        self.callback(
+            fake_event(
+                "ObservationEvent",
+                id="fake-editor-observation",
+                source="environment",
+                tool_name="file_editor",
+                tool_call_id="call-editor",
+                observation=SimpleNamespace(
+                    content=[text("def forget_agent_interactions(...):")],
+                    is_error=False,
+                    exit_code=0,
+                ),
+            )
+        )
+        self.callback(
+            fake_event(
+                "MessageEvent",
+                id="fake-multiple-tools-assistant",
+                source="agent",
+                llm_message=SimpleNamespace(role="assistant", content=[text("已找到定义。")]),
+            )
+        )
+
+
 class FakeErrorConversation(FakeConversation):
     def run(self):
         self.callback(
@@ -602,6 +664,33 @@ def test_runner_persists_duplicate_tool_observation_once(tmp_path):
         assert result["event_summary"]["tool_results"] == 2
         assert result["event_summary"]["procedural_memories"] == 1
         assert len(result["memory_change_summary"]["new_memories"]) == 1
+    finally:
+        service.close()
+
+
+def test_runner_pairs_tool_results_by_call_id_and_skips_editor_noise(tmp_path):
+    service = make_service(tmp_path)
+
+    def conversation_factory(**kwargs):
+        return FakeMultipleToolsSameTurnConversation(kwargs["callback"])
+
+    try:
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id="session-multiple-tools",
+            workspace=tmp_path / "workspace",
+            state_dir=tmp_path / "state",
+            conversation_factory=conversation_factory,
+        )
+
+        result = runner.run("请查找 forget_agent_interactions 的定义位置。")
+
+        learned = result["memory_change_summary"]["new_memories"]
+        assert result["event_summary"]["tool_results"] == 2
+        assert result["event_summary"]["procedural_memories"] == 1
+        assert len(learned) == 1
+        assert "grep -R -n target ." in learned[0]["summary_for_user"]
+        assert "view" not in learned[0]["summary_for_user"]
     finally:
         service.close()
 

@@ -93,6 +93,8 @@ class OpenHandsEventAdapter:
             tool_args = json.loads(raw_arguments) if isinstance(raw_arguments, str) else dict(raw_arguments or {})
         except (json.JSONDecodeError, TypeError, ValueError):
             tool_args = {"raw_arguments": str(raw_arguments)}
+        if tool_call_id:
+            tool_args["tool_call_id"] = tool_call_id
         return self._event(
             raw_event,
             event_type="tool_call",
@@ -114,6 +116,7 @@ class OpenHandsEventAdapter:
             event_type="tool_result",
             role="tool",
             tool_name=str(getattr(raw_event, "tool_name", "")),
+            tool_args={"tool_call_id": tool_call_id} if tool_call_id else {},
             tool_result=_content_text(getattr(observation, "content", [])),
             exit_code=exit_code,
             turn_id=self.tool_turns.get(tool_call_id, self._turn_id()),
