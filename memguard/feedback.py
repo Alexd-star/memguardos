@@ -228,6 +228,8 @@ def merge_memory_change_summaries(
     merged.effective_scopes = _unique(merged.effective_scopes)
     merged.suggested_next_actions = _unique(merged.suggested_next_actions)
     merged.audit_event_ids = _unique(merged.audit_event_ids)
+    merged.new_memories = _unique_memory_items(merged.new_memories)
+    merged.updated_memories = _unique_memory_items(merged.updated_memories)
     unique_preferences = []
     seen_preferences = set()
     for item in merged.observed_preferences:
@@ -245,6 +247,22 @@ def merge_memory_change_summaries(
     if merged.new_memories and "view" not in merged.suggested_next_actions:
         merged.suggested_next_actions.insert(0, "view")
     return merged.to_dict()
+
+
+def _unique_memory_items(items: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    unique = []
+    seen = set()
+    for item in items:
+        if not isinstance(item, Mapping):
+            continue
+        payload = dict(item)
+        memory_id = str(payload.get("memory_id") or "")
+        key = memory_id or json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(payload)
+    return unique
 
 
 def build_preference_effect_proof(

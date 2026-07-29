@@ -97,6 +97,44 @@ class FakeConversation:
         self.closed = True
 
 
+class FakeDuplicateObservationConversation(FakeConversation):
+    def run(self):
+        self.callback(
+            fake_event(
+                "ActionEvent",
+                id="fake-duplicate-action",
+                source="agent",
+                tool_name="terminal",
+                tool_call_id="call-duplicate",
+                tool_call=SimpleNamespace(arguments='{"command":"rg build_agent_context"}'),
+                thought=[text("查找实现")],
+            )
+        )
+        for event_id in ("fake-duplicate-observation-1", "fake-duplicate-observation-2"):
+            self.callback(
+                fake_event(
+                    "ObservationEvent",
+                    id=event_id,
+                    source="environment",
+                    tool_name="terminal",
+                    tool_call_id="call-duplicate",
+                    observation=SimpleNamespace(
+                        content=[text("memguard/service.py:1297")],
+                        is_error=False,
+                        exit_code=0,
+                    ),
+                )
+            )
+        self.callback(
+            fake_event(
+                "MessageEvent",
+                id="fake-duplicate-assistant",
+                source="agent",
+                llm_message=SimpleNamespace(role="assistant", content=[text("已找到实现。")]),
+            )
+        )
+
+
 class FakeErrorConversation(FakeConversation):
     def run(self):
         self.callback(
@@ -540,6 +578,30 @@ def test_runner_callback_automatically_persists_real_agent_events(tmp_path):
         ]
         memories = service.list_memories(include_deleted=False)
         assert any(item["subtype"] == "procedural_trace" for item in memories)
+    finally:
+        service.close()
+
+
+def test_runner_persists_duplicate_tool_observation_once(tmp_path):
+    service = make_service(tmp_path)
+
+    def conversation_factory(**kwargs):
+        return FakeDuplicateObservationConversation(kwargs["callback"])
+
+    try:
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id="session-duplicate-observation",
+            workspace=tmp_path / "workspace",
+            state_dir=tmp_path / "state",
+            conversation_factory=conversation_factory,
+        )
+
+        result = runner.run("请查找 build_agent_context 的实现。")
+
+        assert result["event_summary"]["tool_results"] == 2
+        assert result["event_summary"]["procedural_memories"] == 1
+        assert len(result["memory_change_summary"]["new_memories"]) == 1
     finally:
         service.close()
 

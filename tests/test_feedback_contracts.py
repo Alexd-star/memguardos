@@ -8,6 +8,7 @@ from memguard.feedback import (
     build_preference_effect_proof,
     build_sensitive_block_notice,
     is_urgent_notification,
+    merge_memory_change_summaries,
     notifications_from_audit,
 )
 from memguard.api.server import handle_request
@@ -72,6 +73,26 @@ def test_memory_change_summary_translates_structured_preference_fields():
     assert item["preference_value"] == "rg"
     assert "code_search_tool" not in item["summary_for_user"]
     assert "global" not in item["summary_for_user"]
+
+
+def test_merged_memory_change_summary_deduplicates_same_memory_id():
+    item = {
+        "memory_id": "mem-procedure-1",
+        "category_label": "操作经验",
+        "status_label": "已保存",
+        "summary_for_user": "已验证的项目搜索命令。",
+    }
+
+    merged = merge_memory_change_summaries(
+        [
+            {"new_memories": [item]},
+            {"new_memories": [dict(item)]},
+        ],
+        namespace="demo",
+        source="agent",
+    )
+
+    assert merged["new_memories"] == [item]
 
 
 def test_sensitive_block_notice_proves_not_stored_or_entered_rag():

@@ -99,6 +99,7 @@ class OpenHandsMemoryRunner:
         self._tool_commands: Dict[str, str] = {}
         self._procedural_memories = []
         self._procedural_feedback = []
+        self._processed_tool_results = set()
         self._live_events = []
 
     def prepare_context(self, task: str) -> Dict[str, object]:
@@ -173,6 +174,15 @@ class OpenHandsMemoryRunner:
         if event.event_type == "tool_result":
             command = self._tool_commands.get(event.turn_id, "")
             if command:
+                result_key = (
+                    str(event.turn_id),
+                    " ".join(command.split()),
+                    int(event.exit_code or 0),
+                    " ".join(str(event.tool_result or "").split()),
+                )
+                if result_key in self._processed_tool_results:
+                    return
+                self._processed_tool_results.add(result_key)
                 memory_result = self.service.ingest_tool_result(
                     ToolResult(
                         command=command,
@@ -428,6 +438,7 @@ class OpenHandsMemoryRunner:
         self._tool_commands.clear()
         self._procedural_memories.clear()
         self._procedural_feedback.clear()
+        self._processed_tool_results.clear()
         self._live_events.clear()
         self.adapter.tool_turns.clear()
         self.adapter.internal_feedback.clear()
