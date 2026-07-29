@@ -42,8 +42,8 @@ class _ForgetService:
             "forgotten": ["mem-tool"],
             "verification_report": {
                 "verification_steps": [
-                    {"name": "检索结果复核", "status": "passed"},
-                    {"name": "审计链复核", "status": "passed"},
+                    {"name": "sqlite_fts", "status": "passed"},
+                    {"name": "audit_chain", "status": "passed"},
                 ],
                 "user_summary": "目标记忆已从受管检索链路移除。",
             },
@@ -382,7 +382,9 @@ def test_confirmed_forget_uses_readable_verification_summary(capsys):
     ) == 0
     output = capsys.readouterr().out
     assert "已遗忘 1 条目标记忆" in output
-    assert "检索结果复核：通过" in output
+    assert "文本检索索引：通过" in output
+    assert "main_record" not in output
+    assert "mmap_segment_compact" not in output
     assert "外部 Agent 日志" in output
     assert '"forgotten"' not in output
 

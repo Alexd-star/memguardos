@@ -192,6 +192,9 @@ class ForgetPlanner:
                     "preference_topic_match": preference_topic_match,
                     "summary": record.get("summary", ""),
                     "type": record.get("type", ""),
+                    "subtype": record.get("subtype", ""),
+                    "preference_topic": record.get("preference_topic", ""),
+                    "preference_value": record.get("preference_value", ""),
                 }
             )
         if not results:

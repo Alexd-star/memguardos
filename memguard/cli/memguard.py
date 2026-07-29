@@ -314,10 +314,21 @@ def _print_confirmed_forget(result: dict) -> int:
     steps = list(report.get("verification_steps") or [])
     if steps:
         print("验证结果")
-        labels = {"passed": "通过", "failed": "需检查", "skipped": "未执行"}
+        labels = {"passed": "通过", "failed": "需检查", "skipped": "本次不适用"}
+        step_labels = {
+            "main_record": "主记忆记录",
+            "agent_event_payload": "Agent 交互记录",
+            "sqlite_fts": "文本检索索引",
+            "graph_relations": "关联关系索引",
+            "search_cache": "检索缓存",
+            "mmap_segment_compact": "本机存储整理",
+            "plaintext_probe": "明文残留检查",
+            "agent_context_absence": "Agent 上下文复检",
+            "audit_chain": "操作记录完整性",
+        }
         for step in steps:
             print("- %s：%s" % (
-                step.get("name", "验证项"),
+                step_labels.get(step.get("name"), "验证项"),
                 labels.get(step.get("status"), step.get("status", "未知")),
             ))
     if report.get("user_summary"):
@@ -334,7 +345,15 @@ def _print_forget_preview(result: dict, interactive: bool) -> None:
     if candidates:
         for index, item in enumerate(candidates, 1):
             print("%d. %s" % (index, item.get("summary") or item.get("memory_id")))
-            print("   ID：%s  分数：%s" % (item.get("memory_id", "-"), item.get("score", "-")))
+            category = _memory_category_display(item)
+            if item.get("preference_topic_match"):
+                reason = "与当前生效的结构化偏好一致"
+            else:
+                reason = "内容与遗忘目标相关"
+            current_value = str(item.get("preference_value") or "").strip()
+            value_text = " · 当前设置：%s" % current_value if current_value else ""
+            print("   类别：%s%s · 匹配依据：%s" % (category, value_text, reason))
+            print("   ID：%s" % item.get("memory_id", "-"))
     else:
         print("没有发现候选。")
     if interactive and candidates:

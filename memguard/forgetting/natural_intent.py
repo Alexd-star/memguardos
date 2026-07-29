@@ -39,7 +39,17 @@ PREFERENCE_TOPIC_ALIASES = {
         "安全确认",
         "高风险安全策略",
     ),
-    "code_search_tool": ("查代码", "代码搜索", "搜索工具", "rg", "grep", "ripgrep"),
+    "code_search_tool": (
+        "查代码",
+        "查找代码",
+        "代码查找",
+        "代码搜索",
+        "搜索代码",
+        "搜索工具",
+        "rg",
+        "grep",
+        "ripgrep",
+    ),
     "response_order": ("先给命令", "先给结论", "先命令后解释", "回答顺序", "输出顺序", "回复顺序"),
     "response_language": ("中文回答", "英文回答", "用中文", "回答语言", "回复语言", "语言偏好"),
     "response_verbosity": ("简洁回答", "详细回答", "简短", "少废话", "回答长度", "详细程度"),
@@ -66,6 +76,20 @@ class ErasureIntentCompiler:
         target_phrase = self._target_phrase(text, topic)
         preference_topic = self._preference_topic(text, topic)
         normalized_preference_topic = self._normalized_preference_topic(text, preference_topic)
+        explicit_all_memory_request = _explicit_all_memory_request(text)
+        if explicit_all_memory_request:
+            # “所有记忆”是用户明确授权的跨类型范围，不能再被工具词
+            # 自动收窄成只删除偏好。
+            preference_topic = ""
+            normalized_preference_topic = ""
+        if (
+            normalized_preference_topic
+            and memory_types == ["all"]
+            and not explicit_all_memory_request
+        ):
+            # “忘记使用 grep”描述的是正在生效的工具选择，不应退化成
+            # 对所有包含 grep 文本的知识与工具执行记录做全文匹配。
+            memory_types = ["preference"]
         topic_aliases = self._topic_aliases(text, topic, normalized_preference_topic or preference_topic)
         project_hint = self._project_hint(text, context, topic)
         unresolved_slots = []
@@ -278,8 +302,31 @@ class ErasureIntentCompiler:
             return "回答风格"
         if "pytest" in lowered and "偏好" in target_text:
             return "pytest"
-        if any(tool in lowered for tool in ("rg", "grep", "ripgrep")) and any(
-            marker in target_text for marker in ("偏好", "习惯", "代码搜索", "查代码")
+        tool_mentioned = any(tool in lowered for tool in ("rg", "grep", "ripgrep"))
+        code_search_context = any(
+            marker in target_text
+            for marker in ("查代码", "查找代码", "代码查找", "代码搜索", "搜索代码")
+        )
+        tool_usage_context = any(
+            marker in target_text
+            for marker in (
+                "使用",
+                "用grep",
+                "用 grep",
+                "用rg",
+                "用 rg",
+                "采用",
+                "改用",
+                "选择",
+                "默认",
+                "优先",
+            )
+        )
+        explicit_forgetting = any(verb in target_text for verb in FORGET_VERBS)
+        if tool_mentioned and (
+            any(marker in target_text for marker in ("偏好", "习惯"))
+            or code_search_context
+            or (explicit_forgetting and tool_usage_context)
         ):
             return "code_search_tool"
         if (
@@ -290,7 +337,7 @@ class ErasureIntentCompiler:
             or "操作确认" in target_text
         ):
             return "high_risk_confirmation"
-        if "代码搜索" in target_text or "查代码" in target_text:
+        if code_search_context:
             return "code_search_tool"
         if "先给命令" in target_text or "先给结论" in target_text or "先命令后解释" in target_text:
             return "response_order"
@@ -445,6 +492,17 @@ class ErasureIntentCompiler:
         if "安全确认策略" in keep_text:
             constraints.append({"memory_types": ["security_policy"], "topic": "安全确认策略"})
         return constraints
+
+
+def _explicit_all_memory_request(text: str) -> bool:
+    """Return whether the user explicitly authorised all memory categories."""
+
+    return bool(
+        re.search(
+            r"(?:所有|全部)[^，。,；;]{0,40}(?:记忆|内容|记录|数据)",
+            str(text or ""),
+        )
+    )
 
 
 def _split_retention_clause(text: str) -> tuple[str, str]:
