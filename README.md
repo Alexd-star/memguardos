@@ -18,9 +18,20 @@
   <img src="https://img.shields.io/badge/Local--first-memory%20stays%20on%20device-168A72" alt="Local first"> <img src="https://img.shields.io/badge/Precise%20forgetting-preview%20%2B%20verify-D97706" alt="Precise forgetting"> <img src="https://img.shields.io/badge/AgentEvent-open%20integration%20contract-7C3AED" alt="AgentEvent integration contract">
 </p>
 
-[快速体验](#快速体验) · [核心能力](#核心能力) · [真实-agent-接入](#真实-agent-接入) · [项目结构](#项目结构) · [系统架构](#系统架构) · [验证结果](#验证结果) · [完整文档](#完整文档)
+[快速体验](#快速体验) · [核心能力](#核心能力) · [真实-agent-接入](#真实-agent-接入) · [项目结构](#项目结构) · [系统架构](#系统架构) · [验证结果](#验证结果) · [完整文档](#完整文档) · [演示视频](#演示视频)
 
 </div>
+
+<a id="演示视频"></a>
+
+## 🎬 演示视频
+
+<video controls preload="metadata" poster="docs/assets/branding/demo-video-cover.jpg" width="100%">
+  <source src="MemGuardOS-演示视频-头脑特工队.mp4" type="video/mp4">
+  当前浏览器不支持在线播放，请打开 <a href="MemGuardOS-演示视频-头脑特工队.mp4">MemGuardOS 演示视频</a>。
+</video>
+
+<p align="center">5 分 26 秒完整演示：openKylin 桌面入口、真实 Agent 记忆复用、偏好更新、精准遗忘、敏感保护与 Web 证据链。</p>
 
 MemGuardOS 是部署在本机的 OS Agent 记忆层。它接收用户与 Agent 的交互事件，提取长期偏好、知识和工具经验，在下一次任务中按需提供上下文；当用户要求遗忘时，系统先展示候选和影响范围，再清理受管存储、检索索引、图谱、缓存和段文件中的目标内容。
 
