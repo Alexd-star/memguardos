@@ -9,7 +9,7 @@
 | 普通用户 | [安装部署](installation.md) → [用户指南](user-guide.md) |
 | Agent 开发者 | [Agent 接入](agent-integration.md) → [接口参考](api.md) → [系统架构](architecture.md) |
 | openKylin 管理员 | [安装部署](installation.md) → [安全与遗忘边界](security.md) → [测试与评测](testing.md) |
-| 贡献者 | [开发者指南](developer-guide.md) → 根目录 `CONTRIBUTING.md` |
+| 贡献者 | [开发者指南](developer-guide.md) |
 | 竞赛评审 | [赛题符合性](competition.md) → [测试与评测](testing.md) → [证据索引](evidence/README.md) |
 
 ## 稳定文档

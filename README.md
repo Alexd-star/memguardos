@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/version-1.0.1-0F6CBD" alt="Version 1.0.1"> <img src="https://img.shields.io/badge/openKylin-2.0%20SP2-1683C4" alt="openKylin 2.0 SP2"> <img src="https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB" alt="Python 3.10, 3.11, 3.12"> <img src="https://img.shields.io/badge/openKylin%20tests-705%20passed-138A72" alt="705 openKylin tests passed"> <img src="https://img.shields.io/badge/License-MIT-4B5563" alt="MIT License">
 </p>
 <p>
-  <a href="https://github.com/Alexd-star/memguardos/actions/workflows/ci.yml"><img src="https://github.com/Alexd-star/memguardos/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a> <a href="https://github.com/Alexd-star/memguardos/releases/latest"><img src="https://img.shields.io/github/v/release/Alexd-star/memguardos?label=release&amp;color=6C5CE7" alt="Latest release"></a> <img src="https://img.shields.io/badge/Debian%20packages-5-DB4B4B" alt="Five Debian packages"> <img src="https://img.shields.io/badge/GPU-not%20required-546E7A" alt="No GPU required">
+  <img src="https://img.shields.io/badge/build-verified-138A72" alt="Build verified"> <img src="https://img.shields.io/badge/release-v1.0.1-6C5CE7" alt="Release v1.0.1"> <img src="https://img.shields.io/badge/Debian%20packages-5-DB4B4B" alt="Five Debian packages"> <img src="https://img.shields.io/badge/GPU-not%20required-546E7A" alt="No GPU required">
 </p>
 <p>
   <img src="https://img.shields.io/badge/Local--first-memory%20stays%20on%20device-168A72" alt="Local first"> <img src="https://img.shields.io/badge/Precise%20forgetting-preview%20%2B%20verify-D97706" alt="Precise forgetting"> <img src="https://img.shields.io/badge/AgentEvent-open%20integration%20contract-7C3AED" alt="AgentEvent integration contract">
@@ -35,16 +35,10 @@ MemGuardOS 是部署在本机的 OS Agent 记忆层。它接收用户与 Agent �
   </tr>
 </table>
 
-<table>
-  <tr>
-    <td width="58%"><img src="docs/assets/screenshots/personal-workbench.png" alt="MemGuardOS 个人工作台"></td>
-    <td width="42%"><img src="docs/assets/screenshots/system-maintenance.png" alt="MemGuardOS 系统维护"></td>
-  </tr>
-  <tr>
-    <td align="center"><b>个人工作台</b><br>查看最近学习内容、检索记忆、预览上下文和执行遗忘</td>
-    <td align="center"><b>系统维护</b><br>查看服务、检索后端、SDK、审计链和本机资源状态</td>
-  </tr>
-</table>
+| 个人工作台 | 系统维护 |
+| --- | --- |
+| ![MemGuardOS 个人工作台](docs/assets/screenshots/personal-workbench.png) | ![MemGuardOS 系统维护](docs/assets/screenshots/system-maintenance.png) |
+| 查看最近学习内容、检索记忆、预览上下文和执行遗忘 | 查看服务、检索后端、SDK、审计链和本机资源状态 |
 
 <a id="项目结构"></a>
 
@@ -486,6 +480,6 @@ MemGuardOS 对受管事件、元数据、FTS、图谱、向量缓存、结果缓
 
 ## 🤝 贡献与开源
 
-项目采用 [MIT License](LICENSE)。提交问题或补丁前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)，新增功能应同时提供测试、用户可理解的错误反馈和必要文档。
+项目采用 [MIT License](LICENSE)。开发环境、代码边界、测试规范和扩展方式统一收录在[开发者指南](docs/developer-guide.md)中；新增功能应同时提供测试、用户可理解的错误反馈和必要文档。
 
 MemGuardOS 起源于第三届中国研究生操作系统开源创新大赛“面向 openKylin 的智能体记忆提取与精准遗忘机制”赛题，现按可独立安装、可接入和可审计的开源项目维护。赛题要求与实现映射见 [赛题符合性](docs/competition.md)。
