@@ -444,7 +444,7 @@ def main() -> int:
     parser.add_argument("--output-dir", default="dist")
     parser.add_argument("--build-root", default="dist/deb-split")
     parser.add_argument("--version", default="")
-    parser.add_argument("--revision", default=os.environ.get("DEB_REVISION", "2"))
+    parser.add_argument("--revision", default=os.environ.get("DEB_REVISION", "1"))
     parser.add_argument("--without-ukui", action="store_true")
     parser.add_argument("--print-plan", action="store_true")
     args = parser.parse_args()

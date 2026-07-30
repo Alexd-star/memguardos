@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-VERSION="${1:-1.0.0-2}"
+VERSION="${1:-1.0.1-1}"
 ARCH="${2:-$(dpkg --print-architecture)}"
 ROOT="${TMPDIR:-/tmp}/memguardos-deb-lifecycle"
 PACKAGES=(

@@ -2,6 +2,19 @@
 
 本文记录 MemGuardOS 的公开版本。格式参考 Keep a Changelog，版本号遵循语义化版本。
 
+## [1.0.1] - 2026-07-30
+
+### 修复
+
+- 强化自然语言记忆写入、查询、偏好更新和精准遗忘的通用意图处理。
+- 修正 OpenHands 工具调用与执行结果配对，保持真实参数、结果和记忆采用记录的一致性。
+- 完善程序性记忆、工具偏好与知识记忆的分类、去重和用户可见反馈。
+
+### 优化
+
+- 重整公开项目入口、目录导航和品牌展示，提升源码阅读与复现效率。
+- 更新最终交付清单、安装资产和 openKylin 五包发布流程。
+
 ## [1.0.0] - 2026-07-28
 
 ### 新增
@@ -37,5 +50,6 @@
 
 首个工程快照，建立本地记忆卡片、mmap/SQLite 存储、混合检索、敏感检测、精准遗忘、审计链和基础 openKylin 部署路径。
 
-[1.0.0]: https://www.gitlink.org.cn/lc263126/mxokdzntjytqyjzywjz/tags/v1.0.0
-[0.1.0]: https://www.gitlink.org.cn/lc263126/mxokdzntjytqyjzywjz/tags/v0.1.0
+[1.0.1]: https://github.com/Alexd-star/memguardos/releases/tag/v1.0.1
+[1.0.0]: https://github.com/Alexd-star/memguardos/releases/tag/v1.0.0
+[0.1.0]: https://github.com/Alexd-star/memguardos/releases/tag/v0.1.0
