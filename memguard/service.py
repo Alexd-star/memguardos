@@ -166,9 +166,14 @@ class MemGuardService:
     def _recover_pending_memory_writes(self) -> int:
         pending = self.meta.pending_memory_writes()
         for item in pending:
-            self.meta.commit_staged_new_memory_write(
-                str(item["version_id"]), self._append_staged_record_once,
-            )
+            if item["expected_version_id"]:
+                self.meta.commit_staged_existing_memory_write(
+                    str(item["version_id"]), self.store.append_version_once,
+                )
+            else:
+                self.meta.commit_staged_new_memory_write(
+                    str(item["version_id"]), self._append_staged_record_once,
+                )
         return len(pending)
 
     def _append_staged_record_once(self, record: MemoryRecord) -> MemoryRecord:
@@ -177,6 +182,8 @@ class MemGuardService:
             if latest.to_json() != record.to_json():
                 raise ValueError("staged memory payload differs from segment")
             return latest
+        if latest is not None:
+            raise ValueError("segment memory id differs from staged new write")
         return self.store.append(record)
 
     def _persist_new_memory(self, record: MemoryRecord) -> MemoryRecord:
@@ -187,6 +194,18 @@ class MemGuardService:
         )
         return self.meta.commit_staged_new_memory_write(
             record.version.version_id, self._append_staged_record_once,
+        )
+
+    def _persist_existing_memory(
+        self, previous: MemoryRecord, record: MemoryRecord,
+    ) -> MemoryRecord:
+        self.meta.stage_existing_memory_write(
+            previous, record, self.EMBEDDING_BACKEND,
+            self.EMBEDDING_MODEL_REVISION,
+            vector_content_hash(record.summary, record.content),
+        )
+        return self.meta.commit_staged_existing_memory_write(
+            record.version.version_id, self.store.append_version_once,
         )
 
     def enqueue_missing_embedding_jobs(
@@ -2066,8 +2085,6 @@ class MemGuardService:
         memory_type = previous.type if replacement_observation else extraction.memory_type
         new_version_id = new_id("ver")
         previous.invalidate(superseded_by=new_version_id)
-        self.store.append(previous)
-        self.meta.invalidate_memory(memory_id, superseded_by=new_version_id, valid_to=previous.temporal.valid_to)
 
         record = MemoryRecord(
             memory_id=previous.memory_id,
@@ -2101,13 +2118,7 @@ class MemGuardService:
             governance_reason=previous.governance_reason,
         ).finalize_hash()
         self._enrich_graph(record)
-        self.store.append(record)
-        self.meta.upsert_memory_with_embedding_job(
-            record,
-            self.EMBEDDING_BACKEND,
-            self.EMBEDDING_MODEL_REVISION,
-            vector_content_hash(record.summary, record.content),
-        )
+        record = self._persist_existing_memory(previous, record)
         self._audit(
             "update",
             memory_id,
@@ -2193,8 +2204,6 @@ class MemGuardService:
 
         new_version_id = new_id("ver")
         previous.invalidate(superseded_by=new_version_id)
-        self.store.append(previous)
-        self.meta.invalidate_memory(memory_id, superseded_by=new_version_id, valid_to=previous.temporal.valid_to)
         payload = previous.to_dict()
         now = utc_now()
         payload["version"] = {
@@ -2210,13 +2219,7 @@ class MemGuardService:
         payload["governance_reason"] = reason
         payload["deleted"] = False
         approved = MemoryRecord.from_dict(payload).finalize_hash()
-        self.store.append(approved)
-        self.meta.upsert_memory_with_embedding_job(
-            approved,
-            self.EMBEDDING_BACKEND,
-            self.EMBEDDING_MODEL_REVISION,
-            vector_content_hash(approved.summary, approved.content),
-        )
+        approved = self._persist_existing_memory(previous, approved)
         self._audit(
             "governance_approve",
             memory_id,
@@ -2245,8 +2248,6 @@ class MemGuardService:
             return {"promoted": False, "reason": "memory_not_found", "memory_id": memory_id}
         new_version_id = new_id("ver")
         record.invalidate(superseded_by=new_version_id)
-        self.store.append(record)
-        self.meta.invalidate_memory(memory_id, superseded_by=new_version_id, valid_to=record.temporal.valid_to)
 
         promoted = MemoryRecord(
             memory_id=record.memory_id,
@@ -2279,13 +2280,7 @@ class MemGuardService:
             governance_state=record.governance_state,
             governance_reason=record.governance_reason,
         ).finalize_hash()
-        self.store.append(promoted)
-        self.meta.upsert_memory_with_embedding_job(
-            promoted,
-            self.EMBEDDING_BACKEND,
-            self.EMBEDDING_MODEL_REVISION,
-            vector_content_hash(promoted.summary, promoted.content),
-        )
+        promoted = self._persist_existing_memory(record, promoted)
         self._audit(
             "promote",
             memory_id,
@@ -2479,6 +2474,7 @@ class MemGuardService:
             }
             return [predecessor, tombstone]
         by_version_id: Dict[str, Dict[str, object]] = {}
+        committed_version_found = False
         for record in self.store.get_versions(memory_id):
             by_version_id[record.version.version_id] = {
                 "memory_id": record.memory_id,
@@ -2494,6 +2490,11 @@ class MemGuardService:
                 "active": not record.deleted and record.temporal.valid_to is None,
                 "hash": record.audit.hash,
             }
+            if record.version.version_id == row["version_id"]:
+                committed_version_found = True
+                break
+        if not committed_version_found:
+            return []
         versions = list(by_version_id.values())
         self._audit("versions", memory_id, {"count": len(versions)})
         return versions
@@ -2565,8 +2566,6 @@ class MemGuardService:
 
         new_version_id = new_id("ver")
         latest.invalidate(superseded_by=new_version_id)
-        self.store.append(latest)
-        self.meta.invalidate_memory(memory_id, superseded_by=new_version_id, valid_to=latest.temporal.valid_to)
 
         record = MemoryRecord(
             memory_id=target.memory_id,
@@ -2585,7 +2584,7 @@ class MemGuardService:
             relations=target.relations,
             sensitivity=target.sensitivity,
             version=VersionInfo(version_id=new_version_id, parent_version_id=latest.version.version_id, op="rollback"),
-            audit=AuditInfo(created_by="memguard", created_at=utc_now(), hash=stable_hash(target.memory_id + version_id + utc_now())),
+            audit=AuditInfo(created_by="memguard", created_at=utc_now()),
             preference_topic=target.preference_topic,
             preference_value=target.preference_value,
             preference_scope=target.preference_scope,
@@ -2599,14 +2598,8 @@ class MemGuardService:
             governance_state=target.governance_state,
             governance_reason=target.governance_reason,
             deleted=False,
-        )
-        self.store.append(record)
-        self.meta.upsert_memory_with_embedding_job(
-            record,
-            self.EMBEDDING_BACKEND,
-            self.EMBEDDING_MODEL_REVISION,
-            vector_content_hash(record.summary, record.content),
-        )
+        ).finalize_hash()
+        record = self._persist_existing_memory(latest, record)
         self._audit(
             "rollback",
             memory_id,

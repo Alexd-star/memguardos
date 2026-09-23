@@ -1,6 +1,11 @@
+import json
+import sqlite3
+
 import pytest
 
 from memguard.integrations.events import AgentInteractionEvent
+from memguard.models import MemorySource, make_memory
+from memguard.retrieval.vector_cache import vector_content_hash
 from memguard.service import MemGuardService
 
 
@@ -135,5 +140,213 @@ def test_preference_supersession_commits_before_feedback_failure(tmp_path, monke
                   if row["preference_topic"] == "code_search_tool"]
         assert len(active) == 1
         assert active[0]["preference_value"] == "rg"
+    finally:
+        recovered.close()
+
+
+def _version_operation(service, operation):
+    if operation == "approve":
+        created = service.ingest_text(
+            "External note: openKylin uses systemctl status for service checks.",
+            source_kind="web_content", source_uri="https://docs.example.invalid/service",
+        )["record"]
+        assert created.governance_state == "quarantined"
+        return created.memory_id, lambda: service.review_quarantined_memory(
+            created.memory_id, "approve", "reviewer", "checked against manual",
+        )
+    created = service.ingest_text("The Lark project meets on Thursday.")["record"]
+    if operation == "update":
+        return created.memory_id, lambda: service.update_memory(
+            created.memory_id, "The Lark project meets on Friday."
+        )
+    if operation == "promote":
+        return created.memory_id, lambda: service.promote_memory(
+            created.memory_id, "working"
+        )
+    service.update_memory(created.memory_id, "The Lark project meets on Friday.")
+    return created.memory_id, lambda: service.rollback(
+        created.memory_id, created.version.version_id
+    )
+
+
+@pytest.mark.parametrize("operation", ["update", "promote", "rollback", "approve"])
+def test_existing_version_recovers_after_sqlite_failure(tmp_path, monkeypatch, operation):
+    service = _service(tmp_path)
+    memory_id, run = _version_operation(service, operation)
+    old_version = service.meta.get_memory(memory_id)["version_id"]
+    old_count = len(service.store.get_versions(memory_id))
+
+    def fail_upsert(*_args):
+        raise OSError("simulated metadata failure")
+
+    monkeypatch.setattr(service.meta, "_upsert_memory_with_embedding_job_no_commit", fail_upsert)
+    with pytest.raises(OSError, match="simulated metadata failure"):
+        run()
+    pending = service.meta.pending_memory_writes()
+    assert len(pending) == 1
+    assert pending[0]["expected_version_id"] == old_version
+    assert service.meta.get_memory(memory_id)["version_id"] == old_version
+    assert len(service.store.get_versions(memory_id)) == old_count + 2
+    visible = service.versions(memory_id)
+    assert visible[-1]["version_id"] == old_version
+    assert visible[-1]["active"] is True
+    service.close()
+
+    recovered = _service(tmp_path)
+    try:
+        assert recovered.meta.pending_memory_writes() == []
+        current = recovered.meta.get_memory(memory_id)
+        assert current["version_id"] == pending[0]["version_id"]
+        assert current["deleted"] == 0
+        assert recovered.store.get_latest(memory_id).version.version_id == current["version_id"]
+        assert len(recovered.store.get_versions(memory_id)) == old_count + 2
+        assert recovered.versions(memory_id)[-1]["active"] is True
+        committed = [
+            item for item in recovered.meta.list_audit(
+                50, event_type="memory_version_committed"
+            )
+            if json.loads(item["detail"])["version_id"] == current["version_id"]
+        ]
+        assert len(committed) == 1
+        assert recovered.meta.verify_audit_chain()["ok"] is True
+    finally:
+        recovered.close()
+
+
+@pytest.mark.parametrize("failure_point", ["before_previous", "before_new"])
+def test_existing_version_recovers_after_segment_failure(tmp_path, monkeypatch, failure_point):
+    service = _service(tmp_path)
+    memory_id, run = _version_operation(service, "update")
+    old_version = service.meta.get_memory(memory_id)["version_id"]
+    if failure_point == "before_previous":
+        def fail_version(_previous, _record):
+            raise OSError("simulated first append failure")
+        monkeypatch.setattr(service.store, "append_version_once", fail_version)
+    else:
+        original_append = service.store._append_unlocked
+
+        def fail_second(record):
+            if record.version.version_id != old_version:
+                raise OSError("simulated second append failure")
+            return original_append(record)
+
+        monkeypatch.setattr(service.store, "_append_unlocked", fail_second)
+    with pytest.raises(OSError, match="append failure"):
+        run()
+    assert service.meta.get_memory(memory_id)["version_id"] == old_version
+    assert len(service.meta.pending_memory_writes()) == 1
+    visible = service.versions(memory_id)
+    assert visible[-1]["version_id"] == old_version
+    assert visible[-1]["active"] is True
+    service.close()
+
+    recovered = _service(tmp_path)
+    try:
+        assert recovered.meta.pending_memory_writes() == []
+        versions = recovered.store.get_versions(memory_id)
+        assert len(versions) == 3
+        assert versions[1].temporal.superseded_by == versions[2].version.version_id
+        assert recovered.meta.get_memory(memory_id)["version_id"] == versions[-1].version.version_id
+    finally:
+        recovered.close()
+
+
+def test_erasure_waits_for_staged_version_recovery(tmp_path, monkeypatch):
+    service = _service(tmp_path)
+    memory_id, run = _version_operation(service, "update")
+
+    def fail_version(_previous, _record):
+        raise OSError("simulated append failure")
+
+    monkeypatch.setattr(service.store, "append_version_once", fail_version)
+    with pytest.raises(OSError):
+        run()
+    with pytest.raises(ValueError, match="pending write"):
+        run()
+    current = service.store.get_latest(memory_id)
+    with pytest.raises(ValueError, match="pending memory write"):
+        service._begin_memory_erasure(current, compact=True)
+    assert service.meta.get_memory(memory_id)["deleted"] == 0
+    service.close()
+
+    recovered = _service(tmp_path)
+    try:
+        current = recovered.store.get_latest(memory_id)
+        recovered._begin_memory_erasure(current, compact=True)
+        recovered._recover_pending_erasures()
+        assert recovered.meta.get_memory(memory_id)["deleted"] == 1
+        assert recovered.store.get_latest(memory_id) is None
+    finally:
+        recovered.close()
+
+
+def test_version_audit_failure_replays_with_memory(tmp_path, monkeypatch):
+    service = _service(tmp_path)
+    memory_id, run = _version_operation(service, "update")
+    original = service.meta._add_audit_no_commit
+
+    def fail_version_audit(event_type, memory_id, detail):
+        if event_type == "memory_version_committed":
+            raise OSError("simulated version audit failure")
+        return original(event_type, memory_id, detail)
+
+    monkeypatch.setattr(service.meta, "_add_audit_no_commit", fail_version_audit)
+    with pytest.raises(OSError, match="version audit failure"):
+        run()
+    pending = service.meta.pending_memory_writes()
+    assert len(pending) == 1
+    assert service.meta.get_memory(memory_id)["version_id"] != pending[0]["version_id"]
+    service.close()
+
+    recovered = _service(tmp_path)
+    try:
+        assert recovered.meta.pending_memory_writes() == []
+        assert recovered.meta.get_memory(memory_id)["version_id"] == pending[0]["version_id"]
+        assert recovered.meta.verify_audit_chain()["ok"] is True
+        committed = recovered.meta.list_audit(50, event_type="memory_version_committed")
+        assert sum(
+            json.loads(item["detail"])["version_id"] == pending[0]["version_id"]
+            for item in committed
+        ) == 1
+    finally:
+        recovered.close()
+
+
+def test_old_pending_write_schema_migrates_and_replays(tmp_path):
+    record = make_memory(
+        "The Lark project meets on Thursday.", "knowledge",
+        MemorySource(kind="manual"),
+    )
+    db_path = tmp_path / "meta.sqlite3"
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            """CREATE TABLE pending_memory_write (
+                version_id TEXT PRIMARY KEY, memory_id TEXT NOT NULL,
+                record_json TEXT NOT NULL, backend TEXT NOT NULL,
+                model_revision TEXT NOT NULL, content_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )"""
+        )
+        conn.execute(
+            "INSERT INTO pending_memory_write VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                record.version.version_id, record.memory_id, record.to_json(),
+                "kylin_sdk", "kylin-sdk-v1",
+                vector_content_hash(record.summary, record.content),
+                "2026-01-01T00:00:00+00:00",
+            ),
+        )
+
+    recovered = _service(tmp_path)
+    try:
+        assert recovered.meta.pending_memory_writes() == []
+        assert recovered.meta.get_memory(record.memory_id)["version_id"] == record.version.version_id
+        assert len(recovered.store.get_versions(record.memory_id)) == 1
+        columns = {
+            row["name"] for row in recovered.meta.conn.execute(
+                "PRAGMA table_info(pending_memory_write)"
+            )
+        }
+        assert {"expected_version_id", "previous_record_json"} <= columns
     finally:
         recovered.close()

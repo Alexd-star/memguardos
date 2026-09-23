@@ -56,6 +56,26 @@ class AppendOnlyMemoryStore:
         with self._locked():
             return self._append_unlocked(record)
 
+    def append_version_once(
+        self, previous: MemoryRecord, record: MemoryRecord,
+    ) -> MemoryRecord:
+        with self._locked():
+            latest = None
+            for candidate in self._scan_unlocked():
+                if candidate.memory_id == record.memory_id:
+                    latest = candidate
+            if latest is not None and latest.to_json() == record.to_json():
+                return latest
+            if latest is not None and latest.to_json() == previous.to_json():
+                return self._append_unlocked(record)
+            active_previous = MemoryRecord.from_json(previous.to_json())
+            active_previous.temporal.valid_to = None
+            active_previous.temporal.superseded_by = None
+            if latest is None or latest.to_json() != active_previous.to_json():
+                raise ValueError("segment version differs from staged predecessor")
+            self._append_unlocked(previous)
+            return self._append_unlocked(record)
+
     def scan(self) -> List[MemoryRecord]:
         with self._locked():
             return self._scan_unlocked()

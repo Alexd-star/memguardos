@@ -49,6 +49,8 @@ _ALLOWED_COLUMN_MIGRATIONS = {
     ("memory_embedding", "attempt_count", "INTEGER NOT NULL DEFAULT 0"),
     ("memory_embedding", "next_attempt_at", "TEXT NOT NULL DEFAULT ''"),
     ("memory_embedding", "job_token", "TEXT NOT NULL DEFAULT ''"),
+    ("pending_memory_write", "expected_version_id", "TEXT NOT NULL DEFAULT ''"),
+    ("pending_memory_write", "previous_record_json", "TEXT NOT NULL DEFAULT ''"),
 }
 
 
@@ -136,10 +138,14 @@ class SQLiteMetaStore:
                 backend TEXT NOT NULL,
                 model_revision TEXT NOT NULL,
                 content_hash TEXT NOT NULL,
+                expected_version_id TEXT NOT NULL DEFAULT '',
+                previous_record_json TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL
             )
             """
         )
+        self._ensure_column("pending_memory_write", "expected_version_id", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("pending_memory_write", "previous_record_json", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("memory", "subtype", "TEXT NOT NULL DEFAULT 'general'")
         self._ensure_column("memory", "tier", "TEXT NOT NULL DEFAULT 'long_term'")
         self._ensure_column("memory", "sensitivity_redacted", "INTEGER NOT NULL DEFAULT 0")
@@ -468,11 +474,16 @@ class SQLiteMetaStore:
         content_hash: str,
     ) -> None:
         with self.conn:
+            self.conn.execute("BEGIN IMMEDIATE")
             existing = self.conn.execute(
                 "SELECT 1 FROM memory WHERE memory_id = ?", (record.memory_id,)
             ).fetchone()
             if existing is not None:
                 raise ValueError("memory id already exists")
+            if self.conn.execute(
+                "SELECT 1 FROM pending_memory_write WHERE memory_id = ?", (record.memory_id,)
+            ).fetchone() is not None:
+                raise ValueError("memory id already has a pending write")
             self.conn.execute(
                 """
                 INSERT INTO pending_memory_write(
@@ -486,9 +497,49 @@ class SQLiteMetaStore:
                 ),
             )
 
+    def stage_existing_memory_write(
+        self, previous: MemoryRecord, record: MemoryRecord,
+        backend: str, model_revision: str, content_hash: str,
+    ) -> None:
+        if (
+            previous.memory_id != record.memory_id
+            or previous.version.version_id != record.version.parent_version_id
+            or previous.temporal.superseded_by != record.version.version_id
+            or previous.temporal.valid_to is None
+            or record.temporal.valid_to is not None
+            or record.deleted
+        ):
+            raise ValueError("invalid staged memory version transition")
+        with self.conn:
+            self.conn.execute("BEGIN IMMEDIATE")
+            row = self.conn.execute(
+                "SELECT version_id, deleted FROM memory WHERE memory_id = ?",
+                (record.memory_id,),
+            ).fetchone()
+            if row is None or row["deleted"] or row["version_id"] != previous.version.version_id:
+                raise ValueError("stale memory version")
+            if self.conn.execute(
+                "SELECT 1 FROM pending_memory_write WHERE memory_id = ?", (record.memory_id,)
+            ).fetchone() is not None:
+                raise ValueError("memory id already has a pending write")
+            self.conn.execute(
+                """
+                INSERT INTO pending_memory_write(
+                    version_id, memory_id, record_json, backend, model_revision,
+                    content_hash, expected_version_id, previous_record_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    record.version.version_id, record.memory_id, record.to_json(),
+                    backend, model_revision, content_hash,
+                    previous.version.version_id, previous.to_json(), utc_now(),
+                ),
+            )
+
     def pending_memory_writes(self) -> List[Dict[str, Any]]:
         return [dict(row) for row in self.conn.execute(
-            "SELECT version_id, memory_id FROM pending_memory_write ORDER BY created_at, version_id"
+            """SELECT version_id, memory_id, expected_version_id
+               FROM pending_memory_write ORDER BY created_at, version_id"""
         )]
 
     def commit_staged_new_memory_write(
@@ -504,6 +555,8 @@ class SQLiteMetaStore:
             record = MemoryRecord.from_json(str(row["record_json"]))
             if record.memory_id != row["memory_id"] or record.version.version_id != version_id:
                 raise ValueError("staged memory write identity mismatch")
+            if row["expected_version_id"] or row["previous_record_json"]:
+                raise ValueError("staged write is not a new memory")
             existing = self.conn.execute(
                 "SELECT 1 FROM memory WHERE memory_id = ?", (record.memory_id,)
             ).fetchone()
@@ -515,6 +568,10 @@ class SQLiteMetaStore:
                 str(row["content_hash"]),
             )
             self._attach_preference_evidence_no_commit(record)
+            self._add_audit_no_commit(
+                "memory_version_committed", record.memory_id,
+                self._version_audit_detail(record),
+            )
             self.conn.execute(
                 "DELETE FROM pending_memory_write WHERE version_id = ?", (version_id,)
             )
@@ -523,6 +580,65 @@ class SQLiteMetaStore:
         except Exception:
             self.conn.rollback()
             raise
+
+    def commit_staged_existing_memory_write(
+        self, version_id: str,
+        append_version: Callable[[MemoryRecord, MemoryRecord], MemoryRecord],
+    ) -> MemoryRecord:
+        self.conn.execute("BEGIN IMMEDIATE")
+        try:
+            row = self.conn.execute(
+                "SELECT * FROM pending_memory_write WHERE version_id = ?", (version_id,)
+            ).fetchone()
+            if row is None:
+                raise ValueError("staged memory write not found")
+            if not row["expected_version_id"] or not row["previous_record_json"]:
+                raise ValueError("staged write is not a version update")
+            previous = MemoryRecord.from_json(str(row["previous_record_json"]))
+            record = MemoryRecord.from_json(str(row["record_json"]))
+            if (
+                previous.memory_id != row["memory_id"]
+                or record.memory_id != previous.memory_id
+                or previous.version.version_id != row["expected_version_id"]
+                or record.version.parent_version_id != row["expected_version_id"]
+                or record.version.version_id != version_id
+                or previous.temporal.superseded_by != version_id
+                or previous.temporal.valid_to is None
+                or record.temporal.valid_to is not None
+                or record.deleted
+            ):
+                raise ValueError("staged memory version identity mismatch")
+            current = self.conn.execute(
+                "SELECT version_id, deleted FROM memory WHERE memory_id = ?",
+                (record.memory_id,),
+            ).fetchone()
+            if current is None or current["deleted"] or current["version_id"] != row["expected_version_id"]:
+                raise ValueError("stale memory version")
+            append_version(previous, record)
+            self._upsert_memory_with_embedding_job_no_commit(
+                record, str(row["backend"]), str(row["model_revision"]),
+                str(row["content_hash"]),
+            )
+            self._add_audit_no_commit(
+                "memory_version_committed", record.memory_id,
+                self._version_audit_detail(record),
+            )
+            self.conn.execute(
+                "DELETE FROM pending_memory_write WHERE version_id = ?", (version_id,)
+            )
+            self.conn.commit()
+            return record
+        except Exception:
+            self.conn.rollback()
+            raise
+
+    @staticmethod
+    def _version_audit_detail(record: MemoryRecord) -> Dict[str, Any]:
+        return {
+            "version_id": record.version.version_id,
+            "parent_version_id": record.version.parent_version_id,
+            "operation": record.version.op,
+        }
 
     def _attach_preference_evidence_no_commit(self, record: MemoryRecord) -> None:
         if record.source.kind != "agent_interaction" or not record.preference_topic:
@@ -683,6 +799,10 @@ class SQLiteMetaStore:
         with self.conn:
             for item in items:
                 memory_id = str(item["memory_id"])
+                if self.conn.execute(
+                    "SELECT 1 FROM pending_memory_write WHERE memory_id = ?", (memory_id,)
+                ).fetchone() is not None:
+                    raise ValueError("pending memory write must be recovered before erasure: %s" % memory_id)
                 tombstone_version_id = str(item["tombstone_version_id"])
                 self.conn.execute(
                     """
@@ -2074,23 +2194,29 @@ class SQLiteMetaStore:
         return {"memory_id": memory_id, "entities": entities, "relations": relations}
 
     def add_audit(self, event_type: str, memory_id: Optional[str], detail: Dict[str, Any]) -> Dict[str, Any]:
-        detail_json = json.dumps(detail, ensure_ascii=False, sort_keys=True)
-        created_at = utc_now()
         try:
             self.conn.execute("BEGIN IMMEDIATE")
-            prev_hash = self._last_audit_hash()
-            event_hash = stable_hash("|".join([prev_hash, event_type, memory_id or "", detail_json, created_at]))
-            cursor = self.conn.execute(
-                """
-                INSERT INTO audit(event_type, memory_id, detail, created_at, prev_hash, event_hash)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (event_type, memory_id, detail_json, created_at, prev_hash, event_hash),
-            )
+            result = self._add_audit_no_commit(event_type, memory_id, detail)
             self.conn.commit()
-        except sqlite3.Error:
+            return result
+        except Exception:
             self.conn.rollback()
             raise
+
+    def _add_audit_no_commit(
+        self, event_type: str, memory_id: Optional[str], detail: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        detail_json = json.dumps(detail, ensure_ascii=False, sort_keys=True)
+        created_at = utc_now()
+        prev_hash = self._last_audit_hash()
+        event_hash = stable_hash("|".join([prev_hash, event_type, memory_id or "", detail_json, created_at]))
+        cursor = self.conn.execute(
+            """
+            INSERT INTO audit(event_type, memory_id, detail, created_at, prev_hash, event_hash)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (event_type, memory_id, detail_json, created_at, prev_hash, event_hash),
+        )
         return {
             "audit_id": int(cursor.lastrowid),
             "prev_hash": prev_hash,
