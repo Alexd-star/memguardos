@@ -46,6 +46,14 @@ _ALLOWED_COLUMN_MIGRATIONS = {
     ("preference_observations", "task_type", "TEXT NOT NULL DEFAULT ''"),
     ("preference_observations", "scope_agent_name", "TEXT NOT NULL DEFAULT ''"),
     ("preference_observations", "scope_session_id", "TEXT NOT NULL DEFAULT ''"),
+    ("preference_observations", "source_field", "TEXT NOT NULL DEFAULT ''"),
+    ("preference_observations", "source_start", "INTEGER NOT NULL DEFAULT -1"),
+    ("preference_observations", "source_end", "INTEGER NOT NULL DEFAULT -1"),
+    ("preference_observations", "source_excerpt", "TEXT NOT NULL DEFAULT ''"),
+    ("memory_event_links", "source_field", "TEXT NOT NULL DEFAULT ''"),
+    ("memory_event_links", "source_start", "INTEGER NOT NULL DEFAULT -1"),
+    ("memory_event_links", "source_end", "INTEGER NOT NULL DEFAULT -1"),
+    ("memory_event_links", "source_excerpt", "TEXT NOT NULL DEFAULT ''"),
     ("memory_embedding", "attempt_count", "INTEGER NOT NULL DEFAULT 0"),
     ("memory_embedding", "next_attempt_at", "TEXT NOT NULL DEFAULT ''"),
     ("memory_embedding", "job_token", "TEXT NOT NULL DEFAULT ''"),
@@ -250,11 +258,19 @@ class SQLiteMetaStore:
                 memory_id TEXT NOT NULL,
                 event_id TEXT NOT NULL,
                 relation TEXT NOT NULL,
+                source_field TEXT NOT NULL DEFAULT '',
+                source_start INTEGER NOT NULL DEFAULT -1,
+                source_end INTEGER NOT NULL DEFAULT -1,
+                source_excerpt TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL,
                 PRIMARY KEY (memory_id, event_id, relation)
             )
             """
         )
+        self._ensure_column("memory_event_links", "source_field", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory_event_links", "source_start", "INTEGER NOT NULL DEFAULT -1")
+        self._ensure_column("memory_event_links", "source_end", "INTEGER NOT NULL DEFAULT -1")
+        self._ensure_column("memory_event_links", "source_excerpt", "TEXT NOT NULL DEFAULT ''")
         self.conn.execute(
             """
             CREATE TABLE IF NOT EXISTS preference_observations (
@@ -272,6 +288,10 @@ class SQLiteMetaStore:
                 task_type TEXT NOT NULL DEFAULT '',
                 scope_agent_name TEXT NOT NULL DEFAULT '',
                 scope_session_id TEXT NOT NULL DEFAULT '',
+                source_field TEXT NOT NULL DEFAULT '',
+                source_start INTEGER NOT NULL DEFAULT -1,
+                source_end INTEGER NOT NULL DEFAULT -1,
+                source_excerpt TEXT NOT NULL DEFAULT '',
                 promoted_memory_id TEXT,
                 created_at TEXT NOT NULL,
                 UNIQUE(event_id, topic, value, polarity, preference_scope)
@@ -282,6 +302,10 @@ class SQLiteMetaStore:
         self._ensure_column("preference_observations", "task_type", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("preference_observations", "scope_agent_name", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("preference_observations", "scope_session_id", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("preference_observations", "source_field", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("preference_observations", "source_start", "INTEGER NOT NULL DEFAULT -1")
+        self._ensure_column("preference_observations", "source_end", "INTEGER NOT NULL DEFAULT -1")
+        self._ensure_column("preference_observations", "source_excerpt", "TEXT NOT NULL DEFAULT ''")
         self._init_memory_embedding_schema()
         self.conn.execute(
             """
@@ -649,7 +673,8 @@ class SQLiteMetaStore:
         }
         rows = self.conn.execute(
             """
-            SELECT event_id, explicit FROM preference_observations
+            SELECT event_id, explicit, source_field, source_start,
+                   source_end, source_excerpt FROM preference_observations
             WHERE topic = ? AND value = ? AND preference_scope = ?
               AND project_root = ? AND task_type = ?
               AND scope_agent_name = ? AND scope_session_id = ?
@@ -669,10 +694,16 @@ class SQLiteMetaStore:
             relation = "confirmed_by" if event_id in origin_ids and row["explicit"] else "extracted_from"
             self.conn.execute(
                 """
-                INSERT OR IGNORE INTO memory_event_links(memory_id, event_id, relation, created_at)
-                VALUES (?, ?, ?, ?)
+                INSERT OR IGNORE INTO memory_event_links(
+                    memory_id, event_id, relation, source_field,
+                    source_start, source_end, source_excerpt, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (record.memory_id, event_id, relation, now),
+                (
+                    record.memory_id, event_id, relation,
+                    row["source_field"], row["source_start"], row["source_end"],
+                    row["source_excerpt"], now,
+                ),
             )
         self.conn.executemany(
             "UPDATE preference_observations SET promoted_memory_id = ? WHERE event_id = ?",
@@ -796,6 +827,7 @@ class SQLiteMetaStore:
         memory_ids = []
         plaintexts = []
         linked_event_ids = set()
+        target_links = []
         with self.conn:
             for item in items:
                 memory_id = str(item["memory_id"])
@@ -821,17 +853,55 @@ class SQLiteMetaStore:
                     raise ValueError("stale memory version: %s" % memory_id)
                 memory_ids.append(memory_id)
                 plaintexts.append(str(item.get("plaintext") or ""))
-                linked_event_ids.update(
-                    str(row["event_id"])
-                    for row in self.conn.execute(
-                        "SELECT DISTINCT event_id FROM memory_event_links WHERE memory_id = ?",
-                        (memory_id,),
-                    )
-                )
+                links = self.conn.execute(
+                    """SELECT event_id, source_field, source_start, source_end
+                       FROM memory_event_links WHERE memory_id = ?""",
+                    (memory_id,),
+                ).fetchall()
+                linked_event_ids.update(str(link["event_id"]) for link in links)
+                target_links.extend(links)
                 totals["deleted_observations"] += self.conn.execute(
                     "DELETE FROM preference_observations WHERE promoted_memory_id = ?",
                     (memory_id,),
                 ).rowcount
+            if memory_ids:
+                placeholders = ",".join("?" for _ in memory_ids)
+                self.conn.execute(
+                    """UPDATE memory_event_links
+                       SET source_field = '', source_start = -1,
+                           source_end = -1, source_excerpt = ''
+                       WHERE memory_id IN (%s)""" % placeholders,  # nosec B608
+                    memory_ids,
+                )
+                # Keep a surviving atom's excerpt only when its source span is
+                # known and disjoint from every revoked span in that event.
+                for link in target_links:
+                    field = str(link["source_field"] or "")
+                    start, end = int(link["source_start"]), int(link["source_end"])
+                    overlap = (
+                        " AND source_field = ? AND source_start < ? AND source_end > ?"
+                        if field in {"content", "user_feedback"} and 0 <= start < end
+                        else ""
+                    )
+                    params: List[Any] = [str(link["event_id"]), *memory_ids]
+                    if overlap:
+                        params.extend((field, end, start))
+                    self.conn.execute(
+                        """UPDATE memory_event_links SET source_field = '',
+                                  source_start = -1, source_end = -1, source_excerpt = ''
+                           WHERE event_id = ? AND memory_id NOT IN (%s)%s"""
+                        % (placeholders, overlap),  # nosec B608
+                        params,
+                    )
+            if linked_event_ids:
+                placeholders = ",".join("?" for _ in linked_event_ids)
+                self.conn.execute(
+                    """UPDATE preference_observations
+                       SET source_field = '', source_start = -1,
+                           source_end = -1, source_excerpt = ''
+                       WHERE event_id IN (%s)""" % placeholders,  # nosec B608
+                    sorted(linked_event_ids),
+                )
             totals["scrubbed_events"] = self._forget_agent_event_payloads_no_commit(
                 sorted(linked_event_ids)
             )
@@ -1876,7 +1946,10 @@ class SQLiteMetaStore:
         self.conn.commit()
         return int(cursor.rowcount)
 
-    def link_memory_event(self, memory_id: str, event_id: str, relation: str) -> Dict[str, Any]:
+    def link_memory_event(
+        self, memory_id: str, event_id: str, relation: str,
+        source: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         memory = self.conn.execute(
             "SELECT memory_id FROM memory WHERE memory_id = ?",
             (memory_id,),
@@ -1884,17 +1957,20 @@ class SQLiteMetaStore:
         if memory is None:
             return {"linked": False, "reason": "memory_not_found", "memory_id": memory_id, "event_id": event_id}
         event = self.conn.execute(
-            "SELECT event_id FROM agent_events WHERE event_id = ?",
+            "SELECT event_id, content, user_feedback FROM agent_events WHERE event_id = ?",
             (event_id,),
         ).fetchone()
         if event is None:
             return {"linked": False, "reason": "event_not_found", "memory_id": memory_id, "event_id": event_id}
+        source_fields = self._validated_source_fields(source, event)
         cursor = self.conn.execute(
             """
-            INSERT OR IGNORE INTO memory_event_links(memory_id, event_id, relation, created_at)
-            VALUES (?, ?, ?, ?)
+            INSERT OR IGNORE INTO memory_event_links(
+                memory_id, event_id, relation, source_field,
+                source_start, source_end, source_excerpt, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (memory_id, event_id, relation, utc_now()),
+            (memory_id, event_id, relation, *source_fields, utc_now()),
         )
         self.conn.commit()
         return {
@@ -1905,11 +1981,29 @@ class SQLiteMetaStore:
             "relation": relation,
         }
 
+    @staticmethod
+    def _validated_source_fields(
+        source: Optional[Dict[str, Any]], event: Any,
+    ) -> tuple[str, int, int, str]:
+        if not source:
+            return ("", -1, -1, "")
+        field = str(source.get("source_field") or "")
+        if field not in {"content", "user_feedback"}:
+            raise ValueError("unsupported source field")
+        start = int(source.get("source_start", -1))
+        end = int(source.get("source_end", -1))
+        excerpt = str(source.get("source_excerpt") or "")
+        value = event[field] if isinstance(event, sqlite3.Row) else getattr(event, field)
+        if not (0 <= start < end <= len(value)) or value[start:end] != excerpt or len(excerpt) > 500:
+            raise ValueError("source excerpt does not match stored event")
+        return (field, start, end, excerpt)
+
     def memory_event_evidence(self, memory_id: str) -> List[Dict[str, Any]]:
         rows = self.conn.execute(
             """
             SELECT e.*, e.rowid AS ingest_order,
-                   l.relation, l.created_at AS linked_at
+                   l.relation, l.created_at AS linked_at,
+                   l.source_field, l.source_start, l.source_end, l.source_excerpt
             FROM memory_event_links l
             JOIN agent_events e ON e.event_id = l.event_id
             WHERE l.memory_id = ?
@@ -1927,9 +2021,9 @@ class SQLiteMetaStore:
     def redact_events_for_memories(self, memory_ids: List[str]) -> int:
         """Remove source payloads that could retain a forgotten atom's text.
 
-        An event can support several atoms. Without source spans, selectively
-        editing the mixed event is unsafe; other atoms stay active, while their
-        shared source event is marked redacted.
+        An event can support several atoms. The event payload is cleared as a
+        whole; independent per-memory excerpts are governed by the erasure
+        transaction, not by this low-level payload helper.
         """
 
         clean_ids = list(dict.fromkeys(str(item).strip() for item in memory_ids if str(item).strip()))
@@ -1943,15 +2037,20 @@ class SQLiteMetaStore:
         ).fetchall()
         return self.forget_agent_event_payloads([str(row["event_id"]) for row in rows])
 
-    def add_preference_observation(self, observation: Any, event: Any) -> Dict[str, Any]:
+    def add_preference_observation(
+        self, observation: Any, event: Any,
+        source: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        source_fields = self._validated_source_fields(source, event)
         cursor = self.conn.execute(
             """
             INSERT OR IGNORE INTO preference_observations (
                 event_id, agent_name, session_id, topic, value, polarity,
                 preference_scope, explicit, confidence, project_root, task_type,
-                scope_agent_name, scope_session_id, created_at
+                scope_agent_name, scope_session_id, source_field,
+                source_start, source_end, source_excerpt, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 event.event_id,
@@ -1967,6 +2066,7 @@ class SQLiteMetaStore:
                 event.task_type if observation.scope == "task_type" else "",
                 event.agent_name if observation.scope == "agent" else "",
                 event.session_id if observation.scope == "session" else "",
+                *source_fields,
                 utc_now(),
             ),
         )

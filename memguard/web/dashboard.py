@@ -2271,8 +2271,12 @@ def _dashboard_html() -> str:
     }
     function formatAgentEventBody(item) {
       const event = item || {};
-      if (event.forgotten)
-        return '该内容已完成遗忘，仅保留不可还原的核验信息。';
+      if (event.forgotten) {
+        const excerpt = String(event.source_excerpt || '').trim();
+        return excerpt
+          ? '共享事件原文已清理；当前记忆的独立来源片段：' + excerpt
+          : '该内容已完成遗忘，仅保留不可还原的核验信息。';
+      }
       if (event.event_type === 'tool_action') {
         const command = String(event.command || '').trim();
         const state = Number(event.exit_code || 0) === 0 ? '执行成功' : '执行未完成';

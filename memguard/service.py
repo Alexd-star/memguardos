@@ -37,6 +37,7 @@ from memguard.ingestion.quality import assess_text_quality
 from memguard.ingestion.tool_preference import ToolPreferenceMiner
 from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.events import AgentInteractionEvent
+from memguard.integrations.evidence_spans import exact_source_span, preference_source_span
 from memguard.integrations.adherence import (
     final_visible_output,
     response_starts_with_command_or_conclusion,
@@ -565,7 +566,16 @@ class MemGuardService:
                         knowledge_results.append(knowledge)
                         if knowledge.get("stored"):
                             memory_id = knowledge["record"].memory_id
-                            self.meta.link_memory_event(memory_id, event.event_id, "source_clause")
+                            span = exact_source_span(event, clause)
+                            source = (
+                                span.to_dict()
+                                if span and knowledge["record"].content == clause
+                                and not self.detector.classify(clause, source_uri).labels
+                                else None
+                            )
+                            self.meta.link_memory_event(
+                                memory_id, event.event_id, "source_clause", source=source,
+                            )
                             memory_ids.append(memory_id)
             records = [self.meta.get_memory(memory_id) for memory_id in memory_ids]
             records = [record for record in records if record]
@@ -696,7 +706,11 @@ class MemGuardService:
         preference_withdrawals = []
         if result["stored"] and extraction.remember_allowed and sensitivity.level != "high":
             for observation in extraction.observations:
-                self.meta.add_preference_observation(observation, safe_event)
+                span = preference_source_span(safe_event, observation)
+                self.meta.add_preference_observation(
+                    observation, safe_event,
+                    source=span.to_dict() if span else None,
+                )
                 if observation.polarity == "negative" and observation.explicit:
                     withdrawal = self._adjudicate_preference_withdrawal(observation, safe_event)
                     if withdrawal:
@@ -4073,7 +4087,8 @@ class MemGuardService:
             event_payload_scrubbed = all(
                 item.get("forgotten")
                 and not any(item.get(key) for key in (
-                    "content", "tool_result", "state_before", "state_after", "user_feedback"
+                    "content", "tool_result", "state_before", "state_after",
+                    "user_feedback", "source_excerpt",
                 ))
                 and not item.get("tool_args")
                 for item in evidence
