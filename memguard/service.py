@@ -166,14 +166,24 @@ class MemGuardService:
     def _recover_pending_memory_writes(self) -> int:
         pending = self.meta.pending_memory_writes()
         for item in pending:
-            if item["expected_version_id"]:
-                self.meta.commit_staged_existing_memory_write(
-                    str(item["version_id"]), self.store.append_version_once,
-                )
-            else:
-                self.meta.commit_staged_new_memory_write(
-                    str(item["version_id"]), self._append_staged_record_once,
-                )
+            try:
+                if item["expected_version_id"]:
+                    self.meta.commit_staged_existing_memory_write(
+                        str(item["version_id"]), self.store.append_version_once,
+                    )
+                else:
+                    self.meta.commit_staged_new_memory_write(
+                        str(item["version_id"]), self._append_staged_record_once,
+                    )
+            except ValueError:
+                current = self.meta.get_memory(str(item["memory_id"]))
+                if current is None or current["version_id"] != item["version_id"]:
+                    raise
+                if any(
+                    row["version_id"] == item["version_id"]
+                    for row in self.meta.pending_memory_writes()
+                ):
+                    raise
         return len(pending)
 
     def _append_staged_record_once(self, record: MemoryRecord) -> MemoryRecord:
@@ -328,6 +338,7 @@ class MemGuardService:
         }
 
     def ingest_text(self, text: str, source_kind: str = "manual", source_uri: str = "", tier: Optional[str] = None) -> Dict[str, object]:
+        self._recover_pending_memory_writes()
         safe_source_uri = self._safe_provenance_uri(source_uri)
         if explicitly_requests_no_store(text):
             audit = self._audit(
@@ -632,6 +643,7 @@ class MemGuardService:
         }
 
     def ingest_interaction(self, event: Union[AgentInteractionEvent, Dict[str, object]]) -> Dict[str, object]:
+        self._recover_pending_memory_writes()
         parsed = event if isinstance(event, AgentInteractionEvent) else AgentInteractionEvent.from_dict(event)
         normalized = normalize_event(parsed)
         # 偏好提取用原文，避免低风险打码（例如 systemd 单元名被邮箱规则命中）
@@ -2026,6 +2038,7 @@ class MemGuardService:
         return self.ingest_text(event.to_memory_text(), source_kind="os_event", source_uri=event.path, tier="working")
 
     def update_memory(self, memory_id: str, text: str, reason: str = "manual update") -> Dict[str, object]:
+        self._recover_pending_memory_writes()
         row = self.meta.get_memory(memory_id)
         if row is None or row.get("deleted"):
             return {"updated": False, "reason": "memory_not_found", "memory_id": memory_id}
@@ -2066,6 +2079,8 @@ class MemGuardService:
         if sensitivity.level in {"medium", "low"} and sensitivity.labels:
             stored_text = self.detector.redact(clean_text, previous.source.uri)
             sensitivity.redacted = True
+        if stored_text == previous.content:
+            return {"updated": False, "reason": "unchanged", "record": previous}
 
         replacement_observation = None
         if previous.preference_topic:
@@ -2164,6 +2179,7 @@ class MemGuardService:
         reviewer: str,
         reason: str,
     ) -> Dict[str, object]:
+        self._recover_pending_memory_writes()
         decision = str(decision or "").strip().lower()
         reviewer = str(reviewer or "").strip()
         reason = str(reason or "").strip()
@@ -2238,6 +2254,7 @@ class MemGuardService:
         }
 
     def promote_memory(self, memory_id: str, tier: str) -> Dict[str, object]:
+        self._recover_pending_memory_writes()
         if tier not in {"working", "session", "long_term"}:
             return {"promoted": False, "reason": "invalid_tier", "tier": tier}
         row = self.meta.get_memory(memory_id)
@@ -2246,6 +2263,8 @@ class MemGuardService:
         record = self.store.get_latest(memory_id)
         if record is None:
             return {"promoted": False, "reason": "memory_not_found", "memory_id": memory_id}
+        if record.tier == tier:
+            return {"promoted": False, "reason": "already_in_tier", "record": record}
         new_version_id = new_id("ver")
         record.invalidate(superseded_by=new_version_id)
 
@@ -2549,9 +2568,12 @@ class MemGuardService:
         return status
 
     def rollback(self, memory_id: str, version_id: str) -> Dict[str, object]:
+        self._recover_pending_memory_writes()
         row = self.meta.get_memory(memory_id)
         if row is None or row.get("deleted"):
             return {"rolled_back": False, "reason": "memory_not_found", "memory_id": memory_id}
+        if row["version_id"] == version_id:
+            return {"rolled_back": False, "reason": "already_current", "memory_id": memory_id}
         versions = self.store.get_versions(memory_id)
         target = None
         latest = None
@@ -2563,6 +2585,8 @@ class MemGuardService:
             return {"rolled_back": False, "reason": "version_not_found", "memory_id": memory_id}
         if target.deleted:
             return {"rolled_back": False, "reason": "cannot_rollback_to_tombstone", "memory_id": memory_id}
+        if latest.version.op == "rollback" and latest.source.uri == version_id:
+            return {"rolled_back": False, "reason": "already_rolled_back", "record": latest}
 
         new_version_id = new_id("ver")
         latest.invalidate(superseded_by=new_version_id)
@@ -3566,6 +3590,7 @@ class MemGuardService:
         confirm: bool = False,
         compact: bool = False,
     ) -> Dict[str, object]:
+        self._recover_pending_memory_writes()
         all_records = self.meta.list_memories(include_deleted=False)
         _, time_window = _apply_forget_time_window(all_records, plan.as_intent())
         records = self.meta.select_forget_candidates(plan)
@@ -3710,6 +3735,7 @@ class MemGuardService:
         self, memory_ids: List[str], reason: str, compact: bool = True,
         expected_versions: Optional[Dict[str, str]] = None,
     ) -> Dict[str, object]:
+        self._recover_pending_memory_writes()
         unique_ids: List[str] = []
         for memory_id in memory_ids:
             normalized = str(memory_id).strip()
@@ -3839,6 +3865,7 @@ class MemGuardService:
         compact: bool = True,
         external_persistence: bool = True,
     ) -> Dict[str, object]:
+        self._recover_pending_memory_writes()
         allowed = {
             "agent_name",
             "session_id",
@@ -4150,6 +4177,7 @@ class MemGuardService:
         return dropped
 
     def compact(self) -> Dict[str, object]:
+        self._recover_pending_memory_writes()
         live_count = self.store.compact()
         self._audit("compact", None, {"live_count": live_count})
         return {"compacted": True, "live_count": live_count}

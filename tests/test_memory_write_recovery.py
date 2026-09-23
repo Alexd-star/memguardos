@@ -261,7 +261,7 @@ def test_erasure_waits_for_staged_version_recovery(tmp_path, monkeypatch):
     monkeypatch.setattr(service.store, "append_version_once", fail_version)
     with pytest.raises(OSError):
         run()
-    with pytest.raises(ValueError, match="pending write"):
+    with pytest.raises(OSError, match="append failure"):
         run()
     current = service.store.get_latest(memory_id)
     with pytest.raises(ValueError, match="pending memory write"):
@@ -278,6 +278,101 @@ def test_erasure_waits_for_staged_version_recovery(tmp_path, monkeypatch):
         assert recovered.store.get_latest(memory_id) is None
     finally:
         recovered.close()
+
+
+def test_same_process_retry_replays_once_without_duplicate_update(tmp_path, monkeypatch):
+    service = _service(tmp_path)
+    memory_id, run = _version_operation(service, "update")
+    original_upsert = service.meta._upsert_memory_with_embedding_job_no_commit
+    failed = False
+
+    def fail_once(*args):
+        nonlocal failed
+        if not failed:
+            failed = True
+            raise OSError("simulated one-time metadata failure")
+        return original_upsert(*args)
+
+    monkeypatch.setattr(service.meta, "_upsert_memory_with_embedding_job_no_commit", fail_once)
+    try:
+        with pytest.raises(OSError, match="one-time metadata failure"):
+            run()
+        retried = run()
+        assert retried["updated"] is False
+        assert retried["reason"] == "unchanged"
+        assert service.meta.pending_memory_writes() == []
+        assert len(service.versions(memory_id)) == 2
+        assert len(service.store.get_versions(memory_id)) == 3
+        assert service.meta.verify_audit_chain()["ok"] is True
+    finally:
+        service.close()
+
+
+@pytest.mark.parametrize(
+    ("operation", "flag", "reason"),
+    [
+        ("promote", "promoted", "already_in_tier"),
+        ("rollback", "rolled_back", "already_rolled_back"),
+        ("approve", "reviewed", "memory_not_quarantined"),
+    ],
+)
+def test_same_process_retry_skips_completed_version_operation(
+    tmp_path, monkeypatch, operation, flag, reason,
+):
+    service = _service(tmp_path)
+    memory_id, run = _version_operation(service, operation)
+    old_count = len(service.store.get_versions(memory_id))
+    original_upsert = service.meta._upsert_memory_with_embedding_job_no_commit
+    failed = False
+
+    def fail_once(*args):
+        nonlocal failed
+        if not failed:
+            failed = True
+            raise OSError("simulated one-time metadata failure")
+        return original_upsert(*args)
+
+    monkeypatch.setattr(service.meta, "_upsert_memory_with_embedding_job_no_commit", fail_once)
+    try:
+        with pytest.raises(OSError, match="one-time metadata failure"):
+            run()
+        retried = run()
+        assert retried[flag] is False
+        assert retried["reason"] == reason
+        assert service.meta.pending_memory_writes() == []
+        assert len(service.store.get_versions(memory_id)) == old_count + 2
+    finally:
+        service.close()
+
+
+def test_old_erasure_preview_is_stale_after_automatic_recovery(tmp_path, monkeypatch):
+    service = _service(tmp_path)
+    memory_id, run = _version_operation(service, "update")
+    old_version = service.meta.get_memory(memory_id)["version_id"]
+    original_upsert = service.meta._upsert_memory_with_embedding_job_no_commit
+    failed = False
+
+    def fail_once(*args):
+        nonlocal failed
+        if not failed:
+            failed = True
+            raise OSError("simulated one-time metadata failure")
+        return original_upsert(*args)
+
+    monkeypatch.setattr(service.meta, "_upsert_memory_with_embedding_job_no_commit", fail_once)
+    try:
+        with pytest.raises(OSError):
+            run()
+        result = service.forget_memory_ids(
+            [memory_id], "test stale preview", expected_versions={memory_id: old_version},
+        )
+        assert result["ok"] is False
+        assert result["reason"] == "stale_preview"
+        assert result["forgotten_memory_ids"] == []
+        assert service.meta.get_memory(memory_id)["deleted"] == 0
+        assert service.meta.pending_memory_writes() == []
+    finally:
+        service.close()
 
 
 def test_version_audit_failure_replays_with_memory(tmp_path, monkeypatch):
