@@ -442,6 +442,6 @@ def test_old_pending_write_schema_migrates_and_replays(tmp_path):
                 "PRAGMA table_info(pending_memory_write)"
             )
         }
-        assert {"expected_version_id", "previous_record_json"} <= columns
+        assert {"expected_version_id", "previous_record_json", "source_link_json"} <= columns
     finally:
         recovered.close()

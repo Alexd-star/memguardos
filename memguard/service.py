@@ -197,11 +197,14 @@ class MemGuardService:
             raise ValueError("segment memory id differs from staged new write")
         return self.store.append(record)
 
-    def _persist_new_memory(self, record: MemoryRecord) -> MemoryRecord:
+    def _persist_new_memory(
+        self, record: MemoryRecord,
+        source_link: Optional[Dict[str, object]] = None,
+    ) -> MemoryRecord:
         content_hash = vector_content_hash(record.summary, record.content)
         self.meta.stage_new_memory_write(
             record, self.EMBEDDING_BACKEND, self.EMBEDDING_MODEL_REVISION,
-            content_hash,
+            content_hash, source_link=source_link,
         )
         return self.meta.commit_staged_new_memory_write(
             record.version.version_id, self._append_staged_record_once,
@@ -338,8 +341,14 @@ class MemGuardService:
             "failures": failures,
         }
 
-    def ingest_text(self, text: str, source_kind: str = "manual", source_uri: str = "", tier: Optional[str] = None) -> Dict[str, object]:
+    def ingest_text(
+        self, text: str, source_kind: str = "manual", source_uri: str = "",
+        tier: Optional[str] = None,
+        source_link: Optional[Dict[str, object]] = None,
+    ) -> Dict[str, object]:
         self._recover_pending_memory_writes()
+        if source_link and source_link.get("relation") != "source_clause":
+            raise ValueError("unsupported source relation")
         safe_source_uri = self._safe_provenance_uri(source_uri)
         if explicitly_requests_no_store(text):
             audit = self._audit(
@@ -423,6 +432,15 @@ class MemGuardService:
         if existing is not None:
             existing_record = self.store.get_latest(str(existing["memory_id"]))
             if existing_record is not None:
+                if source_link:
+                    linked = self.meta.link_memory_event(
+                        existing_record.memory_id,
+                        str(source_link.get("event_id") or ""),
+                        str(source_link.get("relation") or ""),
+                        source=source_link.get("source"),
+                    )
+                    if not linked["linked"]:
+                        raise ValueError("source event is unavailable")
                 audit = self._audit(
                     "ingest_duplicate",
                     existing_record.memory_id,
@@ -469,7 +487,7 @@ class MemGuardService:
         )
         record.confidence = min(record.confidence, quality.score, extraction.confidence)
         self._enrich_graph(record)
-        record = self._persist_new_memory(record)
+        record = self._persist_new_memory(record, source_link=source_link)
         audit = self._audit(
             "ingest",
             record.memory_id,
@@ -546,6 +564,9 @@ class MemGuardService:
         extraction = extract_interaction_preferences(event)
         if extraction.observations or not extraction.remember_allowed:
             interaction = self.ingest_interaction(event)
+            safe_event, _ = self._sanitize_interaction_event(
+                normalize_event(event), extraction.remember_allowed,
+            )
             memory_ids = [str(item) for item in interaction.get("memory_ids") or []]
             sensitivity = dict(interaction.get("sensitivity") or {})
             knowledge_results = []
@@ -560,22 +581,23 @@ class MemGuardService:
                             continue
                         if not _independent_fact_clause(clause):
                             continue
+                        span = exact_source_span(safe_event, clause)
+                        source = (
+                            span.to_dict()
+                            if span and not self.detector.classify(clause, source_uri).labels
+                            else None
+                        )
                         knowledge = self.ingest_text(
-                            clause, source_kind=source_kind, source_uri=source_uri, tier=tier
+                            clause, source_kind=source_kind, source_uri=source_uri, tier=tier,
+                            source_link={
+                                "event_id": event.event_id,
+                                "relation": "source_clause",
+                                "source": source,
+                            },
                         )
                         knowledge_results.append(knowledge)
                         if knowledge.get("stored"):
                             memory_id = knowledge["record"].memory_id
-                            span = exact_source_span(event, clause)
-                            source = (
-                                span.to_dict()
-                                if span and knowledge["record"].content == clause
-                                and not self.detector.classify(clause, source_uri).labels
-                                else None
-                            )
-                            self.meta.link_memory_event(
-                                memory_id, event.event_id, "source_clause", source=source,
-                            )
                             memory_ids.append(memory_id)
             records = [self.meta.get_memory(memory_id) for memory_id in memory_ids]
             records = [record for record in records if record]

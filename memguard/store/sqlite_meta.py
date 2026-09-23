@@ -59,6 +59,7 @@ _ALLOWED_COLUMN_MIGRATIONS = {
     ("memory_embedding", "job_token", "TEXT NOT NULL DEFAULT ''"),
     ("pending_memory_write", "expected_version_id", "TEXT NOT NULL DEFAULT ''"),
     ("pending_memory_write", "previous_record_json", "TEXT NOT NULL DEFAULT ''"),
+    ("pending_memory_write", "source_link_json", "TEXT NOT NULL DEFAULT ''"),
 }
 
 
@@ -148,12 +149,14 @@ class SQLiteMetaStore:
                 content_hash TEXT NOT NULL,
                 expected_version_id TEXT NOT NULL DEFAULT '',
                 previous_record_json TEXT NOT NULL DEFAULT '',
+                source_link_json TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL
             )
             """
         )
         self._ensure_column("pending_memory_write", "expected_version_id", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("pending_memory_write", "previous_record_json", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("pending_memory_write", "source_link_json", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("memory", "subtype", "TEXT NOT NULL DEFAULT 'general'")
         self._ensure_column("memory", "tier", "TEXT NOT NULL DEFAULT 'long_term'")
         self._ensure_column("memory", "sensitivity_redacted", "INTEGER NOT NULL DEFAULT 0")
@@ -495,7 +498,7 @@ class SQLiteMetaStore:
 
     def stage_new_memory_write(
         self, record: MemoryRecord, backend: str, model_revision: str,
-        content_hash: str,
+        content_hash: str, source_link: Optional[Dict[str, Any]] = None,
     ) -> None:
         with self.conn:
             self.conn.execute("BEGIN IMMEDIATE")
@@ -508,16 +511,29 @@ class SQLiteMetaStore:
                 "SELECT 1 FROM pending_memory_write WHERE memory_id = ?", (record.memory_id,)
             ).fetchone() is not None:
                 raise ValueError("memory id already has a pending write")
+            source_link_json = ""
+            if source_link:
+                if source_link.get("relation") != "source_clause":
+                    raise ValueError("unsupported staged source relation")
+                event = self.conn.execute(
+                    """SELECT content, user_feedback, forgotten FROM agent_events
+                       WHERE event_id = ?""",
+                    (str(source_link.get("event_id") or ""),),
+                ).fetchone()
+                if event is None or event["forgotten"]:
+                    raise ValueError("source event is unavailable")
+                self._validated_source_fields(source_link.get("source"), event)
+                source_link_json = json.dumps(source_link, ensure_ascii=False, sort_keys=True)
             self.conn.execute(
                 """
                 INSERT INTO pending_memory_write(
                     version_id, memory_id, record_json, backend,
-                    model_revision, content_hash, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    model_revision, content_hash, source_link_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     record.version.version_id, record.memory_id, record.to_json(),
-                    backend, model_revision, content_hash, utc_now(),
+                    backend, model_revision, content_hash, source_link_json, utc_now(),
                 ),
             )
 
@@ -592,6 +608,16 @@ class SQLiteMetaStore:
                 str(row["content_hash"]),
             )
             self._attach_preference_evidence_no_commit(record)
+            if row["source_link_json"]:
+                source_link = json.loads(str(row["source_link_json"]))
+                if source_link.get("relation") != "source_clause":
+                    raise ValueError("invalid staged source relation")
+                linked = self._insert_memory_event_link_no_commit(
+                    record.memory_id, str(source_link.get("event_id") or ""),
+                    "source_clause", source_link.get("source"),
+                )
+                if linked is None:
+                    raise ValueError("source event is unavailable")
             self._add_audit_no_commit(
                 "memory_version_committed", record.memory_id,
                 self._version_audit_detail(record),
@@ -1956,12 +1982,31 @@ class SQLiteMetaStore:
         ).fetchone()
         if memory is None:
             return {"linked": False, "reason": "memory_not_found", "memory_id": memory_id, "event_id": event_id}
+        with self.conn:
+            created = self._insert_memory_event_link_no_commit(
+                memory_id, event_id, relation, source,
+            )
+        if created is None:
+            return {"linked": False, "reason": "event_not_found", "memory_id": memory_id, "event_id": event_id}
+        return {
+            "linked": True,
+            "created": created,
+            "memory_id": memory_id,
+            "event_id": event_id,
+            "relation": relation,
+        }
+
+    def _insert_memory_event_link_no_commit(
+        self, memory_id: str, event_id: str, relation: str,
+        source: Optional[Dict[str, Any]] = None,
+    ) -> Optional[bool]:
         event = self.conn.execute(
-            "SELECT event_id, content, user_feedback FROM agent_events WHERE event_id = ?",
+            """SELECT event_id, content, user_feedback, forgotten
+               FROM agent_events WHERE event_id = ?""",
             (event_id,),
         ).fetchone()
-        if event is None:
-            return {"linked": False, "reason": "event_not_found", "memory_id": memory_id, "event_id": event_id}
+        if event is None or event["forgotten"]:
+            return None
         source_fields = self._validated_source_fields(source, event)
         cursor = self.conn.execute(
             """
@@ -1972,14 +2017,7 @@ class SQLiteMetaStore:
             """,
             (memory_id, event_id, relation, *source_fields, utc_now()),
         )
-        self.conn.commit()
-        return {
-            "linked": True,
-            "created": cursor.rowcount == 1,
-            "memory_id": memory_id,
-            "event_id": event_id,
-            "relation": relation,
-        }
+        return cursor.rowcount == 1
 
     @staticmethod
     def _validated_source_fields(

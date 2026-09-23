@@ -202,3 +202,76 @@ def test_existing_evidence_tables_migrate_without_dropping_rows(tmp_path):
         assert old["source_excerpt"] == ""
     finally:
         service.close()
+
+
+def test_mixed_fact_and_source_link_replay_together(tmp_path, monkeypatch):
+    service = _service(tmp_path)
+    original = service.meta._insert_memory_event_link_no_commit
+
+    def fail_source_link(memory_id, event_id, relation, source=None):
+        if relation == "source_clause":
+            raise OSError("simulated source-link failure")
+        return original(memory_id, event_id, relation, source)
+
+    monkeypatch.setattr(service.meta, "_insert_memory_event_link_no_commit", fail_source_link)
+    with pytest.raises(OSError, match="source-link failure"):
+        service.ingest_natural_memory(
+            "以后搜索项目代码优先使用 rg，白鹭项目发布日是周四。",
+            session_id="source-replay",
+        )
+    pending = service.meta.pending_memory_writes()
+    assert len(pending) == 1
+    fact_id = pending[0]["memory_id"]
+    assert service.meta.get_memory(fact_id) is None
+    assert service.store.get_latest(fact_id) is not None
+    service.close()
+
+    recovered = _service(tmp_path)
+    try:
+        assert recovered.meta.pending_memory_writes() == []
+        assert recovered.meta.get_memory(fact_id)["deleted"] == 0
+        links = recovered.meta.memory_event_evidence(fact_id)
+        assert len(links) == 1
+        assert links[0]["relation"] == "source_clause"
+        assert links[0]["source_excerpt"] == "白鹭项目发布日是周四"
+        assert len(recovered.store.get_versions(fact_id)) == 1
+        assert recovered.meta.verify_audit_chain()["ok"] is True
+    finally:
+        recovered.close()
+
+
+def test_mixed_fact_span_uses_redacted_event_offsets(tmp_path):
+    service = _service(tmp_path)
+    try:
+        result = service.ingest_natural_memory(
+            "以后搜索项目代码优先使用 rg，联系邮箱是 hello@example.com，白鹭项目发布日是周四。",
+            session_id="redacted-source",
+        )
+        fact = next(
+            service.meta.get_memory(memory_id)
+            for memory_id in result["memory_ids"]
+            if service.meta.get_memory(memory_id)["type"] == "knowledge"
+            and "白鹭项目" in service.meta.get_memory(memory_id)["content"]
+        )
+        source = service.meta.memory_event_evidence(fact["memory_id"])[0]
+        assert "hello@example.com" not in source["content"]
+        assert source["source_excerpt"] == "白鹭项目发布日是周四"
+        assert source["content"][source["source_start"]:source["source_end"]] == source["source_excerpt"]
+    finally:
+        service.close()
+
+
+def test_mixed_duplicate_fact_adds_new_source_evidence(tmp_path):
+    service = _service(tmp_path)
+    try:
+        existing = service.ingest_text("白鹭项目发布日是周四")["record"]
+        result = service.ingest_natural_memory(
+            "以后搜索项目代码优先使用 rg，白鹭项目发布日是周四。",
+            session_id="duplicate-source",
+        )
+        assert result["knowledge_results"][0]["duplicate"] is True
+        source = service.meta.memory_event_evidence(existing.memory_id)
+        assert len(source) == 1
+        assert source[0]["source_excerpt"] == "白鹭项目发布日是周四"
+    finally:
+        service.close()
