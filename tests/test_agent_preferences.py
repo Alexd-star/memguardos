@@ -401,6 +401,36 @@ def test_project_preference_overrides_global_only_in_matching_project(tmp_path):
         service.close()
 
 
+def test_project_preference_update_does_not_supersede_other_project(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        first = service.ingest_interaction(event(
+            "在当前项目中默认使用 grep 搜索代码。",
+            event_id="evt-project-a-old", project_root="/work/a",
+        ))
+        second = service.ingest_interaction(event(
+            "在当前项目中默认使用 rg 搜索代码。",
+            event_id="evt-project-b", project_root="/work/b",
+        ))
+        first_id = first["memory_ids"][0]
+        second_id = second["memory_ids"][0]
+        assert service.meta.get_memory(first_id)["governance_state"] == "active"
+        assert service.meta.get_memory(second_id)["governance_state"] == "active"
+
+        updated = service.ingest_interaction(event(
+            "在当前项目中以后改用 rg 搜索代码。",
+            event_id="evt-project-a-new", project_root="/work/a", session_id="next-a",
+        ))
+        assert first_id in updated["preference_updates"][0]["superseded_memory_ids"]
+        assert service.meta.get_memory(first_id)["governance_state"] == "superseded"
+        assert service.meta.get_memory(second_id)["governance_state"] == "active"
+        assert service.select_preferences(
+            agent_name="openhands", session_id="next", project_root="/work/b",
+        )["selected"][0]["value"] == "rg"
+    finally:
+        service.close()
+
+
 def test_session_preference_overrides_project_and_global_preferences(tmp_path):
     service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
     try:

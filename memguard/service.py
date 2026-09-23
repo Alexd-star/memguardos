@@ -98,6 +98,7 @@ class MemGuardService:
         self._last_search_timings: Dict[str, float] = {}
         self._pending_hits: List[str] = []
         self._recover_pending_erasures()
+        self._recover_pending_memory_writes()
         permission_corrections = [
             *getattr(self.store, "permission_corrections", []),
             *getattr(self.meta, "permission_corrections", []),
@@ -161,6 +162,32 @@ class MemGuardService:
             }
             for record in records
         ])
+
+    def _recover_pending_memory_writes(self) -> int:
+        pending = self.meta.pending_memory_writes()
+        for item in pending:
+            self.meta.commit_staged_new_memory_write(
+                str(item["version_id"]), self._append_staged_record_once,
+            )
+        return len(pending)
+
+    def _append_staged_record_once(self, record: MemoryRecord) -> MemoryRecord:
+        latest = self.store.get_latest(record.memory_id, include_deleted=True)
+        if latest is not None and latest.version.version_id == record.version.version_id:
+            if latest.to_json() != record.to_json():
+                raise ValueError("staged memory payload differs from segment")
+            return latest
+        return self.store.append(record)
+
+    def _persist_new_memory(self, record: MemoryRecord) -> MemoryRecord:
+        content_hash = vector_content_hash(record.summary, record.content)
+        self.meta.stage_new_memory_write(
+            record, self.EMBEDDING_BACKEND, self.EMBEDDING_MODEL_REVISION,
+            content_hash,
+        )
+        return self.meta.commit_staged_new_memory_write(
+            record.version.version_id, self._append_staged_record_once,
+        )
 
     def enqueue_missing_embedding_jobs(
         self, scan_limit: int = 100
@@ -411,13 +438,7 @@ class MemGuardService:
         )
         record.confidence = min(record.confidence, quality.score, extraction.confidence)
         self._enrich_graph(record)
-        self.store.append(record)
-        self.meta.upsert_memory_with_embedding_job(
-            record,
-            self.EMBEDDING_BACKEND,
-            self.EMBEDDING_MODEL_REVISION,
-            vector_content_hash(record.summary, record.content),
-        )
+        record = self._persist_new_memory(record)
         audit = self._audit(
             "ingest",
             record.memory_id,
@@ -606,6 +627,17 @@ class MemGuardService:
         # blocked locally; medium/low findings are redacted before enhancement.
         if sensitivity.level != "high":
             extraction = self._augment_with_enhancer(extraction, safe_event)
+        if extraction.observations:
+            safe_observations = [
+                item for item in extraction.observations
+                if not self.detector.classify(item.value).labels
+            ]
+            if len(safe_observations) != len(extraction.observations):
+                extraction = InteractionExtractionResult(
+                    remember_allowed=extraction.remember_allowed,
+                    reason=extraction.reason,
+                    observations=safe_observations,
+                )
         result = self.meta.insert_agent_event(safe_event)
         audit_type = "interaction_ingest" if result["stored"] else "interaction_duplicate"
         audit = self._audit(
@@ -642,13 +674,9 @@ class MemGuardService:
                 aggregate_row = self._preference_aggregate(observation, safe_event)
                 if aggregate_row and aggregate_row["stable"] and not aggregate_row.get("promoted_memory_id"):
                     memory = self._store_preference_observation(observation, safe_event)
-                    for event_id in self.meta.preference_observation_event_ids(aggregate_row):
-                        relation = "confirmed_by" if event_id == safe_event.event_id and observation.explicit else "extracted_from"
-                        self.link_memory_event(memory.memory_id, event_id, relation)
-                    self.meta.mark_preference_promoted(aggregate_row, memory.memory_id)
                     memory_ids.append(memory.memory_id)
                     memory_observations[memory.memory_id] = observation
-                    update = self._adjudicate_preference_update(observation, memory, safe_event)
+                    update = self._adjudicate_preference_update(observation, memory)
                     if update:
                         preference_updates.append(update)
         feedback_parts = []
@@ -1722,39 +1750,13 @@ class MemGuardService:
         self,
         observation: PreferenceObservation,
         memory: MemoryRecord,
-        event: AgentInteractionEvent,
     ) -> Optional[Dict[str, object]]:
-        """Retire older memories for the same preference topic when a new value wins.
-
-        Without this, "以后改用 grep" leaves the previous rg preference active and
-        both values stay retrievable. The superseded record is marked in
-        governance state (not deleted) so the change stays auditable and the
-        evidence chain records which event caused it.
-        """
+        """Report preference supersession committed with the new memory."""
 
         topic = str(observation.topic or "").strip()
         if not topic:
             return None
-        superseded: List[str] = []
-        for row in self.meta.list_memories(include_deleted=False, governance_state="active"):
-            memory_id = str(row.get("memory_id") or "")
-            if not memory_id or memory_id == memory.memory_id:
-                continue
-            if str(row.get("preference_topic") or "") != topic:
-                continue
-            if str(row.get("preference_scope") or "") != str(observation.scope or ""):
-                continue
-            if str(row.get("preference_value") or "") == str(observation.value or ""):
-                continue
-            self.meta.set_governance_state(
-                memory_id,
-                "superseded",
-                str(row.get("trust_level") or "normal"),
-                float(row.get("trust_score") or 0.0),
-                "superseded_by_preference_update:%s" % memory.memory_id,
-            )
-            self.link_memory_event(memory_id, event.event_id, "contradicted_by")
-            superseded.append(memory_id)
+        superseded = self.meta.superseded_preference_ids(memory.memory_id)
         if not superseded:
             return None
         self._invalidate_search_cache()
@@ -1881,13 +1883,7 @@ class MemGuardService:
         record.confidence = observation.confidence
         record.evidence = ["agent_event:%s" % event.event_id]
         self._enrich_graph(record)
-        self.store.append(record)
-        self.meta.upsert_memory_with_embedding_job(
-            record,
-            self.EMBEDDING_BACKEND,
-            self.EMBEDDING_MODEL_REVISION,
-            vector_content_hash(record.summary, record.content),
-        )
+        record = self._persist_new_memory(record)
         self._audit(
             "interaction_preference_extract",
             record.memory_id,

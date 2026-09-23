@@ -4,6 +4,7 @@ from memguard.sensitivity.detector import SensitiveDetector
 from memguard.service import MemGuardService
 from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.events import AgentInteractionEvent
+from memguard.integrations.interaction_extractor import InteractionExtractionResult, PreferenceObservation
 
 
 @pytest.mark.parametrize(
@@ -40,6 +41,12 @@ def test_short_and_natural_language_passwords_are_blocked(tmp_path, text):
 )
 def test_password_policy_descriptions_are_not_treated_as_password_values(text):
     assert SensitiveDetector().classify(text).level != "high"
+
+
+def test_systemd_instance_unit_is_not_confused_with_contact_email():
+    detector = SensitiveDetector()
+    assert detector.classify("journalctl --user -u memguard-agent@luo.service").labels == []
+    assert "email" in detector.classify("联系 memguard-agent@luo.service 后运行 journalctl").labels
 
 
 def test_credentials_are_blocked_consistently_on_update_and_tool_results(tmp_path):
@@ -91,5 +98,41 @@ def test_sensitive_source_uri_never_enters_memory_event_or_audit(tmp_path):
         assert secret not in str(service.audit())
         assert "/home/demo/.env" not in str(service.audit())
         assert "violet-fabric-77" not in str(service.audit())
+    finally:
+        service.close()
+
+
+def test_sensitive_extracted_value_is_not_persisted_as_preference(tmp_path, monkeypatch):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    event = AgentInteractionEvent(
+        agent_name="test-agent", agent_version="1", session_id="s1",
+        turn_id="t1", sequence=1, event_type="user_message", role="user",
+        content="以后搜索代码优先使用 rg。",
+    )
+    observations = [
+        PreferenceObservation(
+            topic="response_order", value="person@example.org", polarity="positive",
+            scope="global", explicit=True, confidence=0.9,
+            evidence_event_id=event.event_id,
+        ),
+        PreferenceObservation(
+            topic="code_search_tool", value="rg", polarity="positive",
+            scope="global", explicit=True, confidence=0.9,
+            evidence_event_id=event.event_id,
+        ),
+    ]
+    monkeypatch.setattr(
+        "memguard.service.extract_interaction_preferences",
+        lambda _event: InteractionExtractionResult(remember_allowed=True, observations=observations),
+    )
+    try:
+        result = service.ingest_interaction(event)
+        assert len(result["memory_ids"]) == 1
+        assert service.meta.get_memory(result["memory_ids"][0])["preference_value"] == "rg"
+        rows = service.meta.conn.execute(
+            "SELECT value FROM preference_observations"
+        ).fetchall()
+        assert [row["value"] for row in rows] == ["rg"]
+        assert "person@example.org" not in str(service.audit())
     finally:
         service.close()

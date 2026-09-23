@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 import json
 import sqlite3
 from datetime import datetime, timedelta
@@ -123,6 +123,19 @@ class SQLiteMetaStore:
                 memory_id TEXT PRIMARY KEY,
                 tombstone_version_id TEXT NOT NULL,
                 compact_required INTEGER NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS pending_memory_write (
+                version_id TEXT PRIMARY KEY,
+                memory_id TEXT NOT NULL,
+                record_json TEXT NOT NULL,
+                backend TEXT NOT NULL,
+                model_revision TEXT NOT NULL,
+                content_hash TEXT NOT NULL,
                 created_at TEXT NOT NULL
             )
             """
@@ -417,35 +430,179 @@ class SQLiteMetaStore:
         content_hash: str,
     ) -> None:
         with self.conn:
-            self._upsert_memory_no_commit(record)
-            if (
-                not record.deleted
-                and record.governance_state == "active"
-                and record.trust_level in {"trusted", "verified", "reviewed"}
-            ):
+            self._upsert_memory_with_embedding_job_no_commit(
+                record, backend, model_revision, content_hash,
+            )
+
+    def _upsert_memory_with_embedding_job_no_commit(
+        self, record: MemoryRecord, backend: str, model_revision: str,
+        content_hash: str,
+    ) -> None:
+        self._upsert_memory_no_commit(record)
+        if (
+            not record.deleted
+            and record.governance_state == "active"
+            and record.trust_level in {"trusted", "verified", "reviewed"}
+        ):
+            self.conn.execute(
+                """
+                DELETE FROM memory_embedding
+                WHERE memory_id = ?
+                  AND NOT (
+                      content_hash = ? AND backend = ? AND model_revision = ?
+                  )
+                """,
+                (record.memory_id, content_hash, backend, model_revision),
+            )
+            self._enqueue_memory_embedding_no_commit(
+                record.memory_id, content_hash, backend, model_revision, now=utc_now(),
+            )
+        else:
+            self.conn.execute(
+                "DELETE FROM memory_embedding WHERE memory_id = ?",
+                (record.memory_id,),
+            )
+
+    def stage_new_memory_write(
+        self, record: MemoryRecord, backend: str, model_revision: str,
+        content_hash: str,
+    ) -> None:
+        with self.conn:
+            existing = self.conn.execute(
+                "SELECT 1 FROM memory WHERE memory_id = ?", (record.memory_id,)
+            ).fetchone()
+            if existing is not None:
+                raise ValueError("memory id already exists")
+            self.conn.execute(
+                """
+                INSERT INTO pending_memory_write(
+                    version_id, memory_id, record_json, backend,
+                    model_revision, content_hash, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    record.version.version_id, record.memory_id, record.to_json(),
+                    backend, model_revision, content_hash, utc_now(),
+                ),
+            )
+
+    def pending_memory_writes(self) -> List[Dict[str, Any]]:
+        return [dict(row) for row in self.conn.execute(
+            "SELECT version_id, memory_id FROM pending_memory_write ORDER BY created_at, version_id"
+        )]
+
+    def commit_staged_new_memory_write(
+        self, version_id: str, append_record: Callable[[MemoryRecord], MemoryRecord],
+    ) -> MemoryRecord:
+        self.conn.execute("BEGIN IMMEDIATE")
+        try:
+            row = self.conn.execute(
+                "SELECT * FROM pending_memory_write WHERE version_id = ?", (version_id,)
+            ).fetchone()
+            if row is None:
+                raise ValueError("staged memory write not found")
+            record = MemoryRecord.from_json(str(row["record_json"]))
+            if record.memory_id != row["memory_id"] or record.version.version_id != version_id:
+                raise ValueError("staged memory write identity mismatch")
+            existing = self.conn.execute(
+                "SELECT 1 FROM memory WHERE memory_id = ?", (record.memory_id,)
+            ).fetchone()
+            if existing is not None:
+                raise ValueError("staged memory id was claimed by another write")
+            append_record(record)
+            self._upsert_memory_with_embedding_job_no_commit(
+                record, str(row["backend"]), str(row["model_revision"]),
+                str(row["content_hash"]),
+            )
+            self._attach_preference_evidence_no_commit(record)
+            self.conn.execute(
+                "DELETE FROM pending_memory_write WHERE version_id = ?", (version_id,)
+            )
+            self.conn.commit()
+            return record
+        except Exception:
+            self.conn.rollback()
+            raise
+
+    def _attach_preference_evidence_no_commit(self, record: MemoryRecord) -> None:
+        if record.source.kind != "agent_interaction" or not record.preference_topic:
+            return
+        origin_ids = {
+            evidence.removeprefix("agent_event:")
+            for evidence in record.evidence if evidence.startswith("agent_event:")
+        }
+        rows = self.conn.execute(
+            """
+            SELECT event_id, explicit FROM preference_observations
+            WHERE topic = ? AND value = ? AND preference_scope = ?
+              AND project_root = ? AND task_type = ?
+              AND scope_agent_name = ? AND scope_session_id = ?
+              AND promoted_memory_id IS NULL
+            """,
+            (
+                record.preference_topic, record.preference_value,
+                record.preference_scope, record.project_root, record.task_type,
+                record.agent_name, record.preference_session_id,
+            ),
+        ).fetchall()
+        if not rows:
+            raise ValueError("preference write has no eligible source observations")
+        now = utc_now()
+        for row in rows:
+            event_id = str(row["event_id"])
+            relation = "confirmed_by" if event_id in origin_ids and row["explicit"] else "extracted_from"
+            self.conn.execute(
+                """
+                INSERT OR IGNORE INTO memory_event_links(memory_id, event_id, relation, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (record.memory_id, event_id, relation, now),
+            )
+        self.conn.executemany(
+            "UPDATE preference_observations SET promoted_memory_id = ? WHERE event_id = ?",
+            [(record.memory_id, str(row["event_id"])) for row in rows],
+        )
+        old_rows = self.conn.execute(
+            """
+            SELECT memory_id FROM memory
+            WHERE memory_id != ? AND deleted = 0 AND governance_state = 'active'
+              AND preference_topic = ? AND preference_value != ?
+              AND preference_scope = ? AND agent_name = ?
+              AND preference_session_id = ? AND project_root = ? AND task_type = ?
+            """,
+            (
+                record.memory_id, record.preference_topic, record.preference_value,
+                record.preference_scope, record.agent_name,
+                record.preference_session_id, record.project_root, record.task_type,
+            ),
+        ).fetchall()
+        reason = "superseded_by_preference_update:%s" % record.memory_id
+        for old in old_rows:
+            old_id = str(old["memory_id"])
+            self.conn.execute(
+                """
+                UPDATE memory
+                SET governance_state = 'superseded', governance_reason = ?,
+                    valid_to = ?, superseded_by = ?, updated_at = ?
+                WHERE memory_id = ? AND governance_state = 'active' AND deleted = 0
+                """,
+                (reason, now, record.version.version_id, now, old_id),
+            )
+            for event_id in origin_ids:
                 self.conn.execute(
                     """
-                    DELETE FROM memory_embedding
-                    WHERE memory_id = ?
-                      AND NOT (
-                          content_hash = ? AND backend = ? AND model_revision = ?
-                      )
+                    INSERT OR IGNORE INTO memory_event_links(memory_id, event_id, relation, created_at)
+                    VALUES (?, ?, 'contradicted_by', ?)
                     """,
-                    (record.memory_id, content_hash, backend, model_revision),
+                    (old_id, event_id, now),
                 )
-                now = utc_now()
-                self._enqueue_memory_embedding_no_commit(
-                    record.memory_id,
-                    content_hash,
-                    backend,
-                    model_revision,
-                    now=now,
-                )
-            else:
-                self.conn.execute(
-                    "DELETE FROM memory_embedding WHERE memory_id = ?",
-                    (record.memory_id,),
-                )
+
+    def superseded_preference_ids(self, new_memory_id: str) -> List[str]:
+        rows = self.conn.execute(
+            "SELECT memory_id FROM memory WHERE governance_reason = ? ORDER BY memory_id",
+            ("superseded_by_preference_update:%s" % new_memory_id,),
+        ).fetchall()
+        return [str(row["memory_id"]) for row in rows]
 
     def update_tier(self, memory_id: str, tier: str) -> None:
         self.conn.execute(

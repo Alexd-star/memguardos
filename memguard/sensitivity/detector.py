@@ -239,6 +239,16 @@ class SensitiveDetector:
     def _allowlist_hit(value: str, context: str) -> bool:
         value_lower = value.lower()
         context_lower = context.lower()
+        if re.fullmatch(
+            r"[a-z0-9_.-]+@[a-z0-9_.-]+\.(?:service|timer|socket|target|mount|path|slice|scope)",
+            value_lower,
+        ):
+            position = context_lower.find(value_lower)
+            prefix = context_lower[:position] if position >= 0 else ""
+            if re.search(r"\b(?:journalctl|systemctl)\b", prefix) and re.search(
+                r"(?:^|\s)(?:-u|--unit(?:=|\s))\s*$", prefix
+            ):
+                return True
         if value_lower.startswith("sk-demo-"):
             return True
         if value_lower.endswith("@example.invalid"):
