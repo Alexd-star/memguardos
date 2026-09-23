@@ -197,6 +197,18 @@ class MemGuardService:
             raise ValueError("segment memory id differs from staged new write")
         return self.store.append(record)
 
+    def _peer_committed_record(self, record: MemoryRecord) -> bool:
+        current = self.meta.get_memory(record.memory_id)
+        if current is None or current["version_id"] != record.version.version_id:
+            return False
+        if any(
+            row["version_id"] == record.version.version_id
+            for row in self.meta.pending_memory_writes()
+        ):
+            return False
+        latest = self.store.get_latest(record.memory_id, include_deleted=True)
+        return latest is not None and latest.to_json() == record.to_json()
+
     def _persist_new_memory(
         self, record: MemoryRecord,
         source_link: Optional[Dict[str, object]] = None,
@@ -206,9 +218,14 @@ class MemGuardService:
             record, self.EMBEDDING_BACKEND, self.EMBEDDING_MODEL_REVISION,
             content_hash, source_link=source_link,
         )
-        return self.meta.commit_staged_new_memory_write(
-            record.version.version_id, self._append_staged_record_once,
-        )
+        try:
+            return self.meta.commit_staged_new_memory_write(
+                record.version.version_id, self._append_staged_record_once,
+            )
+        except ValueError:
+            if self._peer_committed_record(record):
+                return record
+            raise
 
     def _persist_existing_memory(
         self, previous: MemoryRecord, record: MemoryRecord,
@@ -218,9 +235,14 @@ class MemGuardService:
             self.EMBEDDING_MODEL_REVISION,
             vector_content_hash(record.summary, record.content),
         )
-        return self.meta.commit_staged_existing_memory_write(
-            record.version.version_id, self.store.append_version_once,
-        )
+        try:
+            return self.meta.commit_staged_existing_memory_write(
+                record.version.version_id, self.store.append_version_once,
+            )
+        except ValueError:
+            if self._peer_committed_record(record):
+                return record
+            raise
 
     def enqueue_missing_embedding_jobs(
         self, scan_limit: int = 100

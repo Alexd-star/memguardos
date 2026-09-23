@@ -1,5 +1,7 @@
 import json
+import multiprocessing
 import sqlite3
+from pathlib import Path
 
 import pytest
 
@@ -11,6 +13,16 @@ from memguard.service import MemGuardService
 
 def _service(tmp_path):
     return MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+
+
+def _replay_in_process(store_path, db_path, start, results):
+    start.wait(20)
+    try:
+        service = MemGuardService(Path(store_path), Path(db_path))
+        service.close()
+        results.put("ok")
+    except Exception as exc:
+        results.put("%s: %s" % (type(exc).__name__, exc))
 
 
 def test_new_memory_append_failure_replays_after_restart(tmp_path, monkeypatch):
@@ -65,6 +77,91 @@ def test_new_memory_sqlite_failure_does_not_duplicate_segment_on_replay(tmp_path
         assert versions[0].version.version_id == pending[0]["version_id"]
     finally:
         recovered.close()
+
+
+def test_peer_replay_before_original_new_write_commit_is_success(tmp_path, monkeypatch):
+    service = _service(tmp_path)
+    peer = _service(tmp_path)
+    original_stage = service.meta.stage_new_memory_write
+
+    def stage_then_replay(*args, **kwargs):
+        original_stage(*args, **kwargs)
+        assert peer._recover_pending_memory_writes() == 1
+
+    monkeypatch.setattr(service.meta, "stage_new_memory_write", stage_then_replay)
+    try:
+        result = service.ingest_text("白鹭项目的例会安排在周四。")
+        memory_id = result["record"].memory_id
+        assert service.meta.get_memory(memory_id)["version_id"] == result["record"].version.version_id
+        assert len(service.store.get_versions(memory_id)) == 1
+    finally:
+        peer.close()
+        service.close()
+
+
+def test_peer_replay_before_original_update_commit_is_success(tmp_path, monkeypatch):
+    service = _service(tmp_path)
+    peer = _service(tmp_path)
+    original_stage = service.meta.stage_existing_memory_write
+    try:
+        memory_id = service.ingest_text("白鹭项目的例会安排在周四。")["record"].memory_id
+
+        def stage_then_replay(*args, **kwargs):
+            original_stage(*args, **kwargs)
+            assert peer._recover_pending_memory_writes() == 1
+
+        monkeypatch.setattr(service.meta, "stage_existing_memory_write", stage_then_replay)
+        updated = service.update_memory(memory_id, "白鹭项目的例会安排在周五。")
+        assert updated["record"].version.version_id == service.meta.get_memory(memory_id)["version_id"]
+        assert len(service.store.get_versions(memory_id)) == 3
+    finally:
+        peer.close()
+        service.close()
+
+
+def test_two_processes_replay_one_staged_write_once(tmp_path):
+    service = _service(tmp_path)
+    record = make_memory(
+        content="白鹭项目的例会安排在周四。", memory_type="knowledge",
+        source=MemorySource(kind="manual", uri=""),
+    )
+    service.meta.stage_new_memory_write(
+        record, service.EMBEDDING_BACKEND, service.EMBEDDING_MODEL_REVISION,
+        vector_content_hash(record.summary, record.content),
+    )
+    service.close()
+
+    context = multiprocessing.get_context("spawn")
+    start = context.Event()
+    results = context.Queue()
+    workers = [
+        context.Process(
+            target=_replay_in_process,
+            args=(str(tmp_path / "memory.segment"), str(tmp_path / "meta.sqlite3"), start, results),
+        ) for _ in range(2)
+    ]
+    try:
+        for worker in workers:
+            worker.start()
+        start.set()
+        for worker in workers:
+            worker.join(20)
+        assert all(worker.exitcode == 0 for worker in workers)
+        assert [results.get(timeout=2) for _ in workers] == ["ok", "ok"]
+
+        recovered = _service(tmp_path)
+        try:
+            assert recovered.meta.pending_memory_writes() == []
+            assert recovered.meta.get_memory(record.memory_id)["version_id"] == record.version.version_id
+            assert len(recovered.store.get_versions(record.memory_id)) == 1
+            assert recovered.meta.verify_audit_chain()["ok"] is True
+        finally:
+            recovered.close()
+    finally:
+        for worker in workers:
+            if worker.is_alive():
+                worker.terminate()
+                worker.join(5)
 
 
 def test_staged_write_identity_mismatch_fails_closed(tmp_path):

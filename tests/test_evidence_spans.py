@@ -275,3 +275,46 @@ def test_mixed_duplicate_fact_adds_new_source_evidence(tmp_path):
         assert source[0]["source_excerpt"] == "白鹭项目发布日是周四"
     finally:
         service.close()
+
+
+def test_erasure_waits_for_pending_fact_link_to_shared_event(tmp_path, monkeypatch):
+    service = _service(tmp_path)
+    original = service.meta._insert_memory_event_link_no_commit
+
+    def fail_fact_link(memory_id, event_id, relation, source=None):
+        if relation == "source_clause":
+            raise OSError("simulated interrupted fact link")
+        return original(memory_id, event_id, relation, source)
+
+    monkeypatch.setattr(service.meta, "_insert_memory_event_link_no_commit", fail_fact_link)
+    try:
+        with pytest.raises(OSError, match="interrupted fact link"):
+            service.ingest_natural_memory(
+                "以后搜索项目代码优先使用 rg，白鹭项目发布日是周四。",
+                session_id="pending-shared-source",
+            )
+        preference = next(
+            row for row in service.list_memories()
+            if row["preference_topic"] == "code_search_tool"
+        )
+        with pytest.raises(ValueError, match="pending source write"):
+            service.meta.begin_memory_erasure(
+                preference["memory_id"], "ver-pending-shared-source",
+                compact=True, plaintext=preference["content"],
+                expected_version_id=preference["version_id"],
+            )
+        assert service.meta.get_memory(preference["memory_id"])["deleted"] == 0
+        assert service.meta.memory_event_evidence(preference["memory_id"])[0]["forgotten"] == 0
+
+        monkeypatch.setattr(service.meta, "_insert_memory_event_link_no_commit", original)
+        assert service._recover_pending_memory_writes() == 1
+        fact_id = next(
+            row["memory_id"] for row in service.list_memories()
+            if row["type"] == "knowledge"
+        )
+        assert service.forget_memory_ids(
+            [preference["memory_id"]], reason="user forget", compact=True,
+        )["ok"] is True
+        assert service.meta.memory_event_evidence(fact_id)[0]["source_excerpt"] == "白鹭项目发布日是周四"
+    finally:
+        service.close()

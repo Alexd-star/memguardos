@@ -855,6 +855,29 @@ class SQLiteMetaStore:
         linked_event_ids = set()
         target_links = []
         with self.conn:
+            self.conn.execute("BEGIN IMMEDIATE")
+            pending_sources = self.conn.execute(
+                "SELECT source_link_json FROM pending_memory_write WHERE source_link_json <> ''"
+            ).fetchall()
+            if pending_sources and items:
+                target_ids = [str(item["memory_id"]) for item in items]
+                placeholders = ",".join("?" for _ in target_ids)
+                affected_events = {
+                    str(row["event_id"])
+                    for row in self.conn.execute(
+                        "SELECT DISTINCT event_id FROM memory_event_links WHERE memory_id IN (%s)"
+                        % placeholders,  # nosec B608 - only parameter placeholders are interpolated
+                        target_ids,
+                    )
+                }
+                for row in pending_sources:
+                    try:
+                        source_link = json.loads(str(row["source_link_json"]))
+                        event_id = str(source_link["event_id"])
+                    except (ValueError, TypeError, KeyError) as exc:
+                        raise ValueError("invalid pending source write") from exc
+                    if event_id in affected_events:
+                        raise ValueError("pending source write must be recovered before erasure")
             for item in items:
                 memory_id = str(item["memory_id"])
                 if self.conn.execute(
