@@ -550,7 +550,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                     "command": "forget",
                     "request": request_text,
                     "confirm": bool(payload.get("confirm", False)),
-                    "compact": bool(payload.get("compact", False)),
+                    "compact": bool(payload.get("confirm", False)),
                     "selected_memory_ids": (
                         payload.get("selected_memory_ids")
                         if isinstance(payload.get("selected_memory_ids"), list)
@@ -706,7 +706,9 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                 result = response.get("result")
                 if isinstance(result, dict):
                     item_ids = _preview_item_ids(result)
-                    token = self._store_preview_receipt(kind, identity, item_ids)
+                    token = self._store_preview_receipt(
+                        kind, identity, item_ids, _preview_memory_versions(result)
+                    )
                     result["preview_token"] = token
                     result["preview_candidate_count"] = len(item_ids)
                     result["preview_expires_in_seconds"] = int(self.dashboard_preview_ttl_seconds)
@@ -741,7 +743,12 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         current = self._api_response(current_request)
         current_result = current.get("result")
         current_ids = _preview_item_ids(current_result if isinstance(current_result, dict) else {})
-        if not current.get("ok") or tuple(current_ids) != tuple(receipt.get("item_ids", ())):
+        current_versions = _preview_memory_versions(current_result if isinstance(current_result, dict) else {})
+        if (
+            not current.get("ok")
+            or tuple(current_ids) != tuple(receipt.get("item_ids", ()))
+            or current_versions != receipt.get("memory_versions", {})
+        ):
             self._discard_preview_receipt(preview_token)
             self._send_json(
                 {
@@ -806,6 +813,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                 "memory_ids": selected_ids,
                 "reason": str(request.get("request") or "user forget"),
                 "compact": bool(request.get("compact", True)),
+                "expected_versions": {memory_id: current_versions[memory_id] for memory_id in selected_ids},
             }
 
         self._discard_preview_receipt(preview_token)
@@ -817,6 +825,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         kind: str,
         identity: dict[str, Any],
         item_ids: tuple[str, ...],
+        memory_versions: dict[str, str] | None = None,
     ) -> str:
         token = secrets.token_urlsafe(32)
         now = time.monotonic()
@@ -826,6 +835,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                 "kind": kind,
                 "identity": _canonical_preview_identity(identity),
                 "item_ids": tuple(item_ids),
+                "memory_versions": dict(memory_versions or {}),
                 "created_at": now,
             }
         return token
@@ -1034,6 +1044,14 @@ def _preview_item_ids(result: dict[str, Any]) -> tuple[str, ...]:
                 if normalized:
                     item_ids.add(prefix + normalized)
     return tuple(sorted(item_ids))
+
+
+def _preview_memory_versions(result: dict[str, Any]) -> dict[str, str]:
+    return {
+        str(item["memory_id"]): str(item.get("version_id") or "")
+        for item in result.get("candidates", []) or []
+        if isinstance(item, dict) and item.get("memory_id")
+    }
 
 
 def _dashboard_html() -> str:

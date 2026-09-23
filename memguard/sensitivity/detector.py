@@ -49,14 +49,18 @@ class SensitiveDetector:
             # 不能依赖凭据长度恰好等于某个固定值。
             "token_assignment": re.compile(r"(?i)\b[A-Z0-9_]*(?:api[_-]?key|access[_-]?key|token|secret|passwd|pwd|password)\s*[:=]\s*['\"]?[^'\"\s]{6,}"),
             "weak_password_hint_cn": re.compile(r"(?:口令|密码)\s*(?:是|为|[:=：])\s*\S{6,64}"),
-            # 用户在自然语言入口中常写“记住我的密码 11515”或“解锁 PIN 010609”。
-            # 值可以很短、也可能没有冒号，不能依赖传统复杂口令形状才保护。
-            # 值部分只接收凭据常见字符，因而不会把“密码长度/密码策略”误当成秘密。
+            # Assignment context matters more than password length or alphabet.
             "password_secret": re.compile(
-                r"(?i)(?:(?:请)?(?:记住|保存)(?:我的)?|我的|登录|解锁|账号|系统|数据库|wifi|无线网)?\s*"
-                r"(?:密码|口令|passcode|pin(?:码)?)\s*"
-                r"(?:是|为|[:=：]|设为|设置为|设置成)?\s*"
-                r"[A-Za-z0-9!@#$%^&*._+\-]{4,64}(?![A-Za-z0-9_])"
+                r"(?i)(?<![A-Za-z0-9_])(?:密码|口令|password|passwd|passcode|pin(?:码)?)\s*"
+                r"(?:是|为|[:=：]|设为|设置为|设置成|is)\s*"
+                r"[\u4e00-\u9fffA-Za-z0-9!@#$%^&*._+\-]{2,64}"
+                r"(?![\u4e00-\u9fffA-Za-z0-9_])"
+            ),
+            "password_remember": re.compile(
+                r"(?i)(?:记住|保存|登录|解锁)(?:我的)?\s*"
+                r"(?:密码|口令|password|passwd|passcode|pin(?:码)?)\s+"
+                r"[\u4e00-\u9fffA-Za-z0-9!@#$%^&*._+\-]{2,64}"
+                r"(?![\u4e00-\u9fffA-Za-z0-9_])"
             ),
             "one_time_code": re.compile(
                 r"(?i)(?:验证码|短信码|动态码|一次性口令|otp)\s*"
@@ -92,7 +96,7 @@ class SensitiveDetector:
                         continue  # 全同数字是文档占位符，不是真实卡号
                 findings.append(
                     SensitiveFinding(
-                        label=label,
+                        label="password_secret" if label == "password_remember" else label,
                         value=match.group(0),
                         start=match.start(),
                         end=match.end(),
@@ -161,6 +165,7 @@ class SensitiveDetector:
             "url_credentials",
             "private_key",
             "password_secret",
+            "password_remember",
             "one_time_code",
         }:
             return "high"

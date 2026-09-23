@@ -273,6 +273,32 @@ def test_confirm_forgetting_requires_a_matching_unexpired_preview_receipt(tmp_pa
         service.close()
 
 
+def test_web_forget_rejects_updated_memory_after_preview(tmp_path):
+    service, base = start_dashboard(tmp_path)
+    try:
+        memory_id = service.ingest_text("BlueRiver 项目部署目录是 /srv/old。")["record"].memory_id
+        preview_status, preview = request_json(
+            base + "/api/forget", "operator-secret", method="POST",
+            payload={"request": "忘掉 BlueRiver", "confirm": False},
+        )
+        assert preview_status == 200
+        assert memory_id in {item["memory_id"] for item in preview["result"]["candidates"]}
+
+        service.update_memory(memory_id, "BlueRiver 项目部署目录是 /srv/new。")
+        status, result = request_json(
+            base + "/api/forget", "admin-secret", method="POST",
+            payload={
+                "request": "忘掉 BlueRiver", "confirm": True,
+                "preview_token": preview["result"]["preview_token"],
+            },
+        )
+        assert status == 409
+        assert result["error"] == "forget_preview_stale"
+        assert service.meta.get_memory(memory_id)["deleted"] == 0
+    finally:
+        service.close()
+
+
 def test_web_forgetting_requires_and_honors_subset_selection(tmp_path):
     service, base = start_dashboard(tmp_path)
     try:

@@ -74,7 +74,7 @@ class SQLiteMetaStore:
         self.conn.execute("PRAGMA secure_delete = ON")
         try:
             self.conn.execute("PRAGMA journal_mode = WAL")
-            self.conn.execute("PRAGMA synchronous = NORMAL")
+            self.conn.execute("PRAGMA synchronous = FULL")
         except sqlite3.OperationalError:
             pass
         self._fts_enabled = False
@@ -114,6 +114,16 @@ class SQLiteMetaStore:
                 governance_reason TEXT NOT NULL DEFAULT '',
                 deleted INTEGER NOT NULL DEFAULT 0,
                 updated_at TEXT NOT NULL
+            )
+            """
+        )
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS pending_erasure (
+                memory_id TEXT PRIMARY KEY,
+                tombstone_version_id TEXT NOT NULL,
+                compact_required INTEGER NOT NULL,
+                created_at TEXT NOT NULL
             )
             """
         )
@@ -304,7 +314,7 @@ class SQLiteMetaStore:
         self.conn.close()
 
     def _upsert_memory_no_commit(self, record: MemoryRecord) -> None:
-        self.conn.execute(
+        cursor = self.conn.execute(
             """
             INSERT INTO memory (
                 memory_id, type, scope, tier, summary, content, source_kind, source_uri,
@@ -345,6 +355,7 @@ class SQLiteMetaStore:
                 governance_reason=excluded.governance_reason,
                 deleted=excluded.deleted,
                 updated_at=excluded.updated_at
+            WHERE memory.deleted = 0 OR excluded.deleted = 1
             """,
             (
                 record.memory_id,
@@ -379,6 +390,8 @@ class SQLiteMetaStore:
                 record.subtype,
             ),
         )
+        if cursor.rowcount != 1:
+            raise ValueError("forgotten memory id cannot be reactivated")
         if self._fts_enabled:
             self.conn.execute("DELETE FROM memory_fts WHERE memory_id = ?", (record.memory_id,))
             if not record.deleted and record.governance_state == "active":
@@ -449,31 +462,120 @@ class SQLiteMetaStore:
         self.conn.commit()
 
     def mark_deleted(self, memory_id: str, superseded_by: Optional[str] = None) -> None:
-        now = utc_now()
         with self.conn:
-            self.conn.execute(
-                """
-                UPDATE memory
-                SET deleted = 1,
-                    content = '', summary = 'FORGOTTEN', source_kind = 'forgotten', source_uri = '',
-                    sensitivity_level = 'none', sensitivity_labels = '[]', sensitivity_redacted = 0,
-                    preference_topic = '', preference_value = '', preference_scope = 'global',
-                    preference_explicit = 0, agent_name = '', preference_session_id = '',
-                    project_root = '', task_type = '', governance_state = 'forgotten',
-                    governance_reason = '',
-                    valid_to = ?, superseded_by = ?, updated_at = ?
-                WHERE memory_id = ?
-                """,
-                (now, superseded_by, now, memory_id),
+            self._mark_deleted_no_commit(memory_id, superseded_by)
+
+    def _mark_deleted_no_commit(
+        self, memory_id: str, superseded_by: Optional[str],
+        expected_version_id: Optional[str] = None,
+    ) -> int:
+        now = utc_now()
+        version_guard = " AND deleted = 0 AND version_id = ?" if expected_version_id else ""
+        params = (now, superseded_by, now, memory_id)
+        if expected_version_id:
+            params += (expected_version_id,)
+        cursor = self.conn.execute(
+            """
+            UPDATE memory
+            SET deleted = 1,
+                content = '', summary = 'FORGOTTEN', source_kind = 'forgotten', source_uri = '',
+                sensitivity_level = 'none', sensitivity_labels = '[]', sensitivity_redacted = 0,
+                preference_topic = '', preference_value = '', preference_scope = 'global',
+                preference_explicit = 0, agent_name = '', preference_session_id = '',
+                project_root = '', task_type = '', governance_state = 'forgotten',
+                governance_reason = '',
+                valid_to = ?, superseded_by = ?, updated_at = ?
+            WHERE memory_id = ?
+            """ + version_guard,
+            params,
+        )
+        if cursor.rowcount == 0:
+            return 0
+        if self._fts_enabled:
+            self.conn.execute("DELETE FROM memory_fts WHERE memory_id = ?", (memory_id,))
+        self.conn.execute("DELETE FROM memory_entity WHERE memory_id = ?", (memory_id,))
+        self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (memory_id,))
+        self.conn.execute("DELETE FROM memory_embedding WHERE memory_id = ?", (memory_id,))
+        self.conn.execute(
+            "DELETE FROM entity WHERE NOT EXISTS "
+            "(SELECT 1 FROM memory_entity WHERE memory_entity.entity = entity.entity)"
+        )
+        return int(cursor.rowcount)
+
+    def begin_memory_erasure(
+        self, memory_id: str, tombstone_version_id: str, *, compact: bool,
+        plaintext: str = "", expected_version_id: str,
+    ) -> Dict[str, int]:
+        """Hide a memory and its linked evidence in one durable SQLite commit."""
+
+        return self.begin_memory_erasures([{
+            "memory_id": memory_id,
+            "tombstone_version_id": tombstone_version_id,
+            "compact": compact,
+            "plaintext": plaintext,
+            "expected_version_id": expected_version_id,
+        }])
+
+    def begin_memory_erasures(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
+        """Apply a previewed batch atomically or leave every target untouched."""
+
+        totals = {"scrubbed_events": 0, "deleted_observations": 0, "redacted_audit": 0}
+        memory_ids = []
+        plaintexts = []
+        linked_event_ids = set()
+        with self.conn:
+            for item in items:
+                memory_id = str(item["memory_id"])
+                tombstone_version_id = str(item["tombstone_version_id"])
+                self.conn.execute(
+                    """
+                    INSERT INTO pending_erasure(memory_id, tombstone_version_id, compact_required, created_at)
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT(memory_id) DO UPDATE SET
+                        compact_required = MAX(compact_required, excluded.compact_required)
+                    """,
+                    (memory_id, tombstone_version_id, int(item["compact"]), utc_now()),
+                )
+                changed = self._mark_deleted_no_commit(
+                    memory_id, tombstone_version_id,
+                    expected_version_id=str(item["expected_version_id"]),
+                )
+                if changed != 1:
+                    raise ValueError("stale memory version: %s" % memory_id)
+                memory_ids.append(memory_id)
+                plaintexts.append(str(item.get("plaintext") or ""))
+                linked_event_ids.update(
+                    str(row["event_id"])
+                    for row in self.conn.execute(
+                        "SELECT DISTINCT event_id FROM memory_event_links WHERE memory_id = ?",
+                        (memory_id,),
+                    )
+                )
+                totals["deleted_observations"] += self.conn.execute(
+                    "DELETE FROM preference_observations WHERE promoted_memory_id = ?",
+                    (memory_id,),
+                ).rowcount
+            totals["scrubbed_events"] = self._forget_agent_event_payloads_no_commit(
+                sorted(linked_event_ids)
             )
-            if self._fts_enabled:
-                self.conn.execute("DELETE FROM memory_fts WHERE memory_id = ?", (memory_id,))
-            self.conn.execute("DELETE FROM memory_entity WHERE memory_id = ?", (memory_id,))
-            self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (memory_id,))
-            self.conn.execute("DELETE FROM memory_embedding WHERE memory_id = ?", (memory_id,))
-            self.conn.execute(
-                "DELETE FROM entity WHERE NOT EXISTS "
-                "(SELECT 1 FROM memory_entity WHERE memory_entity.entity = entity.entity)"
+            if memory_ids:
+                totals["redacted_audit"] = self._redact_audit_payloads_no_commit(
+                    memory_ids, plaintexts
+                )
+        return totals
+
+    def pending_erasures(self) -> List[Dict[str, Any]]:
+        return [dict(row) for row in self.conn.execute(
+            "SELECT * FROM pending_erasure ORDER BY created_at, memory_id"
+        )]
+
+    def finish_memory_erasures(self, memory_ids: List[str]) -> None:
+        if not memory_ids:
+            return
+        with self.conn:
+            self.conn.executemany(
+                "DELETE FROM pending_erasure WHERE memory_id = ?",
+                [(memory_id,) for memory_id in memory_ids],
             )
 
     def select_forget_candidates(self, plan: ErasurePlan) -> List[Dict[str, Any]]:
@@ -540,6 +642,8 @@ class SQLiteMetaStore:
 
         self.conn.commit()
         checkpoint = list(self.conn.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone() or ())
+        if checkpoint and checkpoint[0] != 0:
+            raise RuntimeError("SQLite WAL checkpoint is busy; erasure remains pending")
         if vacuum:
             self.conn.execute("VACUUM")
         ensure_private_file(self.path)
@@ -554,58 +658,65 @@ class SQLiteMetaStore:
     ) -> int:
         """Replace forgotten audit payloads with hashes and rebuild the chain."""
 
+        with self.conn:
+            return self._redact_audit_payloads_no_commit(memory_ids, plaintexts)
+
+    def _redact_audit_payloads_no_commit(
+        self, memory_ids: List[str], plaintexts: Optional[List[str]] = None,
+    ) -> int:
         targets = {str(item) for item in memory_ids if str(item)}
         probes = [str(item) for item in (plaintexts or []) if str(item)]
         rows = self.conn.execute("SELECT * FROM audit ORDER BY audit_id ASC").fetchall()
         redacted = 0
-        with self.conn:
-            for row in rows:
-                detail = str(row["detail"] or "")
-                matches = str(row["memory_id"] or "") in targets or any(
-                    probe in detail for probe in probes
-                )
-                if not matches:
-                    continue
-                try:
-                    existing = json.loads(detail)
-                except (TypeError, ValueError):
-                    existing = {}
-                if isinstance(existing, dict) and existing.get("redacted_for_forgetting"):
-                    continue
-                replacement = json.dumps(
-                    {
-                        "redacted_for_forgetting": True,
-                        "original_detail_hash": stable_hash(detail),
-                    },
-                    ensure_ascii=False,
-                    sort_keys=True,
-                )
-                self.conn.execute(
-                    "UPDATE audit SET detail = ? WHERE audit_id = ?",
-                    (replacement, row["audit_id"]),
-                )
-                redacted += 1
+        for row in rows:
+            detail = str(row["detail"] or "")
+            matches = str(row["memory_id"] or "") in targets or any(
+                probe in detail for probe in probes
+            )
+            if not matches:
+                continue
+            try:
+                existing = json.loads(detail)
+            except (TypeError, ValueError):
+                existing = {}
+            if isinstance(existing, dict) and existing.get("redacted_for_forgetting"):
+                continue
+            replacement = json.dumps(
+                {
+                    "redacted_for_forgetting": True,
+                    "original_detail_hash": stable_hash(detail),
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+            self.conn.execute(
+                "UPDATE audit SET detail = ? WHERE audit_id = ?",
+                (replacement, row["audit_id"]),
+            )
+            redacted += 1
 
-            previous = ""
-            for row in self.conn.execute(
-                "SELECT * FROM audit ORDER BY audit_id ASC"
-            ).fetchall():
-                event_hash = stable_hash(
-                    "|".join(
-                        [
-                            previous,
-                            row["event_type"],
-                            row["memory_id"] or "",
-                            row["detail"],
-                            row["created_at"],
-                        ]
-                    )
+        if not redacted:
+            return 0
+        previous = ""
+        for row in self.conn.execute(
+            "SELECT * FROM audit ORDER BY audit_id ASC"
+        ).fetchall():
+            event_hash = stable_hash(
+                "|".join(
+                    [
+                        previous,
+                        row["event_type"],
+                        row["memory_id"] or "",
+                        row["detail"],
+                        row["created_at"],
+                    ]
                 )
-                self.conn.execute(
-                    "UPDATE audit SET prev_hash = ?, event_hash = ? WHERE audit_id = ?",
-                    (previous, event_hash, row["audit_id"]),
-                )
-                previous = event_hash
+            )
+            self.conn.execute(
+                "UPDATE audit SET prev_hash = ?, event_hash = ? WHERE audit_id = ?",
+                (previous, event_hash, row["audit_id"]),
+            )
+            previous = event_hash
         return redacted
 
     def list_memories(self, include_deleted: bool = False, tier: Optional[str] = None, limit: Optional[int] = None, governance_state: Optional[str] = "active") -> List[Dict[str, Any]]:
@@ -1427,6 +1538,10 @@ class SQLiteMetaStore:
         }
 
     def forget_agent_event_payloads(self, event_ids: List[str]) -> int:
+        with self.conn:
+            return self._forget_agent_event_payloads_no_commit(event_ids)
+
+    def _forget_agent_event_payloads_no_commit(self, event_ids: List[str]) -> int:
         if not event_ids:
             return 0
         placeholders = ",".join("?" for _ in event_ids)
@@ -1445,7 +1560,6 @@ class SQLiteMetaStore:
             update_query,
             [utc_now()] + list(event_ids),
         )
-        self.conn.commit()
         return int(cursor.rowcount)
 
     def delete_preference_observations(
@@ -1532,6 +1646,25 @@ class SQLiteMetaStore:
             item["tool_args"] = json.loads(item.pop("tool_args_json"))
             result.append(item)
         return result
+
+    def redact_events_for_memories(self, memory_ids: List[str]) -> int:
+        """Remove source payloads that could retain a forgotten atom's text.
+
+        An event can support several atoms. Without source spans, selectively
+        editing the mixed event is unsafe; other atoms stay active, while their
+        shared source event is marked redacted.
+        """
+
+        clean_ids = list(dict.fromkeys(str(item).strip() for item in memory_ids if str(item).strip()))
+        if not clean_ids:
+            return 0
+        placeholders = ",".join("?" for _ in clean_ids)
+        rows = self.conn.execute(
+            "SELECT DISTINCT event_id FROM memory_event_links "
+            "WHERE memory_id IN (%s)" % placeholders,  # nosec B608
+            clean_ids,
+        ).fetchall()
+        return self.forget_agent_event_payloads([str(row["event_id"]) for row in rows])
 
     def add_preference_observation(self, observation: Any, event: Any) -> Dict[str, Any]:
         cursor = self.conn.execute(

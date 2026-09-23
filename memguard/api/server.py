@@ -166,8 +166,9 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
     if command == "forget":
         forget_request = _string_param(request, "request", request.get("text", ""), max_chars=2048)
         confirm = bool(request.get("confirm", False))
-        compact = bool(request.get("compact", False))
-        return {"ok": True, "result": _jsonable(service.forget(forget_request, confirm=confirm, compact=compact))}
+        compact = bool(request.get("compact", confirm))
+        result = service.forget(forget_request, confirm=confirm, compact=compact)
+        return {"ok": bool(result.get("ok")) if confirm else True, "result": _jsonable(result)}
     if command == "forget_memory_ids":
         raw_ids = request.get("memory_ids")
         if not isinstance(raw_ids, list):
@@ -176,7 +177,14 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         if len(memory_ids) > 100:
             raise ValueError("memory_ids must contain at most 100 items")
         reason = _string_param(request, "reason", "user forget", max_chars=2048)
-        result = service.forget_memory_ids(memory_ids, reason, compact=bool(request.get("compact", True)))
+        raw_versions = request.get("expected_versions")
+        if raw_versions is not None and not isinstance(raw_versions, dict):
+            raise ValueError("expected_versions must be an object")
+        result = service.forget_memory_ids(
+            memory_ids, reason, compact=bool(request.get("compact", True)),
+            expected_versions={str(key): str(value) for key, value in raw_versions.items()}
+            if raw_versions is not None else None,
+        )
         result["verification_report"] = service.forget_verification_report(result, request=reason, dry_run=False)
         return {"ok": bool(result.get("ok")), "result": _jsonable(result)}
     if command == "verify_forget":

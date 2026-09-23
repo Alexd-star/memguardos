@@ -779,13 +779,31 @@ def _confirm_pending_forget(service: MemGuardService, state: dict) -> int:
         )
         return 0
 
+    expected_versions = {
+        str(item["memory_id"]): str(item.get("version_id") or "")
+        for item in pending.get("candidates") or []
+        if item.get("memory_id")
+    }
+    refreshed_versions = {
+        str(item["memory_id"]): str(item.get("version_id") or "")
+        for item in refreshed.get("candidates") or []
+        if item.get("memory_id")
+    }
+    if refreshed_versions != expected_versions:
+        state["pending_forget"] = None
+        print("记忆内容在预览后发生变化，请重新预览再选择；本次没有执行。")
+        return 0
+
     if any(memory_id not in refreshed_ids for memory_id in selected_ids):
         state["pending_forget"] = None
         print("已选择的候选不再有效，本次没有执行，请重新发起遗忘。")
         return 0
 
     state["pending_forget"] = None
-    result = service.forget_memory_ids(selected_ids, reason=request, compact=True)
+    result = service.forget_memory_ids(
+        selected_ids, reason=request, compact=True,
+        expected_versions={memory_id: expected_versions[memory_id] for memory_id in selected_ids},
+    )
     result["verification_report"] = service.forget_verification_report(
         result,
         request=request,

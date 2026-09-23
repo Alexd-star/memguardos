@@ -32,8 +32,8 @@ class ToolPreferenceCandidate:
         avoid = "、".join(self.avoid_tools) if self.avoid_tools else "无明确失败工具"
         evidence = "；".join(self.evidence[:4])
         return (
-            "以后进行%s时优先使用 %s。"
-            "工具结果统计显示 preferred_tool=%s success_count=%s failure_count=%s "
+            "本批次%s工具执行统计：候选工具=%s。"
+            "结果显示 observed_tool=%s success_count=%s failure_count=%s "
             "avg_duration_ms=%.3f avoid_tools=%s evidence=%s"
             % (
                 domain_label,

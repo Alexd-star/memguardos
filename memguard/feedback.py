@@ -353,7 +353,9 @@ def build_forget_verification_report(
                 external[key] = str(residue[key])
     if is_dry_run:
         user_summary = "已完成遗忘预览，尚未改变受管数据；确认后会显示逐项验证结果。"
-    elif all(item["status"] == "passed" for item in statuses if item["status"] != "skipped") and statuses:
+    elif result.get("ok") is True and all(
+        item["status"] == "passed" for item in statuses if item["status"] != "skipped"
+    ):
         user_summary = "遗忘已完成，受管记录和可验证的检索路径均已复核；外部日志和备份不在本系统管理范围内。"
     else:
         user_summary = "遗忘操作已返回结果，请查看未通过或未执行的验证步骤。"
@@ -446,7 +448,11 @@ def _memory_item(record: Any, result: Mapping[str, Any]) -> dict[str, Any]:
         "category": category,
         "category_label": category_label,
         "change_kind": "updated" if updated else "saved",
-        "status_label": "已更新" if updated else "已保存",
+        "status_label": (
+            ("已更新" if updated else "已保存")
+            if topic else ("已更新，可检索" if updated else "已保存，可检索")
+        ),
+        "application_status": "active_preference" if topic else "retrieval_only",
         "evidence_label": str(extraction.get("reason") or _evidence_label(row)),
         "confidence": round(float(row.get("confidence") or 0.0), 3),
         "summary_for_user": memory_summary_for_user(row),
@@ -536,11 +542,12 @@ def _why_extracted(memory_type: str, subtype: str, topic: str, result: Mapping[s
 
 def _where_it_applies(row: Mapping[str, Any]) -> list[str]:
     topic = str(row.get("preference_topic") or "")
-    scope = str(row.get("preference_scope") or row.get("scope") or "global")
-    if topic:
-        return ["Agent 规划", "工具选择", "回答生成"] if scope in {"global", "agent", "project", "task_type", "session"} else ["相关任务"]
-    if str(row.get("subtype") or "") == "user_habit":
-        return ["Agent 规划", "回答生成"]
+    if topic in {"code_search_tool", "test_runner_command", "service_log_tool"}:
+        return ["相关任务的工具选择"]
+    if topic in {"response_order", "response_language", "response_verbosity"}:
+        return ["相关任务的回答生成"]
+    if topic == "high_risk_confirmation":
+        return ["高风险操作确认"]
     return ["相关检索任务"]
 
 
@@ -556,7 +563,7 @@ def _memory_category(memory_type: str, subtype: str, topic: str) -> tuple[str, s
     if memory_type == "knowledge" or subtype in {"fact", "case", "template"}:
         return "knowledge_memory", "知识记忆"
     if memory_type == "preference":
-        return "user_preference", "用户偏好"
+        return "preference_candidate", "偏好线索"
     return "general_memory", "可复用记忆"
 
 
@@ -626,17 +633,6 @@ def _sensitivity_dict(value: Any) -> dict[str, Any]:
 def _verification_statuses(result: Mapping[str, Any], *, confirmed: bool, dry_run: bool) -> list[dict[str, str]]:
     raw = result.get("verification")
     verification_map = raw if isinstance(raw, Mapping) else {}
-    by_name: dict[str, dict[str, Any]] = {}
-    if isinstance(raw, list):
-        for item in raw:
-            if isinstance(item, Mapping):
-                memory_id = str(item.get("memory_id") or "")
-                if memory_id:
-                    by_name["main_record"] = item
-                    if item.get("irreversible_ok"):
-                        by_name["plaintext_probe"] = item
-    if isinstance(raw, Mapping):
-        by_name.update({str(key): value for key, value in raw.items() if isinstance(value, Mapping)})
     result_steps: list[dict[str, str]] = []
     for name in _VERIFICATION_NAMES:
         if dry_run:
@@ -648,17 +644,26 @@ def _verification_statuses(result: Mapping[str, Any], *, confirmed: bool, dry_ru
             status = "passed" if result.get("forgotten_memory_ids", result.get("forgotten", [])) else "skipped"
             detail = "受管主记录已写入遗忘结果。" if status == "passed" else "没有需要遗忘的主记录。"
         elif name == "agent_event_payload" and result.get("scrubbed_event_count") is not None:
-            status = "passed" if int(result.get("scrubbed_event_count") or 0) >= 0 else "failed"
-            detail = "Agent 事件载荷已按结果处理。"
+            if isinstance(raw, Mapping):
+                event_clean = bool(raw.get("event_payload_scrubbed"))
+            elif isinstance(raw, list):
+                event_clean = bool(raw) and all(item.get("event_payload_scrubbed") for item in raw)
+            else:
+                event_clean = False
+            status = "passed" if event_clean else "failed"
+            detail = "关联事件载荷已核实脱敏。" if status == "passed" else "关联事件载荷仍需复核。"
         elif name in {"sqlite_fts", "graph_relations", "search_cache"} and result.get("confirmed"):
             # 真实回查每个检索面，而不是凭 confirmed 标志直接判定通过。
             status, detail = _retrieval_surface_status(name, result)
         elif name == "mmap_segment_compact" and result.get("compact") is not None:
             status = "passed" if result.get("compact") else "skipped"
             detail = "段文件整理已执行。" if status == "passed" else "未要求整理段文件。"
-        elif name == "plaintext_probe" and by_name.get(name, {}).get("irreversible_ok"):
-            status = "passed"
-            detail = "未发现受管段文件明文残留。"
+        elif name == "plaintext_probe" and isinstance(raw, list) and raw:
+            status = "passed" if all(item.get("irreversible_ok") for item in raw) else "failed"
+            detail = "未发现受管段文件明文残留。" if status == "passed" else "原文仍有残留或未提供有效核查证据。"
+        elif name == "plaintext_probe" and isinstance(raw, Mapping) and raw.get("segment_plaintext_absent") is not None:
+            status = "passed" if raw["segment_plaintext_absent"] else "failed"
+            detail = "受管段文件原文复查完成。" if status == "passed" else "受管段文件仍有原文残留。"
         elif name == "agent_context_absence" and verification_map.get("all_stages_absent") is not None:
             status = "passed" if verification_map["all_stages_absent"] else "failed"
             detail = "遗忘内容未再进入 Agent 上下文。" if status == "passed" else "仍有阶段返回遗忘内容。"
@@ -693,6 +698,8 @@ def _retrieval_surface_status(name: str, result: Mapping[str, Any]) -> tuple[str
                 probes.append(item)
     if not probes:
         return "skipped", "%s未提供复查结果，请在管理员视图重新校验。" % label
+    if any(not item.get("verified", True) for item in probes):
+        return "failed", "%s复查出现错误，不能视为清理成功。" % label
     recallable = [item for item in probes if item.get(field)]
     if recallable:
         return "failed", "%s仍可召回已遗忘内容，需要管理员处理。" % label

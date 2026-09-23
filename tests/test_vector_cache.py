@@ -1260,13 +1260,8 @@ def test_safe_enqueue_rejects_stale_memory_and_job_token_aba(tmp_path):
             if row["memory_id"] == aba.memory_id
         )
         store.mark_deleted(aba.memory_id)
-        store.upsert_memory_with_embedding_job(aba, "kylin", "v1", aba_hash)
-        new_job = next(
-            row
-            for row in store.list_pending_embeddings("kylin", "v1", 10)
-            if row["memory_id"] == aba.memory_id
-        )
-        assert new_job["job_token"] != old_job["job_token"]
+        with pytest.raises(ValueError, match="cannot be reactivated"):
+            store.upsert_memory_with_embedding_job(aba, "kylin", "v1", aba_hash)
         assert not store.complete_memory_embedding(
             aba.memory_id,
             aba_hash,
@@ -1275,15 +1270,6 @@ def test_safe_enqueue_rejects_stale_memory_and_job_token_aba(tmp_path):
             [9.0],
             expected_attempt_count=old_job["attempt_count"],
             expected_job_token=old_job["job_token"],
-        )
-        assert store.complete_memory_embedding(
-            aba.memory_id,
-            aba_hash,
-            "kylin",
-            "v1",
-            [2.0],
-            expected_attempt_count=new_job["attempt_count"],
-            expected_job_token=new_job["job_token"],
         )
     finally:
         store.close()

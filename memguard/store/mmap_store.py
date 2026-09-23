@@ -100,12 +100,27 @@ class AppendOnlyMemoryStore:
                 return None
             return result
 
+    def get_latest_many(
+        self, memory_ids: Iterable[str], include_deleted: bool = False,
+    ) -> dict[str, MemoryRecord]:
+        targets = set(memory_ids)
+        if not targets:
+            return {}
+        with self._locked():
+            latest = {}
+            for record in self._scan_unlocked():
+                if record.memory_id in targets:
+                    latest[record.memory_id] = record
+            if include_deleted:
+                return latest
+            return {memory_id: record for memory_id, record in latest.items() if not record.deleted}
+
     def get_versions(self, memory_id: str) -> List[MemoryRecord]:
         with self._locked():
             return [record for record in self._scan_unlocked() if record.memory_id == memory_id]
 
-    def tombstone(self, record: MemoryRecord, reason: str) -> MemoryRecord:
-        tombstone_version_id = new_id("ver")
+    def tombstone(self, record: MemoryRecord, reason: str, *, version_id: Optional[str] = None) -> MemoryRecord:
+        tombstone_version_id = version_id or new_id("ver")
         tomb = MemoryRecord(
             memory_id=record.memory_id,
             type=record.type,
@@ -155,6 +170,8 @@ class AppendOnlyMemoryStore:
         self._repair_incomplete_tail_unlocked()
         with self.path.open("ab") as fh:
             fh.write((record.to_json() + "\n").encode("utf-8"))
+            fh.flush()
+            os.fsync(fh.fileno())
         return record
 
     def _repair_incomplete_tail_unlocked(self) -> int:
@@ -221,6 +238,19 @@ class AppendOnlyMemoryStore:
             latest = {}
             for record in self._scan_unlocked():
                 latest[record.memory_id] = record
+            live = [record for record in latest.values() if not record.deleted]
+            self._replace_atomic_unlocked(live)
+            return len(live)
+
+    def purge_ids(self, memory_ids: Iterable[str]) -> int:
+        """Atomically remove every version of selected memories from the segment."""
+
+        excluded = set(memory_ids)
+        with self._locked():
+            latest = {}
+            for record in self._scan_unlocked():
+                if record.memory_id not in excluded:
+                    latest[record.memory_id] = record
             live = [record for record in latest.values() if not record.deleted]
             self._replace_atomic_unlocked(live)
             return len(live)

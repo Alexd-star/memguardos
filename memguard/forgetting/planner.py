@@ -112,7 +112,9 @@ class ForgetPlanner:
         keywords = self.keywords(search_basis or request)
         distinctive_keywords = [keyword for keyword in keywords if keyword not in GENERIC_MATCH_TERMS]
         corpus = list(records)
-        ranked = self.retriever.rank(" ".join(keywords) or request, corpus, limit=limit)
+        # A destructive "all" request must inspect the entire scoped corpus.
+        # The UI may page the preview, but ranking must never silently cap it.
+        ranked = self.retriever.rank(" ".join(keywords) or request, corpus, limit=len(corpus))
         ranked_ids = {str(record.get("memory_id") or "") for _, record in ranked}
         if preference_topic:
             for record in corpus:
@@ -186,6 +188,7 @@ class ForgetPlanner:
             results.append(
                 {
                     "memory_id": record["memory_id"],
+                    "version_id": record.get("version_id", ""),
                     "score": round(score + (0.35 if preference_topic_match else 0.0), 4),
                     "matched_keywords": list(dict.fromkeys(matched + matched_aliases)),
                     "matched_distinctive_keywords": matched_distinctive,
@@ -195,15 +198,59 @@ class ForgetPlanner:
                     "subtype": record.get("subtype", ""),
                     "preference_topic": record.get("preference_topic", ""),
                     "preference_value": record.get("preference_value", ""),
+                    "exact_topic_match": bool(
+                        intent.get("topic")
+                        and str(intent["topic"]).casefold() in text.casefold()
+                    ),
                 }
             )
+        exhaustive_topic = bool(
+            set(intent.get("memory_types") or []) == {"all"}
+            and intent.get("topic")
+            and re.search(r"所有|全部", request)
+        )
+        if exhaustive_topic:
+            seen = {str(item["memory_id"]) for item in results}
+            exact_topic = str(intent["topic"]).casefold()
+            for record in corpus:
+                memory_id = str(record.get("memory_id") or "")
+                if not memory_id or memory_id in seen or not _record_type_matches(intent, record):
+                    continue
+                text = " ".join(str(record.get(key) or "") for key in ("summary", "content"))
+                if exact_topic not in text.casefold():
+                    continue
+                if not _required_qualifiers_match(request, text):
+                    continue
+                if not _sensitive_labels_match(intent, text):
+                    continue
+                if _violates_retention_constraints(intent, record, text):
+                    continue
+                results.append({
+                    "memory_id": memory_id,
+                    "version_id": record.get("version_id", ""),
+                    "score": 1.0,
+                    "matched_keywords": [str(intent["topic"])],
+                    "matched_distinctive_keywords": [str(intent["topic"])],
+                    "preference_topic_match": False,
+                    "summary": record.get("summary", ""),
+                    "type": record.get("type", ""),
+                    "subtype": record.get("subtype", ""),
+                    "preference_topic": record.get("preference_topic", ""),
+                    "preference_value": record.get("preference_value", ""),
+                    "exact_topic_match": True,
+                })
+                seen.add(memory_id)
         if not results:
             return []
         top_score = max(float(item["score"]) for item in results)
         preference_floor, phrase_floor, plain_floor = CANDIDATE_SCORE_FLOORS
         relative_floor = preference_floor if preference_topic else phrase_floor if target_phrase else plain_floor
         score_floor = max(0.18, top_score * relative_floor)
-        return [item for item in results if float(item["score"]) >= score_floor]
+        return [
+            item for item in results
+            if float(item["score"]) >= score_floor
+            or (exhaustive_topic and item.get("exact_topic_match"))
+        ]
 
 
 def _target_request_text(request: str) -> str:
