@@ -42,15 +42,37 @@ class AppendOnlyMemoryStore:
         fail or rewrite the segment while another process is writing to it.
         """
         if fcntl is None:
-            yield
+            with self.lock_path.open("a+b") as lock:
+                ensure_private_file(self.lock_path)
+                yield lock
             return
         with self.lock_path.open("a+b") as lock:
             ensure_private_file(self.lock_path)
             fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
             try:
-                yield
+                yield lock
             finally:
                 fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+
+    def bind_namespace(self, namespace: str) -> None:
+        """Keep a segment from being reused across logical namespaces."""
+
+        with self._locked() as lock:
+            lock.seek(0)
+            identity = lock.read().decode("ascii").strip()
+            expected = "memguard-namespace-v1:" + namespace
+            if identity and identity != expected:
+                raise ValueError("memory segment belongs to another namespace")
+            if identity == expected:
+                return
+            scopes = {record.scope for record in self._scan_unlocked()}
+            allowed_scopes = {namespace, "user"} if namespace == "default" else {namespace}
+            if scopes - allowed_scopes:
+                raise ValueError("memory segment contains records from another namespace")
+            if not identity:
+                lock.write((expected + "\n").encode("ascii"))
+                lock.flush()
+                os.fsync(lock.fileno())
 
     def append(self, record: MemoryRecord) -> MemoryRecord:
         with self._locked():

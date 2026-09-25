@@ -81,7 +81,15 @@ class MemGuardService:
     def __init__(self, store_path: Optional[Path] = None, db_path: Optional[Path] = None, namespace: Optional[str] = None):
         self.namespace = normalize_namespace(namespace)
         self.store = AppendOnlyMemoryStore(store_path or default_store_path(self.namespace))
-        self.meta = SQLiteMetaStore(db_path or default_db_path(self.namespace))
+        self.meta = SQLiteMetaStore(
+            db_path or default_db_path(self.namespace), expected_namespace=self.namespace,
+        )
+        try:
+            self.meta.bind_namespace(self.namespace)
+            self.store.bind_namespace(self.namespace)
+        except Exception:
+            self.meta.close()
+            raise
         if store_path is not None or db_path is not None:
             self.pattern_path = (Path(db_path) if db_path is not None else Path(store_path)).parent / "sensitive_patterns.json"
         else:

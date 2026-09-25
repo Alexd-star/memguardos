@@ -141,7 +141,9 @@ def test_interrupted_fact_index_backfill_is_resumed(tmp_path):
 
 def test_fact_correction_does_not_cross_namespace(tmp_path):
     first = _service(tmp_path, namespace="project-a")
-    second = _service(tmp_path, namespace="project-b")
+    second_root = tmp_path / "project-b"
+    second_root.mkdir()
+    second = _service(second_root, namespace="project-b")
     try:
         first_id = first.ingest_text("白鹭项目发布日是周三。")["record"].memory_id
         second_result = second.ingest_text("白鹭项目发布日改为周四。")

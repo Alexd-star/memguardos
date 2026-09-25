@@ -71,7 +71,7 @@ class FactSlotConflict(ValueError):
 
 
 class SQLiteMetaStore:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, expected_namespace: Optional[str] = None):
         self.path = Path(path)
         self.permission_corrections = []
         correction = ensure_private_directory(self.path.parent)
@@ -96,7 +96,49 @@ class SQLiteMetaStore:
         except sqlite3.OperationalError:
             pass
         self._fts_enabled = False
-        self.init_schema()
+        try:
+            if expected_namespace is not None:
+                self._check_namespace_owner(expected_namespace)
+            self.init_schema()
+        except Exception:
+            self.conn.close()
+            raise
+
+    def _check_namespace_owner(self, namespace: str) -> None:
+        tables = {
+            str(row["name"])
+            for row in self.conn.execute(
+                """SELECT name FROM sqlite_master WHERE type = 'table'
+                   AND name IN ('storage_identity', 'memory', 'pending_memory_write', 'agent_events')"""
+            )
+        }
+        if "storage_identity" in tables:
+            existing = self.conn.execute(
+                "SELECT namespace FROM storage_identity WHERE singleton = 1"
+            ).fetchone()
+            if existing is not None:
+                if existing["namespace"] != namespace:
+                    raise ValueError("SQLite metadata belongs to another namespace")
+                return
+        else:
+            existing = None
+        scopes = set()
+        if "memory" in tables:
+            scopes.update(str(row["scope"]) for row in self.conn.execute("SELECT DISTINCT scope FROM memory"))
+        if "pending_memory_write" in tables:
+            scopes.update(
+                str(row["scope"] or "")
+                for row in self.conn.execute(
+                    """SELECT DISTINCT json_extract(record_json, '$.scope') AS scope
+                       FROM pending_memory_write"""
+                )
+            )
+        allowed_scopes = {namespace, "user"} if namespace == "default" else {namespace}
+        if scopes - allowed_scopes:
+            raise ValueError("SQLite metadata contains records from another namespace")
+        if existing is None and not scopes and namespace != "default" and "agent_events" in tables:
+            if self.conn.execute("SELECT 1 FROM agent_events LIMIT 1").fetchone() is not None:
+                raise ValueError("unbound event history has no verifiable namespace")
 
     def init_schema(self) -> None:
         self.conn.execute(
@@ -454,6 +496,31 @@ class SQLiteMetaStore:
 
     def close(self) -> None:
         self.conn.close()
+
+    def bind_namespace(self, namespace: str) -> None:
+        """Fail closed when a database path is reused by another namespace."""
+
+        self.conn.execute("BEGIN IMMEDIATE")
+        try:
+            self.conn.execute(
+                """CREATE TABLE IF NOT EXISTS storage_identity (
+                    singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
+                    namespace TEXT NOT NULL
+                )"""
+            )
+            self._check_namespace_owner(namespace)
+            existing = self.conn.execute(
+                "SELECT namespace FROM storage_identity WHERE singleton = 1"
+            ).fetchone()
+            if existing is None:
+                self.conn.execute(
+                    "INSERT INTO storage_identity(singleton, namespace) VALUES (1, ?)",
+                    (namespace,),
+                )
+            self.conn.commit()
+        except Exception:
+            self.conn.rollback()
+            raise
 
     def _upsert_memory_no_commit(self, record: MemoryRecord) -> None:
         cursor = self.conn.execute(
