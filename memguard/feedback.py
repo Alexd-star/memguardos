@@ -95,6 +95,7 @@ _VERIFICATION_NAMES = (
     "agent_event_payload",
     "sqlite_fts",
     "graph_relations",
+    "fact_slot",
     "search_cache",
     "mmap_segment_compact",
     "plaintext_probe",
@@ -137,16 +138,16 @@ def build_memory_change_summary(
         )
         summary.effective_scopes.extend(_where_it_applies(item))
         summary.suggested_next_actions.extend(["view", "test_effect"])
-    elif result.get("stored") and record is not None:
-        item = _memory_item(record, result)
-        summary.new_memories.append(item)
-        summary.effective_scopes.extend(_where_it_applies(item))
-        summary.suggested_next_actions.extend(["view", "test_effect", "forget"])
     elif result.get("updated") and record is not None:
         item = _memory_item(record, result)
         summary.updated_memories.append(item)
         summary.effective_scopes.extend(_where_it_applies(item))
         summary.suggested_next_actions.extend(["view", "test_effect"])
+    elif result.get("stored") and record is not None:
+        item = _memory_item(record, result)
+        summary.new_memories.append(item)
+        summary.effective_scopes.extend(_where_it_applies(item))
+        summary.suggested_next_actions.extend(["view", "test_effect", "forget"])
     else:
         sensitivity = _sensitivity_dict(result.get("sensitivity"))
         if result.get("reason") == "sensitive_block" or sensitivity.get("level") == "high":
@@ -164,6 +165,7 @@ def build_memory_change_summary(
                 "user_requested_no_memory": "已按你的要求跳过保存；本次内容不会进入长期记忆或检索上下文。",
                 "quality_reject": "内容未通过可复用性检查，因此没有保存为记忆。",
                 "interaction_not_promoted": "本轮内容已作为交互记录处理，但尚未形成稳定偏好或可复用经验。",
+                "fact_conflict_requires_review": "同一事实属性已有不同记录。本次未覆盖旧值，请确认原记忆后明确提出更正。",
             }.get(reason, "本次内容未形成可保存的记忆。")
             summary.skipped_items.append(
                 {
@@ -652,7 +654,7 @@ def _verification_statuses(result: Mapping[str, Any], *, confirmed: bool, dry_ru
                 event_clean = False
             status = "passed" if event_clean else "failed"
             detail = "关联事件载荷已核实脱敏。" if status == "passed" else "关联事件载荷仍需复核。"
-        elif name in {"sqlite_fts", "graph_relations", "search_cache"} and result.get("confirmed"):
+        elif name in {"sqlite_fts", "graph_relations", "fact_slot", "search_cache"} and result.get("confirmed"):
             # 真实回查每个检索面，而不是凭 confirmed 标志直接判定通过。
             status, detail = _retrieval_surface_status(name, result)
         elif name == "mmap_segment_compact" and result.get("compact") is not None:
@@ -677,6 +679,7 @@ def _verification_statuses(result: Mapping[str, Any], *, confirmed: bool, dry_ru
 _SURFACE_FIELDS = {
     "sqlite_fts": ("sqlite_fts_recallable", "文本检索索引"),
     "graph_relations": ("graph_relations_recallable", "关联关系索引"),
+    "fact_slot": ("fact_slot_recallable", "事实属性索引"),
     "search_cache": ("search_cache_recallable", "检索缓存"),
 }
 
@@ -700,6 +703,8 @@ def _retrieval_surface_status(name: str, result: Mapping[str, Any]) -> tuple[str
         return "skipped", "%s未提供复查结果，请在管理员视图重新校验。" % label
     if any(not item.get("verified", True) for item in probes):
         return "failed", "%s复查出现错误，不能视为清理成功。" % label
+    if any(field not in item for item in probes):
+        return "skipped", "%s未提供独立复查结果。" % label
     recallable = [item for item in probes if item.get(field)]
     if recallable:
         return "failed", "%s仍可召回已遗忘内容，需要管理员处理。" % label

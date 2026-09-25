@@ -2761,7 +2761,7 @@ def _dashboard_html() -> str:
       const allSkipped = steps.length > 0 && steps.every(step => step.status === 'skipped');
       const labels = {
         main_record:'主记忆记录', agent_event_payload:'Agent 交互记录', sqlite_fts:'文本检索索引',
-        graph_relations:'关联关系', search_cache:'检索缓存', mmap_segment_compact:'本机存储文件',
+        graph_relations:'关联关系', fact_slot:'事实属性索引', search_cache:'检索缓存', mmap_segment_compact:'本机存储文件',
         plaintext_probe:'原文残留检查', agent_context_absence:'Agent 上下文复检', audit_chain:'操作记录完整性'
       };
       const body = allSkipped
@@ -3452,7 +3452,7 @@ def _dashboard_html() -> str:
         partial ? 'warn' : 'ok'
       );
     }
-    async function refreshAfterMutation(successMessage) {
+    async function refreshAfterMutation(successMessage, state) {
       try {
         const result = await refresh(null, {silent:true});
         if (result && result.operationFeedback && result.operationFeedback.state === 'warn')
@@ -3460,7 +3460,7 @@ def _dashboard_html() -> str:
       } catch (err) {
         return operationFeedback(successMessage + '，但部分概览暂未更新。', 'warn');
       }
-      return operationFeedback(successMessage + '。', 'ok');
+      return operationFeedback(successMessage + '。', state || 'ok');
     }
     function retrievalModeLabel(backend) {
       const value = String(backend || '').toLowerCase();
@@ -3494,7 +3494,12 @@ def _dashboard_html() -> str:
         const payload = await postJson('/api/ingest', data);
         setRawOutput('ingestOut', payload);
         renderIngestFeedback(payload);
-        return refreshAfterMutation('保存已经完成');
+        const result = payload.result || {};
+        return refreshAfterMutation(
+          result.partial_conflict ? '部分内容已处理，事实冲突需核对'
+            : (result.stored ? (result.updated ? '记忆已更新' : '记忆已保存') : '本次未新增记忆，请查看下方处理结果'),
+          result.stored && !result.partial_conflict ? 'ok' : 'warn'
+        );
       });
     }
     function renderIngestFeedback(payload) {
@@ -3510,19 +3515,27 @@ def _dashboard_html() -> str:
           + privilegedActionMarkup('查看操作记录', 'audit') + '</div>';
         return;
       }
-      if (result.duplicate && result.record) {
-        const memoryId = result.record.memory_id || '';
+      if (result.duplicate && result.memory_id) {
+        const memoryId = result.memory_id;
         box.innerHTML = '<div class="item"><div class="health"><div class="item-title">相同记忆已经存在</div><span class="badge warn">未重复保存</span></div>'
           + '<div class="muted">系统继续使用原有记忆编号 ' + esc(shortMemoryId(memoryId)) + '，不会产生新的重复记录。</div>'
           + '<div class="mini-actions"><button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(memoryId) + '">查看原记忆</button><button class="secondary" data-action="copy-memory-id" data-memory-id="' + esc(memoryId) + '">复制编号</button></div></div>';
         return;
       }
-      const item = (feedback.new_memories || [])[0] || (feedback.updated_memories || [])[0];
-      if (!item) {
-        box.innerHTML = '<div class="item"><div class="item-title">本次没有形成可保存记忆</div><div class="muted">' + esc(((feedback.skipped_items || [])[0] || {}).summary_for_user || '请检查输入内容和保存策略。') + '</div></div>';
+      const items = (feedback.updated_memories || []).concat(feedback.new_memories || []);
+      const candidates = result.candidate_memory_ids || [];
+      const conflictBanner = candidates.length ? '<div class="item"><div class="health"><div class="item-title">事实内容需要核对</div><span class="badge warn">未覆盖旧值</span></div><div class="muted">同一属性已有不同记录。确认后请明确提出更正。</div><div class="mini-actions">'
+        + candidates.map(id => '<button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(id) + '">核对原记忆 ' + esc(shortMemoryId(id)) + '</button>').join('') + '</div></div>' : '';
+      if (!items.length) {
+        box.innerHTML = '<div class="item"><div class="item-title">本次没有新增记忆</div><div class="muted">'
+          + esc(((feedback.skipped_items || [])[0] || {}).summary_for_user || '请检查输入内容和保存策略。') + '</div>'
+          + '</div>' + conflictBanner;
         return;
       }
-      box.innerHTML = '<div class="item"><div class="health"><div class="item-title">' + esc(item.category_label || '可复用记忆') + '：' + esc(item.summary_for_user) + '</div><span class="badge ok">' + esc(item.status_label || '已保存') + '</span></div><div class="muted">来源：' + esc(item.evidence_label || item.why_extracted) + '</div><div class="muted">后续用于：' + esc((item.where_it_will_apply || []).join('、')) + '</div><div class="mini-actions"><button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(item.memory_id || '') + '">查看详情</button><button class="secondary" data-action="preference-proof" data-memory-id="' + esc(item.memory_id || '') + '">测试生效</button></div></div>';
+      box.innerHTML = conflictBanner + items.slice(0, 5).map(item =>
+        '<div class="item"><div class="health"><div class="item-title">' + esc(item.category_label || '可复用记忆') + '：' + esc(item.summary_for_user) + '</div><span class="badge ok">' + esc(item.status_label || '已保存') + '</span></div><div class="muted">来源：' + esc(item.evidence_label || item.why_extracted) + '</div><div class="muted">后续用于：' + esc((item.where_it_will_apply || []).join('、')) + '</div><div class="mini-actions"><button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(item.memory_id || '') + '">查看详情</button>'
+        + (item.preference_topic ? '<button class="secondary" data-action="preference-proof" data-memory-id="' + esc(item.memory_id || '') + '">测试生效</button>' : '') + '</div></div>'
+      ).join('') + (items.length > 5 ? '<div class="muted">另有 ' + esc(items.length - 5) + ' 项可在最近记忆中查看。</div>' : '');
     }
     async function explainExtraction(event) {
       return withBusy(event, async () => {

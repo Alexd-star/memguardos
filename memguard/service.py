@@ -17,6 +17,7 @@ from memguard.config import (
     normalize_namespace,
 )
 from memguard.extraction.entity import extract_entities, extract_relations
+from memguard.extraction.fact_slot import parse_fact_slot
 from memguard.feedback import (
     build_forget_verification_report,
     build_memory_change_summary,
@@ -69,7 +70,7 @@ from memguard.retrieval.vector_cache import vector_content_hash
 from memguard.sensitivity.custom_patterns import PatternValidationError, load_patterns, save_pattern, save_pattern_from_instruction, suggest_pattern_from_instruction
 from memguard.sensitivity.detector import SensitiveDetector
 from memguard.store.mmap_store import AppendOnlyMemoryStore
-from memguard.store.sqlite_meta import SQLiteMetaStore
+from memguard.store.sqlite_meta import FactSlotConflict, SQLiteMetaStore
 
 
 class MemGuardService:
@@ -176,6 +177,8 @@ class MemGuardService:
                     self.meta.commit_staged_new_memory_write(
                         str(item["version_id"]), self._append_staged_record_once,
                     )
+            except FactSlotConflict:
+                continue
             except ValueError:
                 current = self.meta.get_memory(str(item["memory_id"]))
                 if current is None or current["version_id"] != item["version_id"]:
@@ -229,11 +232,13 @@ class MemGuardService:
 
     def _persist_existing_memory(
         self, previous: MemoryRecord, record: MemoryRecord,
+        source_link: Optional[Dict[str, object]] = None,
     ) -> MemoryRecord:
         self.meta.stage_existing_memory_write(
             previous, record, self.EMBEDDING_BACKEND,
             self.EMBEDDING_MODEL_REVISION,
             vector_content_hash(record.summary, record.content),
+            source_link=source_link,
         )
         try:
             return self.meta.commit_staged_existing_memory_write(
@@ -451,6 +456,45 @@ class MemGuardService:
         memory_type = extraction.memory_type
         subtype = extraction.subtype
         existing = self.meta.find_active_memory_by_content(stored_text, self.namespace)
+        fact = parse_fact_slot(stored_text) if memory_type == "knowledge" and not sensitivity.labels else None
+        if fact is not None:
+            candidates = self.meta.find_active_fact_candidates(
+                self.namespace, fact.subject, fact.predicate,
+            )
+            if len(candidates) > 1:
+                return self._fact_review_required(
+                    fact.predicate, candidates, source_kind, safe_source_uri,
+                )
+            if candidates:
+                current = parse_fact_slot(str(candidates[0]["content"]))
+                if current is not None and current.value == fact.value:
+                    existing = candidates[0]
+                elif (
+                    fact.explicit_update
+                    and source_kind in {"manual", "user_cli", "api"}
+                    and governance.governance_state == "active"
+                ):
+                    updated = self.update_memory(
+                        str(candidates[0]["memory_id"]), fact.canonical_content,
+                        reason="explicit fact correction", source_link=source_link,
+                    )
+                    if updated.get("updated"):
+                        result = {
+                            **updated, "stored": True, "fact_update": True,
+                            "quality": quality.to_dict(),
+                            "extraction": extraction.to_dict(),
+                        }
+                        result["feedback"] = build_memory_change_summary(
+                            result, namespace=self.namespace, source=source_kind,
+                            session_id=safe_source_uri,
+                            audit_event_ids=[str(updated.get("audit_event_id") or "")],
+                        ).to_dict()
+                        return result
+                    return {"stored": False, **updated}
+                else:
+                    return self._fact_review_required(
+                        fact.predicate, candidates, source_kind, safe_source_uri,
+                    )
         if existing is not None:
             existing_record = self.store.get_latest(str(existing["memory_id"]))
             if existing_record is not None:
@@ -509,7 +553,22 @@ class MemGuardService:
         )
         record.confidence = min(record.confidence, quality.score, extraction.confidence)
         self._enrich_graph(record)
-        record = self._persist_new_memory(record, source_link=source_link)
+        try:
+            record = self._persist_new_memory(record, source_link=source_link)
+        except (FactSlotConflict, ValueError) as exc:
+            if fact is None or (
+                not isinstance(exc, FactSlotConflict)
+                and str(exc) != "staged memory write not found"
+            ):
+                raise
+            candidates = self.meta.find_active_fact_candidates(
+                self.namespace, fact.subject, fact.predicate,
+            )
+            if not candidates:
+                raise
+            return self._fact_review_required(
+                fact.predicate, candidates, source_kind, safe_source_uri,
+            )
         audit = self._audit(
             "ingest",
             record.memory_id,
@@ -545,6 +604,26 @@ class MemGuardService:
             source=source_kind,
             session_id=safe_source_uri,
             audit_event_ids=[result["audit_event_id"]],
+        ).to_dict()
+        return result
+
+    def _fact_review_required(
+        self, predicate: str, candidates: List[Dict[str, object]],
+        source_kind: str, safe_source_uri: str,
+    ) -> Dict[str, object]:
+        ids = [str(item["memory_id"]) for item in candidates]
+        audit = self._audit(
+            "fact_conflict_requires_review", None,
+            {"predicate": predicate, "candidate_memory_ids": ids, "source_kind": source_kind},
+        )
+        result = {
+            "stored": False, "reason": "fact_conflict_requires_review",
+            "candidate_memory_ids": ids,
+            "audit_event_id": _audit_event_id(audit),
+        }
+        result["feedback"] = build_memory_change_summary(
+            result, namespace=self.namespace, source=source_kind,
+            session_id=safe_source_uri, audit_event_ids=[result["audit_event_id"]],
         ).to_dict()
         return result
 
@@ -621,6 +700,11 @@ class MemGuardService:
                         if knowledge.get("stored"):
                             memory_id = knowledge["record"].memory_id
                             memory_ids.append(memory_id)
+            fact_conflict_ids = list(dict.fromkeys(
+                str(memory_id)
+                for item in knowledge_results
+                for memory_id in item.get("candidate_memory_ids") or []
+            ))
             records = [self.meta.get_memory(memory_id) for memory_id in memory_ids]
             records = [record for record in records if record]
             reason = ""
@@ -628,12 +712,17 @@ class MemGuardService:
                 reason = "sensitive_block"
             elif not interaction.get("remember_allowed"):
                 reason = "user_requested_no_memory"
+            elif fact_conflict_ids and not memory_ids:
+                reason = "fact_conflict_requires_review"
             elif not memory_ids:
                 reason = "interaction_not_promoted"
             feedback_parts = [interaction.get("feedback") or {}]
             feedback_parts.extend(item.get("feedback") or {} for item in knowledge_results)
             return {
                 "stored": bool(memory_ids),
+                "updated": any(item.get("updated") for item in knowledge_results),
+                "partial_conflict": bool(fact_conflict_ids),
+                "candidate_memory_ids": fact_conflict_ids,
                 "event_stored": bool(interaction.get("stored")),
                 "reason": reason,
                 "record": records[0] if records else None,
@@ -2095,7 +2184,10 @@ class MemGuardService:
         self._audit("os_event", None, detail)
         return self.ingest_text(event.to_memory_text(), source_kind="os_event", source_uri=event.path, tier="working")
 
-    def update_memory(self, memory_id: str, text: str, reason: str = "manual update") -> Dict[str, object]:
+    def update_memory(
+        self, memory_id: str, text: str, reason: str = "manual update",
+        source_link: Optional[Dict[str, object]] = None,
+    ) -> Dict[str, object]:
         self._recover_pending_memory_writes()
         row = self.meta.get_memory(memory_id)
         if row is None or row.get("deleted"):
@@ -2191,8 +2283,8 @@ class MemGuardService:
             governance_reason=previous.governance_reason,
         ).finalize_hash()
         self._enrich_graph(record)
-        record = self._persist_existing_memory(previous, record)
-        self._audit(
+        record = self._persist_existing_memory(previous, record, source_link=source_link)
+        audit = self._audit(
             "update",
             memory_id,
             {
@@ -2205,7 +2297,11 @@ class MemGuardService:
                 "extraction": extraction.to_dict(),
             },
         )
-        return {"updated": True, "record": record, "quality": quality.to_dict(), "extraction": extraction.to_dict()}
+        return {
+            "updated": True, "record": record,
+            "quality": quality.to_dict(), "extraction": extraction.to_dict(),
+            "audit_event_id": _audit_event_id(audit),
+        }
 
     def list_memories(
         self,
@@ -4165,6 +4261,7 @@ class MemGuardService:
         probe = str(probe_text or "").strip()
         fts_hit = False
         graph_hit = False
+        fact_hit = False
         cache_hit = False
         errors: List[str] = []
         try:
@@ -4183,6 +4280,12 @@ class MemGuardService:
             )
         except Exception as exc:
             errors.append("graph_relations: %s" % type(exc).__name__)
+        try:
+            fact_hit = self.meta.conn.execute(
+                "SELECT 1 FROM fact_slot WHERE memory_id = ? LIMIT 1", (target,)
+            ).fetchone() is not None
+        except Exception as exc:
+            errors.append("fact_slot: %s" % type(exc).__name__)
         for cached in self._search_cache.values():
             if any(str(item.get("memory_id") or "") == target for item in cached):
                 cache_hit = True
@@ -4191,10 +4294,11 @@ class MemGuardService:
             "probe_text_used": bool(probe),
             "sqlite_fts_recallable": fts_hit,
             "graph_relations_recallable": graph_hit,
+            "fact_slot_recallable": fact_hit,
             "search_cache_recallable": cache_hit,
             "verified": not errors,
             "verification_errors": errors,
-            "any_surface_recallable": bool(fts_hit or graph_hit or cache_hit),
+            "any_surface_recallable": bool(fts_hit or graph_hit or fact_hit or cache_hit),
         }
 
     def _buffer_memory_hits(self, memory_ids: List[str]) -> None:

@@ -5,6 +5,7 @@ import sqlite3
 from datetime import datetime, timedelta
 
 from memguard.models import MemoryRecord, new_id, stable_hash, utc_now
+from memguard.extraction.fact_slot import parse_fact_slot
 from memguard.forgetting.plan import ErasurePlan
 from memguard.store.permissions import ensure_private_directory, ensure_private_file
 from memguard.retrieval.vector_cache import (
@@ -61,6 +62,12 @@ _ALLOWED_COLUMN_MIGRATIONS = {
     ("pending_memory_write", "previous_record_json", "TEXT NOT NULL DEFAULT ''"),
     ("pending_memory_write", "source_link_json", "TEXT NOT NULL DEFAULT ''"),
 }
+
+
+class FactSlotConflict(ValueError):
+    def __init__(self, candidate_memory_ids: List[str]):
+        super().__init__("fact slot already has an active memory")
+        self.candidate_memory_ids = candidate_memory_ids
 
 
 class SQLiteMetaStore:
@@ -331,6 +338,38 @@ class SQLiteMetaStore:
             self._fts_enabled = True
         except sqlite3.OperationalError:
             self._fts_enabled = False
+        self.conn.execute(
+            """CREATE TABLE IF NOT EXISTS schema_migrations (
+                name TEXT PRIMARY KEY, applied_at TEXT NOT NULL
+            )"""
+        )
+        self.conn.execute(
+            """CREATE TABLE IF NOT EXISTS fact_slot (
+                memory_id TEXT PRIMARY KEY,
+                scope TEXT NOT NULL,
+                subject TEXT NOT NULL,
+                predicate TEXT NOT NULL
+            )"""
+        )
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_fact_slot_key ON fact_slot(scope, subject, predicate)"
+        )
+        if self.conn.execute(
+            "SELECT 1 FROM schema_migrations WHERE name = 'fact_slot_backfill_v1'"
+        ).fetchone() is None:
+            for row in self.conn.execute(
+                "SELECT memory_id, scope, content FROM memory WHERE deleted = 0 AND type = 'knowledge'"
+            ):
+                fact = parse_fact_slot(str(row["content"]))
+                if fact is not None:
+                    self.conn.execute(
+                        "INSERT OR IGNORE INTO fact_slot(memory_id, scope, subject, predicate) VALUES (?, ?, ?, ?)",
+                        (row["memory_id"], row["scope"], fact.subject, fact.predicate),
+                    )
+            self.conn.execute(
+                "INSERT OR IGNORE INTO schema_migrations(name, applied_at) VALUES ('fact_slot_backfill_v1', ?)",
+                (utc_now(),),
+            )
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_live_updated ON memory(deleted, updated_at DESC)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_tier_live ON memory(tier, deleted, updated_at DESC)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_governance ON memory(governance_state, deleted, updated_at DESC)")
@@ -354,7 +393,64 @@ class SQLiteMetaStore:
             ON memory_embedding(backend, model_revision, status, updated_at)
             """
         )
+        self._repair_preference_observation_owners_once()
         self.conn.commit()
+
+    def _repair_preference_observation_owners_once(self) -> None:
+        migration = "preference_observation_owner_v1"
+        if self.conn.execute(
+            "SELECT 1 FROM schema_migrations WHERE name = ?", (migration,)
+        ).fetchone() is not None:
+            return
+        mismatched = self.conn.execute(
+            """SELECT p.observation_id, p.event_id, p.topic, p.value,
+                      p.preference_scope, p.project_root, p.task_type,
+                      p.scope_agent_name, p.scope_session_id
+               FROM preference_observations p
+               LEFT JOIN memory current ON current.memory_id = p.promoted_memory_id
+               WHERE p.promoted_memory_id IS NOT NULL
+                 AND (current.memory_id IS NULL OR current.preference_topic != p.topic
+                      OR current.preference_value != p.value
+                      OR current.preference_scope != p.preference_scope
+                      OR current.project_root != p.project_root
+                      OR current.task_type != p.task_type
+                      OR current.agent_name != p.scope_agent_name
+                      OR current.preference_session_id != p.scope_session_id)"""
+        ).fetchall()
+        repaired = 0
+        for observation in mismatched:
+            matches = self.conn.execute(
+                """SELECT DISTINCT m.memory_id FROM memory_event_links l
+                   JOIN memory m ON m.memory_id = l.memory_id
+                   WHERE l.event_id = ? AND l.relation IN ('confirmed_by', 'extracted_from')
+                     AND m.deleted = 0
+                     AND m.preference_topic = ? AND m.preference_value = ?
+                     AND m.preference_scope = ? AND m.project_root = ?
+                     AND m.task_type = ? AND m.agent_name = ?
+                     AND m.preference_session_id = ? LIMIT 2""",
+                (
+                    observation["event_id"], observation["topic"], observation["value"],
+                    observation["preference_scope"], observation["project_root"],
+                    observation["task_type"], observation["scope_agent_name"],
+                    observation["scope_session_id"],
+                ),
+            ).fetchall()
+            if len(matches) == 1:
+                self.conn.execute(
+                    "UPDATE preference_observations SET promoted_memory_id = ? WHERE observation_id = ?",
+                    (matches[0]["memory_id"], observation["observation_id"]),
+                )
+                repaired += 1
+        unresolved = len(mismatched) - repaired
+        if mismatched:
+            self._add_audit_no_commit(
+                "preference_observation_owner_repair", None,
+                {"repaired": repaired, "unresolved": unresolved},
+            )
+        self.conn.execute(
+            "INSERT OR IGNORE INTO schema_migrations(name, applied_at) VALUES (?, ?)",
+            (migration, utc_now()),
+        )
 
     def close(self) -> None:
         self.conn.close()
@@ -450,6 +546,17 @@ class SQLiteMetaStore:
         else:
             self.conn.execute("DELETE FROM memory_entity WHERE memory_id = ?", (record.memory_id,))
             self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (record.memory_id,))
+        fact = parse_fact_slot(record.content) if record.type == "knowledge" and not record.deleted else None
+        if fact is None:
+            self.conn.execute("DELETE FROM fact_slot WHERE memory_id = ?", (record.memory_id,))
+        else:
+            self.conn.execute(
+                """INSERT INTO fact_slot(memory_id, scope, subject, predicate)
+                   VALUES (?, ?, ?, ?)
+                   ON CONFLICT(memory_id) DO UPDATE SET scope = excluded.scope,
+                       subject = excluded.subject, predicate = excluded.predicate""",
+                (record.memory_id, record.scope, fact.subject, fact.predicate),
+            )
 
     def upsert_memory(self, record: MemoryRecord) -> None:
         with self.conn:
@@ -511,19 +618,7 @@ class SQLiteMetaStore:
                 "SELECT 1 FROM pending_memory_write WHERE memory_id = ?", (record.memory_id,)
             ).fetchone() is not None:
                 raise ValueError("memory id already has a pending write")
-            source_link_json = ""
-            if source_link:
-                if source_link.get("relation") != "source_clause":
-                    raise ValueError("unsupported staged source relation")
-                event = self.conn.execute(
-                    """SELECT content, user_feedback, forgotten FROM agent_events
-                       WHERE event_id = ?""",
-                    (str(source_link.get("event_id") or ""),),
-                ).fetchone()
-                if event is None or event["forgotten"]:
-                    raise ValueError("source event is unavailable")
-                self._validated_source_fields(source_link.get("source"), event)
-                source_link_json = json.dumps(source_link, ensure_ascii=False, sort_keys=True)
+            source_link_json = self._staged_source_link_json(source_link)
             self.conn.execute(
                 """
                 INSERT INTO pending_memory_write(
@@ -540,6 +635,7 @@ class SQLiteMetaStore:
     def stage_existing_memory_write(
         self, previous: MemoryRecord, record: MemoryRecord,
         backend: str, model_revision: str, content_hash: str,
+        source_link: Optional[Dict[str, Any]] = None,
     ) -> None:
         if (
             previous.memory_id != record.memory_id
@@ -562,19 +658,50 @@ class SQLiteMetaStore:
                 "SELECT 1 FROM pending_memory_write WHERE memory_id = ?", (record.memory_id,)
             ).fetchone() is not None:
                 raise ValueError("memory id already has a pending write")
+            source_link_json = self._staged_source_link_json(source_link)
             self.conn.execute(
                 """
                 INSERT INTO pending_memory_write(
                     version_id, memory_id, record_json, backend, model_revision,
-                    content_hash, expected_version_id, previous_record_json, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    content_hash, expected_version_id, previous_record_json,
+                    source_link_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     record.version.version_id, record.memory_id, record.to_json(),
                     backend, model_revision, content_hash,
-                    previous.version.version_id, previous.to_json(), utc_now(),
+                    previous.version.version_id, previous.to_json(), source_link_json,
+                    utc_now(),
                 ),
             )
+
+    def _staged_source_link_json(self, source_link: Optional[Dict[str, Any]]) -> str:
+        if not source_link:
+            return ""
+        if source_link.get("relation") != "source_clause":
+            raise ValueError("unsupported staged source relation")
+        event = self.conn.execute(
+            """SELECT content, user_feedback, forgotten FROM agent_events
+               WHERE event_id = ?""",
+            (str(source_link.get("event_id") or ""),),
+        ).fetchone()
+        if event is None or event["forgotten"]:
+            raise ValueError("source event is unavailable")
+        self._validated_source_fields(source_link.get("source"), event)
+        return json.dumps(source_link, ensure_ascii=False, sort_keys=True)
+
+    def _attach_staged_source_link_no_commit(self, record: MemoryRecord, source_link_json: str) -> None:
+        if not source_link_json:
+            return
+        source_link = json.loads(source_link_json)
+        if source_link.get("relation") != "source_clause":
+            raise ValueError("invalid staged source relation")
+        linked = self._insert_memory_event_link_no_commit(
+            record.memory_id, str(source_link.get("event_id") or ""),
+            "source_clause", source_link.get("source"),
+        )
+        if linked is None:
+            raise ValueError("source event is unavailable")
 
     def pending_memory_writes(self) -> List[Dict[str, Any]]:
         return [dict(row) for row in self.conn.execute(
@@ -602,22 +729,29 @@ class SQLiteMetaStore:
             ).fetchone()
             if existing is not None:
                 raise ValueError("staged memory id was claimed by another write")
+            fact = parse_fact_slot(record.content) if record.type == "knowledge" else None
+            if fact is not None:
+                candidates = self.find_active_fact_candidates(
+                    record.scope, fact.subject, fact.predicate,
+                )
+                if candidates:
+                    ids = [str(item["memory_id"]) for item in candidates]
+                    self.conn.execute(
+                        "DELETE FROM pending_memory_write WHERE version_id = ?", (version_id,)
+                    )
+                    self._add_audit_no_commit(
+                        "fact_write_race_blocked", None,
+                        {"candidate_memory_ids": ids, "predicate": fact.predicate},
+                    )
+                    self.conn.commit()
+                    raise FactSlotConflict(ids)
             append_record(record)
             self._upsert_memory_with_embedding_job_no_commit(
                 record, str(row["backend"]), str(row["model_revision"]),
                 str(row["content_hash"]),
             )
             self._attach_preference_evidence_no_commit(record)
-            if row["source_link_json"]:
-                source_link = json.loads(str(row["source_link_json"]))
-                if source_link.get("relation") != "source_clause":
-                    raise ValueError("invalid staged source relation")
-                linked = self._insert_memory_event_link_no_commit(
-                    record.memory_id, str(source_link.get("event_id") or ""),
-                    "source_clause", source_link.get("source"),
-                )
-                if linked is None:
-                    raise ValueError("source event is unavailable")
+            self._attach_staged_source_link_no_commit(record, str(row["source_link_json"]))
             self._add_audit_no_commit(
                 "memory_version_committed", record.memory_id,
                 self._version_audit_detail(record),
@@ -627,6 +761,8 @@ class SQLiteMetaStore:
             )
             self.conn.commit()
             return record
+        except FactSlotConflict:
+            raise
         except Exception:
             self.conn.rollback()
             raise
@@ -669,6 +805,7 @@ class SQLiteMetaStore:
                 record, str(row["backend"]), str(row["model_revision"]),
                 str(row["content_hash"]),
             )
+            self._attach_staged_source_link_no_commit(record, str(row["source_link_json"]))
             self._add_audit_no_commit(
                 "memory_version_committed", record.memory_id,
                 self._version_audit_detail(record),
@@ -699,7 +836,7 @@ class SQLiteMetaStore:
         }
         rows = self.conn.execute(
             """
-            SELECT event_id, explicit, source_field, source_start,
+            SELECT observation_id, event_id, explicit, source_field, source_start,
                    source_end, source_excerpt FROM preference_observations
             WHERE topic = ? AND value = ? AND preference_scope = ?
               AND project_root = ? AND task_type = ?
@@ -732,8 +869,9 @@ class SQLiteMetaStore:
                 ),
             )
         self.conn.executemany(
-            "UPDATE preference_observations SET promoted_memory_id = ? WHERE event_id = ?",
-            [(record.memory_id, str(row["event_id"])) for row in rows],
+            """UPDATE preference_observations SET promoted_memory_id = ?
+               WHERE observation_id = ? AND promoted_memory_id IS NULL""",
+            [(record.memory_id, int(row["observation_id"])) for row in rows],
         )
         old_rows = self.conn.execute(
             """
@@ -826,6 +964,7 @@ class SQLiteMetaStore:
         self.conn.execute("DELETE FROM memory_entity WHERE memory_id = ?", (memory_id,))
         self.conn.execute("DELETE FROM relation WHERE memory_id = ?", (memory_id,))
         self.conn.execute("DELETE FROM memory_embedding WHERE memory_id = ?", (memory_id,))
+        self.conn.execute("DELETE FROM fact_slot WHERE memory_id = ?", (memory_id,))
         self.conn.execute(
             "DELETE FROM entity WHERE NOT EXISTS "
             "(SELECT 1 FROM memory_entity WHERE memory_entity.entity = entity.entity)"
@@ -1713,6 +1852,18 @@ class SQLiteMetaStore:
             (scope, content),
         ).fetchone()
         return dict(row) if row else None
+
+    def find_active_fact_candidates(
+        self, scope: str, subject: str, predicate: str,
+    ) -> List[Dict[str, Any]]:
+        return [dict(row) for row in self.conn.execute(
+            """SELECT m.* FROM fact_slot f
+               JOIN memory m ON m.memory_id = f.memory_id
+               WHERE f.scope = ? AND f.subject = ? AND f.predicate = ?
+                 AND m.deleted = 0 AND m.governance_state = 'active'
+               ORDER BY m.updated_at DESC, m.memory_id LIMIT 2""",
+            (scope, subject, predicate),
+        )]
 
     def record_memory_hits(self, memory_ids: List[str]) -> int:
         """Count retrieval hits so tier eviction can prefer cold memories.

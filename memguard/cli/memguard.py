@@ -135,7 +135,7 @@ def _remember(service: MemGuardService, text: str) -> int:
         source_uri="memguard",
         session_id="memguard-shell",
     )
-    _section("记忆写入")
+    _section("记忆更新" if result.get("updated") else "记忆写入")
     if result.get("stored"):
         records = list(result.get("records") or [])
         if not records and result.get("record") is not None:
@@ -146,7 +146,13 @@ def _remember(service: MemGuardService, text: str) -> int:
         ]
         feedback = result.get("feedback") or {}
         items = list(feedback.get("new_memories") or []) + list(feedback.get("updated_memories") or [])
-        print("检测到并保存 %d 项可复用内容。" % max(1, len(items) or len(records)))
+        count = max(1, len(items) or len(records))
+        if feedback.get("new_memories") and not result.get("updated"):
+            print("检测到并保存 %d 项可复用内容。" % count)
+        elif result.get("updated") and not feedback.get("new_memories"):
+            print("已更新 %d 项可复用内容。" % count)
+        else:
+            print("已处理 %d 项可复用内容。" % count)
         for index, item in enumerate(items or [{}], 1):
             summary = str(item.get("summary_for_user") or "已形成一条受控记忆。")
             print("%d. [%s · %s] %s" % (
@@ -169,6 +175,9 @@ def _remember(service: MemGuardService, text: str) -> int:
         if tiers & {"working", "session"}:
             print("说明：阶段性记忆不会被当作长期偏好；任务或会话结束后可统一清理。")
         print("记忆编号：%s" % ("、".join(memory_ids) or "可在 Web 控制台的最近记忆中查看"))
+        if result.get("partial_conflict"):
+            print("另有事实属性与现有记录冲突，尚未覆盖：%s" % "、".join(result.get("candidate_memory_ids") or []))
+            print("请先核对原记忆，再明确说明该属性改为的新值。")
         print("下一步：输入 /memory 查看内容，或运行相关 Agent 任务验证是否生效。")
         return 0
     notice = result.get("sensitive_notice") or {}
@@ -180,7 +189,11 @@ def _remember(service: MemGuardService, text: str) -> int:
         print("下一步：可在“内容保护”或审计记录中查看本次处理依据。")
     else:
         observed = list((result.get("feedback") or {}).get("observed_preferences") or [])
-        if observed:
+        if result.get("reason") == "fact_conflict_requires_review":
+            print("同一事实属性已有不同记录，本次没有覆盖旧值。")
+            print("待核对记忆编号：%s" % "、".join(result.get("candidate_memory_ids") or []))
+            print("下一步：先输入 /memory 核对旧记录；确认变化后明确说“该项目的对应属性改为新值”。")
+        elif observed:
             for item in observed:
                 print("检测到%s：%s" % (item.get("category_label") or "用户偏好", item.get("summary_for_user") or ""))
                 print("当前状态：%s；已获得 %s 条依据，来自 %s 个会话。" % (
@@ -520,7 +533,9 @@ def _run_json(service: MemGuardService, args: argparse.Namespace) -> int:
         record = result.get("record")
         value = {
             "stored": bool(result.get("stored")),
+            "updated": bool(result.get("updated")),
             "memory_id": getattr(record, "memory_id", ""),
+            "candidate_memory_ids": result.get("candidate_memory_ids") or [],
             "feedback": result.get("feedback"),
             "sensitive_notice": result.get("sensitive_notice"),
             "reason": result.get("reason", ""),

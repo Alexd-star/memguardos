@@ -321,7 +321,8 @@ def test_dashboard_refresh_renders_partial_results_and_preserves_mutation_succes
     assert "renderStatusPayload" in page
     assert "renderDiagnosticsPayload" in page
     assert "refreshAfterMutation" in page
-    assert "保存已经完成" in page
+    assert "result.updated ? '记忆已更新' : '记忆已保存'" in page
+    assert "本次未新增记忆，请查看下方处理结果" in page
     assert "遗忘已经完成" in page
     assert "操作记录校验通过" in page
     assert "，但部分概览暂未更新。" in page
@@ -516,6 +517,17 @@ def test_dashboard_product_hubs_reuse_existing_memory_and_evidence_flows():
     assert "审计链状态" in page
     assert "导出证据包" in page
     assert "查看完整技术详情" in page
+
+
+def test_ingest_feedback_distinguishes_updates_conflicts_and_applicable_actions():
+    page = _dashboard_html()
+
+    assert "result.updated ? '记忆已更新' : '记忆已保存'" in page
+    assert "本次未新增记忆，请查看下方处理结果" in page
+    assert "result.candidate_memory_ids || []" in page
+    assert "核对原记忆" in page
+    assert "item.preference_topic ?" in page
+    assert "fact_slot:'事实属性索引'" in page
 
 
 def test_dashboard_clears_contextual_operation_feedback_when_switching_pages():

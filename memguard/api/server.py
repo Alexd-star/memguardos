@@ -308,6 +308,9 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                 "ok": True,
                 "result": {
                     "stored": True,
+                    "updated": bool(result.get("updated")),
+                    "partial_conflict": bool(result.get("partial_conflict")),
+                    "candidate_memory_ids": result.get("candidate_memory_ids") or [],
                     "memory_id": record_value.get("memory_id", ""),
                     "memory_ids": result.get("memory_ids") or [record_value.get("memory_id", "")],
                     "type": record_value.get("type", ""),
@@ -331,6 +334,10 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
             "result": {
                 "stored": False,
                 "reason": result.get("reason"),
+                "duplicate": bool(result.get("duplicate")),
+                "memory_id": getattr(result.get("record"), "memory_id", ""),
+                "partial_conflict": bool(result.get("partial_conflict")),
+                "candidate_memory_ids": result.get("candidate_memory_ids") or [],
                 "sensitivity": sensitivity_value,
                 "feedback": result.get("feedback"),
                 "sensitive_notice": result.get("sensitive_notice"),
