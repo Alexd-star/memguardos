@@ -450,6 +450,8 @@ class HybridRetriever:
         records: Iterable[Dict[str, str]],
         limit: int = 10,
         persisted_vectors: Optional[Dict[str, List[float]]] = None,
+        kylin_query_vector: Optional[List[float]] = None,
+        allow_kylin_rerank: bool = True,
     ) -> List[Tuple[float, Dict[str, str]]]:
         records = list(records)
         expanded_info = expand_query_aliases(query)
@@ -482,14 +484,18 @@ class HybridRetriever:
         semantic_pool.sort(key=lambda item: item[0], reverse=True)
         self.last_backend_used = "hash"
 
-        if self.kylin_provider is None or not semantic_pool:
+        if self.kylin_provider is None or not semantic_pool or not allow_kylin_rerank:
             return self._tag_backend(scored[:limit], "hash")
 
         sdk_started = time.perf_counter()
         query_timeout = self._remaining_kylin_timeout(sdk_started)
         if query_timeout == 0.0:
             return self._tag_backend(scored[:limit], "hash")
-        kylin_query_vector = self.kylin_provider.vector(expanded_query, timeout_seconds=query_timeout)
+        if kylin_query_vector is None:
+            try:
+                kylin_query_vector = self.kylin_provider.vector(expanded_query, timeout_seconds=query_timeout)
+            except Exception:
+                return self._tag_backend(scored[:limit], "hash")
         if kylin_query_vector is None:
             return self._tag_backend(scored[:limit], "hash")
         if self._kylin_budget_exceeded(sdk_started):

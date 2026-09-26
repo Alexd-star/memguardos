@@ -1864,6 +1864,56 @@ class SQLiteMetaStore:
                 continue
         return vectors
 
+    def list_dense_candidate_vectors(
+        self,
+        backend: str,
+        model_revision: str,
+        namespace: str,
+        max_vectors: int,
+    ) -> tuple[List[tuple[str, List[float]]], bool]:
+        """Return a complete, governed vector snapshot or decline an oversized scan."""
+        if max_vectors <= 0:
+            return [], False
+        scopes = [namespace, "user"] if namespace == "default" else [namespace]
+        rows = self.conn.execute(
+            """
+            SELECT embedding.memory_id, embedding.dimension, embedding.vector_blob
+            FROM memory_embedding AS embedding
+            JOIN memory ON memory.memory_id = embedding.memory_id
+            WHERE embedding.backend = ? AND embedding.model_revision = ?
+              AND embedding.status = 'ready' AND embedding.vector_blob IS NOT NULL
+              AND memory.deleted = 0 AND memory.governance_state = 'active'
+              AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
+              AND memory.scope IN (SELECT value FROM json_each(?))
+              AND embedding.content_hash =
+                  memguard_content_hash(memory.summary, memory.content)
+            ORDER BY embedding.memory_id
+            LIMIT ?
+            """,
+            (backend, model_revision, json.dumps(scopes), max_vectors + 1),
+        ).fetchall()
+        if len(rows) > max_vectors:
+            return [], False
+        vectors = []
+        for row in rows:
+            try:
+                vector = decode_vector(row["vector_blob"], int(row["dimension"]))
+            except (TypeError, ValueError):
+                continue
+            vectors.append((str(row["memory_id"]), vector))
+        return vectors, True
+
+    def embedding_revision(self, backend: str, model_revision: str) -> str:
+        row = self.conn.execute(
+            """
+            SELECT COUNT(*) AS total, COALESCE(MAX(updated_at), '') AS latest
+            FROM memory_embedding
+            WHERE backend = ? AND model_revision = ? AND status = 'ready'
+            """,
+            (backend, model_revision),
+        ).fetchone()
+        return "%s:%s" % (row["total"], row["latest"])
+
     def delete_memory_embeddings(self, memory_id: str) -> int:
         cursor = self.conn.execute(
             "DELETE FROM memory_embedding WHERE memory_id = ?", (memory_id,)

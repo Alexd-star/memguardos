@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import perf_counter
 from typing import Dict, List, Optional, Tuple, Union
 import json
+import math
 import os
 import re
 
@@ -65,7 +66,7 @@ from memguard.os_guard.cgroup import cgroup_status
 from memguard.os_guard.journald import JournaldLogger
 from memguard.retrieval.conflict import ConflictResolver, preference_topic as inferred_preference_topic
 from memguard.retrieval.fusion import QueryIntent, classify_query_intent, rrf_fuse
-from memguard.retrieval.hybrid import HybridRetriever, expand_query_aliases, tokenize_literal
+from memguard.retrieval.hybrid import HybridRetriever, cosine, expand_query_aliases, normalize_vector, tokenize_literal
 from memguard.retrieval.vector_cache import vector_content_hash
 from memguard.sensitivity.custom_patterns import PatternValidationError, load_patterns, save_pattern, save_pattern_from_instruction, suggest_pattern_from_instruction
 from memguard.sensitivity.detector import SensitiveDetector
@@ -98,12 +99,13 @@ class MemGuardService:
         self.extractor = HybridMemoryExtractor()
         self.preference_enhancer = PreferenceEnhancer()
         self.retriever = HybridRetriever()
+        self.dense_candidates_enabled = os.environ.get("MEMGUARD_DENSE_CANDIDATES", "").strip() == "1"
         self.conflicts = ConflictResolver()
         self.forget_planner = ForgetPlanner()
         self.erasure_intent_compiler = ErasureIntentCompiler()
         self.tool_preference_miner = ToolPreferenceMiner()
         self.journald = JournaldLogger()
-        self._search_cache: OrderedDict[Tuple[str, int, str], List[Dict[str, object]]] = OrderedDict()
+        self._search_cache: OrderedDict[Tuple[str, int, str, str], List[Dict[str, object]]] = OrderedDict()
         self._search_cache_limit = 128
         self._last_search_timings: Dict[str, float] = {}
         self._pending_hits: List[str] = []
@@ -2802,7 +2804,10 @@ class MemGuardService:
         clean_query = query.strip()
         if not clean_query:
             return []
-        cache_key = (clean_query, max(1, int(limit)), self.meta.memory_revision())
+        cache_key = (
+            clean_query, max(1, int(limit)), self.meta.memory_revision(),
+            self.meta.embedding_revision(self.EMBEDDING_BACKEND, self.EMBEDDING_MODEL_REVISION),
+        )
         cached = self._search_cache.get(cache_key)
         if cached is not None:
             self._search_cache.move_to_end(cache_key)
@@ -2815,6 +2820,9 @@ class MemGuardService:
         intent = classify_query_intent(clean_query)
         candidates = self._search_candidates(
             query, limit=max(limit * 8, 64), include_graph=False
+        )
+        dense_ids, dense_query_vector, dense_status = self._dense_candidate_ids(
+            clean_query, limit=max(limit * 4, 20)
         )
         recall_done_at = perf_counter()
         exact_ids: List[str] = []
@@ -2846,6 +2854,10 @@ class MemGuardService:
             # lexical hit before the lexical ranking is even constructed.
             limit=max(len(candidates), limit * 4, 20),
             persisted_vectors=persisted_vectors,
+            kylin_query_vector=dense_query_vector,
+            allow_kylin_rerank=dense_status not in {
+                "latency_budget_exceeded", "query_vector_unavailable",
+            },
         )
         base_ranked = []
         for base_score, record in base_pairs:
@@ -2940,6 +2952,21 @@ class MemGuardService:
         ]
         rankings = {"lexical": lexical_ids, "hash": hash_ids, "kylin": kylin_ids}
         by_id = {str(item["memory_id"]): item for item in base_ranked}
+        if dense_ids:
+            verified_dense_ids = []
+            for memory_id in dense_ids:
+                record = self.meta.get_memory(memory_id)
+                if record is None or not self._retrieval_record_is_eligible(record):
+                    continue
+                verified_dense_ids.append(memory_id)
+                if memory_id not in by_id:
+                    item = dict(record)
+                    item["_base_score"] = 0.0
+                    item["_vector_backend"] = "kylin_sdk_dense"
+                    by_id[memory_id] = item
+                elif by_id[memory_id].get("_vector_backend") == "hash":
+                    by_id[memory_id]["_vector_backend"] = "kylin_sdk_dense"
+            rankings["dense"] = verified_dense_ids
 
         if intent == QueryIntent.RELATIONAL:
             graph_result = self.hierarchical_graph_search(
@@ -2975,6 +3002,7 @@ class MemGuardService:
             else 1.0,
             "hash": 1.0,
             "kylin": 1.15,
+            "dense": 1.15 if dense_ids else 0.0,
             "graph": 1.25 if intent == QueryIntent.RELATIONAL else 0.0,
         }
         exact_hits = set()
@@ -3041,7 +3069,11 @@ class MemGuardService:
                 "query_intent": intent.value,
                 "fusion_sources": list(fused_item.sources),
                 "protected_exact_hit": fused_item.protected,
-                "kylin_vector_cached": fused_item.memory_id in persisted_vectors,
+                "kylin_vector_cached": (
+                    fused_item.memory_id in persisted_vectors
+                    or fused_item.memory_id in dense_ids
+                ),
+                "dense_candidate_status": dense_status,
             }
             ranked.append((fused_item.score, item))
         results = []
@@ -3089,8 +3121,56 @@ class MemGuardService:
                 None,
                 {"query": clean_query, "count": len(results), "cache": "miss", "timings": timings},
             )
-        self._remember_search(cache_key, results)
+        if not self.dense_candidates_enabled or dense_status in {"ready", "disabled"}:
+            self._remember_search(cache_key, results)
         return [dict(item) for item in results]
+
+    def _dense_candidate_ids(
+        self, query: str, limit: int,
+    ) -> Tuple[List[str], Optional[List[float]], str]:
+        if not self.dense_candidates_enabled:
+            return [], None, "disabled"
+        provider = self.retriever.kylin_provider
+        if provider is None:
+            return [], None, "provider_unavailable"
+        try:
+            cap = max(1, min(int(os.environ.get("MEMGUARD_DENSE_SCAN_LIMIT", "2000")), 5000))
+        except ValueError:
+            cap = 2000
+        started = perf_counter()
+        vectors, complete = self.meta.list_dense_candidate_vectors(
+            self.EMBEDDING_BACKEND, self.EMBEDDING_MODEL_REVISION,
+            self.namespace, cap,
+        )
+        if not complete:
+            return [], None, "scan_limit_exceeded"
+        if not vectors:
+            return [], None, "no_ready_vectors"
+        budget_ms = self.retriever.kylin_rerank_budget_ms
+        remaining = budget_ms / 1000 - (perf_counter() - started) if budget_ms > 0 else 0
+        if remaining <= 0:
+            return [], None, "latency_budget_exceeded"
+        try:
+            query_vector = provider.vector(
+                str(expand_query_aliases(query)["expanded_query"]),
+                timeout_seconds=remaining,
+            )
+        except Exception:
+            return [], None, "query_vector_unavailable"
+        if not query_vector or not all(math.isfinite(value) for value in query_vector):
+            return [], None, "query_vector_unavailable"
+        normalized_query = normalize_vector(query_vector)
+        scored = []
+        for memory_id, vector in vectors:
+            if len(vector) != len(query_vector):
+                continue
+            similarity = cosine(normalized_query, normalize_vector(vector))
+            if similarity >= 0.45:
+                scored.append((similarity, memory_id))
+        if (perf_counter() - started) * 1000 > budget_ms:
+            return [], query_vector, "latency_budget_exceeded"
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        return [memory_id for _, memory_id in scored[:limit]], query_vector, "ready"
 
     def batch_search(self, queries: List[str], limit: int = 5, workers: int = 4) -> Dict[str, object]:
         clean_queries = [query.strip() for query in queries if query and query.strip()]
@@ -4510,7 +4590,7 @@ class MemGuardService:
             return self.detector.redact(value) if finding.labels else value
         return value
 
-    def _remember_search(self, cache_key: Tuple[str, int, str], results: List[Dict[str, object]]) -> None:
+    def _remember_search(self, cache_key: Tuple[str, int, str, str], results: List[Dict[str, object]]) -> None:
         self._search_cache[cache_key] = [dict(item) for item in results]
         self._search_cache.move_to_end(cache_key)
         while len(self._search_cache) > self._search_cache_limit:
@@ -4613,6 +4693,9 @@ class MemGuardService:
             return "摘要关键词与查询匹配"
         if float(breakdown.get("content_score", 0.0)) > 0:
             return "正文关键词与查询匹配"
+        explanation = item.get("retrieval_explanation")
+        if isinstance(explanation, dict) and "dense" in explanation.get("fusion_sources", []):
+            return "已保存的语义向量与查询匹配"
         return "综合语义相关度较高"
 
     @staticmethod

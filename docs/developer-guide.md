@@ -125,10 +125,10 @@ namespace 名只允许 1-64 位 ASCII 字母、数字、点、下划线和横线
 普通检索流程：
 
 ```text
-query -> FTS 候选预筛选 -> 图谱候选补充 -> 低相关候选过滤 -> 混合重排 -> top-k
+query -> FTS/别名候选与最近记忆补充 -> 低相关候选过滤 -> 混合重排 -> top-k
 ```
 
-当 FTS 没有命中时，系统会从当前 namespace 的存活记忆中取候选再做混合重排；低于相关性阈值的候选会被过滤，避免只因为时间较新就返回无关记忆。
+当 FTS 没有命中时，系统会从当前 namespace 的最近存活记忆中取有界候选再做混合重排；低于相关性阈值的候选会被过滤，避免只因为时间较新就返回无关记忆。关系查询另行融合图谱候选。这条默认路径不能保证零词面重合的旧记忆进入候选集。
 
 Agent 批量检索流程：
 
@@ -162,13 +162,13 @@ Kylin embedding 可选重排链路：
 
 ```text
 MEMGUARD_EMBEDDING_BACKEND=auto
-  -> 默认 FTS/hash/graph 先召回稳定候选
-  -> 调用 openKylin Kylin embedding SDK 生成 query/candidate 768 维向量
-  -> 对候选做可选重排
+  -> 默认 FTS/hash/关系图谱先召回稳定候选
+  -> 后台回填当前模型版本的记忆向量；查询时只生成 query 向量
+  -> 使用已持久化的候选向量做可选重排
   -> SDK 不可用、超时或维度异常时回退到 hash-vector 结果
 ```
 
-该链路不改变默认离线检索路径。openKylin 的 SDK 探针、预热状态和检索 v2 结果分别保存在 `docs/evidence/openkylin/` 与 `docs/evidence/performance_latest/`，可用于区分真实 SDK 路径和延迟预算降级路径。
+独立语义候选召回仍处于显式启用的验证阶段。设置 `MEMGUARD_EMBEDDING_BACKEND=kylin`（或在 openKylin 使用 `auto`）及 `MEMGUARD_DENSE_CANDIDATES=1` 后，搜索会在当前 namespace 内读取已就绪、未删除、治理状态有效、内容哈希和模型版本都匹配的向量，计算与 query 的相似度，并把达到暂定阈值的候选独立送入融合排序。`MEMGUARD_DENSE_SCAN_LIMIT` 默认 2000、最高 5000；超限时完整放弃这一通道，不以较新的部分向量冒充全集。查询向量超时、SDK 不可用或扫描超预算同样回退。阈值、Top-1 和 P95 尚需冻结评测集及 openKylin 实测，不应将此开关直接视为已验证的默认生产配置。向量就绪版本会参与搜索缓存键，后台回填后同一查询可重新检索。
 
 图谱检索：
 
