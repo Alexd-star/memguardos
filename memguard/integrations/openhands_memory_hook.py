@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 from pathlib import Path
 import json
 import re
 import shlex
+import sqlite3
 import sys
 
 
@@ -60,6 +62,72 @@ def deny(reason, category, **details):
     payload.update(details)
     print(json.dumps(payload, ensure_ascii=False))
     return 2
+
+
+def context_snapshot_status(payload):
+    snapshot = payload.get("memory_snapshot")
+    stages = payload.get("stages")
+    if stages is None and not payload.get("trace_id") and snapshot is None:
+        return {"ok": True, "reason": "", "stale_memory_ids": []}
+    if not isinstance(stages, dict) or (payload.get("trace_id") and not stages):
+        return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
+    selected = []
+    for stage in stages.values():
+        if not isinstance(stage, dict):
+            return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
+        memories = stage.get("memories") or []
+        if not isinstance(memories, list) or any(not isinstance(item, dict) for item in memories):
+            return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
+        selected.extend(item for item in memories if item.get("memory_id"))
+    if not isinstance(snapshot, dict):
+        if payload.get("trace_id") and selected:
+            return {"ok": False, "reason": "missing_snapshot", "stale_memory_ids": []}
+        return {"ok": True, "reason": "", "stale_memory_ids": []}
+    versions = snapshot.get("versions")
+    if not isinstance(versions, dict):
+        return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
+    if set(versions) != {str(memory["memory_id"]) for memory in selected}:
+        return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
+    if not versions:
+        return {"ok": True, "reason": "", "stale_memory_ids": []}
+    if any(
+        not isinstance(memory_id, str) or not memory_id
+        or not isinstance(version_id, str) or not version_id
+        for memory_id, version_id in versions.items()
+    ):
+        return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
+    if any(versions.get(str(memory["memory_id"])) != memory.get("version_id") for memory in selected):
+        return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
+    db_path = str(snapshot.get("db_path") or "")
+    namespace = str(snapshot.get("namespace") or "")
+    if not db_path or not Path(db_path).is_absolute() or not namespace:
+        return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
+    try:
+        uri = Path(db_path).resolve().as_uri() + "?mode=ro"
+        with closing(sqlite3.connect(uri, uri=True, timeout=1.0)) as connection:
+            connection.row_factory = sqlite3.Row
+            connection.execute("BEGIN")
+            stale = []
+            allowed_scopes = {namespace, "user"} if namespace == "default" else {namespace}
+            for memory_id, version_id in versions.items():
+                row = connection.execute(
+                    """SELECT version_id, deleted, governance_state, valid_to,
+                              trust_level, scope FROM memory WHERE memory_id = ?""",
+                    (memory_id,),
+                ).fetchone()
+                if (
+                    row is None or row["version_id"] != version_id
+                    or row["deleted"] or row["governance_state"] != "active"
+                    or row["valid_to"] is not None
+                    or row["trust_level"] not in {
+                        "trusted", "verified", "reviewed", "controlled", "limited",
+                    }
+                    or row["scope"] not in allowed_scopes
+                ):
+                    stale.append(memory_id)
+    except (OSError, sqlite3.Error, ValueError):
+        return {"ok": False, "reason": "memory_store_unavailable", "stale_memory_ids": []}
+    return {"ok": not stale, "reason": "memory_changed" if stale else "", "stale_memory_ids": stale}
 
 
 def violates_code_search_preference(command, preferred_tool):
@@ -228,7 +296,20 @@ def parse_args():
 
 def main() -> int:
     args = parse_args()
-    payload = json.loads(Path(args.context_file).read_text(encoding="utf-8"))
+    try:
+        payload = json.loads(Path(args.context_file).read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("context payload must be an object")
+    except (OSError, ValueError):
+        return deny("记忆上下文不可用，请重新开始当前任务。", "memory_validation_unavailable")
+    snapshot_status = context_snapshot_status(payload)
+    if not snapshot_status["ok"]:
+        return deny(
+            "记忆上下文已更新或撤回，请结束当前任务并重新开始，以获取最新记忆。",
+            "stale_memory_context",
+            validation_reason=snapshot_status["reason"],
+            affected_memory_ids=snapshot_status["stale_memory_ids"],
+        )
     if not args.guard_tool:
         print(
             json.dumps(

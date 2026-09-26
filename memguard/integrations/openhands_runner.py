@@ -12,6 +12,7 @@ import sys
 from time import perf_counter
 
 from memguard.ingestion.tool_result import ToolResult
+from memguard.integrations.openhands_memory_hook import context_snapshot_status
 from memguard.feedback import build_preference_effect_proof, merge_memory_change_summaries
 from memguard.integrations.adherence import (
     build_adherence_repair_message,
@@ -106,7 +107,9 @@ class OpenHandsMemoryRunner:
         clean_task = str(task).strip()
         if not clean_task:
             raise ValueError("task is required")
-        self.state_dir.mkdir(parents=True, exist_ok=True)
+        self.state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if os.name != "nt":
+            self.state_dir.chmod(0o700)
         trace_id = new_id("ctx")
         stages = {}
         for stage in ("planning", "tool_selection", "response_generation"):
@@ -128,8 +131,23 @@ class OpenHandsMemoryRunner:
                     "budget": {"selected_count": 0, "token_budget": 0},
                     "memory_enabled": False,
                 }
+        versions = {}
+        for result in stages.values():
+            for memory in result.get("memories") or []:
+                memory_id = str(memory.get("memory_id") or "")
+                version_id = str(memory.get("version_id") or "")
+                if not memory_id or not version_id:
+                    raise RuntimeError("Agent 上下文缺少可核验的记忆版本")
+                if memory_id in versions and versions[memory_id] != version_id:
+                    raise RuntimeError("Agent 上下文包含冲突的记忆版本")
+                versions[memory_id] = version_id
+        snapshot = {
+            "db_path": str(self.service.meta.path),
+            "namespace": self.service.namespace,
+            "versions": versions,
+        }
         payload = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "trace_id": trace_id,
             "created_at": utc_now(),
             "session_id": self.session_id,
@@ -138,18 +156,34 @@ class OpenHandsMemoryRunner:
                 ["terminal", "finish"] if self.tool_profile == "terminal" else []
             ),
             "stages": stages,
+            "memory_snapshot": snapshot,
             "additional_context": format_agent_context(trace_id, stages, task=clean_task),
         }
+        self._require_fresh_context(payload)
         context_file = self.state_dir / ("%s.json" % trace_id)
-        context_file.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        temporary_file = context_file.with_name(context_file.name + ".tmp")
+        descriptor = os.open(temporary_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                json.dump(payload, handle, ensure_ascii=False, indent=2)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary_file, context_file)
+        except Exception:
+            temporary_file.unlink(missing_ok=True)
+            raise
         return {
             "trace_id": trace_id,
             "context_file": str(context_file),
             "stages": stages,
+            "memory_snapshot": snapshot,
         }
+
+    @staticmethod
+    def _require_fresh_context(payload: Dict[str, object]) -> None:
+        status = context_snapshot_status(payload)
+        if not status["ok"]:
+            raise RuntimeError("记忆已更新或撤回，当前 Agent 任务已停止；请重新开始以获取最新上下文。")
 
     def on_event(self, raw_event: Any) -> None:
         event = self.adapter.convert(raw_event)
@@ -248,11 +282,12 @@ class OpenHandsMemoryRunner:
         try:
             conversation.send_message(str(task).strip())
             conversation.run()
+            self._require_fresh_context(context_bundle)
             natural_high_risk_block = self._block_direct_high_risk_request(
                 context_bundle["stages"]
             )
             structured_recovery = self._recover_structured_tool_intent(
-                context_bundle["stages"]
+                context_bundle["stages"], context_bundle
             )
             initial_issues = detect_adherence_issues(
                 context_bundle["stages"],
@@ -266,18 +301,21 @@ class OpenHandsMemoryRunner:
                     self._live_events,
                 )
                 self.adapter.register_internal_feedback(repair_message)
+                self._require_fresh_context(context_bundle)
                 conversation.send_message(repair_message)
                 conversation.run()
+                self._require_fresh_context(context_bundle)
                 repair_attempt_count = 1
                 if not structured_recovery.get("executed"):
                     followup_recovery = self._recover_structured_tool_intent(
-                        context_bundle["stages"]
+                        context_bundle["stages"], context_bundle
                     )
                     if followup_recovery.get("attempted"):
                         structured_recovery = followup_recovery
             procedural_fallback = self._apply_procedural_memory_fallback(
-                context_bundle["stages"]
+                context_bundle["stages"], context_bundle
             )
+            self._require_fresh_context(context_bundle)
             remaining_issues = detect_adherence_issues(
                 context_bundle["stages"],
                 self._live_events,
@@ -448,6 +486,7 @@ class OpenHandsMemoryRunner:
     def _recover_structured_tool_intent(
         self,
         stages: Dict[str, object],
+        context_bundle: Dict[str, object],
     ) -> Dict[str, object]:
         preferences = selected_preferences(stages)
         preferred_tool = preferences.get("code_search_tool", "")
@@ -519,6 +558,7 @@ class OpenHandsMemoryRunner:
 
         result["attempted"] = True
         result["command"] = intent["command"]
+        self._require_fresh_context(context_bundle)
         try:
             completed = self.structured_intent_executor(
                 intent["argv"],
@@ -675,6 +715,7 @@ class OpenHandsMemoryRunner:
     def _apply_procedural_memory_fallback(
         self,
         stages: Dict[str, object],
+        context_bundle: Dict[str, object],
     ) -> Dict[str, object]:
         result = {
             "applied": False,
@@ -698,6 +739,7 @@ class OpenHandsMemoryRunner:
         if evidence in visible:
             result["reason"] = "model output already contains procedural evidence"
             return result
+        self._require_fresh_context(context_bundle)
         self.adapter.sequence += 1
         event = AgentInteractionEvent(
             agent_name="openhands",

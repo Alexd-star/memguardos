@@ -452,6 +452,7 @@ class HybridRetriever:
         persisted_vectors: Optional[Dict[str, List[float]]] = None,
         kylin_query_vector: Optional[List[float]] = None,
         allow_kylin_rerank: bool = True,
+        allow_ungrounded_kylin_candidates: bool = True,
     ) -> List[Tuple[float, Dict[str, str]]]:
         records = list(records)
         expanded_info = expand_query_aliases(query)
@@ -502,7 +503,9 @@ class HybridRetriever:
             return self._tag_backend(scored[:limit], "hash")
 
         vectors = persisted_vectors or {}
-        rerank_pool = semantic_pool[: max(30, limit * 6)]
+        rerank_pool = (semantic_pool if allow_ungrounded_kylin_candidates else scored)[
+            : max(30, limit * 6)
+        ]
         reranked = []
         hit_count = 0
         for base_score, record in rerank_pool:
@@ -565,8 +568,8 @@ class HybridRetriever:
         return float(breakdown.get("entity_score", 0.0)) >= 0.2
 
     def _kylin_budget_exceeded(self, started: float) -> bool:
-        if self.requested_backend in {"kylin", "kylin_sdk"} or self.kylin_rerank_budget_ms <= 0:
-            return False
+        if self.kylin_rerank_budget_ms <= 0:
+            return True
         elapsed_ms = (time.perf_counter() - started) * 1000.0
         if elapsed_ms <= self.kylin_rerank_budget_ms:
             return False
@@ -576,8 +579,8 @@ class HybridRetriever:
         return True
 
     def _remaining_kylin_timeout(self, started: float) -> Optional[float]:
-        if self.requested_backend in {"kylin", "kylin_sdk"} or self.kylin_rerank_budget_ms <= 0:
-            return None
+        if self.kylin_rerank_budget_ms <= 0:
+            return 0.0
         remaining = (self.kylin_rerank_budget_ms / 1000.0) - (time.perf_counter() - started)
         return max(0.0, remaining)
 

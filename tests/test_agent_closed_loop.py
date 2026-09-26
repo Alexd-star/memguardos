@@ -22,7 +22,7 @@ from memguard.integrations.adherence import (
     code_search_preference_applicable,
     parse_natural_search_intent,
 )
-from memguard.integrations.openhands_memory_hook import violates_code_search_preference
+from memguard.integrations.openhands_memory_hook import context_snapshot_status, violates_code_search_preference
 from memguard.ingestion.tool_result import ToolResult
 from memguard.api.server import handle_request
 from memguard.cli.memctl import main as memctl_main
@@ -576,6 +576,106 @@ def test_runner_builds_traceable_three_stage_context_without_changing_user_promp
         assert stored["trace_id"] == bundle["trace_id"]
         assert stored["allowed_tools"] == []
         assert "请查找 build_agent_context 的实现。" not in stored["additional_context"]
+    finally:
+        service.close()
+
+
+def test_agent_context_snapshot_blocks_updated_and_forgotten_memories(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        created = service.ingest_text("蓝河项目的部署版本为 1.0.0。", source_kind="manual")
+        assert created["stored"]
+        memory_id = created["record"].memory_id
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id="session-revocation",
+            workspace=tmp_path / "workspace",
+            state_dir=tmp_path / "state",
+        )
+        first = runner.prepare_context("蓝河项目的部署版本是什么？")
+        assert memory_id in first["memory_snapshot"]["versions"]
+        assert context_snapshot_status(first)["ok"]
+        script = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
+
+        def guard(context_file, guard_tool=True):
+            args = [sys.executable, str(script), "--context-file", str(context_file)]
+            if guard_tool:
+                args.append("--guard-tool")
+            return subprocess.run(
+                args,
+                input=json.dumps({"tool_name": "terminal", "tool_input": {"command": "true"}}),
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+        assert guard(first["context_file"]).returncode == 0
+        updated = service.update_memory(memory_id, "蓝河项目的部署版本为 1.1.0。")
+        assert updated["updated"]
+        assert context_snapshot_status(first)["stale_memory_ids"] == [memory_id]
+        stale_tool = guard(first["context_file"])
+        stale_prompt = guard(first["context_file"], guard_tool=False)
+        assert stale_tool.returncode == stale_prompt.returncode == 2
+        assert json.loads(stale_tool.stdout)["policy_category"] == "stale_memory_context"
+
+        refreshed = runner.prepare_context("蓝河项目的部署版本是什么？")
+        assert context_snapshot_status(refreshed)["ok"]
+        assert guard(refreshed["context_file"]).returncode == 0
+        service.forget_memory_ids([memory_id], reason="用户撤回", compact=True)
+        assert context_snapshot_status(refreshed)["stale_memory_ids"] == [memory_id]
+        assert guard(refreshed["context_file"]).returncode == 2
+    finally:
+        service.close()
+
+
+def test_agent_context_snapshot_rejects_malformed_or_mismatched_bundle():
+    payload = {
+        "trace_id": "ctx_test",
+        "stages": {"planning": {"memories": [{"memory_id": "mem_test", "version_id": "ver_test"}]}},
+        "memory_snapshot": {"versions": {}},
+    }
+    assert context_snapshot_status(payload)["reason"] == "invalid_snapshot"
+    payload["memory_snapshot"]["versions"] = {"mem_other": "ver_test"}
+    assert context_snapshot_status(payload)["reason"] == "invalid_snapshot"
+    payload["stages"]["planning"]["memories"] = {"memory_id": "mem_test"}
+    assert context_snapshot_status(payload)["reason"] == "invalid_snapshot"
+    payload["stages"] = {}
+    assert context_snapshot_status(payload)["reason"] == "invalid_snapshot"
+
+
+def test_runner_stops_before_automatic_recovery_after_memory_withdrawal(tmp_path):
+    service = make_service(tmp_path)
+    created = service.ingest_text("蓝河项目的部署版本为 1.0.0。", source_kind="manual")
+    assert created["stored"]
+    memory_id = created["record"].memory_id
+    executed = []
+
+    class RevokingConversation:
+        closed = False
+
+        def send_message(self, _message):
+            pass
+
+        def run(self):
+            service.forget_memory_ids([memory_id], reason="用户撤回", compact=True)
+
+        def close(self):
+            self.closed = True
+
+    conversation = RevokingConversation()
+    runner = OpenHandsMemoryRunner(
+        service=service,
+        session_id="session-recovery-revocation",
+        workspace=tmp_path / "workspace",
+        state_dir=tmp_path / "state",
+        conversation_factory=lambda **_kwargs: conversation,
+        structured_intent_executor=lambda *_args, **_kwargs: executed.append(True),
+    )
+    try:
+        with pytest.raises(RuntimeError, match="记忆已更新或撤回"):
+            runner.run("蓝河项目的部署版本是什么？")
+        assert conversation.closed
+        assert executed == []
     finally:
         service.close()
 

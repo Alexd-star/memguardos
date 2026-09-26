@@ -294,3 +294,39 @@ def test_kylin_without_persisted_candidate_vector_keeps_grounded_fallback():
 
     assert ranked == []
     assert retriever.last_backend_used == "hash"
+
+
+def test_explicit_kylin_backend_honors_zero_rerank_budget():
+    class UnexpectedKylin:
+        def vector(self, text, timeout_seconds=None):
+            raise AssertionError("Kylin provider must not be called without a budget")
+
+    retriever = HybridRetriever("kylin")
+    retriever.kylin_provider = UnexpectedKylin()
+    retriever.kylin_rerank_budget_ms = 0
+    record = {
+        "memory_id": "mem-budget-test",
+        "type": "knowledge",
+        "subtype": "general",
+        "summary": "openKylin 服务日志使用 journalctl 查看",
+        "content": "openKylin 服务日志使用 journalctl 查看",
+        "source_kind": "manual",
+        "sensitivity_level": "none",
+    }
+    ranked = retriever.rank("openKylin journalctl", [record], limit=5)
+    assert ranked
+    assert retriever.last_backend_used == "hash"
+
+    class RecordingKylin:
+        timeouts = []
+
+        def vector(self, text, timeout_seconds=None):
+            self.timeouts.append(timeout_seconds)
+            return [1.0, 0.0]
+
+    provider = RecordingKylin()
+    retriever.kylin_provider = provider
+    retriever.kylin_rerank_budget_ms = 160
+    retriever.rank("openKylin journalctl", [record], limit=5)
+    assert len(provider.timeouts) == 1
+    assert 0 < provider.timeouts[0] <= 0.160

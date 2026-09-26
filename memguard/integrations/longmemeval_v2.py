@@ -135,7 +135,11 @@ class LongMemEvalV2Backend:
     def set_query_context(self, context: Optional[Dict[str, object]] = None, **kwargs: object) -> None:
         merged = dict(context or {})
         merged.update(kwargs)
-        self._query_context_local.context = merged
+        self._query_context_local.context = {
+            key: merged[key]
+            for key in ("question_id", "question_type", "domain")
+            if key in merged
+        }
 
     def get_query_context(self) -> Dict[str, object]:
         return dict(getattr(self._query_context_local, "context", {}) or {})
@@ -224,7 +228,6 @@ def evaluate_questions(
             backend.set_query_context(
                 question_id=question.get("id"),
                 question_type=question.get("question_type"),
-                raw_question_item=question,
             )
             started = perf_counter()
             contexts = backend.query(str(question.get("question") or ""), query_image=question.get("image"))

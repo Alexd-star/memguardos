@@ -68,7 +68,7 @@ def test_backend_matches_official_insert_query_context_contract(tmp_path):
     assert any("Incident" in item["value"] for item in contexts)
 
 
-def test_external_evaluation_separates_retrieval_proxy_from_answer_accuracy(tmp_path):
+def test_external_evaluation_separates_retrieval_proxy_from_answer_accuracy(tmp_path, monkeypatch):
     trajectories = tmp_path / "trajectories.jsonl"
     questions = tmp_path / "questions.jsonl"
     trajectories.write_text(json.dumps(trajectory_fixture()) + "\n", encoding="utf-8")
@@ -87,6 +87,16 @@ def test_external_evaluation_separates_retrieval_proxy_from_answer_accuracy(tmp_
         encoding="utf-8",
     )
 
+    original_query = LongMemEvalV2Backend.query
+
+    def query_without_labels(self, query, query_image=None):
+        assert self.get_query_context() == {
+            "question_id": "question-1",
+            "question_type": "dynamic-environment",
+        }
+        return original_query(self, query, query_image=query_image)
+
+    monkeypatch.setattr(LongMemEvalV2Backend, "query", query_without_labels)
     result = evaluate_questions(
         trajectories_path=trajectories,
         questions_path=questions,
@@ -104,3 +114,17 @@ def test_external_evaluation_separates_retrieval_proxy_from_answer_accuracy(tmp_
         "reason": "reader and official answer evaluator were not configured",
     }
     assert result["retrieval_layer"]["p95_latency_ms"] >= 0
+
+
+def test_backend_discards_reference_labels_from_external_query_context(tmp_path):
+    backend = LongMemEvalV2Backend({"workspace_dir": str(tmp_path), "namespace": "label-isolation"})
+    try:
+        backend.set_query_context({
+            "question_id": "q-1",
+            "raw_question_item": {"answer": "secret answer"},
+            "answer": "secret answer",
+            "eval_function": "exact_match",
+        })
+        assert backend.get_query_context() == {"question_id": "q-1"}
+    finally:
+        backend.close()

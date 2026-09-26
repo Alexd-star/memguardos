@@ -62,6 +62,57 @@ def test_dense_recalls_memory_missing_from_lexical_candidates(tmp_path, monkeypa
         service.close()
 
 
+def test_dense_candidates_exclude_weak_tail_from_rrf(tmp_path, monkeypatch):
+    service = make_service(tmp_path, monkeypatch)
+    try:
+        ids = [
+            service.ingest_text(text, source_kind="manual")["record"].memory_id
+            for text in ("会议纪要格式", "系统备份策略", "代码搜索工具")
+        ]
+        for memory_id, vector in zip(ids, ([1.0, 0.0], [0.8, 0.6], [0.7, 0.714])):
+            ready_vector(service, memory_id, vector)
+        service.retriever.kylin_provider = FixedProvider([1.0, 0.0])
+        selected, _, status = service._dense_candidate_ids("meeting notes format", 20)
+        assert status == "ready"
+        assert selected == ids[:1]
+        monkeypatch.setattr(service, "_search_candidates", lambda *args, **kwargs: [])
+        assert [hit["memory_id"] for hit in service.search("meeting notes format", limit=5)] == ids[:1]
+    finally:
+        service.close()
+
+
+def test_dense_candidates_keep_close_semantic_matches(tmp_path, monkeypatch):
+    service = make_service(tmp_path, monkeypatch)
+    try:
+        ids = [
+            service.ingest_text(text, source_kind="manual")["record"].memory_id
+            for text in ("会议纪要标题", "会议纪要模板", "无关的系统备份")
+        ]
+        for memory_id, vector in zip(ids, ([1.0, 0.0], [0.99, 0.14], [0.8, 0.6])):
+            ready_vector(service, memory_id, vector)
+        service.retriever.kylin_provider = FixedProvider([1.0, 0.0])
+        selected, _, status = service._dense_candidate_ids("meeting notes format", 20)
+        assert status == "ready"
+        assert selected == ids[:2]
+    finally:
+        service.close()
+
+
+def test_dense_and_kylin_rerank_do_not_double_vote(tmp_path, monkeypatch):
+    service = make_service(tmp_path, monkeypatch)
+    try:
+        record = service.ingest_text("会议纪要采用标准模板", source_kind="manual")["record"]
+        ready_vector(service, record.memory_id, [1.0, 0.0])
+        service.retriever.kylin_provider = FixedProvider([1.0, 0.0])
+        hits = service.search("会议纪要模板", limit=5)
+        assert hits[0]["memory_id"] == record.memory_id
+        sources = hits[0]["retrieval_explanation"]["fusion_sources"]
+        assert "dense" in sources
+        assert "kylin" not in sources
+    finally:
+        service.close()
+
+
 def test_dense_requires_current_authorized_vector_and_complete_scan(tmp_path, monkeypatch):
     service = make_service(tmp_path, monkeypatch)
     try:

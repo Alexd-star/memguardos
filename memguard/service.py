@@ -2858,6 +2858,7 @@ class MemGuardService:
             allow_kylin_rerank=dense_status not in {
                 "latency_budget_exceeded", "query_vector_unavailable",
             },
+            allow_ungrounded_kylin_candidates=not self.dense_candidates_enabled,
         )
         base_ranked = []
         for base_score, record in base_pairs:
@@ -2950,7 +2951,14 @@ class MemGuardService:
                 ),
             )
         ]
-        rankings = {"lexical": lexical_ids, "hash": hash_ids, "kylin": kylin_ids}
+        # Both Kylin rankings use the same embedding evidence. When the
+        # independent dense lane is ready, voting again through the prefilter
+        # rerank lane would over-weight weak vector matches in RRF.
+        rankings = {
+            "lexical": lexical_ids,
+            "hash": hash_ids,
+            "kylin": [] if dense_ids else kylin_ids,
+        }
         by_id = {str(item["memory_id"]): item for item in base_ranked}
         if dense_ids:
             verified_dense_ids = []
@@ -3170,7 +3178,16 @@ class MemGuardService:
         if (perf_counter() - started) * 1000 > budget_ms:
             return [], query_vector, "latency_budget_exceeded"
         scored.sort(key=lambda item: (-item[0], item[1]))
-        return [memory_id for _, memory_id in scored[:limit]], query_vector, "ready"
+        if not scored:
+            return [], query_vector, "ready"
+        # RRF ignores cosine magnitude, so admitting the whole dense tail can
+        # promote weak semantic matches above stronger lexical evidence.
+        leader_score = scored[0][0]
+        close_candidates = [
+            memory_id for score, memory_id in scored[:min(limit, 3)]
+            if leader_score - score <= 0.05
+        ]
+        return close_candidates, query_vector, "ready"
 
     def batch_search(self, queries: List[str], limit: int = 5, workers: int = 4) -> Dict[str, object]:
         clean_queries = [query.strip() for query in queries if query and query.strip()]
@@ -3553,6 +3570,7 @@ class MemGuardService:
             memories.append(
                 {
                     "memory_id": memory_id,
+                    "version_id": candidate.get("version_id", ""),
                     "type": candidate.get("type"),
                     "subtype": candidate.get("subtype"),
                     "tier": candidate.get("tier"),
