@@ -1477,24 +1477,62 @@ class SQLiteMetaStore:
                             "failed_sessions": int(row["failed_sessions"] or 0)})
         return results
 
-    def verified_tool_experience_exists(
+    def claim_verified_tool_experience(
         self, scope: str, project_root: str, domain: str, tool: str,
-    ) -> bool:
-        return self.conn.execute(
-            """SELECT 1 FROM verified_tool_experience
-               WHERE scope = ? AND project_root = ? AND domain = ? AND tool = ?""",
-            (scope, project_root, domain, tool),
-        ).fetchone() is not None
+    ) -> str:
+        key = (scope, project_root, domain, tool)
+        claim = new_id("claim")
+        now = utc_now()
+        stale_before = (datetime.fromisoformat(now) - timedelta(minutes=30)).isoformat()
+        try:
+            self.conn.execute("BEGIN IMMEDIATE")
+            row = self.conn.execute(
+                """SELECT memory_id, created_at FROM verified_tool_experience
+                   WHERE scope = ? AND project_root = ? AND domain = ? AND tool = ?""",
+                key,
+            ).fetchone()
+            if row is None:
+                self.conn.execute(
+                    """INSERT INTO verified_tool_experience
+                       (scope, project_root, domain, tool, memory_id, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (*key, claim, now),
+                )
+            elif str(row["memory_id"]).startswith("claim_") and row["created_at"] < stale_before:
+                self.conn.execute(
+                    """UPDATE verified_tool_experience SET memory_id = ?, created_at = ?
+                       WHERE scope = ? AND project_root = ? AND domain = ? AND tool = ?""",
+                    (claim, now, *key),
+                )
+            else:
+                claim = ""
+            self.conn.commit()
+            return claim
+        except Exception:
+            self.conn.rollback()
+            raise
 
-    def mark_verified_tool_experience(
-        self, scope: str, project_root: str, domain: str, tool: str, memory_id: str,
+    def finish_verified_tool_experience_claim(
+        self, scope: str, project_root: str, domain: str, tool: str,
+        claim: str, memory_id: str,
+    ) -> bool:
+        with self.conn:
+            return self.conn.execute(
+                """UPDATE verified_tool_experience SET memory_id = ?
+                   WHERE scope = ? AND project_root = ? AND domain = ? AND tool = ?
+                     AND memory_id = ?""",
+                (memory_id, scope, project_root, domain, tool, claim),
+            ).rowcount == 1
+
+    def release_verified_tool_experience_claim(
+        self, scope: str, project_root: str, domain: str, tool: str, claim: str,
     ) -> None:
         with self.conn:
             self.conn.execute(
-                """INSERT OR IGNORE INTO verified_tool_experience
-                   (scope, project_root, domain, tool, memory_id, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (scope, project_root, domain, tool, memory_id, utc_now()),
+                """DELETE FROM verified_tool_experience
+                   WHERE scope = ? AND project_root = ? AND domain = ? AND tool = ?
+                     AND memory_id = ?""",
+                (scope, project_root, domain, tool, claim),
             )
 
     def get_memory(self, memory_id: str) -> Optional[Dict[str, Any]]:

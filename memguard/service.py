@@ -852,27 +852,39 @@ class MemGuardService:
             tool = str(observation["tool"])
             if observation["successful_sessions"] < 2 or observation["failed_sessions"] > observation["successful_sessions"]:
                 continue
-            if self.meta.verified_tool_experience_exists(self.namespace, project, domain, tool):
+            claim = self.meta.claim_verified_tool_experience(self.namespace, project, domain, tool)
+            if not claim:
                 continue
             label = DOMAIN_LABELS.get(domain, domain)
             memory_text = (
                 "跨会话已验证工具经验：%s工具 %s 在至少两个独立完成的任务会话中执行成功。"
                 "此记录是工具结果证据，不代表用户偏好；实际使用仍需按当前环境验证。"
             ) % (label, tool)
-            result = self.ingest_text(
-                memory_text, source_kind="tool_result_verified",
-                source_uri="verified-tool:%s:%s:%s" % (stable_hash(project)[:12], domain, tool),
-                tier="long_term", project_root=project,
-                verified_tool_evidence=True,
-            )
+            try:
+                result = self.ingest_text(
+                    memory_text, source_kind="tool_result_verified",
+                    source_uri="verified-tool:%s:%s:%s" % (stable_hash(project)[:12], domain, tool),
+                    tier="long_term", project_root=project,
+                    verified_tool_evidence=True,
+                )
+            except Exception:
+                self.meta.release_verified_tool_experience_claim(
+                    self.namespace, project, domain, tool, claim,
+                )
+                raise
             record = result.get("record")
             if record and (result.get("stored") or result.get("duplicate")):
-                self.meta.mark_verified_tool_experience(
-                    self.namespace, project, domain, tool, record.memory_id,
-                )
+                if not self.meta.finish_verified_tool_experience_claim(
+                    self.namespace, project, domain, tool, claim, record.memory_id,
+                ):
+                    raise RuntimeError("verified tool experience claim changed during write")
                 promoted.append(record.memory_id)
                 if result.get("feedback"):
                     feedback.append(result["feedback"])
+            else:
+                self.meta.release_verified_tool_experience_claim(
+                    self.namespace, project, domain, tool, claim,
+                )
         return {"recorded": len(outcomes), "observations": observations,
                 "promoted": promoted, "feedback": feedback}
 

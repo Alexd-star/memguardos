@@ -1,3 +1,8 @@
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
 from memguard.ingestion.tool_preference import ToolPreferenceMiner
 from memguard.ingestion.tool_result import ToolResult
 from memguard.service import MemGuardService
@@ -131,5 +136,97 @@ def test_verified_tool_experience_rejects_unbounded_or_failing_tools(tmp_path):
             )
             assert result["promoted"] == []
         assert service.search("已验证工具经验") == []
+    finally:
+        service.close()
+
+
+def test_verified_tool_experience_recovers_stale_claim(tmp_path):
+    service = MemGuardService(store_path=tmp_path / "memory.segment", db_path=tmp_path / "memguard.sqlite3")
+    project = str(tmp_path.resolve())
+    result = [ToolResult(command="rg -n sample .", tool_name="terminal", exit_code=0)]
+    try:
+        service.consolidate_verified_tool_outcomes(
+            result, session_id="first", project_root=project, task_verified=True,
+        )
+        old = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+        service.meta.conn.execute(
+            """INSERT INTO verified_tool_experience
+               (scope, project_root, domain, tool, memory_id, created_at)
+               VALUES (?, ?, 'code_search', 'rg', 'claim_abandoned', ?)""",
+            (service.namespace, project, old),
+        )
+        service.meta.conn.commit()
+        second = service.consolidate_verified_tool_outcomes(
+            result, session_id="second", project_root=project, task_verified=True,
+        )
+        assert len(second["promoted"]) == 1
+        assert service.meta.conn.execute(
+            "SELECT memory_id FROM verified_tool_experience WHERE project_root = ?", (project,),
+        ).fetchone()[0] == second["promoted"][0]
+    finally:
+        service.close()
+
+
+def test_simultaneous_sessions_promote_one_experience(tmp_path):
+    store = tmp_path / "memory.segment"
+    db = tmp_path / "memguard.sqlite3"
+    project = str(tmp_path.resolve())
+    result = [ToolResult(command="rg -n sample .", tool_name="terminal", exit_code=0)]
+    seed = MemGuardService(store_path=store, db_path=db)
+    try:
+        seed.consolidate_verified_tool_outcomes(
+            result, session_id="first", project_root=project, task_verified=True,
+        )
+    finally:
+        seed.close()
+
+    def run(session_id):
+        service = MemGuardService(store_path=store, db_path=db)
+        try:
+            return service.consolidate_verified_tool_outcomes(
+                result, session_id=session_id, project_root=project, task_verified=True,
+            )
+        finally:
+            service.close()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = list(pool.map(run, ("second", "third")))
+    assert sum(len(item["promoted"]) for item in outcomes) == 1
+    check = MemGuardService(store_path=store, db_path=db)
+    try:
+        rows = check.meta.conn.execute(
+            "SELECT memory_id FROM memory WHERE source_kind = 'tool_result_verified' AND deleted = 0"
+        ).fetchall()
+        assert len(rows) == 1
+    finally:
+        check.close()
+
+
+def test_failed_experience_write_releases_claim_for_retry(tmp_path, monkeypatch):
+    service = MemGuardService(store_path=tmp_path / "memory.segment", db_path=tmp_path / "memguard.sqlite3")
+    project = str(tmp_path.resolve())
+    result = [ToolResult(command="rg -n sample .", tool_name="rg", exit_code=0)]
+    try:
+        service.consolidate_verified_tool_outcomes(
+            result, session_id="first", project_root=project, task_verified=True,
+        )
+        original = service.ingest_text
+
+        def fail_verified(*args, **kwargs):
+            if kwargs.get("source_kind") == "tool_result_verified":
+                raise OSError("simulated segment write failure")
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(service, "ingest_text", fail_verified)
+        with pytest.raises(OSError, match="simulated"):
+            service.consolidate_verified_tool_outcomes(
+                result, session_id="second", project_root=project, task_verified=True,
+            )
+        assert service.meta.conn.execute("SELECT COUNT(*) FROM verified_tool_experience").fetchone()[0] == 0
+        monkeypatch.setattr(service, "ingest_text", original)
+        retry = service.consolidate_verified_tool_outcomes(
+            result, session_id="third", project_root=project, task_verified=True,
+        )
+        assert len(retry["promoted"]) == 1
     finally:
         service.close()
