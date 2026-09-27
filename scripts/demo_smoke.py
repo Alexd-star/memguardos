@@ -45,6 +45,7 @@ def main(argv: list[str] | None = None) -> int:
                     tool_name="pytest",
                 ),
                 source_uri="demo_tool_result",
+                session_id="demo-session",
             )
             os_event = service.ingest_os_event('{"event_type":"fanotify_open","path":"/home/demo/.ssh/id_rsa","process":"cat","action":"read"}')
             emit(
@@ -58,7 +59,7 @@ def main(argv: list[str] | None = None) -> int:
                 "retrieval",
                 {
                     "search": service.search("openKylin 服务内存限制", limit=5),
-                    "tool_search": service.search("pytest passed test_report", limit=5),
+                    "tool_search": service.search("pytest passed test_report", limit=5, session_id="demo-session"),
                     "graph_search": service.graph_search("systemd", limit=5),
                     "related": service.related(workflow["record"].memory_id, limit=5),
                 },

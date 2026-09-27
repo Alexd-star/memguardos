@@ -110,7 +110,7 @@ def test_security_explanations_are_not_mistaken_for_real_credentials(tmp_path, t
 def test_public_ingest_honors_natural_retention_phrases(tmp_path, text, expected_tier):
     app = service(tmp_path)
     try:
-        result = app.ingest_natural_memory(text)
+        result = app.ingest_natural_memory(text, session_id="retention-test")
         assert result["stored"] is True
         assert result["record"].tier == expected_tier
     finally:

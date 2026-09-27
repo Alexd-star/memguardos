@@ -197,7 +197,10 @@ def _strip_polite_prefixes(text: str) -> str:
 
 def infer_retention_tier(text: str) -> str:
     compact = re.sub(r"\s+", "", str(text or "")).lower()
-    if any(
+    if (
+        "临时" in compact
+        and any(marker in compact for marker in ("本次会话", "当前会话", "这次会话", "这次对话", "本轮"))
+    ) or any(
         marker in compact
         for marker in (
             "只保留到本次演示结束",

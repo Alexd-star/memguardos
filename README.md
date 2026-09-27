@@ -219,6 +219,7 @@ memguard audit
 ```
 
 `forget` 默认只预览候选；只有带 `--yes` 才会执行，`--compact` 会继续整理追加式段文件。
+临时记忆属于具体会话：`memguard shell` 会自动创建并在正常退出时清理；单条命令可用 `memguard remember "本次会话临时记录构建步骤" --session-id demo-01`，之后用同一 `--session-id` 搜索，最后执行 `memguard end-session --session-id demo-01 --yes`。长期记忆不随会话结束删除。
 
 ### ② 在 openKylin 安装完整桌面版
 

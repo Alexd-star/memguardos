@@ -34,15 +34,17 @@ def test_eviction_candidates_prefer_cold_memories_over_recalled_ones(tmp_path):
             "排查 systemd 服务失败时优先查看 journalctl 输出。",
             source_kind="manual",
             tier="working",
+            retention_session_id="heat-test",
         )["record"]
         cold = service.ingest_text(
             "临时记录：演示环境的壁纸切换脚本存放位置。",
             source_kind="manual",
             tier="working",
+            retention_session_id="heat-test",
         )["record"]
 
         for _ in range(3):
-            service.search("journalctl systemd 服务失败", limit=5)
+            service.search("journalctl systemd 服务失败", limit=5, session_id="heat-test")
 
         policy = service.memory_policy_status()
         candidates = policy["eviction_candidates"]

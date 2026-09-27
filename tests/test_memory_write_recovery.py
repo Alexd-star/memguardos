@@ -258,7 +258,7 @@ def _version_operation(service, operation):
         )
     if operation == "promote":
         return created.memory_id, lambda: service.promote_memory(
-            created.memory_id, "working"
+            created.memory_id, "working", session_id="recovery-test"
         )
     service.update_memory(created.memory_id, "The Lark project meets on Friday.")
     return created.memory_id, lambda: service.rollback(

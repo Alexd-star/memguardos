@@ -1339,6 +1339,7 @@ def test_runner_adds_verified_procedural_result_when_model_answer_is_incomplete(
             lesson="后续同类任务复用已验证路径",
         ),
         source_uri="openhands://procedural-history/tool",
+        session_id="session-procedural-fallback",
     )
 
     def conversation_factory(**kwargs):

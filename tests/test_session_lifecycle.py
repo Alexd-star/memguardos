@@ -1,0 +1,187 @@
+import sqlite3
+
+from memguard.api.server import handle_request
+from memguard.cli.memguard import main as user_cli_main
+from memguard.cli.memctl import build_parser as memctl_parser
+from memguard.models import MemoryRecord
+from memguard.retrieval.vector_cache import vector_content_hash
+from memguard.service import MemGuardService
+from memguard.store.sqlite_meta import SQLiteMetaStore
+
+
+def _service(tmp_path):
+    return MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+
+
+def test_session_facts_are_isolated_across_retrieval_and_updates(tmp_path):
+    service = _service(tmp_path)
+    try:
+        first = service.ingest_text(
+            "蓝河项目发布日是周三。", tier="session", retention_session_id="session-a",
+        )["record"]
+        second = service.ingest_text(
+            "蓝河项目发布日是周三。", tier="session", retention_session_id="session-b",
+        )["record"]
+        assert first.memory_id != second.memory_id
+        duplicate = service.ingest_text(
+            "蓝河项目发布日是周三。", tier="session", retention_session_id="session-a",
+        )
+        assert duplicate["duplicate"] is True
+        corrected = service.ingest_text(
+            "蓝河项目发布日改为周四。", tier="session", retention_session_id="session-a",
+        )
+        assert corrected["updated"] is True
+        assert corrected["record"].memory_id == first.memory_id
+        assert "周四" in service.meta.get_memory(first.memory_id)["content"]
+        assert "周三" in service.meta.get_memory(second.memory_id)["content"]
+
+        for session_id, expected_id, excluded_id in (
+            ("session-a", first.memory_id, second.memory_id),
+            ("session-b", second.memory_id, first.memory_id),
+        ):
+            hits = service.search("蓝河项目发布日", session_id=session_id, limit=10)
+            ids = {hit["memory_id"] for hit in hits}
+            assert expected_id in ids
+            assert excluded_id not in ids
+            context = service.build_agent_context(
+                "蓝河项目发布日", stage="planning", agent_name="test",
+                session_id=session_id,
+            )
+            assert excluded_id not in str(context.get("selected_memory_ids"))
+        assert service.search("蓝河项目发布日", session_id="session-c") == []
+        assert service.search("蓝河项目发布日") == []
+        assert first.memory_id not in {row["memory_id"] for row in service.graph_search("蓝河项目", session_id="session-b")}
+        assert second.memory_id not in {row["memory_id"] for row in service.meta.list_recent_memories(10, session_id="session-a")}
+        for record in (first, second):
+            current = service.meta.get_memory(record.memory_id)
+            service.meta.upsert_memory_embedding(
+                record.memory_id, vector_content_hash(current["summary"], current["content"]),
+                service.EMBEDDING_BACKEND, service.EMBEDDING_MODEL_REVISION, [1.0, 0.0],
+            )
+        vectors, complete = service.meta.list_dense_candidate_vectors(
+            service.EMBEDDING_BACKEND, service.EMBEDDING_MODEL_REVISION,
+            service.namespace, 10, session_id="session-a",
+        )
+        assert complete and {memory_id for memory_id, _ in vectors} == {first.memory_id}
+    finally:
+        service.close()
+
+
+def test_session_end_preserves_other_sessions_and_promoted_memory(tmp_path):
+    service = _service(tmp_path)
+    try:
+        disposable = service.ingest_text(
+            "当前会话暂存蓝河环境日志。", tier="working", retention_session_id="session-a",
+        )["record"]
+        promoted = service.ingest_text(
+            "蓝河项目使用本地构建脚本。", tier="session", retention_session_id="session-a",
+        )["record"]
+        other = service.ingest_text(
+            "另一个会话暂存白鹭环境日志。", tier="working", retention_session_id="session-b",
+        )["record"]
+        long_term = service.ingest_text("长期保留：白鹭项目采用增量测试。", tier="long_term")["record"]
+        assert service.promote_memory(promoted.memory_id, "long_term", session_id="session-b")["reason"] == "session_mismatch"
+        assert service.promote_memory(promoted.memory_id, "long_term")["record"].retention_session_id == ""
+        preview = service.evict_session("session-a")
+        assert preview["memory_ids"] == [disposable.memory_id]
+        assert not preview["evicted"]
+        result = service.evict_session("session-a", confirm=True)
+        assert result["evicted"] is True
+        assert result["memory_ids"] == [disposable.memory_id]
+        assert not service.search("蓝河环境日志", session_id="session-a")
+        assert service.meta.get_memory(other.memory_id)["deleted"] == 0
+        assert service.meta.get_memory(promoted.memory_id)["deleted"] == 0
+        assert service.meta.get_memory(long_term.memory_id)["deleted"] == 0
+        assert service.search("蓝河项目使用本地构建脚本", session_id="session-b")
+    finally:
+        service.close()
+
+
+def test_temporary_write_requires_explicit_session_and_api_routes_it(tmp_path):
+    service = _service(tmp_path)
+    try:
+        assert service.ingest_text("本轮调试只看白鹭日志。", tier="working")["reason"] == "session_required"
+        assert service.ingest_natural_memory("本次会话临时记录白鹭日志。", tier="session")["reason"] == "session_required"
+        request = {"command": "ingest", "text": "本轮只保存白鹭构建日志。", "tier": "session", "session_id": "web-a"}
+        stored = handle_request(service, request)
+        assert stored["ok"] is True and stored["result"]["stored"] is True
+        memory_id = stored["result"]["memory_id"]
+        own = handle_request(service, {"command": "search", "query": "白鹭构建日志", "session_id": "web-a"})
+        foreign = handle_request(service, {"command": "search", "query": "白鹭构建日志", "session_id": "web-b"})
+        assert memory_id in {item["memory_id"] for item in own["result"]}
+        assert memory_id not in {item["memory_id"] for item in foreign["result"]}
+        ended = handle_request(service, {"command": "evict_session", "session_id": "web-a", "confirm": True})
+        assert ended["ok"] is True
+        assert memory_id in ended["result"]["memory_ids"]
+    finally:
+        service.close()
+
+
+def test_legacy_record_deserialization_has_unbound_session():
+    record = MemoryRecord.from_dict({
+        "memory_id": "mem_legacy", "type": "knowledge", "scope": "default",
+        "source": {"kind": "manual"},
+    })
+    assert record.retention_session_id == ""
+
+
+def test_existing_database_adds_retention_session_column(tmp_path):
+    path = tmp_path / "legacy.sqlite3"
+    original = SQLiteMetaStore(path)
+    original.close()
+    with sqlite3.connect(path) as connection:
+        connection.execute("DROP INDEX idx_memory_retention_session")
+        connection.execute("ALTER TABLE memory DROP COLUMN retention_session_id")
+    upgraded = SQLiteMetaStore(path)
+    try:
+        columns = {row["name"] for row in upgraded.conn.execute("PRAGMA table_info(memory)")}
+        assert "retention_session_id" in columns
+    finally:
+        upgraded.close()
+
+
+def test_preference_conflicts_do_not_merge_distinct_sessions(tmp_path):
+    service = _service(tmp_path)
+    try:
+        one = service.ingest_natural_memory("本次会话搜索代码优先用 rg。", session_id="session-a")
+        two = service.ingest_natural_memory("本次会话搜索代码优先用 grep。", session_id="session-b")
+        assert one["stored"] and two["stored"]
+        resolved = service.resolve_conflicts()
+        assert not any(
+            {one["record"]["memory_id"], two["record"]["memory_id"]}
+            <= set(item["candidate_memory_ids"])
+            for item in resolved["resolutions"]
+        )
+    finally:
+        service.close()
+
+
+def test_public_cli_session_flow(tmp_path, capsys):
+    common = ["--store", str(tmp_path / "cli.segment"), "--db", str(tmp_path / "cli.sqlite3")]
+    assert user_cli_main(common + ["remember", "本次会话临时记录蓝河构建策略。", "--session-id", "cli-a"]) == 0
+    capsys.readouterr()
+    assert user_cli_main(common + ["search", "蓝河构建策略", "--session-id", "cli-a"]) == 0
+    assert "记忆检索" in capsys.readouterr().out
+    assert user_cli_main(common + ["search", "蓝河构建策略", "--session-id", "cli-b"]) == 1
+    capsys.readouterr()
+    assert user_cli_main(common + ["end-session", "--session-id", "cli-a", "--yes"]) == 0
+    assert "临时记忆" in capsys.readouterr().out
+    assert user_cli_main(common + ["search", "蓝河构建策略", "--session-id", "cli-a"]) == 1
+    assert memctl_parser().parse_args(["search", "蓝河", "--session-id", "cli-a"]).session_id == "cli-a"
+
+
+def test_session_end_rejects_changed_preview(tmp_path):
+    service = _service(tmp_path)
+    try:
+        first = service.ingest_text("本轮仅记录蓝河构建失败。", tier="session", retention_session_id="web-a")["record"]
+        preview = handle_request(service, {"command": "evict_session", "session_id": "web-a"})["result"]
+        second = service.ingest_text("本轮仅记录白鹭构建失败。", tier="session", retention_session_id="web-a")["record"]
+        rejected = handle_request(service, {
+            "command": "evict_session", "session_id": "web-a", "confirm": True,
+            "expected_versions": preview["expected_versions"],
+        })
+        assert rejected["ok"] is False and rejected["error"] == "stale_preview"
+        assert service.meta.get_memory(first.memory_id)["deleted"] == 0
+        assert service.meta.get_memory(second.memory_id)["deleted"] == 0
+    finally:
+        service.close()

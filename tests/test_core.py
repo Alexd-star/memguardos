@@ -221,6 +221,7 @@ def test_natural_language_retention_maps_to_session_and_no_store_is_respected(tm
         temporary = service.ingest_text(
             "知识记忆：临时项目代号是蓝河，该信息只保留到本次演示结束。",
             source_kind="user_cli",
+            retention_session_id="retention-test",
         )
         skipped = service.ingest_text(
             "不要保存这条：临时项目代号是青山。",
@@ -1026,13 +1027,13 @@ def test_search_candidates_skip_fallback_when_fts_fills_budget(tmp_path, monkeyp
             for index in range(8)
         ]
         calls = {"graph": 0, "recent": 0}
-        monkeypatch.setattr(service.meta, "search_text", lambda query, limit: fts_rows[:limit])
+        monkeypatch.setattr(service.meta, "search_text", lambda query, limit, session_id="": fts_rows[:limit])
 
-        def graph_search(query, limit):
+        def graph_search(query, limit, session_id=""):
             calls["graph"] += 1
             return []
 
-        def list_recent_memories(limit, exclude_ids=None):
+        def list_recent_memories(limit, exclude_ids=None, session_id=""):
             calls["recent"] += 1
             return []
 
@@ -1059,7 +1060,7 @@ def test_search_candidates_fill_remaining_budget_without_duplicates(tmp_path, mo
         monkeypatch.setattr(
             service.meta,
             "search_text",
-            lambda query, limit: [
+            lambda query, limit, session_id="": [
                 {"memory_id": "fts-1"},
                 {"memory_id": "shared"},
             ],
@@ -1067,14 +1068,14 @@ def test_search_candidates_fill_remaining_budget_without_duplicates(tmp_path, mo
         monkeypatch.setattr(
             service.meta,
             "graph_search",
-            lambda query, limit: [
+            lambda query, limit, session_id="": [
                 {"memory_id": "shared"},
                 {"memory_id": "graph-1"},
             ],
         )
         observed = {}
 
-        def list_recent_memories(limit, exclude_ids=None):
+        def list_recent_memories(limit, exclude_ids=None, session_id=""):
             observed["limit"] = limit
             observed["exclude_ids"] = set(exclude_ids or [])
             return [
@@ -1104,18 +1105,18 @@ def test_search_candidates_use_offline_aliases_before_recent_fallback(tmp_path, 
     try:
         calls = []
 
-        def search_text(query, limit):
+        def search_text(query, limit, session_id=""):
             calls.append(query)
             if query == "cgroup":
                 return [{"memory_id": "cross-language-match"}]
             return []
 
         monkeypatch.setattr(service.meta, "search_text", search_text)
-        monkeypatch.setattr(service.meta, "graph_search", lambda query, limit: [])
+        monkeypatch.setattr(service.meta, "graph_search", lambda query, limit, session_id="": [])
         monkeypatch.setattr(
             service.meta,
             "list_recent_memories",
-            lambda limit, exclude_ids=None: [{"memory_id": "recent-fallback"}],
+            lambda limit, exclude_ids=None, session_id="": [{"memory_id": "recent-fallback"}],
             raising=False,
         )
 
@@ -1365,7 +1366,7 @@ def test_natural_language_sensitive_pattern_add_and_suggest(tmp_path, monkeypatc
 def test_memory_tier_promote_and_evict(tmp_path):
     service = make_service(tmp_path)
     try:
-        working = service.ingest_text("临时工作记忆：只在当前任务中使用。", tier="working")["record"]
+        working = service.ingest_text("临时工作记忆：只在当前任务中使用。", tier="working", retention_session_id="tier-test")["record"]
         assert working.tier == "working"
         assert service.list_memories(tier="working")[0]["memory_id"] == working.memory_id
         current_hash = vector_content_hash(working.summary, working.content)
@@ -1411,7 +1412,7 @@ def test_memory_tier_promote_and_evict(tmp_path):
             }
         ]
 
-        session = service.ingest_text("会话记忆：本轮调试使用。", tier="session")["record"]
+        session = service.ingest_text("会话记忆：本轮调试使用。", tier="session", retention_session_id="tier-test")["record"]
         dry = service.evict_tier("session", confirm=False)
         assert dry["candidate_count"] == 1
         assert service.meta.conn.execute(
@@ -1432,8 +1433,8 @@ def test_memory_tier_promote_and_evict(tmp_path):
 def test_memory_policy_status_reports_tiers_candidates_and_storage(tmp_path):
     service = make_service(tmp_path)
     try:
-        working = service.ingest_text("临时工作记忆：用于当前任务调试。", tier="working")["record"]
-        session = service.ingest_text("会话记忆：本轮答辩材料整理。", tier="session")["record"]
+        working = service.ingest_text("临时工作记忆：用于当前任务调试。", tier="working", retention_session_id="policy-test")["record"]
+        session = service.ingest_text("会话记忆：本轮答辩材料整理。", tier="session", retention_session_id="policy-test")["record"]
         service.ingest_text("长期知识：systemd MemoryMax 可以限制服务内存。", tier="long_term")
 
         before = service.memory_policy_status(eviction_limit=2)
@@ -1495,13 +1496,14 @@ def test_structured_tool_result_ingestion(tmp_path):
                 tool_name="pytest",
             ),
             source_uri="tool_result_success.json",
+            session_id="tool-test",
         )
         assert result["stored"] is True
         record = result["record"]
         assert record.type == "knowledge"
         assert record.subtype == "tool_trace"
         assert record.tier == "session"
-        hits = service.search("pytest passed test_report")
+        hits = service.search("pytest passed test_report", session_id="tool-test")
         assert any(hit["memory_id"] == record.memory_id for hit in hits)
     finally:
         service.close()
@@ -1524,6 +1526,7 @@ def test_tool_result_is_indexed_as_state_action_result_procedural_memory(tmp_pat
                 lesson="after editing memguardd.service, reload and restart then verify active state",
             ),
             source_uri="real_tool_trace.json",
+            session_id="tool-test",
         )
         assert result["stored"] is True
         record = result["record"]
@@ -1532,7 +1535,7 @@ def test_tool_result_is_indexed_as_state_action_result_procedural_memory(tmp_pat
         assert "state_before=memguardd inactive after unit change" in record.content
         assert "state_after=memguardd active" in record.content
         assert "lesson=after editing memguardd.service" in record.content
-        hits = service.search("unit change restart verify active procedural", limit=5)
+        hits = service.search("unit change restart verify active procedural", limit=5, session_id="tool-test")
         assert any(hit["memory_id"] == record.memory_id for hit in hits)
     finally:
         service.close()
@@ -1615,11 +1618,11 @@ def test_shell_history_ingestion_as_user_behavior(tmp_path):
     try:
         parsed = parse_shell_history(history.read_text(encoding="utf-8").splitlines())
         assert [event.command for event in parsed] == ["rg TODO memguard", "pytest -q", "sudo rm -rf /tmp/memguard-test"]
-        result = service.ingest_shell_history(history)
+        result = service.ingest_shell_history(history, session_id="history-test")
         assert result["stored_count"] == 3
-        hits = service.search("pytest shell command", limit=5)
+        hits = service.search("pytest shell command", limit=5, session_id="history-test")
         assert any(hit["subtype"] == "behavior_trace" for hit in hits)
-        risky = service.search("sudo rm high risk", limit=5)
+        risky = service.search("sudo rm high risk", limit=5, session_id="history-test")
         assert any(hit["subtype"] == "behavior_risk" for hit in risky)
     finally:
         service.close()
@@ -1780,6 +1783,7 @@ def test_forgetting_preserves_polarity_and_expands_high_risk_topic(tmp_path):
         learned_policy = service.ingest_text(
             "用户行为偏好：shell history 出现 rm -rf、dd、mkfs 时，Agent 必须二次确认。",
             source_kind="user_behavior",
+            retention_session_id="behavior-test",
         )["record"]
         negative = service.ingest_text(
             "知识：普通缓存清理不等于精准遗忘，不能替代索引清理和审计链。"
@@ -2109,6 +2113,7 @@ def test_local_api_natural_ingest_enforces_product_memory_policy(tmp_path):
                 "source_kind": "dashboard",
                 "source_uri": "web_dashboard",
                 "natural": True,
+                "session_id": "web-test",
             },
         )
         preferences = handle_request(
@@ -2155,7 +2160,7 @@ def test_local_api_internal_errors_are_auditable_without_leaking_details(tmp_pat
     try:
         original_search = service.search
 
-        def broken_search(_query: str, limit: int = 5, audit: bool = True):
+        def broken_search(_query: str, limit: int = 5, audit: bool = True, session_id: str = ""):
             raise RuntimeError("database password=secret leaked implementation detail")
 
         service.search = broken_search

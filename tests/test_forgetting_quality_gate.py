@@ -30,6 +30,7 @@ def test_natural_language_forgetting_meets_release_quality_gate(tmp_path):
                 str(row["text"]),
                 source_kind=str(row.get("source_kind", "benchmark")),
                 source_uri=str(row.get("source_uri", row["label"])),
+                retention_session_id="quality-gate",
             )
             id_to_label[result["record"].memory_id] = str(row["label"])
 

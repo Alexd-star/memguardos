@@ -130,8 +130,9 @@ def _finalize_with_optional_audit(report: Dict[str, object], service: MemGuardSe
         result = service.ingest_os_event(json.dumps(event, ensure_ascii=False))
         report["audit_event"] = {
             "attempted": True,
-            "stored": bool(result.get("stored")),
+            "stored": bool(result.get("os_audit_event_id")),
             "reason": result.get("reason", ""),
+            "audit_event_id": result.get("os_audit_event_id", ""),
         }
         report["verification"]["audit_chain_ok"] = bool(service.verify_audit().get("ok"))
     _maybe_notify(report, notify)

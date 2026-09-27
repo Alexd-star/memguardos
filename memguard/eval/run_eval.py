@@ -177,9 +177,9 @@ def run(latency_size: int = 200, latency_queries: int = 100) -> dict:
 
             tier_service = MemGuardService(store_path=root / "tier.segment", db_path=root / "tier.sqlite3")
             try:
-                working = tier_service.ingest_text("临时调试上下文，只在当前任务中使用。", tier="working")["record"]
+                working = tier_service.ingest_text("临时调试上下文，只在当前任务中使用。", tier="working", retention_session_id="eval-tier")["record"]
                 promoted = tier_service.promote_memory(working.memory_id, "long_term")
-                session = tier_service.ingest_text("本轮会话记忆，结束后可清理。", tier="session")["record"]
+                session = tier_service.ingest_text("本轮会话记忆，结束后可清理。", tier="session", retention_session_id="eval-tier")["record"]
                 policy_before_evict = tier_service.memory_policy_status(eviction_limit=5)
                 evicted = tier_service.evict_tier("session", confirm=True)
                 policy_after_evict = tier_service.memory_policy_status(eviction_limit=5)
@@ -361,6 +361,7 @@ def run_concurrent_search_load(
                 source_kind="concurrent_load",
                 source_uri="concurrent_%04d" % idx,
                 tier="session" if idx % 5 == 0 else "long_term",
+                retention_session_id="eval-load",
             )
     finally:
         seed_service.close()
@@ -488,6 +489,7 @@ def run_procedural_memory_eval(root: Path) -> dict:
                     lesson=row.get("lesson", ""),
                 ),
                 source_uri=row.get("source_uri", row["label"]),
+                session_id="procedural-eval",
             )
             if result.get("stored"):
                 record = result["record"]
@@ -497,13 +499,13 @@ def run_procedural_memory_eval(root: Path) -> dict:
         recalls = []
         subtype_hits = []
         for row in cases:
-            hits = service.search(row["query"], limit=5)
+            hits = service.search(row["query"], limit=5, session_id="procedural-eval")
             actual_labels = [id_to_label.get(hit["memory_id"], hit["memory_id"]) for hit in hits]
             recalls.append(recall_at_k([row["label"]], actual_labels, 5))
             subtype_hits.append(1.0 if any(hit.get("subtype") == "procedural_trace" for hit in hits) else 0.0)
 
-        graph = service.hierarchical_graph_search("systemd", limit=5)
-        context = service.build_context("pytest systemd 修复经验", limit=5, token_budget=600)
+        graph = service.hierarchical_graph_search("systemd", limit=5, session_id="procedural-eval")
+        context = service.build_context("pytest systemd 修复经验", limit=5, token_budget=600, session_id="procedural-eval")
         return {
             "state_action_result_cases": len(cases),
             "stored_cases": len(label_to_id),

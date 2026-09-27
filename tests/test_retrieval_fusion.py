@@ -208,6 +208,7 @@ def test_multi_term_command_signature_is_protected_from_semantic_noise(tmp_path)
             "systemctl restart memguardd category=maintenance "
             "risk=service_disruption",
             source_kind="user_behavior",
+            retention_session_id="command-test",
         )["record"]
         service.ingest_text(
             "systemctl status memguardd 用于读取服务状态，不会重启服务。",
@@ -216,6 +217,7 @@ def test_multi_term_command_signature_is_protected_from_semantic_noise(tmp_path)
         hits = service.search(
             "bash history 中 sudo systemctl restart memguardd 属于什么行为风险？",
             limit=5,
+            session_id="command-test",
         )
         assert hits[0]["memory_id"] == expected.memory_id
         assert hits[0]["retrieval_explanation"]["protected_exact_hit"] is True
@@ -230,6 +232,7 @@ def test_command_context_words_do_not_hide_destructive_action_anchor(tmp_path):
             "用户行为偏好：shell history 出现 rm -rf、dd、mkfs 时，"
             "Agent 必须先二次确认。",
             source_kind="user_behavior",
+            retention_session_id="command-test",
         )["record"]
         service.ingest_text(
             "真实 shell history 难例：history -d 只清理记录，不等于 "
@@ -240,6 +243,7 @@ def test_command_context_words_do_not_hide_destructive_action_anchor(tmp_path):
         hits = service.search(
             "shell history 出现 sudo rm -rf 或 mkfs 时要不要先确认？",
             limit=5,
+            session_id="command-test",
         )
 
         assert hits[0]["memory_id"] == expected.memory_id

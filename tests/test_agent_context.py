@@ -50,6 +50,7 @@ def seeded_service(tmp_path) -> MemGuardService:
             lesson="先检查配置再重启服务",
         ),
         source_uri="agent://tool-result-1",
+        session_id="session-a",
     )
     return service
 
@@ -168,9 +169,9 @@ def test_agent_context_uses_one_candidate_search(tmp_path, monkeypatch):
         calls = {"count": 0}
         original = service.search
 
-        def counted_search(query, limit=5, audit=True):
+        def counted_search(query, limit=5, audit=True, session_id=""):
             calls["count"] += 1
-            return original(query, limit=limit, audit=audit)
+            return original(query, limit=limit, audit=audit, session_id=session_id)
 
         monkeypatch.setattr(service, "search", counted_search)
 

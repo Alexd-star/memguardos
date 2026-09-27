@@ -19,7 +19,7 @@ def test_compact_forget_removes_plaintext_from_managed_storage(tmp_path):
         )["record"]
         assert service.store.raw_contains(sentinel)
 
-        result = service.forget(sentinel, confirm=True, compact=True)
+        result = service.forget("忘掉 " + sentinel, confirm=True, compact=True)
         row = service.meta.get_memory(record.memory_id)
 
         assert result["forgotten"] == [record.memory_id]

@@ -40,6 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Memory namespace/session id. Defaults to MEMGUARD_NAMESPACE or 'default'.",
     )
+    parser.add_argument("--session-id", default=os.environ.get("MEMGUARD_SESSION_ID", ""), help="Session for temporary memory access")
     sub = parser.add_subparsers(dest="command", required=True)
 
     ingest = sub.add_parser("ingest", help="Ingest text or a file into memory")
@@ -88,6 +89,10 @@ def build_parser() -> argparse.ArgumentParser:
     evict = sub.add_parser("evict-tier", help="Evict working/session tier memories")
     evict.add_argument("tier", choices=["working", "session"])
     evict.add_argument("--yes", action="store_true")
+    evict_session = sub.add_parser("evict-session", help="End one session and erase its temporary memories")
+    evict_session.add_argument("--yes", action="store_true")
+    for name in ("ingest", "ingest-tool-result", "ingest-history", "ingest-os-event", "ingest-auditd", "promote", "evict-session"):
+        sub.choices[name].add_argument("--session-id", default=argparse.SUPPRESS, help="Session for temporary memory")
     memory_policy = sub.add_parser("memory-policy", help="Show tiered memory policy, storage footprint, cgroup status, and eviction candidates")
     memory_policy.add_argument("--eviction-limit", type=int, default=10)
     temporal = sub.add_parser("temporal-status", help="Show temporal validity windows for active and superseded memories")
@@ -333,6 +338,8 @@ def build_parser() -> argparse.ArgumentParser:
     agent_forget.add_argument("--no-compact", action="store_true")
     agent_forget.add_argument("--no-external-persistence", action="store_true")
 
+    for name in ("search", "build-context", "build-prompt", "generate-answer", "graph-search", "hierarchical-graph-search", "related"):
+        sub.choices[name].add_argument("--session-id", default=argparse.SUPPRESS, help="Session for temporary memory retrieval")
     return parser
 
 
@@ -487,7 +494,10 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "ingest":
             text, source_uri = _read_ingest(args)
-            result = service.ingest_text(text, source_kind=args.source_kind, source_uri=source_uri, tier=args.tier)
+            result = service.ingest_text(
+                text, source_kind=args.source_kind, source_uri=source_uri, tier=args.tier,
+                retention_session_id=args.session_id,
+            )
             if result["stored"]:
                 record = result["record"]
                 print(
@@ -510,7 +520,7 @@ def main(argv: list[str] | None = None) -> int:
                 if result.get("sensitivity"):
                     payload["sensitivity"] = result["sensitivity"].__dict__
                 print(json.dumps(payload, ensure_ascii=False))
-            return 0
+            return 2 if result.get("reason") == "session_required" else 0
         if args.command == "feedback-home":
             print(json.dumps(service.feedback_home_snapshot(limit=args.limit), ensure_ascii=False, indent=2))
             return 0
@@ -541,7 +551,7 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "ingest-tool-result":
             path = Path(args.file)
-            result = service.ingest_tool_result(ToolResult.from_json_file(path), source_uri=str(path))
+            result = service.ingest_tool_result(ToolResult.from_json_file(path), source_uri=str(path), session_id=args.session_id)
             printable = dict(result)
             if printable.get("record"):
                 record = printable["record"]
@@ -555,19 +565,20 @@ def main(argv: list[str] | None = None) -> int:
             if printable.get("sensitivity"):
                 printable["sensitivity"] = printable["sensitivity"].__dict__
             print(json.dumps(printable, ensure_ascii=False, indent=2))
-            return 0
+            return 2 if result.get("reason") == "session_required" else 0
 
         if args.command == "ingest-config":
             print(json.dumps(service.ingest_config(Path(args.file)), ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "ingest-history":
-            print(json.dumps(service.ingest_shell_history(Path(args.file), limit=args.limit), ensure_ascii=False, indent=2))
-            return 0
+            result = service.ingest_shell_history(Path(args.file), limit=args.limit, session_id=args.session_id)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 2 if result.get("reason") == "session_required" else 0
 
         if args.command == "ingest-os-event":
             raw = _read_os_event(args)
-            result = service.ingest_os_event(raw)
+            result = service.ingest_os_event(raw, session_id=args.session_id)
             printable = dict(result)
             if printable.get("record"):
                 record = printable["record"]
@@ -582,7 +593,7 @@ def main(argv: list[str] | None = None) -> int:
             events = parse_auditd_events(lines, key=args.key)
             ingested = []
             for event in events:
-                result = service.ingest_os_event(json.dumps(event.to_os_event_json(), ensure_ascii=False))
+                result = service.ingest_os_event(json.dumps(event.to_os_event_json(), ensure_ascii=False), session_id=args.session_id)
                 ingested.append(
                     {
                         "audit_id": event.audit_id,
@@ -616,7 +627,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "promote":
-            result = service.promote_memory(args.memory_id, args.tier)
+            result = service.promote_memory(args.memory_id, args.tier, session_id=args.session_id)
             printable = dict(result)
             if printable.get("record"):
                 record = printable["record"]
@@ -627,6 +638,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "evict-tier":
             print(json.dumps(service.evict_tier(args.tier, confirm=args.yes), ensure_ascii=False, indent=2))
             return 0
+
+        if args.command == "evict-session":
+            result = service.evict_session(args.session_id, confirm=args.yes)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result.get("evicted") or not args.yes else 2
 
         if args.command == "memory-policy":
             print(json.dumps(service.memory_policy_status(eviction_limit=args.eviction_limit), ensure_ascii=False, indent=2))
@@ -682,7 +698,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "search":
-            print(json.dumps(service.search(args.query, limit=args.top_k), ensure_ascii=False, indent=2))
+            print(json.dumps(service.search(args.query, limit=args.top_k, session_id=args.session_id), ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "batch-search":
@@ -693,7 +709,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "build-context":
             print(
                 json.dumps(
-                    service.build_context(args.query, limit=args.top_k, max_chars=args.max_chars, token_budget=args.token_budget),
+                    service.build_context(args.query, limit=args.top_k, max_chars=args.max_chars, token_budget=args.token_budget, session_id=args.session_id),
                     ensure_ascii=False,
                     indent=2,
                 )
@@ -701,12 +717,12 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "build-prompt":
-            context_package = service.build_context(args.query, limit=args.top_k, max_chars=args.max_chars, token_budget=args.token_budget)
+            context_package = service.build_context(args.query, limit=args.top_k, max_chars=args.max_chars, token_budget=args.token_budget, session_id=args.session_id)
             print(render_generation_prompt(context_package))
             return 0
 
         if args.command == "generate-answer":
-            context_package = service.build_context(args.query, limit=args.top_k, max_chars=args.max_chars, token_budget=args.token_budget)
+            context_package = service.build_context(args.query, limit=args.top_k, max_chars=args.max_chars, token_budget=args.token_budget, session_id=args.session_id)
             prompt_text = render_generation_prompt(context_package)
             api_key = Path(args.api_key_file).read_text(encoding="utf-8").strip() if args.api_key_file else ""
             try:
@@ -726,15 +742,15 @@ def main(argv: list[str] | None = None) -> int:
                 return 2
 
         if args.command == "graph-search":
-            print(json.dumps(service.graph_search(args.entity, limit=args.limit), ensure_ascii=False, indent=2))
+            print(json.dumps(service.graph_search(args.entity, limit=args.limit, session_id=args.session_id), ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "hierarchical-graph-search":
-            print(json.dumps(service.hierarchical_graph_search(args.entity, limit=args.limit), ensure_ascii=False, indent=2))
+            print(json.dumps(service.hierarchical_graph_search(args.entity, limit=args.limit, session_id=args.session_id), ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "related":
-            print(json.dumps(service.related(args.memory_id, limit=args.limit), ensure_ascii=False, indent=2))
+            print(json.dumps(service.related(args.memory_id, limit=args.limit, session_id=args.session_id), ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "forget":

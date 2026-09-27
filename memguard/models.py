@@ -82,6 +82,7 @@ class MemoryRecord:
     preference_explicit: bool = True
     agent_name: str = ""
     preference_session_id: str = ""
+    retention_session_id: str = ""
     project_root: str = ""
     task_type: str = ""
     trust_level: str = "trusted"
@@ -138,6 +139,7 @@ class MemoryRecord:
             preference_explicit=bool(data.get("preference_explicit", True)),
             agent_name=data.get("agent_name", ""),
             preference_session_id=data.get("preference_session_id", ""),
+            retention_session_id=data.get("retention_session_id", ""),
             project_root=data.get("project_root", ""),
             task_type=data.get("task_type", ""),
             trust_level=data.get("trust_level", "trusted"),
@@ -167,6 +169,7 @@ def make_memory(
     preference_explicit: bool = True,
     agent_name: str = "",
     preference_session_id: str = "",
+    retention_session_id: str = "",
     project_root: str = "",
     task_type: str = "",
     trust_level: str = "trusted",
@@ -192,6 +195,7 @@ def make_memory(
         preference_explicit=preference_explicit,
         agent_name=agent_name,
         preference_session_id=preference_session_id,
+        retention_session_id=retention_session_id,
         project_root=project_root,
         task_type=task_type,
         trust_level=trust_level,

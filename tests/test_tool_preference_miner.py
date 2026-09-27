@@ -33,6 +33,7 @@ def test_service_keeps_tool_statistics_as_experience_not_user_preference(tmp_pat
                 ToolResult(command="rg -n service memguard", exit_code=0, stdout="memguard/service.py:1", duration_ms=170),
             ],
             source_uri="batch_tool_stats.json",
+            session_id="tool-stats",
         )
         assert result["stored_count"] == 3
         assert result["preference_count"] == 0

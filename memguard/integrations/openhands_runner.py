@@ -141,11 +141,12 @@ class OpenHandsMemoryRunner:
                 if memory_id in versions and versions[memory_id] != version_id:
                     raise RuntimeError("Agent 上下文包含冲突的记忆版本")
                 versions[memory_id] = version_id
-        snapshot = {
-            "db_path": str(self.service.meta.path),
-            "namespace": self.service.namespace,
-            "versions": versions,
-        }
+        snapshot = {"versions": versions}
+        if self.memory_enabled:
+            snapshot.update({
+                "db_path": str(self.service.meta.path),
+                "namespace": self.service.namespace,
+            })
         payload = {
             "schema_version": "1.1",
             "trace_id": trace_id,
@@ -240,6 +241,7 @@ class OpenHandsMemoryRunner:
                         ),
                     ),
                     source_uri=event.source_uri,
+                    session_id=self.session_id,
                 )
                 if memory_result.get("stored"):
                     self._procedural_memories.append(

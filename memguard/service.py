@@ -71,7 +71,7 @@ from memguard.retrieval.vector_cache import vector_content_hash
 from memguard.sensitivity.custom_patterns import PatternValidationError, load_patterns, save_pattern, save_pattern_from_instruction, suggest_pattern_from_instruction
 from memguard.sensitivity.detector import SensitiveDetector
 from memguard.store.mmap_store import AppendOnlyMemoryStore
-from memguard.store.sqlite_meta import FactSlotConflict, SQLiteMetaStore
+from memguard.store.sqlite_meta import FactSlotConflict, SQLiteMetaStore, fact_slot_scope
 
 
 class MemGuardService:
@@ -105,7 +105,7 @@ class MemGuardService:
         self.erasure_intent_compiler = ErasureIntentCompiler()
         self.tool_preference_miner = ToolPreferenceMiner()
         self.journald = JournaldLogger()
-        self._search_cache: OrderedDict[Tuple[str, int, str, str], List[Dict[str, object]]] = OrderedDict()
+        self._search_cache: OrderedDict[Tuple[str, int, str, str, str], List[Dict[str, object]]] = OrderedDict()
         self._search_cache_limit = 128
         self._last_search_timings: Dict[str, float] = {}
         self._pending_hits: List[str] = []
@@ -382,6 +382,7 @@ class MemGuardService:
         self, text: str, source_kind: str = "manual", source_uri: str = "",
         tier: Optional[str] = None,
         source_link: Optional[Dict[str, object]] = None,
+        retention_session_id: str = "",
     ) -> Dict[str, object]:
         self._recover_pending_memory_writes()
         if source_link and source_link.get("relation") != "source_clause":
@@ -465,11 +466,20 @@ class MemGuardService:
         governance = assess_memory_source(stored_text, source_kind, source_uri)
         memory_type = extraction.memory_type
         subtype = extraction.subtype
-        existing = self.meta.find_active_memory_by_content(stored_text, self.namespace)
+        effective_tier = tier or infer_retention_tier(clean_text) or self._default_tier(memory_type, source_kind)
+        if effective_tier not in {"working", "session", "long_term"}:
+            raise ValueError("invalid memory tier")
+        session_scope = str(retention_session_id or "").strip() if effective_tier in {"working", "session"} else ""
+        if effective_tier in {"working", "session"} and not session_scope:
+            return {"stored": False, "reason": "session_required", "tier": effective_tier}
+        existing = self.meta.find_active_memory_by_content(
+            stored_text, self.namespace, tier=effective_tier, retention_session_id=session_scope,
+        )
         fact = parse_fact_slot(stored_text) if memory_type == "knowledge" and not sensitivity.labels else None
         if fact is not None:
             candidates = self.meta.find_active_fact_candidates(
-                self.namespace, fact.subject, fact.predicate,
+                fact_slot_scope(self.namespace, session_scope), fact.subject, fact.predicate,
+                tier=effective_tier,
             )
             if len(candidates) > 1:
                 return self._fact_review_required(
@@ -546,7 +556,6 @@ class MemGuardService:
                     audit_event_ids=[result["audit_event_id"]],
                 ).to_dict()
                 return result
-        effective_tier = tier or infer_retention_tier(clean_text) or self._default_tier(memory_type, source_kind)
         record = make_memory(
             content=stored_text,
             memory_type=memory_type,
@@ -555,6 +564,7 @@ class MemGuardService:
             subtype=subtype,
             scope=self.namespace,
             tier=effective_tier,
+            retention_session_id=session_scope,
             sensitivity=sensitivity,
             trust_level=governance.trust_level,
             trust_score=governance.trust_score,
@@ -572,7 +582,8 @@ class MemGuardService:
             ):
                 raise
             candidates = self.meta.find_active_fact_candidates(
-                self.namespace, fact.subject, fact.predicate,
+                fact_slot_scope(self.namespace, session_scope), fact.subject, fact.predicate,
+                tier=effective_tier,
             )
             if not candidates:
                 raise
@@ -643,7 +654,7 @@ class MemGuardService:
         *,
         source_kind: str = "user_cli",
         source_uri: str = "memguard",
-        session_id: str = "natural-memory",
+        session_id: str = "",
         tier: Optional[str] = None,
     ) -> Dict[str, object]:
         """Ingest natural language through one semantic and safety decision path.
@@ -655,6 +666,9 @@ class MemGuardService:
         """
 
         requested_tier = tier or infer_retention_tier(text)
+        if requested_tier in {"working", "session"} and not str(session_id or "").strip():
+            return {"stored": False, "reason": "session_required", "tier": requested_tier}
+        effective_session_id = str(session_id or new_id("session"))
         event_text = str(text or "")
         if requested_tier in {"working", "session"} and not any(
             marker in event_text for marker in ("本轮", "本次会话", "当前会话", "这个会话")
@@ -663,7 +677,7 @@ class MemGuardService:
         event = AgentInteractionEvent(
             agent_name="memguardos",
             agent_version="product",
-            session_id=str(session_id or "natural-memory"),
+            session_id=effective_session_id,
             turn_id=new_id("turn"),
             sequence=1,
             event_type="user_message",
@@ -699,7 +713,8 @@ class MemGuardService:
                             else None
                         )
                         knowledge = self.ingest_text(
-                            clause, source_kind=source_kind, source_uri=source_uri, tier=tier,
+                            clause, source_kind=source_kind, source_uri=source_uri, tier=requested_tier,
+                            retention_session_id=effective_session_id,
                             source_link={
                                 "event_id": event.event_id,
                                 "relation": "source_clause",
@@ -739,7 +754,7 @@ class MemGuardService:
                 "records": records,
                 "memory_ids": memory_ids,
                 "feedback": merge_memory_change_summaries(
-                    feedback_parts, namespace=self.namespace, source=source_kind, session_id=session_id
+                    feedback_parts, namespace=self.namespace, source=source_kind, session_id=effective_session_id
                 ),
                 "sensitive_notice": interaction.get("sensitive_notice"),
                 "sensitivity": sensitivity,
@@ -753,7 +768,8 @@ class MemGuardService:
             text,
             source_kind=source_kind,
             source_uri=source_uri,
-            tier=tier,
+            tier=requested_tier,
+            retention_session_id=effective_session_id,
         )
         sensitivity = result.get("sensitivity")
         if sensitivity is not None and not isinstance(sensitivity, dict):
@@ -761,19 +777,30 @@ class MemGuardService:
         result["natural_intent"] = "memory_content"
         return result
 
-    def ingest_tool_result(self, tool_result: ToolResult, source_uri: str = "tool_result") -> Dict[str, object]:
+    def ingest_tool_result(
+        self, tool_result: ToolResult, source_uri: str = "tool_result", session_id: str = "",
+    ) -> Dict[str, object]:
         return self.ingest_text(
             tool_result.to_memory_text(),
             source_kind="tool_result",
             source_uri=source_uri,
             tier="session" if tool_result.exit_code == 0 else "working",
+            retention_session_id=session_id,
         )
 
-    def ingest_tool_results(self, tool_results: List[ToolResult], source_uri: str = "tool_results") -> Dict[str, object]:
+    def ingest_tool_results(
+        self, tool_results: List[ToolResult], source_uri: str = "tool_results", session_id: str = "",
+    ) -> Dict[str, object]:
         if len(tool_results) > 200:
             raise ValueError("tool_results must contain at most 200 items")
+        if not str(session_id or "").strip():
+            return {
+                "stored_count": 0, "preference_count": 0, "experience_count": 0,
+                "results": [], "preferences": [], "experience_candidates": [],
+                "reason": "session_required",
+            }
         stored_results = [
-            self.ingest_tool_result(tool_result, source_uri="%s#%s" % (source_uri, index + 1))
+            self.ingest_tool_result(tool_result, source_uri="%s#%s" % (source_uri, index + 1), session_id=session_id)
             for index, tool_result in enumerate(tool_results)
         ]
         experience_results = []
@@ -783,7 +810,7 @@ class MemGuardService:
                     candidate.to_memory_text(),
                     source_kind="tool_result",
                     source_uri="%s#tool-experience:%s:%s" % (source_uri, candidate.domain, candidate.preferred_tool),
-                    tier="profile",
+                    tier="long_term",
                 )
             )
         return {
@@ -1243,7 +1270,7 @@ class MemGuardService:
         excluded = []
         for row in candidates:
             scope = str(row.get("preference_scope") or "global")
-            matches = {
+            matches = str(row.get("retention_session_id") or "") in {"", session_id} and {
                 "global": True,
                 "agent": str(row.get("agent_name") or "") == agent_name,
                 "project": bool(project_root) and str(row.get("project_root") or "") == project_root,
@@ -2059,6 +2086,7 @@ class MemGuardService:
             subtype=subtype,
             scope=self.namespace,
             tier="long_term" if observation.scope != "session" else "session",
+            retention_session_id=event.session_id if observation.scope == "session" else "",
             preference_topic=observation.topic,
             preference_value=observation.value,
             preference_scope=observation.scope,
@@ -2139,20 +2167,27 @@ class MemGuardService:
             "skipped": skipped,
         }
 
-    def ingest_behavior_event(self, event: BehaviorEvent) -> Dict[str, object]:
+    def ingest_behavior_event(self, event: BehaviorEvent, session_id: str = "") -> Dict[str, object]:
         return self.ingest_text(
             event.to_memory_text(),
             source_kind="user_behavior",
             source_uri="%s#%s" % (event.source, event.index),
             tier="session",
+            retention_session_id=session_id,
         )
 
-    def ingest_shell_history(self, path: Path, limit: int = 200) -> Dict[str, object]:
+    def ingest_shell_history(self, path: Path, limit: int = 200, session_id: str = "") -> Dict[str, object]:
+        if not str(session_id or "").strip():
+            return {
+                "source_uri": str(path), "events": 0, "stored_count": 0,
+                "blocked_count": 0, "records": [], "blocked": [],
+                "reason": "session_required",
+            }
         events = load_shell_history(path, limit=limit)
         records = []
         blocked = []
         for event in events:
-            result = self.ingest_behavior_event(event)
+            result = self.ingest_behavior_event(event, session_id=session_id)
             if result.get("stored"):
                 record = result["record"]
                 records.append(
@@ -2183,7 +2218,7 @@ class MemGuardService:
             "blocked": blocked,
         }
 
-    def ingest_os_event(self, raw_event: str) -> Dict[str, object]:
+    def ingest_os_event(self, raw_event: str, session_id: str = "") -> Dict[str, object]:
         event = parse_os_event(raw_event)
         detail = {
             "event_type": event.event_type,
@@ -2191,8 +2226,15 @@ class MemGuardService:
             "process": event.process,
             "action": event.action,
         }
-        self._audit("os_event", None, detail)
-        return self.ingest_text(event.to_memory_text(), source_kind="os_event", source_uri=event.path, tier="working")
+        audit = self._audit("os_event", None, detail)
+        result = self.ingest_text(
+            event.to_memory_text(), source_kind="os_event", source_uri=event.path,
+            tier="working", retention_session_id=session_id,
+        )
+        result["os_audit_event_id"] = _audit_event_id(audit)
+        if result.get("reason") == "session_required":
+            result["reason"] = "audit_only"
+        return result
 
     def update_memory(
         self, memory_id: str, text: str, reason: str = "manual update",
@@ -2285,6 +2327,7 @@ class MemGuardService:
             preference_explicit=previous.preference_explicit,
             agent_name=previous.agent_name,
             preference_session_id=previous.preference_session_id,
+            retention_session_id=previous.retention_session_id,
             project_root=previous.project_root,
             task_type=previous.task_type,
             trust_level=previous.trust_level,
@@ -2417,7 +2460,7 @@ class MemGuardService:
             "record": approved,
         }
 
-    def promote_memory(self, memory_id: str, tier: str) -> Dict[str, object]:
+    def promote_memory(self, memory_id: str, tier: str, session_id: str = "") -> Dict[str, object]:
         self._recover_pending_memory_writes()
         if tier not in {"working", "session", "long_term"}:
             return {"promoted": False, "reason": "invalid_tier", "tier": tier}
@@ -2429,6 +2472,11 @@ class MemGuardService:
             return {"promoted": False, "reason": "memory_not_found", "memory_id": memory_id}
         if record.tier == tier:
             return {"promoted": False, "reason": "already_in_tier", "record": record}
+        if record.retention_session_id and session_id and record.retention_session_id != str(session_id).strip():
+            return {"promoted": False, "reason": "session_mismatch", "tier": tier}
+        target_session = (str(session_id or "").strip() or record.retention_session_id) if tier != "long_term" else ""
+        if tier != "long_term" and not target_session:
+            return {"promoted": False, "reason": "session_required", "tier": tier}
         new_version_id = new_id("ver")
         record.invalidate(superseded_by=new_version_id)
 
@@ -2456,6 +2504,7 @@ class MemGuardService:
             preference_explicit=record.preference_explicit,
             agent_name=record.agent_name,
             preference_session_id=record.preference_session_id,
+            retention_session_id=target_session,
             project_root=record.project_root,
             task_type=record.task_type,
             trust_level=record.trust_level,
@@ -2495,6 +2544,36 @@ class MemGuardService:
             self._recover_pending_erasures()
         self._audit("tier_evict", None, {"tier": tier, "evicted": evicted})
         return {"evicted": True, "tier": tier, "memory_ids": evicted}
+
+    def evict_session(
+        self, session_id: str, confirm: bool = False,
+        expected_versions: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, object]:
+        scoped_id = str(session_id or "").strip()
+        if not scoped_id:
+            return {"evicted": False, "reason": "session_required", "memory_ids": []}
+        rows = self.meta.list_session_memories(scoped_id)
+        memory_ids = [str(row["memory_id"]) for row in rows]
+        current_versions = {str(row["memory_id"]): str(row["version_id"]) for row in rows}
+        if not confirm:
+            return {
+                "evicted": False, "session_id": scoped_id,
+                "candidate_count": len(rows), "memory_ids": memory_ids,
+                "expected_versions": current_versions,
+            }
+        if expected_versions is not None and expected_versions != current_versions:
+            return {"evicted": False, "reason": "stale_preview", "session_id": scoped_id, "memory_ids": []}
+        if not memory_ids:
+            return {"evicted": True, "session_id": scoped_id, "memory_ids": []}
+        result = self.forget_memory_ids(
+            memory_ids, reason="session ended", compact=True,
+            expected_versions=current_versions,
+        )
+        return {
+            "evicted": bool(result.get("ok", False)), "session_id": scoped_id,
+            "memory_ids": result.get("forgotten_memory_ids", []),
+            "reason": result.get("reason", ""), "verification": result.get("verification", []),
+        }
 
     def memory_policy_status(self, eviction_limit: int = 10) -> Dict[str, object]:
         self.flush_memory_hits()
@@ -2779,6 +2858,7 @@ class MemGuardService:
             preference_explicit=target.preference_explicit,
             agent_name=target.agent_name,
             preference_session_id=target.preference_session_id,
+            retention_session_id=target.retention_session_id,
             project_root=target.project_root,
             task_type=target.task_type,
             trust_level=target.trust_level,
@@ -2800,13 +2880,16 @@ class MemGuardService:
         )
         return {"rolled_back": True, "record": record}
 
-    def search(self, query: str, limit: int = 5, audit: bool = True) -> List[Dict[str, object]]:
+    def search(
+        self, query: str, limit: int = 5, audit: bool = True, session_id: str = "",
+    ) -> List[Dict[str, object]]:
         clean_query = query.strip()
         if not clean_query:
             return []
         cache_key = (
             clean_query, max(1, int(limit)), self.meta.memory_revision(),
             self.meta.embedding_revision(self.EMBEDDING_BACKEND, self.EMBEDDING_MODEL_REVISION),
+            session_id,
         )
         cached = self._search_cache.get(cache_key)
         if cached is not None:
@@ -2819,10 +2902,10 @@ class MemGuardService:
         started_at = perf_counter()
         intent = classify_query_intent(clean_query)
         candidates = self._search_candidates(
-            query, limit=max(limit * 8, 64), include_graph=False
+            query, limit=max(limit * 8, 64), include_graph=False, session_id=session_id,
         )
         dense_ids, dense_query_vector, dense_status = self._dense_candidate_ids(
-            clean_query, limit=max(limit * 4, 20)
+            clean_query, limit=max(limit * 4, 20), session_id=session_id,
         )
         recall_done_at = perf_counter()
         exact_ids: List[str] = []
@@ -2831,7 +2914,7 @@ class MemGuardService:
             known_ids = {str(item.get("memory_id") or "") for item in candidates}
             for memory_id in exact_ids:
                 record = self.meta.get_memory(memory_id)
-                if record and self._retrieval_record_is_eligible(record):
+                if record and self._retrieval_record_is_eligible(record, session_id):
                     if memory_id not in known_ids:
                         candidates.insert(0, record)
                         known_ids.add(memory_id)
@@ -2964,7 +3047,7 @@ class MemGuardService:
             verified_dense_ids = []
             for memory_id in dense_ids:
                 record = self.meta.get_memory(memory_id)
-                if record is None or not self._retrieval_record_is_eligible(record):
+                if record is None or not self._retrieval_record_is_eligible(record, session_id):
                     continue
                 verified_dense_ids.append(memory_id)
                 if memory_id not in by_id:
@@ -2977,8 +3060,12 @@ class MemGuardService:
             rankings["dense"] = verified_dense_ids
 
         if intent == QueryIntent.RELATIONAL:
-            graph_result = self.hierarchical_graph_search(
-                clean_query, limit=max(limit * 3, 10)
+            graph_result = (
+                self.hierarchical_graph_search(
+                    clean_query, limit=max(limit * 3, 10), session_id=session_id,
+                ) if session_id else self.hierarchical_graph_search(
+                    clean_query, limit=max(limit * 3, 10),
+                )
             )
             summary_rows = graph_result.get("layers", {}).get("summary", [])
             graph_ids = []
@@ -2990,7 +3077,7 @@ class MemGuardService:
                 if memory_id in by_id:
                     continue
                 record = self.meta.get_memory(memory_id)
-                if record and self._retrieval_record_is_eligible(record):
+                if record and self._retrieval_record_is_eligible(record, session_id):
                     item = dict(record)
                     item["_base_score"] = 0.0
                     item["_vector_backend"] = "graph"
@@ -3134,7 +3221,7 @@ class MemGuardService:
         return [dict(item) for item in results]
 
     def _dense_candidate_ids(
-        self, query: str, limit: int,
+        self, query: str, limit: int, session_id: str = "",
     ) -> Tuple[List[str], Optional[List[float]], str]:
         if not self.dense_candidates_enabled:
             return [], None, "disabled"
@@ -3148,7 +3235,7 @@ class MemGuardService:
         started = perf_counter()
         vectors, complete = self.meta.list_dense_candidate_vectors(
             self.EMBEDDING_BACKEND, self.EMBEDDING_MODEL_REVISION,
-            self.namespace, cap,
+            self.namespace, cap, session_id=session_id,
         )
         if not complete:
             return [], None, "scan_limit_exceeded"
@@ -3286,13 +3373,16 @@ class MemGuardService:
         )
         return result
 
-    def build_context(self, query: str, limit: int = 5, max_chars: int = 2000, token_budget: Optional[int] = None) -> Dict[str, object]:
+    def build_context(
+        self, query: str, limit: int = 5, max_chars: int = 2000,
+        token_budget: Optional[int] = None, session_id: str = "",
+    ) -> Dict[str, object]:
         effective_max_chars = max_chars
         if token_budget and token_budget > 0:
             # Conservative cap for mixed Chinese/English contexts; exact tokenizers
             # are provider-specific, so the package reports estimates instead.
             effective_max_chars = min(max_chars, max(256, int(token_budget / 0.65)))
-        hits = self.search(query, limit=limit)
+        hits = self.search(query, limit=limit, session_id=session_id)
         memories = []
         lines = []
         selection_trace = []
@@ -3451,7 +3541,7 @@ class MemGuardService:
         clean_task = str(task).strip()
         if not clean_task:
             raise ValueError("task is required")
-        search_hits = self.search(clean_task, limit=max(limit * 3, limit), audit=False)
+        search_hits = self.search(clean_task, limit=max(limit * 3, limit), audit=False, session_id=session_id)
         preference_selection = self.select_preferences(
             agent_name=agent_name,
             session_id=session_id,
@@ -3679,6 +3769,7 @@ class MemGuardService:
         *,
         include_graph: bool = True,
         include_recent: bool = True,
+        session_id: str = "",
     ) -> List[Dict[str, object]]:
         candidate_limit = max(1, int(limit))
         seen = set()
@@ -3705,39 +3796,44 @@ class MemGuardService:
                 self.meta.search_text(
                     text_query,
                     limit=candidate_limit - len(candidates),
+                    session_id=session_id,
                 )
             )
         if include_graph and len(candidates) < candidate_limit:
             remaining = candidate_limit - len(candidates)
             graph_query = str(expanded.get("expanded_query") or query)
-            add_unique(self.meta.graph_search(graph_query, limit=max(10, remaining)))
+            add_unique(self.meta.graph_search(graph_query, limit=max(10, remaining), session_id=session_id))
         if include_recent and len(candidates) < candidate_limit:
             remaining = candidate_limit - len(candidates)
-            add_unique(self.meta.list_recent_memories(remaining, exclude_ids=list(seen)))
+            add_unique(self.meta.list_recent_memories(remaining, exclude_ids=list(seen), session_id=session_id))
         return candidates[:candidate_limit]
 
     @staticmethod
-    def _retrieval_record_is_eligible(record: Dict[str, object]) -> bool:
+    def _retrieval_record_is_eligible(record: Dict[str, object], session_id: str = "") -> bool:
         return (
             not bool(record.get("deleted"))
+            and str(record.get("retention_session_id") or "") in {"", session_id}
             and str(record.get("governance_state") or "active") == "active"
             and str(record.get("trust_level") or "trusted")
             in {"trusted", "verified", "reviewed"}
         )
 
-    def graph_search(self, entity_query: str, limit: int = 10) -> List[Dict[str, object]]:
-        results = self.meta.graph_search(entity_query, limit=limit)
+    def graph_search(self, entity_query: str, limit: int = 10, session_id: str = "") -> List[Dict[str, object]]:
+        results = self.meta.graph_search(entity_query, limit=limit, session_id=session_id)
         self._audit("graph_search", None, {"entity_query": entity_query, "count": len(results)})
         return results
 
-    def hierarchical_graph_search(self, entity_query: str, limit: int = 10) -> Dict[str, object]:
-        summary_rows = self.meta.graph_search(entity_query, limit=limit)
+    def hierarchical_graph_search(
+        self, entity_query: str, limit: int = 10, session_id: str = "",
+    ) -> Dict[str, object]:
+        summary_rows = self.meta.graph_search(entity_query, limit=limit, session_id=session_id)
         if not summary_rows:
             summary_rows = self._search_candidates(
                 entity_query,
                 limit=limit,
                 include_graph=False,
                 include_recent=False,
+                session_id=session_id,
             )
 
         summary_layer = []
@@ -3832,9 +3928,12 @@ class MemGuardService:
         )
         return result
 
-    def related(self, memory_id: str, limit: int = 10) -> Dict[str, object]:
+    def related(self, memory_id: str, limit: int = 10, session_id: str = "") -> Dict[str, object]:
+        seed = self.meta.get_memory(memory_id)
+        if seed is None or not self._retrieval_record_is_eligible(seed, session_id):
+            return {"graph": {"entities": [], "relations": []}, "related": []}
         graph = self.meta.memory_graph(memory_id)
-        related = self.meta.related_memories(memory_id, limit=limit)
+        related = self.meta.related_memories(memory_id, limit=limit, session_id=session_id)
         result = {"graph": graph, "related": related}
         self._audit("related", memory_id, {"related_count": len(related), "entity_count": len(graph["entities"])})
         return result
@@ -4608,7 +4707,7 @@ class MemGuardService:
             return self.detector.redact(value) if finding.labels else value
         return value
 
-    def _remember_search(self, cache_key: Tuple[str, int, str, str], results: List[Dict[str, object]]) -> None:
+    def _remember_search(self, cache_key: Tuple[str, int, str, str, str], results: List[Dict[str, object]]) -> None:
         self._search_cache[cache_key] = [dict(item) for item in results]
         self._search_cache.move_to_end(cache_key)
         while len(self._search_cache) > self._search_cache_limit:

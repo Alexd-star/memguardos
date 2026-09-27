@@ -295,6 +295,7 @@ def _validate_system_behavior(
                     ),
                 ),
                 source_uri="memory-value-tool://%s/%s" % (case_id, sequence),
+                session_id=session_id,
             )
 
     assertions = dict(case.get("assertions") or {})

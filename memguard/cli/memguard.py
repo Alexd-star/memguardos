@@ -27,6 +27,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="MemGuardOS user-facing memory workspace",
     )
     parser.add_argument("--namespace", default=None, help="记忆空间；默认使用 default。")
+    parser.add_argument("--session-id", default=os.environ.get("MEMGUARD_SESSION_ID", ""), help="临时记忆所属会话；可通过环境变量 MEMGUARD_SESSION_ID 设置。")
     parser.add_argument("--store", default="", help="测试或演示用段文件路径。")
     parser.add_argument("--db", default="", help="测试或演示用 SQLite 路径。")
     parser.add_argument("--workspace", default=os.getcwd(), help="Agent 工作区；默认使用当前目录。")
@@ -52,6 +53,8 @@ def build_parser() -> argparse.ArgumentParser:
     context.add_argument("--token-budget", type=int, default=1200, help="上下文长度上限")
     sub.add_parser("preferences", help="查看当前生效偏好")
     sub.add_parser("audit", help="查看最近操作记录")
+    end_session = sub.add_parser("end-session", help="结束会话并清理该会话的临时记忆")
+    end_session.add_argument("--yes", action="store_true", help="确认清理")
     forget = sub.add_parser("forget", help="预览或确认精准遗忘")
     forget.add_argument("request")
     forget.add_argument("--yes", action="store_true", help="确认执行遗忘")
@@ -63,6 +66,8 @@ def build_parser() -> argparse.ArgumentParser:
     compare_live.add_argument("task")
     shell = sub.add_parser("shell", help="进入交互式记忆工作台")
     shell.add_argument("--prompt", default="memguard> ")
+    for name in ("remember", "search", "context", "end-session", "shell"):
+        sub.choices[name].add_argument("--session-id", default=argparse.SUPPRESS, help="本次会话编号")
     for command_parser in sub.choices.values():
         command_parser.add_argument("--json", dest="command_json", action="store_true", help=argparse.SUPPRESS)
     return parser
@@ -77,13 +82,15 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "status":
             return _status(service)
         if args.command == "remember":
-            return _remember(service, args.text)
+            return _remember(service, args.text, session_id=args.session_id)
         if args.command == "memory":
             return _memory(service, limit=args.limit)
         if args.command == "search":
-            return _search(service, args.query, limit=args.limit)
+            return _search(service, args.query, limit=args.limit, session_id=args.session_id)
         if args.command == "context":
-            return _context(service, args.task, limit=args.limit, token_budget=args.token_budget)
+            return _context(service, args.task, limit=args.limit, token_budget=args.token_budget, session_id=args.session_id)
+        if args.command == "end-session":
+            return _end_session(service, args.session_id, confirm=args.yes)
         if args.command == "preferences":
             return _preferences(service)
         if args.command == "audit":
@@ -97,7 +104,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "compare-live":
             return _compare_live(service, args.task, workspace=args.workspace, model=args.model)
         if args.command == "shell":
-            return _shell(service, prompt=args.prompt, workspace=args.workspace, model=args.model)
+            return _shell(service, prompt=args.prompt, workspace=args.workspace, model=args.model, session_id=args.session_id)
     finally:
         service.close()
     return 1
@@ -128,12 +135,12 @@ def _status(service: MemGuardService) -> int:
     return 0 if audit.get("ok") else 2
 
 
-def _remember(service: MemGuardService, text: str) -> int:
+def _remember(service: MemGuardService, text: str, session_id: str = "") -> int:
     result = service.ingest_natural_memory(
         text,
         source_kind="user_cli",
         source_uri="memguard",
-        session_id="memguard-shell",
+        session_id=session_id,
     )
     _section("记忆更新" if result.get("updated") else "记忆写入")
     if result.get("stored"):
@@ -204,6 +211,8 @@ def _remember(service: MemGuardService, text: str) -> int:
             print("说明：一次性用法不会自动升级为长期偏好；明确说“以后”或“记住”可立即保存。")
         elif result.get("reason") == "user_requested_no_memory":
             print("已按你的要求跳过保存，本次内容不会进入长期记忆或检索上下文。")
+        elif result.get("reason") == "session_required":
+            print("这是临时记忆，需要会话编号。可进入 `memguard shell` 自动创建会话，或添加 `--session-id <编号>`。")
         else:
             print("本次内容未形成记忆：%s" % result.get("reason", "策略未允许"))
             print("处理建议：说明要保存的事实、偏好或可复用步骤，并注明适用范围或保存时长。")
@@ -259,8 +268,8 @@ def _memory_category_display(row: dict) -> str:
     return "知识记忆"
 
 
-def _search(service: MemGuardService, query: str, limit: int = 5) -> int:
-    hits = service.search(query, limit=max(1, limit))
+def _search(service: MemGuardService, query: str, limit: int = 5, session_id: str = "") -> int:
+    hits = service.search(query, limit=max(1, limit), session_id=session_id)
     _section("记忆检索")
     if not hits:
         print("没有找到相关记忆。")
@@ -294,8 +303,8 @@ def _print_retrieval_timings(explanation: object) -> None:
         print("检索耗时：合计 %s ms（%s）" % (total, "，".join(parts) if parts else "未分段"))
 
 
-def _context(service: MemGuardService, task: str, limit: int = 5, token_budget: int = 1200) -> int:
-    context = service.build_context(task, limit=max(1, limit), token_budget=max(64, token_budget))
+def _context(service: MemGuardService, task: str, limit: int = 5, token_budget: int = 1200, session_id: str = "") -> int:
+    context = service.build_context(task, limit=max(1, limit), token_budget=max(64, token_budget), session_id=session_id)
     _section("记忆注入")
     memories = context.get("memories", [])
     print("任务：%s" % task)
@@ -303,6 +312,28 @@ def _context(service: MemGuardService, task: str, limit: int = 5, token_budget: 
     for index, memory in enumerate(memories[: max(1, limit)], 1):
         print("%d. %s" % (index, memory.get("summary") or memory.get("memory_id")))
     print("说明：这里只展示 Agent 生成前会被纳入的受控上下文，不包含敏感原文。")
+    return 0
+
+
+def _end_session(service: MemGuardService, session_id: str, confirm: bool = False) -> int:
+    try:
+        result = service.evict_session(session_id, confirm=confirm)
+    except Exception as exc:
+        _section("结束会话")
+        print("会话清理未完成（%s）。临时记忆仍需复核，请查看操作记录。" % type(exc).__name__)
+        return 2
+    _section("结束会话")
+    if result.get("reason") == "session_required":
+        print("请先提供 `--session-id <编号>`；交互式工作台会自动管理会话。")
+        return 2
+    if not confirm:
+        print("将清理 %d 条当前会话的临时记忆；长期记忆不受影响。" % result.get("candidate_count", 0))
+        print("确认请重新执行并添加 `--yes`。")
+        return 0
+    if not result.get("evicted"):
+        print("会话清理未完成：%s。请检查操作记录。" % result.get("reason", "验证未通过"))
+        return 2
+    print("已结束当前会话，清理 %d 条临时记忆；长期记忆保持可用。" % len(result.get("memory_ids") or []))
     return 0
 
 
@@ -529,12 +560,13 @@ def _run_json(service: MemGuardService, args: argparse.Namespace) -> int:
             "retrieval": service.retrieval_status(),
         }
     elif args.command == "remember":
-        result = service.ingest_text(args.text, source_kind="user_cli", source_uri="memguard")
+        result = service.ingest_natural_memory(args.text, source_kind="user_cli", source_uri="memguard", session_id=args.session_id)
         record = result.get("record")
         value = {
             "stored": bool(result.get("stored")),
             "updated": bool(result.get("updated")),
-            "memory_id": getattr(record, "memory_id", ""),
+            "memory_id": record.get("memory_id", "") if isinstance(record, dict) else getattr(record, "memory_id", ""),
+            "memory_ids": result.get("memory_ids") or [],
             "candidate_memory_ids": result.get("candidate_memory_ids") or [],
             "feedback": result.get("feedback"),
             "sensitive_notice": result.get("sensitive_notice"),
@@ -543,9 +575,11 @@ def _run_json(service: MemGuardService, args: argparse.Namespace) -> int:
     elif args.command == "memory":
         value = service.list_memories(include_deleted=False)[: max(1, args.limit)]
     elif args.command == "search":
-        value = service.search(args.query, limit=max(1, args.limit))
+        value = service.search(args.query, limit=max(1, args.limit), session_id=args.session_id)
     elif args.command == "context":
-        value = service.build_context(args.task, limit=max(1, args.limit), token_budget=max(64, args.token_budget))
+        value = service.build_context(args.task, limit=max(1, args.limit), token_budget=max(64, args.token_budget), session_id=args.session_id)
+    elif args.command == "end-session":
+        value = service.evict_session(args.session_id, confirm=args.yes)
     elif args.command == "preferences":
         value = service.interaction_status().get("preference_aggregates", [])
     elif args.command == "audit":
@@ -566,6 +600,10 @@ def _run_json(service: MemGuardService, args: argparse.Namespace) -> int:
     print(json.dumps(value, ensure_ascii=False, indent=2, default=_json_default))
     if isinstance(value, dict) and value.get("ok") is False:
         return 2
+    if args.command == "remember" and not value.get("stored"):
+        return 2
+    if args.command == "end-session" and args.yes and not value.get("evicted"):
+        return 2
     if args.command == "status" and not value["audit"].get("ok"):
         return 2
     return 0
@@ -581,7 +619,7 @@ def _json_default(value: object) -> object:
 
 SHELL_COMMANDS = (
     "/guide /status /memory /memory on|off /preferences /search 关键词 "
-    "/context 任务 /forget 请求 /run 任务 /audit /evidence /demo /model /workspace /exit"
+    "/context 任务 /forget 请求 /run 任务 /audit /evidence /demo /session /model /workspace /exit"
 )
 
 _FORGET_CONFIRM_WORDS = {"yes", "y", "确认", "确定", "是", "继续"}
@@ -589,13 +627,14 @@ _FORGET_CANCEL_WORDS = {"no", "n", "取消", "不要", "否", "返回"}
 _FORGET_ALL_WORDS = {"all", "全部", "全选", "全部候选"}
 
 
-def _shell(service: MemGuardService, prompt: str, workspace: str = "", model: str = "") -> int:
+def _shell(service: MemGuardService, prompt: str, workspace: str = "", model: str = "", session_id: str = "") -> int:
     _section("MemGuardOS 记忆工作台")
     state = {
         "workspace": str(Path(workspace or Path.cwd()).expanduser()),
         "model": str(model or "未配置"),
         "memory_enabled": True,
         "pending_forget": None,
+        "session_id": str(session_id or "shell-%s" % os.urandom(8).hex()),
     }
     print("用于体验 Agent 学习、复用和遗忘。输入 /guide 查看四步演示流程。")
     print("当前记忆辅助：[开启]  输入 /help 查看全部操作。")
@@ -608,11 +647,11 @@ def _shell(service: MemGuardService, prompt: str, workspace: str = "", model: st
             line = raw_line.strip()
         except EOFError:
             print()
-            return 0
+            return _end_session(service, state["session_id"], confirm=True)
         if not line:
             continue
         if line in {"/exit", "exit", "quit"}:
-            return 0
+            return _end_session(service, state["session_id"], confirm=True)
         if line == "/help":
             print("可用操作：" + SHELL_COMMANDS)
             print("说明：/run 只运行真实 Agent；/demo 是明确标注的本地事件回放。")
@@ -678,6 +717,14 @@ def _dispatch_shell_line(service: MemGuardService, line: str, state: dict) -> in
         return 0
     if line in {"/memory on", "/memory off", "/memory status"}:
         return _memory_mode(line, state)
+    if line == "/session":
+        print("当前会话：%s。输入 /session end 可清理本次临时记忆并开启新会话。" % state["session_id"])
+        return 0
+    if line == "/session end":
+        result = _end_session(service, state["session_id"], confirm=True)
+        if result == 0:
+            state["session_id"] = "shell-%s" % os.urandom(8).hex()
+        return result
     if line == "/preferences":
         return _preferences(service)
     if line == "/audit":
@@ -716,15 +763,15 @@ def _dispatch_shell_line(service: MemGuardService, line: str, state: dict) -> in
         return _status(service)
     if action == "search":
         print("已识别为记忆搜索请求。")
-        return _search(service, payload)
+        return _search(service, payload, session_id=state["session_id"])
     if action == "remember":
         print("已识别为记忆保存请求。")
-        return _remember(service, payload)
+        return _remember(service, payload, session_id=state["session_id"])
     if action == "run":
         print("已识别为 Agent 任务。")
         return _run_agent_task(service, payload, state)
     if line.startswith("/"):
-        return _run_shell_line(service, line)
+        return _run_shell_line(service, line, session_id=state["session_id"])
     print("本次输入尚未执行：请确认它是 Agent 任务还是要保存的记忆。")
     print("- 运行任务：输入 `/run %s`" % line)
     print("- 保存记忆：输入 `记住：%s`" % line)
@@ -859,7 +906,7 @@ def _print_forget_pending_help(pending: dict) -> None:
         print("输入 yes 或 确认执行；输入 no 或 取消停止。")
 
 
-def _run_shell_line(service: MemGuardService, line: str) -> int:
+def _run_shell_line(service: MemGuardService, line: str, session_id: str = "") -> int:
     if line == "/status":
         return _status(service)
     if line == "/memory":
@@ -867,9 +914,9 @@ def _run_shell_line(service: MemGuardService, line: str) -> int:
     if line == "/preferences":
         return _preferences(service)
     if line.startswith("/search "):
-        return _search(service, line[len("/search "):].strip())
+        return _search(service, line[len("/search "):].strip(), session_id=session_id)
     if line.startswith("/context "):
-        return _context(service, line[len("/context "):].strip())
+        return _context(service, line[len("/context "):].strip(), session_id=session_id)
     if line.startswith("/forget "):
         request = line[len("/forget "):].strip()
         confirm = False
@@ -880,7 +927,7 @@ def _run_shell_line(service: MemGuardService, line: str) -> int:
         return _forget(service, request, confirm=confirm, compact=confirm)
     if line == "/evidence":
         return _evidence(service)
-    return _remember(service, line)
+    return _remember(service, line, session_id=session_id)
 
 
 def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
@@ -914,11 +961,12 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
     from memguard.integrations.openhands_runner import OpenHandsMemoryRunner
 
     workspace = Path(str(state.get("workspace") or Path.cwd())).expanduser().resolve()
-    session_id = "shell-%s" % os.urandom(4).hex()
+    session_id = str(state.get("session_id") or "shell-%s" % os.urandom(8).hex())
+    run_id = "run-%s" % os.urandom(8).hex()
     state_root = Path(
         os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local" / "state"))
     ).expanduser()
-    state_dir = state_root / "memguardos" / "agent-shell" / session_id
+    state_dir = state_root / "memguardos" / "agent-shell" / run_id
     memory_enabled = bool(state.get("memory_enabled", True))
     runner = OpenHandsMemoryRunner(
         service=service,

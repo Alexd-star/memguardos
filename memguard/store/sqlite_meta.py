@@ -16,6 +16,13 @@ from memguard.retrieval.vector_cache import (
 )
 
 
+def fact_slot_scope(namespace: str, retention_session_id: str = "") -> str:
+    return (
+        "%s::session:%s" % (namespace, retention_session_id)
+        if retention_session_id else namespace
+    )
+
+
 _ALLOWED_COLUMN_MIGRATIONS = {
     ("memory", "subtype", "TEXT NOT NULL DEFAULT 'general'"),
     ("memory", "tier", "TEXT NOT NULL DEFAULT 'long_term'"),
@@ -29,6 +36,7 @@ _ALLOWED_COLUMN_MIGRATIONS = {
     ("memory", "preference_explicit", "INTEGER NOT NULL DEFAULT 1"),
     ("memory", "agent_name", "TEXT NOT NULL DEFAULT ''"),
     ("memory", "preference_session_id", "TEXT NOT NULL DEFAULT ''"),
+    ("memory", "retention_session_id", "TEXT NOT NULL DEFAULT ''"),
     ("memory", "project_root", "TEXT NOT NULL DEFAULT ''"),
     ("memory", "task_type", "TEXT NOT NULL DEFAULT ''"),
     ("memory", "trust_level", "TEXT NOT NULL DEFAULT 'trusted'"),
@@ -166,6 +174,7 @@ class SQLiteMetaStore:
                 preference_explicit INTEGER NOT NULL DEFAULT 1,
                 agent_name TEXT NOT NULL DEFAULT '',
                 preference_session_id TEXT NOT NULL DEFAULT '',
+                retention_session_id TEXT NOT NULL DEFAULT '',
                 project_root TEXT NOT NULL DEFAULT '',
                 task_type TEXT NOT NULL DEFAULT '',
                 trust_level TEXT NOT NULL DEFAULT 'trusted',
@@ -218,6 +227,7 @@ class SQLiteMetaStore:
         self._ensure_column("memory", "preference_explicit", "INTEGER NOT NULL DEFAULT 1")
         self._ensure_column("memory", "agent_name", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("memory", "preference_session_id", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("memory", "retention_session_id", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("memory", "project_root", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("memory", "task_type", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("memory", "trust_level", "TEXT NOT NULL DEFAULT 'trusted'")
@@ -400,13 +410,13 @@ class SQLiteMetaStore:
             "SELECT 1 FROM schema_migrations WHERE name = 'fact_slot_backfill_v1'"
         ).fetchone() is None:
             for row in self.conn.execute(
-                "SELECT memory_id, scope, content FROM memory WHERE deleted = 0 AND type = 'knowledge'"
+                "SELECT memory_id, scope, retention_session_id, content FROM memory WHERE deleted = 0 AND type = 'knowledge'"
             ):
                 fact = parse_fact_slot(str(row["content"]))
                 if fact is not None:
                     self.conn.execute(
                         "INSERT OR IGNORE INTO fact_slot(memory_id, scope, subject, predicate) VALUES (?, ?, ?, ?)",
-                        (row["memory_id"], row["scope"], fact.subject, fact.predicate),
+                        (row["memory_id"], fact_slot_scope(row["scope"], row["retention_session_id"]), fact.subject, fact.predicate),
                     )
             self.conn.execute(
                 "INSERT OR IGNORE INTO schema_migrations(name, applied_at) VALUES ('fact_slot_backfill_v1', ?)",
@@ -414,6 +424,7 @@ class SQLiteMetaStore:
             )
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_live_updated ON memory(deleted, updated_at DESC)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_tier_live ON memory(tier, deleted, updated_at DESC)")
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_retention_session ON memory(retention_session_id, tier, deleted)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_governance ON memory(governance_state, deleted, updated_at DESC)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_entity_entity ON memory_entity(entity, memory_id)")
         self.conn.execute(
@@ -530,10 +541,11 @@ class SQLiteMetaStore:
                 sensitivity_level, sensitivity_labels, sensitivity_redacted, version_id,
                 valid_from, valid_to, superseded_by, preference_topic, preference_value,
                 preference_scope, preference_explicit, agent_name, preference_session_id,
+                retention_session_id,
                 project_root, task_type, trust_level, trust_score, governance_state,
                 governance_reason, deleted, updated_at, subtype
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(memory_id) DO UPDATE SET
                 type=excluded.type,
                 subtype=excluded.subtype,
@@ -556,6 +568,7 @@ class SQLiteMetaStore:
                 preference_explicit=excluded.preference_explicit,
                 agent_name=excluded.agent_name,
                 preference_session_id=excluded.preference_session_id,
+                retention_session_id=excluded.retention_session_id,
                 project_root=excluded.project_root,
                 task_type=excluded.task_type,
                 trust_level=excluded.trust_level,
@@ -588,6 +601,7 @@ class SQLiteMetaStore:
                 1 if record.preference_explicit else 0,
                 record.agent_name,
                 record.preference_session_id,
+                record.retention_session_id,
                 record.project_root,
                 record.task_type,
                 record.trust_level,
@@ -622,7 +636,7 @@ class SQLiteMetaStore:
                    VALUES (?, ?, ?, ?)
                    ON CONFLICT(memory_id) DO UPDATE SET scope = excluded.scope,
                        subject = excluded.subject, predicate = excluded.predicate""",
-                (record.memory_id, record.scope, fact.subject, fact.predicate),
+                (record.memory_id, fact_slot_scope(record.scope, record.retention_session_id), fact.subject, fact.predicate),
             )
 
     def upsert_memory(self, record: MemoryRecord) -> None:
@@ -799,7 +813,8 @@ class SQLiteMetaStore:
             fact = parse_fact_slot(record.content) if record.type == "knowledge" else None
             if fact is not None:
                 candidates = self.find_active_fact_candidates(
-                    record.scope, fact.subject, fact.predicate,
+                    fact_slot_scope(record.scope, record.retention_session_id), fact.subject, fact.predicate,
+                    tier=record.tier,
                 )
                 if candidates:
                     ids = [str(item["memory_id"]) for item in candidates]
@@ -1017,6 +1032,7 @@ class SQLiteMetaStore:
                 sensitivity_level = 'none', sensitivity_labels = '[]', sensitivity_redacted = 0,
                 preference_topic = '', preference_value = '', preference_scope = 'global',
                 preference_explicit = 0, agent_name = '', preference_session_id = '',
+                retention_session_id = '',
                 project_root = '', task_type = '', governance_state = 'forgotten',
                 governance_reason = '',
                 valid_to = ?, superseded_by = ?, updated_at = ?
@@ -1345,13 +1361,15 @@ class SQLiteMetaStore:
         self,
         limit: int,
         exclude_ids: Optional[List[str]] = None,
+        session_id: str = "",
     ) -> List[Dict[str, Any]]:
         effective_limit = max(0, int(limit))
         if effective_limit == 0:
             return []
         excluded = list(dict.fromkeys(str(memory_id) for memory_id in (exclude_ids or []) if memory_id))
-        sql = "SELECT * FROM memory WHERE deleted = 0 AND governance_state = 'active'"
-        params: List[Any] = []
+        sql = """SELECT * FROM memory WHERE deleted = 0 AND governance_state = 'active'
+                 AND (retention_session_id = '' OR retention_session_id = ?)"""
+        params: List[Any] = [session_id]
         if excluded:
             placeholders = ",".join("?" for _ in excluded)
             sql += " AND memory_id NOT IN (%s)" % placeholders
@@ -1359,6 +1377,16 @@ class SQLiteMetaStore:
         sql += " ORDER BY updated_at DESC LIMIT ?"
         params.append(effective_limit)
         return [dict(row) for row in self.conn.execute(sql, params)]
+
+    def list_session_memories(self, session_id: str) -> List[Dict[str, Any]]:
+        if not session_id:
+            return []
+        return [dict(row) for row in self.conn.execute(
+            """SELECT * FROM memory WHERE retention_session_id = ?
+               AND tier IN ('working', 'session') AND deleted = 0
+               ORDER BY updated_at DESC""",
+            (session_id,),
+        )]
 
     def get_memory(self, memory_id: str) -> Optional[Dict[str, Any]]:
         row = self.conn.execute("SELECT * FROM memory WHERE memory_id = ?", (memory_id,)).fetchone()
@@ -1870,6 +1898,7 @@ class SQLiteMetaStore:
         model_revision: str,
         namespace: str,
         max_vectors: int,
+        session_id: str = "",
     ) -> tuple[List[tuple[str, List[float]]], bool]:
         """Return a complete, governed vector snapshot or decline an oversized scan."""
         if max_vectors <= 0:
@@ -1885,12 +1914,13 @@ class SQLiteMetaStore:
               AND memory.deleted = 0 AND memory.governance_state = 'active'
               AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
               AND memory.scope IN (SELECT value FROM json_each(?))
+              AND (memory.retention_session_id = '' OR memory.retention_session_id = ?)
               AND embedding.content_hash =
                   memguard_content_hash(memory.summary, memory.content)
             ORDER BY embedding.memory_id
             LIMIT ?
             """,
-            (backend, model_revision, json.dumps(scopes), max_vectors + 1),
+            (backend, model_revision, json.dumps(scopes), session_id, max_vectors + 1),
         ).fetchall()
         if len(rows) > max_vectors:
             return [], False
@@ -1957,29 +1987,37 @@ class SQLiteMetaStore:
             "next_retry_at": row["next_retry_at"],
         }
 
-    def find_active_memory_by_content(self, content: str, scope: str) -> Optional[Dict[str, Any]]:
+    def find_active_memory_by_content(
+        self, content: str, scope: str, tier: Optional[str] = None,
+        retention_session_id: str = "",
+    ) -> Optional[Dict[str, Any]]:
+        tier_filter = "AND tier = ? AND retention_session_id = ?" if tier else ""
+        params = (scope, content, tier, retention_session_id) if tier else (scope, content)
         row = self.conn.execute(
             """
             SELECT * FROM memory
             WHERE deleted = 0 AND governance_state = 'active'
               AND scope = ? AND content = ?
+            """ + tier_filter + """
             ORDER BY updated_at DESC
             LIMIT 1
             """,
-            (scope, content),
+            params,
         ).fetchone()
         return dict(row) if row else None
 
     def find_active_fact_candidates(
-        self, scope: str, subject: str, predicate: str,
+        self, scope: str, subject: str, predicate: str, tier: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
+        tier_filter = "AND m.tier = ?" if tier else ""
+        params = (scope, subject, predicate, tier) if tier else (scope, subject, predicate)
         return [dict(row) for row in self.conn.execute(
             """SELECT m.* FROM fact_slot f
                JOIN memory m ON m.memory_id = f.memory_id
                WHERE f.scope = ? AND f.subject = ? AND f.predicate = ?
                  AND m.deleted = 0 AND m.governance_state = 'active'
-               ORDER BY m.updated_at DESC, m.memory_id LIMIT 2""",
-            (scope, subject, predicate),
+            """ + tier_filter + " ORDER BY m.updated_at DESC, m.memory_id LIMIT 2",
+            params,
         )]
 
     def record_memory_hits(self, memory_ids: List[str]) -> int:
@@ -2521,7 +2559,7 @@ class SQLiteMetaStore:
         )
         self.conn.commit()
 
-    def search_text(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+    def search_text(self, query: str, limit: int = 10, session_id: str = "") -> List[Dict[str, Any]]:
         query = query.strip()
         if not query:
             return []
@@ -2535,10 +2573,11 @@ class SQLiteMetaStore:
                         FROM memory_fts
                         JOIN memory m ON m.memory_id = memory_fts.memory_id
                         WHERE memory_fts MATCH ? AND m.deleted = 0 AND m.governance_state = 'active'
+                          AND (m.retention_session_id = '' OR m.retention_session_id = ?)
                         ORDER BY rank
                         LIMIT ?
                         """,
-                        (fts_query, limit),
+                        (fts_query, session_id, limit),
                     ).fetchall()
                     if rows:
                         return [dict(row) for row in rows]
@@ -2549,10 +2588,11 @@ class SQLiteMetaStore:
             """
             SELECT *, 0.0 AS rank FROM memory
             WHERE deleted = 0 AND governance_state = 'active'
+              AND (retention_session_id = '' OR retention_session_id = ?)
               AND (content LIKE ? OR summary LIKE ? OR type LIKE ?)
             LIMIT ?
             """,
-            (pattern, pattern, pattern, limit),
+            (session_id, pattern, pattern, pattern, limit),
         ).fetchall()
         return [dict(row) for row in rows]
 
@@ -2570,7 +2610,7 @@ class SQLiteMetaStore:
             return "0:0:"
         return "%s:%s:%s" % (row["total_count"] or 0, row["live_count"] or 0, row["max_updated_at"] or "")
 
-    def graph_search(self, entity_query: str, limit: int = 10) -> List[Dict[str, Any]]:
+    def graph_search(self, entity_query: str, limit: int = 10, session_id: str = "") -> List[Dict[str, Any]]:
         pattern = "%" + entity_query + "%"
         exact = entity_query.lower()
         rows = self.conn.execute(
@@ -2583,14 +2623,15 @@ class SQLiteMetaStore:
             FROM memory_entity me
             JOIN memory m ON m.memory_id = me.memory_id
             WHERE m.deleted = 0 AND m.governance_state = 'active' AND me.entity LIKE ?
+              AND (m.retention_session_id = '' OR m.retention_session_id = ?)
             ORDER BY graph_rank DESC, m.updated_at ASC
             LIMIT ?
             """,
-            (exact, pattern.lower(), pattern.lower(), pattern, limit),
+            (exact, pattern.lower(), pattern.lower(), pattern, session_id, limit),
         ).fetchall()
         return [dict(row) for row in rows]
 
-    def related_memories(self, memory_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+    def related_memories(self, memory_id: str, limit: int = 10, session_id: str = "") -> List[Dict[str, Any]]:
         rows = self.conn.execute(
             """
             SELECT DISTINCT m.*, me.entity AS via_entity
@@ -2598,10 +2639,11 @@ class SQLiteMetaStore:
             JOIN memory_entity me ON me.entity = seed.entity AND me.memory_id != seed.memory_id
             JOIN memory m ON m.memory_id = me.memory_id
             WHERE seed.memory_id = ? AND m.deleted = 0 AND m.governance_state = 'active'
+              AND (m.retention_session_id = '' OR m.retention_session_id = ?)
             ORDER BY m.updated_at DESC
             LIMIT ?
             """,
-            (memory_id, limit),
+            (memory_id, session_id, limit),
         ).fetchall()
         return [dict(row) for row in rows]
 

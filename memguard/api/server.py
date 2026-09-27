@@ -25,7 +25,7 @@ def handle_request(service: MemGuardService, request: Dict[str, object], auth_to
     command = str(request.get("command", ""))
     try:
         return _handle_authorized_request(service, request)
-    except (TypeError, ValueError) as exc:
+    except ValueError as exc:
         return {"ok": False, "error": "invalid_request", "detail": str(exc)}
     except Exception as exc:
         error_id = _internal_error_id(command, exc)
@@ -44,7 +44,8 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
     if command == "search":
         query = _string_param(request, "query", "", max_chars=2048)
         limit = _int_param(request, "limit", 5, minimum=1, maximum=50)
-        return {"ok": True, "result": service.search(query, limit=limit)}
+        session_id = _string_param(request, "session_id", "", max_chars=256)
+        return {"ok": True, "result": service.search(query, limit=limit, session_id=session_id)}
     if command == "batch_search":
         queries = _string_list_param(request, "queries", max_items=100, max_chars=512)
         limit = _int_param(request, "limit", 5, minimum=1, maximum=50)
@@ -56,11 +57,13 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         max_chars = _int_param(request, "max_chars", 2000, minimum=128, maximum=20000)
         token_budget = request.get("token_budget")
         token_budget = _int_param(request, "token_budget", 0, minimum=64, maximum=32000) if token_budget else None
-        return {"ok": True, "result": service.build_context(query, limit=limit, max_chars=max_chars, token_budget=token_budget)}
+        session_id = _string_param(request, "session_id", "", max_chars=256)
+        return {"ok": True, "result": service.build_context(query, limit=limit, max_chars=max_chars, token_budget=token_budget, session_id=session_id)}
     if command == "hierarchical_graph_search":
         entity = _string_param(request, "entity", request.get("query", ""), max_chars=1024)
         limit = _int_param(request, "limit", 10, minimum=1, maximum=50)
-        return {"ok": True, "result": service.hierarchical_graph_search(entity, limit=limit)}
+        session_id = _string_param(request, "session_id", "", max_chars=256)
+        return {"ok": True, "result": service.hierarchical_graph_search(entity, limit=limit, session_id=session_id)}
     if command == "explain_extraction":
         text = _string_param(request, "text", "", max_chars=200000)
         source_kind = _string_param(request, "source_kind", "manual", max_chars=64)
@@ -158,11 +161,29 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
     if command == "promote":
         memory_id = _string_param(request, "memory_id", "", max_chars=128)
         tier = _string_param(request, "tier", "", max_chars=32)
-        return {"ok": True, "result": _jsonable(service.promote_memory(memory_id, tier))}
+        return {"ok": True, "result": _jsonable(service.promote_memory(
+            memory_id, tier, session_id=_string_param(request, "session_id", "", max_chars=256),
+        ))}
     if command == "evict_tier":
         tier = _string_param(request, "tier", "", max_chars=32)
         confirm = bool(request.get("confirm", False))
         return {"ok": True, "result": _jsonable(service.evict_tier(tier, confirm=confirm))}
+    if command == "evict_session":
+        session_id = _string_param(request, "session_id", "", max_chars=256)
+        confirm = bool(request.get("confirm", False))
+        expected_versions = request.get("expected_versions")
+        if expected_versions is not None and (
+            not isinstance(expected_versions, dict)
+            or len(expected_versions) > 500
+            or any(not isinstance(key, str) or not isinstance(value, str) for key, value in expected_versions.items())
+        ):
+            raise ValueError("expected_versions must be a bounded version map")
+        result = service.evict_session(session_id, confirm=confirm, expected_versions=expected_versions)
+        ok = bool(result.get("evicted")) if confirm else True
+        return {
+            "ok": ok, "error": str(result.get("reason") or "session_evict_failed") if not ok else "",
+            "result": _jsonable(result),
+        }
     if command == "forget":
         forget_request = _string_param(request, "request", request.get("text", ""), max_chars=2048)
         confirm = bool(request.get("confirm", False))
@@ -290,7 +311,7 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                 text,
                 source_kind=source_kind,
                 source_uri=source_uri,
-                session_id=_string_param(request, "session_id", "web-natural-memory", max_chars=256),
+                session_id=_string_param(request, "session_id", "", max_chars=256),
                 tier=selected_tier,
             )
             if bool(request.get("natural", False))
@@ -299,6 +320,7 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                 source_kind=source_kind,
                 source_uri=source_uri,
                 tier=selected_tier,
+                retention_session_id=_string_param(request, "session_id", "", max_chars=256),
             )
         )
         if result.get("stored"):

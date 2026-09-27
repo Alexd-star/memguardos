@@ -17,7 +17,7 @@ python -m memguard.cli.memctl ingest --file data/demo/linux_workflow.md
 写入结构化工具执行结果：
 
 ```bash
-python -m memguard.cli.memctl ingest-tool-result --file data/demo/tool_result_success.json
+python -m memguard.cli.memctl ingest-tool-result --file data/demo/tool_result_success.json --session-id demo-01
 ```
 
 写入结构化手动配置：
@@ -29,7 +29,7 @@ python -m memguard.cli.memctl ingest-config --file data/demo/user_config.json
 写入 shell 历史中的用户行为轨迹：
 
 ```bash
-python -m memguard.cli.memctl ingest-history --file ~/.bash_history --limit 200
+python -m memguard.cli.memctl ingest-history --file ~/.bash_history --limit 200 --session-id demo-01
 ```
 
 该命令会过滤 `ls`、`cd`、`history` 等低价值噪声，并保留 `pytest`、`rg`、`git`、`systemctl`、`journalctl`、`ssh`、`scp`、`pip`、`make` 等对智能体偏好、工具使用习惯、调试路径有价值的行为记忆。
@@ -224,7 +224,7 @@ python -m memguard.cli.memctl rollback <memory_id> <version_id>
 写入指定层级：
 
 ```bash
-python -m memguard.cli.memctl ingest --text "临时工作记忆" --tier working
+python -m memguard.cli.memctl ingest --text "临时工作记忆" --tier working --session-id demo-01
 ```
 
 提升记忆层级：
@@ -236,8 +236,11 @@ python -m memguard.cli.memctl promote <memory_id> long_term
 清理会话记忆：
 
 ```bash
-python -m memguard.cli.memctl evict-tier session --yes
+python -m memguard.cli.memctl evict-session --session-id demo-01
+python -m memguard.cli.memctl evict-session --session-id demo-01 --yes
 ```
+
+临时写入、检索和上下文预览均使用同一会话编号；未提供编号时不会创建无归属的临时记忆。`evict-session` 只清理该会话的 `working` 与 `session` 记忆，长期记忆保持可用；`evict-tier` 是面向管理员的全层级维护操作，不用于结束单个会话。桌面文件检查产生的 OS 事件默认只进入审计链，不会因一次检查自动变成长期记忆。
 
 查看冷热分层、资源策略和淘汰候选：
 

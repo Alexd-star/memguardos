@@ -151,6 +151,7 @@ def ingest_setup_events(service, case, workspace: Path | None = None):
                 ),
                 source_uri="memory-value-real-tool://%s/setup/%s"
                 % (case["case_id"], sequence),
+                session_id=session_id,
             )
     return stored
 

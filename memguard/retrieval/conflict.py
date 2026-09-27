@@ -40,20 +40,29 @@ def preference_topic(record: Dict[str, object]) -> str:
 
 class ConflictResolver:
     def resolve_preferences(self, records: Iterable[Dict[str, object]]) -> Dict[str, object]:
-        groups: Dict[str, List[Dict[str, object]]] = {}
+        groups: Dict[tuple, List[Dict[str, object]]] = {}
         for record in records:
             if record.get("type") not in {"preference", "sensitive_policy"}:
                 continue
-            groups.setdefault(preference_topic(record), []).append(record)
+            key = (
+                preference_topic(record),
+                str(record.get("preference_scope") or "global"),
+                str(record.get("agent_name") or ""),
+                str(record.get("project_root") or ""),
+                str(record.get("task_type") or ""),
+                str(record.get("preference_session_id") or ""),
+                str(record.get("retention_session_id") or ""),
+            )
+            groups.setdefault(key, []).append(record)
 
         resolutions = []
-        for topic, items in groups.items():
+        for key, items in groups.items():
             if len(items) < 2:
                 continue
             chosen = sorted(items, key=self._sort_key, reverse=True)[0]
             resolutions.append(
                 {
-                    "topic": topic,
+                    "topic": key[0],
                     "chosen_memory_id": chosen["memory_id"],
                     "candidate_memory_ids": [item["memory_id"] for item in items],
                     "reason": "highest source priority, then latest updated_at",

@@ -433,19 +433,19 @@ class _DashboardHandler(BaseHTTPRequestHandler):
             params = parse_qs(parsed.query)
             query = params.get("q", [""])[0]
             limit = _safe_int(params.get("top_k", ["5"])[0], 5)
-            self._send_api({"command": "search", "query": query, "limit": limit})
+            self._send_api({"command": "search", "query": query, "limit": limit, "session_id": params.get("session_id", [""])[0]})
             return
         if parsed.path == "/api/context":
             params = parse_qs(parsed.query)
             query = params.get("q", [""])[0]
             budget = _safe_int(params.get("token_budget", ["1200"])[0], 1200)
-            self._send_api({"command": "build_context", "query": query, "limit": 5, "token_budget": budget})
+            self._send_api({"command": "build_context", "query": query, "limit": 5, "token_budget": budget, "session_id": params.get("session_id", [""])[0]})
             return
         if parsed.path == "/api/hierarchical-graph":
             params = parse_qs(parsed.query)
             entity = params.get("q", [""])[0]
             limit = _safe_int(params.get("limit", ["8"])[0], 8)
-            self._send_api({"command": "hierarchical_graph_search", "entity": entity, "limit": limit})
+            self._send_api({"command": "hierarchical_graph_search", "entity": entity, "limit": limit, "session_id": params.get("session_id", [""])[0]})
             return
         if parsed.path == "/api/audit":
             params = parse_qs(parsed.query)
@@ -477,6 +477,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         required_role = {
             "/api/ingest": "operator",
+            "/api/evict-session": "admin",
             "/api/agent-run": "operator",
             "/api/journey": "operator",
             "/api/forget-memory": "admin",
@@ -514,8 +515,16 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                     "source_uri": "web_dashboard",
                     "tier": payload.get("tier") or None,
                     "natural": bool(payload.get("natural", True)),
+                    "session_id": str(payload.get("session_id", "")),
                 }
             )
+            return
+        if parsed.path == "/api/evict-session":
+            self._send_api({
+                "command": "evict_session", "session_id": str(payload.get("session_id", "")),
+                "confirm": bool(payload.get("confirm", False)),
+                "expected_versions": payload.get("expected_versions"),
+            })
             return
         if parsed.path in {"/api/agent-run", "/api/journey"}:
             if not self._require_role("operator"):
@@ -1522,6 +1531,7 @@ def _dashboard_html() -> str:
           <div id="memoryWorkspaceResults" class="memory-result-list"><div class="empty-state">正在读取记忆列表…</div></div>
           <details id="memoryMoreResults" class="more-results" hidden><summary>更多相关结果</summary><div id="memoryMoreResultsBody" class="memory-result-list"></div></details>
           <details><summary>查看完整技术结果</summary><pre id="memoryWorkspaceOut" class="advanced-output"></pre></details>
+          <div class="actions" style="justify-content:flex-end"><button class="secondary" data-min-role="admin" onclick="endBrowserMemorySession(event)">结束当前会话</button></div>
         </div>
       </section>
 
@@ -1956,6 +1966,8 @@ def _dashboard_html() -> str:
     const bootstrapParams = new URLSearchParams(window.location.hash.slice(1));
     const bootstrapToken = bootstrapParams.get('token') || '';
     const bootstrapTab = bootstrapParams.get('tab') || '';
+    let memorySessionId = sessionStorage.getItem('memguardos_memory_session') || crypto.randomUUID();
+    sessionStorage.setItem('memguardos_memory_session', memorySessionId);
     if (bootstrapToken)
       sessionStorage.setItem('memguardos_api_token', bootstrapToken);
     if (bootstrapParams.has('token')) {
@@ -2151,6 +2163,7 @@ def _dashboard_html() -> str:
         forbidden:'当前访问权限不足。请在系统维护中填写具有相应权限的访问凭证。',
         forget_preview_required:'请先重新预览影响范围，再确认遗忘。',
         forget_preview_stale:'遗忘条件或候选范围已经变化，请先重新预览影响范围。',
+        stale_preview:'会话记忆在预览后发生变化，请重新结束当前会话以核对影响范围。',
         invalid_json:'请求内容格式不正确。请刷新页面后重试。',
         payload_too_large:'提交内容过大，请缩短内容或拆分后重试。',
         not_found:'没有找到请求的内容，请返回上一步重新选择。',
@@ -3111,7 +3124,7 @@ def _dashboard_html() -> str:
         const limit = Number(document.getElementById('memorySearchLimit').value || 5);
         const main = document.getElementById('memoryWorkspaceResults');
         main.innerHTML = '<div class="skeleton" aria-label="正在搜索记忆"></div><div class="skeleton" aria-hidden="true"></div>';
-        const payload = await getJson('/api/search?q=' + encodeURIComponent(query) + '&top_k=' + encodeURIComponent(limit), 5000);
+        const payload = await getJson('/api/search?q=' + encodeURIComponent(query) + '&top_k=' + encodeURIComponent(limit) + '&session_id=' + encodeURIComponent(memorySessionId), 5000);
         const rows = payload.result || [];
         renderMemoryWorkspaceRows(rows, 'search');
         document.getElementById('memorySearchSummary').textContent = rows.length
@@ -3490,7 +3503,7 @@ def _dashboard_html() -> str:
     }
     async function ingest(event) {
       return withMutation(event, '保存记忆', async () => {
-        const data = {text: ingestText.value, source_kind: sourceKind.value, tier: tier.value, natural: true};
+        const data = {text: ingestText.value, source_kind: sourceKind.value, tier: tier.value, natural: true, session_id: memorySessionId};
         const payload = await postJson('/api/ingest', data);
         setRawOutput('ingestOut', payload);
         renderIngestFeedback(payload);
@@ -3500,6 +3513,24 @@ def _dashboard_html() -> str:
             : (result.stored ? (result.updated ? '记忆已更新' : '记忆已保存') : '本次未新增记忆，请查看下方处理结果'),
           result.stored && !result.partial_conflict ? 'ok' : 'warn'
         );
+      });
+    }
+    async function endBrowserMemorySession(event) {
+      return withMutation(event, '结束当前会话', async () => {
+        const preview = await postJson('/api/evict-session', {session_id: memorySessionId, confirm: false});
+        const count = Number((preview.result || {}).candidate_count || 0);
+        if (count && !window.confirm('结束当前会话将清理 ' + count + ' 条临时记忆。长期记忆不会删除。确定继续吗？'))
+          return operationFeedback('已取消，会话记忆没有改变。', 'warn');
+        const completed = await postJson('/api/evict-session', {
+          session_id: memorySessionId, confirm: true,
+          expected_versions: (preview.result || {}).expected_versions || {}
+        });
+        if (!(completed.result || {}).evicted)
+          throw new Error('会话清理未完成，请检查操作记录。');
+        memorySessionId = crypto.randomUUID();
+        sessionStorage.setItem('memguardos_memory_session', memorySessionId);
+        await loadMemoryWorkspace(null);
+        return operationFeedback(count ? '当前会话已结束，临时记忆已清理；长期记忆保持可用。' : '当前会话已结束，没有需要清理的临时记忆。', 'ok');
       });
     }
     function renderIngestFeedback(payload) {
@@ -3573,7 +3604,7 @@ def _dashboard_html() -> str:
     }
     async function search(event) {
       await withBusy(event, async () => {
-        const payload = await getJson('/api/search?q=' + encodeURIComponent(searchQuery.value) + '&top_k=5');
+        const payload = await getJson('/api/search?q=' + encodeURIComponent(searchQuery.value) + '&top_k=5&session_id=' + encodeURIComponent(memorySessionId));
         renderSearchCards(payload);
         setRawOutput('searchOut', payload);
       });
@@ -3611,7 +3642,7 @@ def _dashboard_html() -> str:
     }
     async function contextBuild(event) {
       await withBusy(event, async () => {
-        const payload = await getJson('/api/context?q=' + encodeURIComponent(contextQuery.value) + '&token_budget=' + encodeURIComponent(tokenBudget.value));
+        const payload = await getJson('/api/context?q=' + encodeURIComponent(contextQuery.value) + '&token_budget=' + encodeURIComponent(tokenBudget.value) + '&session_id=' + encodeURIComponent(memorySessionId));
         renderContextVisual(payload);
         setRawOutput('contextOut', payload);
       });
