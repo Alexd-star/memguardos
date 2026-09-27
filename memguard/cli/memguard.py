@@ -1079,6 +1079,7 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
         print(final_messages[-1])
 
     changes = result.get("memory_change_summary") or {}
+    consolidation = result.get("tool_consolidation") or {}
     learned = list(changes.get("new_memories") or []) + list(changes.get("updated_memories") or [])
     if memory_enabled:
         _subsection("本次记忆变化")
@@ -1107,6 +1108,12 @@ def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:
                 print("另有 %d 项已保存，可在记忆中心查看。" % (len(learned) - 6))
         else:
             print("- 本轮没有新增稳定偏好或可复用经验；任务记录仍可在审计页查看。")
+        if consolidation.get("promoted"):
+            print("- 跨会话工具经验：新增 %d 条，后续同项目任务可检索；这是执行证据，不代表用户偏好。" % len(consolidation["promoted"]))
+        elif consolidation.get("observations"):
+            print("- 工具结果已纳入验证观察；至少两个独立完成的会话成功后，才会形成长期经验。")
+        if summary.get("procedural_memories"):
+            print("- 本轮工具执行记录 %d 条仅在当前会话可见，结束会话时清理。" % summary["procedural_memories"])
         blocked_items = list(changes.get("blocked_items") or [])
         if blocked_items:
             print("- 内容保护：%d 项敏感内容已阻止进入长期记忆和检索上下文。" % len(blocked_items))

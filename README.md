@@ -221,6 +221,8 @@ memguard audit
 `forget` 默认只预览候选；只有带 `--yes` 才会执行，`--compact` 会继续整理追加式段文件。
 临时记忆属于具体会话：`memguard shell` 会自动创建并在正常退出时清理；单条命令可用 `memguard remember "本次会话临时记录构建步骤" --session-id demo-01`，之后用同一 `--session-id` 搜索，最后执行 `memguard end-session --session-id demo-01 --yes`。长期记忆不随会话结束删除。
 
+异常退出留下的临时会话可用 `memctl stale-sessions --older-than-hours 72` 预览，再按会话编号逐项确认清理。真实 Agent 的工具结果先进入会话记忆；只有完整任务通过校验、同一工具在至少两个独立会话成功后，系统才形成不含原始命令的项目级工具经验，且不会把执行统计冒充用户偏好。
+
 ### ② 在 openKylin 安装完整桌面版
 
 需要复现当前 `main` 的最新代码时，建议在 openKylin 构建机准备 `qmake`、`pkg-config`、`libpeony-dev`、`libukcc-dev` 和 Qt5 开发包，然后直接从源码构建并安装五包：

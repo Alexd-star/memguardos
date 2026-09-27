@@ -406,6 +406,30 @@ class SQLiteMetaStore:
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_fact_slot_key ON fact_slot(scope, subject, predicate)"
         )
+        self.conn.execute(
+            """CREATE TABLE IF NOT EXISTS verified_tool_outcome (
+                scope TEXT NOT NULL,
+                project_root TEXT NOT NULL,
+                session_id TEXT NOT NULL,
+                domain TEXT NOT NULL,
+                tool TEXT NOT NULL,
+                success_seen INTEGER NOT NULL DEFAULT 0,
+                failure_seen INTEGER NOT NULL DEFAULT 0,
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY (scope, project_root, session_id, domain, tool)
+            )"""
+        )
+        self.conn.execute(
+            """CREATE TABLE IF NOT EXISTS verified_tool_experience (
+                scope TEXT NOT NULL,
+                project_root TEXT NOT NULL,
+                domain TEXT NOT NULL,
+                tool TEXT NOT NULL,
+                memory_id TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY (scope, project_root, domain, tool)
+            )"""
+        )
         if self.conn.execute(
             "SELECT 1 FROM schema_migrations WHERE name = 'fact_slot_backfill_v1'"
         ).fetchone() is None:
@@ -425,6 +449,10 @@ class SQLiteMetaStore:
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_live_updated ON memory(deleted, updated_at DESC)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_tier_live ON memory(tier, deleted, updated_at DESC)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_retention_session ON memory(retention_session_id, tier, deleted)")
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_verified_tool_outcome_key "
+            "ON verified_tool_outcome(scope, project_root, domain, tool)"
+        )
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_governance ON memory(governance_state, deleted, updated_at DESC)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_entity_entity ON memory_entity(entity, memory_id)")
         self.conn.execute(
@@ -1071,7 +1099,8 @@ class SQLiteMetaStore:
     def begin_memory_erasures(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
         """Apply a previewed batch atomically or leave every target untouched."""
 
-        totals = {"scrubbed_events": 0, "deleted_observations": 0, "redacted_audit": 0}
+        totals = {"scrubbed_events": 0, "deleted_observations": 0,
+                  "deleted_tool_outcomes": 0, "redacted_audit": 0}
         memory_ids = []
         plaintexts = []
         linked_event_ids = set()
@@ -1135,6 +1164,17 @@ class SQLiteMetaStore:
                     "DELETE FROM preference_observations WHERE promoted_memory_id = ?",
                     (memory_id,),
                 ).rowcount
+                promotion = self.conn.execute(
+                    """SELECT scope, project_root, domain, tool
+                       FROM verified_tool_experience WHERE memory_id = ?""",
+                    (memory_id,),
+                ).fetchone()
+                if promotion is not None:
+                    totals["deleted_tool_outcomes"] += self.conn.execute(
+                        """DELETE FROM verified_tool_outcome
+                           WHERE scope = ? AND project_root = ? AND domain = ? AND tool = ?""",
+                        tuple(promotion),
+                    ).rowcount
             if memory_ids:
                 placeholders = ",".join("?" for _ in memory_ids)
                 self.conn.execute(
@@ -1387,6 +1427,73 @@ class SQLiteMetaStore:
                ORDER BY updated_at DESC""",
             (session_id,),
         )]
+
+    def list_stale_memory_sessions(self, cutoff: str, limit: int = 100) -> List[Dict[str, Any]]:
+        return [dict(row) for row in self.conn.execute(
+            """SELECT retention_session_id AS session_id, COUNT(*) AS memory_count,
+                      MAX(updated_at) AS last_write_at
+               FROM memory
+               WHERE retention_session_id != '' AND tier IN ('working', 'session')
+                 AND deleted = 0
+               GROUP BY retention_session_id
+               HAVING MAX(updated_at) < ?
+               ORDER BY last_write_at ASC LIMIT ?""",
+            (cutoff, max(1, min(int(limit), 500))),
+        )]
+
+    def record_verified_tool_outcomes(
+        self, scope: str, project_root: str, session_id: str,
+        outcomes: List[tuple[str, str, bool]],
+    ) -> List[Dict[str, Any]]:
+        keys = set()
+        with self.conn:
+            for domain, tool, success in outcomes:
+                keys.add((domain, tool))
+                self.conn.execute(
+                    """INSERT INTO verified_tool_outcome
+                       (scope, project_root, session_id, domain, tool,
+                        success_seen, failure_seen, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                       ON CONFLICT(scope, project_root, session_id, domain, tool)
+                       DO UPDATE SET success_seen = MAX(success_seen, excluded.success_seen),
+                                     failure_seen = MAX(failure_seen, excluded.failure_seen),
+                                     updated_at = excluded.updated_at""",
+                    (scope, project_root, session_id, domain, tool,
+                     int(success), int(not success), utc_now()),
+                )
+        results = []
+        for domain, tool in sorted(keys):
+            row = self.conn.execute(
+                """SELECT SUM(success_seen) AS successful_sessions,
+                          SUM(failure_seen) AS failed_sessions
+                   FROM verified_tool_outcome
+                   WHERE scope = ? AND project_root = ? AND domain = ? AND tool = ?""",
+                (scope, project_root, domain, tool),
+            ).fetchone()
+            results.append({"domain": domain, "tool": tool,
+                            "successful_sessions": int(row["successful_sessions"] or 0),
+                            "failed_sessions": int(row["failed_sessions"] or 0)})
+        return results
+
+    def verified_tool_experience_exists(
+        self, scope: str, project_root: str, domain: str, tool: str,
+    ) -> bool:
+        return self.conn.execute(
+            """SELECT 1 FROM verified_tool_experience
+               WHERE scope = ? AND project_root = ? AND domain = ? AND tool = ?""",
+            (scope, project_root, domain, tool),
+        ).fetchone() is not None
+
+    def mark_verified_tool_experience(
+        self, scope: str, project_root: str, domain: str, tool: str, memory_id: str,
+    ) -> None:
+        with self.conn:
+            self.conn.execute(
+                """INSERT OR IGNORE INTO verified_tool_experience
+                   (scope, project_root, domain, tool, memory_id, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (scope, project_root, domain, tool, memory_id, utc_now()),
+            )
 
     def get_memory(self, memory_id: str) -> Optional[Dict[str, Any]]:
         row = self.conn.execute("SELECT * FROM memory WHERE memory_id = ?", (memory_id,)).fetchone()
@@ -1989,15 +2096,15 @@ class SQLiteMetaStore:
 
     def find_active_memory_by_content(
         self, content: str, scope: str, tier: Optional[str] = None,
-        retention_session_id: str = "",
+        retention_session_id: str = "", project_root: str = "",
     ) -> Optional[Dict[str, Any]]:
         tier_filter = "AND tier = ? AND retention_session_id = ?" if tier else ""
-        params = (scope, content, tier, retention_session_id) if tier else (scope, content)
+        params = (scope, content, project_root, tier, retention_session_id) if tier else (scope, content, project_root)
         row = self.conn.execute(
             """
             SELECT * FROM memory
             WHERE deleted = 0 AND governance_state = 'active'
-              AND scope = ? AND content = ?
+              AND scope = ? AND content = ? AND project_root = ?
             """ + tier_filter + """
             ORDER BY updated_at DESC
             LIMIT 1

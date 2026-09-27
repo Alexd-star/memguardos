@@ -704,6 +704,8 @@ def test_runner_callback_automatically_persists_real_agent_events(tmp_path):
         assert result["event_summary"]["tool_calls"] == 1
         assert result["event_summary"]["tool_results"] == 1
         assert result["event_summary"]["procedural_memories"] == 1
+        assert result["tool_consolidation"]["recorded"] == 1
+        assert result["tool_consolidation"]["promoted"] == []
         assert result["duration_ms"] >= 0.0
         assert result["context"]["trace_id"] == result["trace_id"]
         assert set(result["context"]["selected_memory_ids"]) == {
@@ -740,6 +742,31 @@ def test_runner_callback_automatically_persists_real_agent_events(tmp_path):
         ]
         memories = service.list_memories(include_deleted=False)
         assert any(item["subtype"] == "procedural_trace" for item in memories)
+    finally:
+        service.close()
+
+
+def test_real_runner_consolidates_only_after_independent_verified_sessions(tmp_path):
+    service = make_service(tmp_path)
+    try:
+        results = []
+        for session in ("verified-run-1", "verified-run-2"):
+            runner = OpenHandsMemoryRunner(
+                service=service, session_id=session,
+                workspace=tmp_path / "workspace", state_dir=tmp_path / ("state-" + session),
+                conversation_factory=lambda **kwargs: FakeConversation(kwargs["callback"]),
+            )
+            results.append(runner.run("请查找 build_agent_context 的实现。"))
+        assert all(item["ok"] for item in results)
+        assert results[0]["tool_consolidation"]["promoted"] == []
+        assert len(results[1]["tool_consolidation"]["promoted"]) == 1, [
+            item["tool_consolidation"] for item in results
+        ]
+        record_id = results[1]["tool_consolidation"]["promoted"][0]
+        assert service.meta.get_memory(record_id)["type"] == "knowledge"
+        assert record_id in {
+            item["memory_id"] for item in results[1]["memory_change_summary"]["new_memories"]
+        }
     finally:
         service.close()
 

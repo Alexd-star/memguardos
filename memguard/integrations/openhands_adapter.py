@@ -6,7 +6,7 @@ import json
 import sys
 
 from memguard.integrations.events import AgentInteractionEvent
-from memguard.models import utc_now
+from memguard.models import new_id, utc_now
 
 
 OPENHANDS_VERSION = "1.28.1"
@@ -31,6 +31,15 @@ class OpenHandsEventAdapter:
         self.tool_turns: Dict[str, str] = {}
         self.event_tool_call_ids: Dict[str, str] = {}
         self.internal_feedback = set()
+        self.run_id = new_id("run")
+
+    def begin_run(self) -> None:
+        self.run_id = new_id("run")
+        self.sequence = 0
+        self.current_turn = 0
+        self.tool_turns.clear()
+        self.event_tool_call_ids.clear()
+        self.internal_feedback.clear()
 
     def register_internal_feedback(self, content: str) -> None:
         normalized = " ".join(str(content).split())
@@ -175,9 +184,10 @@ class OpenHandsEventAdapter:
     def _event(self, raw_event: Any, **values: Any) -> AgentInteractionEvent:
         self.sequence += 1
         raw_id = str(getattr(raw_event, "id", "event-%s" % self.sequence))
+        event_id = "%s:%s" % (self.run_id, raw_id)
         tool_call_id = str(getattr(raw_event, "tool_call_id", "") or "").strip()
         if tool_call_id:
-            self.event_tool_call_ids[raw_id] = tool_call_id
+            self.event_tool_call_ids[event_id] = tool_call_id
         return AgentInteractionEvent(
             agent_name="openhands",
             agent_version=self.agent_version,
@@ -185,8 +195,8 @@ class OpenHandsEventAdapter:
             turn_id=str(values.pop("turn_id")),
             sequence=self.sequence,
             timestamp=str(getattr(raw_event, "timestamp", "") or utc_now()),
-            source_uri="openhands://%s/%s" % (self.session_id, raw_id),
-            event_id=raw_id,
+            source_uri="openhands://%s/%s/%s" % (self.session_id, self.run_id, raw_id),
+            event_id=event_id,
             project_root=self.project_root,
             task_type=self.task_type,
             **values,

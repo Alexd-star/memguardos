@@ -98,7 +98,22 @@ def test_openhands_message_event_maps_user_role_and_content():
     assert event.event_type == "user_message"
     assert event.role == "user"
     assert event.content == "以后使用 rg。"
-    assert event.source_uri == "openhands://session-a/oh-user-1"
+    assert event.source_uri == "openhands://session-a/%s/oh-user-1" % adapter.run_id
+
+
+def test_reused_raw_event_ids_have_distinct_run_identity():
+    adapter = OpenHandsEventAdapter("session-a")
+    raw = fake_event(
+        "MessageEvent", id="1", source="user",
+        llm_message=SimpleNamespace(role="user", content=[text("查找文件")]),
+    )
+    first = adapter.convert(raw)
+    adapter.begin_run()
+    second = adapter.convert(raw)
+    assert first.event_id != second.event_id
+    assert first.source_uri != second.source_uri
+    assert first.session_id == second.session_id == "session-a"
+    assert second.sequence == 1
 
 
 def test_openhands_action_and_observation_map_tool_trace():

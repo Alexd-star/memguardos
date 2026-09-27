@@ -1,4 +1,7 @@
 import sqlite3
+from datetime import datetime, timedelta, timezone
+
+import pytest
 
 from memguard.api.server import handle_request
 from memguard.cli.memguard import main as user_cli_main
@@ -11,6 +14,51 @@ from memguard.store.sqlite_meta import SQLiteMetaStore
 
 def _service(tmp_path):
     return MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+
+
+def test_stale_session_review_is_read_only_and_requires_explicit_eviction(tmp_path):
+    service = _service(tmp_path)
+    try:
+        old = service.ingest_text(
+            "旧会话的临时构建记录。", tier="session", retention_session_id="abandoned",
+        )["record"]
+        recent = service.ingest_text(
+            "当前会话的临时构建记录。", tier="session", retention_session_id="active",
+        )["record"]
+        stale_at = (datetime.now(timezone.utc) - timedelta(days=5)).isoformat()
+        service.meta.conn.execute(
+            "UPDATE memory SET updated_at = ? WHERE memory_id = ?", (stale_at, old.memory_id),
+        )
+        service.meta.conn.commit()
+        with pytest.raises(ValueError):
+            service.stale_memory_sessions(older_than_hours=1)
+        report = service.stale_memory_sessions(older_than_hours=72)
+        assert [row["session_id"] for row in report["sessions"]] == ["abandoned"]
+        assert service.meta.get_memory(old.memory_id)["deleted"] == 0
+        preview = service.evict_session("abandoned")
+        assert preview["memory_ids"] == [old.memory_id]
+        assert service.evict_session(
+            "abandoned", confirm=True, expected_versions=preview["expected_versions"],
+        )["evicted"]
+        assert service.meta.get_memory(old.memory_id)["deleted"] == 1
+        assert service.meta.get_memory(recent.memory_id)["deleted"] == 0
+    finally:
+        service.close()
+
+
+def test_search_fallback_keeps_the_same_session_scope(tmp_path, monkeypatch):
+    service = _service(tmp_path)
+    try:
+        record = service.ingest_text(
+            "蓝河目录结构记录在本次会话。", tier="session", retention_session_id="owner",
+        )["record"]
+        monkeypatch.setattr(service.retriever, "rank", lambda *_args, **_kwargs: [])
+        assert record.memory_id in {
+            item["memory_id"] for item in service.search("蓝河目录结构", session_id="owner")
+        }
+        assert service.search("蓝河目录结构", session_id="stranger") == []
+    finally:
+        service.close()
 
 
 def test_session_facts_are_isolated_across_retrieval_and_updates(tmp_path):
@@ -168,6 +216,7 @@ def test_public_cli_session_flow(tmp_path, capsys):
     assert "临时记忆" in capsys.readouterr().out
     assert user_cli_main(common + ["search", "蓝河构建策略", "--session-id", "cli-a"]) == 1
     assert memctl_parser().parse_args(["search", "蓝河", "--session-id", "cli-a"]).session_id == "cli-a"
+    assert memctl_parser().parse_args(["stale-sessions", "--older-than-hours", "96"]).older_than_hours == 96
 
 
 def test_session_end_rejects_changed_preview(tmp_path):

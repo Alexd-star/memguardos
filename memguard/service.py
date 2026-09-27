@@ -1,6 +1,7 @@
 from pathlib import Path
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta, timezone
 from time import perf_counter
 from typing import Dict, List, Optional, Tuple, Union
 import json
@@ -36,7 +37,7 @@ from memguard.governance.trust import assess_memory_source
 from memguard.ingestion.behavior import BehaviorEvent, load_shell_history
 from memguard.ingestion.config import config_entry_to_memory_text, load_config_entries, validate_config_entry
 from memguard.ingestion.quality import assess_text_quality
-from memguard.ingestion.tool_preference import ToolPreferenceMiner
+from memguard.ingestion.tool_preference import DOMAIN_LABELS, ToolPreferenceMiner, verified_tool_outcomes
 from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.events import AgentInteractionEvent
 from memguard.integrations.evidence_spans import exact_source_span, preference_source_span
@@ -383,8 +384,12 @@ class MemGuardService:
         tier: Optional[str] = None,
         source_link: Optional[Dict[str, object]] = None,
         retention_session_id: str = "",
+        project_root: str = "",
+        verified_tool_evidence: bool = False,
     ) -> Dict[str, object]:
         self._recover_pending_memory_writes()
+        if source_kind == "tool_result_verified" and not verified_tool_evidence:
+            return {"stored": False, "reason": "verified_source_requires_internal_evidence"}
         if source_link and source_link.get("relation") != "source_clause":
             raise ValueError("unsupported source relation")
         safe_source_uri = self._safe_provenance_uri(source_uri)
@@ -473,7 +478,8 @@ class MemGuardService:
         if effective_tier in {"working", "session"} and not session_scope:
             return {"stored": False, "reason": "session_required", "tier": effective_tier}
         existing = self.meta.find_active_memory_by_content(
-            stored_text, self.namespace, tier=effective_tier, retention_session_id=session_scope,
+            stored_text, self.namespace, tier=effective_tier,
+            retention_session_id=session_scope, project_root=project_root,
         )
         fact = parse_fact_slot(stored_text) if memory_type == "knowledge" and not sensitivity.labels else None
         if fact is not None:
@@ -565,6 +571,7 @@ class MemGuardService:
             scope=self.namespace,
             tier=effective_tier,
             retention_session_id=session_scope,
+            project_root=project_root,
             sensitivity=sensitivity,
             trust_level=governance.trust_level,
             trust_score=governance.trust_score,
@@ -810,7 +817,8 @@ class MemGuardService:
                     candidate.to_memory_text(),
                     source_kind="tool_result",
                     source_uri="%s#tool-experience:%s:%s" % (source_uri, candidate.domain, candidate.preferred_tool),
-                    tier="long_term",
+                    tier="session",
+                    retention_session_id=session_id,
                 )
             )
         return {
@@ -821,6 +829,52 @@ class MemGuardService:
             "preferences": [],
             "experience_candidates": experience_results,
         }
+
+    def consolidate_verified_tool_outcomes(
+        self, tool_results: List[ToolResult], *, session_id: str,
+        project_root: str, task_verified: bool,
+    ) -> Dict[str, object]:
+        if not task_verified:
+            return {"recorded": 0, "promoted": [], "reason": "task_not_verified"}
+        if not str(session_id).strip() or not str(project_root).strip():
+            return {"recorded": 0, "promoted": [], "reason": "session_and_project_required"}
+        outcomes = verified_tool_outcomes(tool_results)
+        if not outcomes:
+            return {"recorded": 0, "promoted": [], "reason": "no_eligible_tool_outcomes"}
+        project = str(Path(project_root).expanduser().resolve())
+        observations = self.meta.record_verified_tool_outcomes(
+            self.namespace, project, str(session_id).strip(), outcomes,
+        )
+        promoted = []
+        feedback = []
+        for observation in observations:
+            domain = str(observation["domain"])
+            tool = str(observation["tool"])
+            if observation["successful_sessions"] < 2 or observation["failed_sessions"] > observation["successful_sessions"]:
+                continue
+            if self.meta.verified_tool_experience_exists(self.namespace, project, domain, tool):
+                continue
+            label = DOMAIN_LABELS.get(domain, domain)
+            memory_text = (
+                "跨会话已验证工具经验：%s工具 %s 在至少两个独立完成的任务会话中执行成功。"
+                "此记录是工具结果证据，不代表用户偏好；实际使用仍需按当前环境验证。"
+            ) % (label, tool)
+            result = self.ingest_text(
+                memory_text, source_kind="tool_result_verified",
+                source_uri="verified-tool:%s:%s:%s" % (stable_hash(project)[:12], domain, tool),
+                tier="long_term", project_root=project,
+                verified_tool_evidence=True,
+            )
+            record = result.get("record")
+            if record and (result.get("stored") or result.get("duplicate")):
+                self.meta.mark_verified_tool_experience(
+                    self.namespace, project, domain, tool, record.memory_id,
+                )
+                promoted.append(record.memory_id)
+                if result.get("feedback"):
+                    feedback.append(result["feedback"])
+        return {"recorded": len(outcomes), "observations": observations,
+                "promoted": promoted, "feedback": feedback}
 
     def ingest_interaction(self, event: Union[AgentInteractionEvent, Dict[str, object]]) -> Dict[str, object]:
         self._recover_pending_memory_writes()
@@ -2575,6 +2629,17 @@ class MemGuardService:
             "reason": result.get("reason", ""), "verification": result.get("verification", []),
         }
 
+    def stale_memory_sessions(self, older_than_hours: int = 72, limit: int = 100) -> Dict[str, object]:
+        hours = int(older_than_hours)
+        if hours < 24:
+            raise ValueError("older_than_hours must be at least 24")
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+        return {
+            "cutoff": cutoff,
+            "sessions": self.meta.list_stale_memory_sessions(cutoff, limit=limit),
+            "note": "Candidates are based on last memory write, not a live-session lease. Review each before evict-session.",
+        }
+
     def memory_policy_status(self, eviction_limit: int = 10) -> Dict[str, object]:
         self.flush_memory_hits()
         live_records = self.meta.list_memories(include_deleted=False)
@@ -3185,7 +3250,7 @@ class MemGuardService:
             results.append(item)
             seen.add(item["memory_id"])
         if not results:
-            for record in self.meta.search_text(query, limit=limit):
+            for record in self.meta.search_text(query, limit=limit, session_id=session_id):
                 record["score"] = 0.1
                 record["match_source"] = "text"
                 results.append(record)
@@ -3541,11 +3606,12 @@ class MemGuardService:
         clean_task = str(task).strip()
         if not clean_task:
             raise ValueError("task is required")
-        search_hits = self.search(clean_task, limit=max(limit * 3, limit), audit=False, session_id=session_id)
+        project_scope = str(Path(project_root).expanduser().resolve()) if project_root else ""
+        search_hits = self.search(clean_task, limit=max(limit * 3, 24), audit=False, session_id=session_id)
         preference_selection = self.select_preferences(
             agent_name=agent_name,
             session_id=session_id,
-            project_root=project_root,
+            project_root=project_scope,
             task_type=task_type,
         )
 
@@ -3581,6 +3647,10 @@ class MemGuardService:
         for hit in search_hits:
             memory_id = str(hit.get("memory_id") or "")
             if not memory_id or memory_id in seen:
+                continue
+            memory_project = str(hit.get("project_root") or "")
+            if memory_project and memory_project != project_scope:
+                filtered.append({"reason": "project_scope_mismatch"})
                 continue
             if hit.get("type") in {"preference", "sensitive_policy"} and hit.get("preference_topic"):
                 filtered.append(

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Iterable
 import shlex
 
-from memguard.ingestion.tool_result import ToolResult, summarize_stream
+from memguard.ingestion.tool_result import ToolResult
 
 
 DOMAIN_LABELS = {
@@ -98,8 +98,6 @@ class ToolPreferenceMiner:
                 "%s success=%s failure=%s avg_ms=%.1f"
                 % (tool, stat["success"], stat["failure"], stat["avg_duration"])
             )
-        for row in preferred["rows"][:2]:
-            evidence.append("%s -> %s" % (summarize_stream(row.command, 80), "success" if row.exit_code == 0 else "failure"))
         return ToolPreferenceCandidate(
             domain=domain,
             preferred_tool=preferred_tool,
@@ -112,7 +110,7 @@ class ToolPreferenceMiner:
 
 
 def _tool_name(result: ToolResult) -> str:
-    if result.tool_name:
+    if result.tool_name and result.tool_name.strip().casefold() not in {"terminal", "shell", "bash", "command"}:
         return result.tool_name.strip()
     try:
         parts = shlex.split(result.command)
@@ -132,3 +130,21 @@ def _domain(command: str, tool: str) -> str:
     if tool == "systemctl" or "systemctl" in lowered or "journalctl" in lowered:
         return "service_management"
     return "general_shell"
+
+
+VERIFIED_TOOL_DOMAINS = {
+    "code_search": {"rg", "grep", "ack", "ag"},
+    "file_search": {"find", "fd"},
+    "test_runner": {"pytest", "tox", "nox"},
+}
+
+
+def verified_tool_outcomes(results: Iterable[ToolResult]) -> list[tuple[str, str, bool]]:
+    """Return only bounded, non-destructive tool categories; never raw output."""
+    outcomes = []
+    for result in results:
+        tool = _tool_name(result).casefold()
+        domain = _domain(result.command, tool)
+        if tool in VERIFIED_TOOL_DOMAINS.get(domain, set()):
+            outcomes.append((domain, tool, result.exit_code == 0))
+    return outcomes

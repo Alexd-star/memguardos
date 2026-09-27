@@ -70,7 +70,7 @@ class OpenHandsMemoryRunner:
             raise ValueError("session_id is required")
         self.workspace = Path(workspace).expanduser().resolve()
         self.state_dir = Path(state_dir).expanduser().resolve()
-        self.project_root = str(project_root or self.workspace)
+        self.project_root = str(Path(project_root or self.workspace).expanduser().resolve())
         self.task_type = str(task_type)
         self.model = str(model)
         self.api_key = str(api_key)
@@ -101,6 +101,7 @@ class OpenHandsMemoryRunner:
         self._procedural_memories = []
         self._procedural_feedback = []
         self._processed_tool_results = set()
+        self._verified_tool_results = []
         self._live_events = []
 
     def prepare_context(self, task: str) -> Dict[str, object]:
@@ -220,30 +221,32 @@ class OpenHandsMemoryRunner:
                 if result_key in self._processed_tool_results:
                     return
                 self._processed_tool_results.add(result_key)
-                memory_result = self.service.ingest_tool_result(
-                    ToolResult(
-                        command=command,
-                        cwd=self.project_root,
-                        exit_code=int(event.exit_code or 0),
-                        stdout=event.tool_result if int(event.exit_code or 0) == 0 else "",
-                        stderr=event.tool_result if int(event.exit_code or 0) != 0 else "",
-                        tool_name=event.tool_name,
-                        state_before="Agent 正在执行当前用户任务",
-                        state_after=(
-                            "工具调用成功"
-                            if int(event.exit_code or 0) == 0
-                            else "工具调用失败"
-                        ),
-                        lesson=(
-                            "该命令已在当前 openKylin Agent 工作区验证"
-                            if int(event.exit_code or 0) == 0
-                            else "后续同类任务应根据错误输出修正命令后再执行"
-                        ),
+                tool_result = ToolResult(
+                    command=command,
+                    cwd=self.project_root,
+                    exit_code=int(event.exit_code or 0),
+                    stdout=event.tool_result if int(event.exit_code or 0) == 0 else "",
+                    stderr=event.tool_result if int(event.exit_code or 0) != 0 else "",
+                    tool_name=event.tool_name,
+                    state_before="Agent 正在执行当前用户任务",
+                    state_after=(
+                        "工具调用成功"
+                        if int(event.exit_code or 0) == 0
+                        else "工具调用失败"
                     ),
+                    lesson=(
+                        "该命令已在当前 openKylin Agent 工作区验证"
+                        if int(event.exit_code or 0) == 0
+                        else "后续同类任务应根据错误输出修正命令后再执行"
+                    ),
+                )
+                memory_result = self.service.ingest_tool_result(
+                    tool_result,
                     source_uri=event.source_uri,
                     session_id=self.session_id,
                 )
                 if memory_result.get("stored"):
+                    self._verified_tool_results.append(tool_result)
                     self._procedural_memories.append(
                         memory_result["record"].memory_id
                     )
@@ -404,6 +407,18 @@ class OpenHandsMemoryRunner:
             natural_high_risk_block=natural_high_risk_block,
             task_type=self.task_type,
         )
+        task_verified = (
+            blocked == 0 and task_errors == recovered_task_errors
+            and not remaining_issues and task_completion["passed"]
+        )
+        tool_consolidation = (
+            self.service.consolidate_verified_tool_outcomes(
+                self._verified_tool_results,
+                session_id=self.session_id,
+                project_root=self.project_root,
+                task_verified=task_verified,
+            ) if self.memory_enabled else {"recorded": 0, "promoted": [], "reason": "memory_disabled"}
+        )
         execution_trace = _execution_trace(self._live_events)
         failed_terminal_commands = sum(
             1
@@ -413,12 +428,7 @@ class OpenHandsMemoryRunner:
             and item.get("status") == "failure"
         )
         return {
-            "ok": (
-                blocked == 0
-                and task_errors == recovered_task_errors
-                and not remaining_issues
-                and task_completion["passed"]
-            ),
+            "ok": task_verified,
             "session_id": self.session_id,
             "trace_id": context_bundle["trace_id"],
             "context_file": context_bundle["context_file"],
@@ -438,6 +448,7 @@ class OpenHandsMemoryRunner:
                 "passed": not remaining_issues,
             },
             "task_completion": task_completion,
+            "tool_consolidation": tool_consolidation,
             "event_summary": {
                 "stored": stored,
                 "duplicate": duplicate,
@@ -457,7 +468,8 @@ class OpenHandsMemoryRunner:
             },
             "memory_change_summary": merge_memory_change_summaries(
                 [item.get("feedback", {}) for item in self._event_results]
-                + list(self._procedural_feedback),
+                + list(self._procedural_feedback)
+                + list(tool_consolidation.get("feedback") or []),
                 namespace=self.service.namespace,
                 source="agent",
                 session_id=self.session_id,
@@ -481,9 +493,9 @@ class OpenHandsMemoryRunner:
         self._procedural_memories.clear()
         self._procedural_feedback.clear()
         self._processed_tool_results.clear()
+        self._verified_tool_results.clear()
         self._live_events.clear()
-        self.adapter.tool_turns.clear()
-        self.adapter.internal_feedback.clear()
+        self.adapter.begin_run()
 
     def _recover_structured_tool_intent(
         self,

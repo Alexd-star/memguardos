@@ -91,6 +91,9 @@ def build_parser() -> argparse.ArgumentParser:
     evict.add_argument("--yes", action="store_true")
     evict_session = sub.add_parser("evict-session", help="End one session and erase its temporary memories")
     evict_session.add_argument("--yes", action="store_true")
+    stale_sessions = sub.add_parser("stale-sessions", help="Review old temporary-memory sessions; does not delete data")
+    stale_sessions.add_argument("--older-than-hours", type=int, default=72)
+    stale_sessions.add_argument("--limit", type=int, default=100)
     for name in ("ingest", "ingest-tool-result", "ingest-history", "ingest-os-event", "ingest-auditd", "promote", "evict-session"):
         sub.choices[name].add_argument("--session-id", default=argparse.SUPPRESS, help="Session for temporary memory")
     memory_policy = sub.add_parser("memory-policy", help="Show tiered memory policy, storage footprint, cgroup status, and eviction candidates")
@@ -643,6 +646,10 @@ def main(argv: list[str] | None = None) -> int:
             result = service.evict_session(args.session_id, confirm=args.yes)
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return 0 if result.get("evicted") or not args.yes else 2
+
+        if args.command == "stale-sessions":
+            print(json.dumps(service.stale_memory_sessions(args.older_than_hours, args.limit), ensure_ascii=False, indent=2))
+            return 0
 
         if args.command == "memory-policy":
             print(json.dumps(service.memory_policy_status(eviction_limit=args.eviction_limit), ensure_ascii=False, indent=2))

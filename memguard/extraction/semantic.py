@@ -76,6 +76,8 @@ class HybridMemoryExtractor:
 
     def extract(self, text: str, source_kind: str = "manual") -> ExtractionDecision:
         base = self._deterministic_extract(text, source_kind)
+        if source_kind == "tool_result_verified":
+            return base
         if not self.command.strip():
             return base
         enhanced, error = self._call_enhancer(text, source_kind)
@@ -94,7 +96,9 @@ class HybridMemoryExtractor:
         lowered = text.lower()
         signals = self._signals(text, source_kind)
         memory_type = "knowledge"
-        if "source_tool_result" in signals and "preference_intent" in signals and "tool_preference_intent" in signals:
+        if source_kind == "tool_result_verified":
+            memory_type = "knowledge"
+        elif "source_tool_result" in signals and "preference_intent" in signals and "tool_preference_intent" in signals:
             memory_type = "preference"
         elif "source_tool_result" in signals:
             memory_type = "knowledge"
@@ -104,7 +108,9 @@ class HybridMemoryExtractor:
             memory_type = "preference"
 
         subtype = "fact"
-        if source_kind == "tool_result" and memory_type == "preference" and "tool_preference_intent" in signals:
+        if source_kind == "tool_result_verified":
+            subtype = "tool_trace"
+        elif source_kind == "tool_result" and memory_type == "preference" and "tool_preference_intent" in signals:
             subtype = "tool_preference"
         elif source_kind == "tool_result" or "tool result:" in lowered:
             if "procedural_memory=state_action_result" in lowered:
