@@ -77,6 +77,16 @@ def test_verified_tool_experience_requires_two_completed_sessions_and_is_project
         assert record["type"] == "knowledge"
         assert record["project_root"] == str(project.resolve())
         assert "build_context" not in record["content"]
+        assert record_id in {
+            hit["memory_id"] for hit in service.search(
+                "代码搜索工具经验 rg", project_root=str(project),
+            )
+        }
+        assert record_id not in {
+            hit["memory_id"] for hit in service.search(
+                "代码搜索工具经验 rg", project_root=str(other_project),
+            )
+        }
         assert service.select_preferences(agent_name="openhands", session_id="three")["selected"] == []
         repeat = service.consolidate_verified_tool_outcomes(
             result, session_id="three", project_root=str(project), task_verified=True,

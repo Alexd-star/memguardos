@@ -169,9 +169,9 @@ def test_agent_context_uses_one_candidate_search(tmp_path, monkeypatch):
         calls = {"count": 0}
         original = service.search
 
-        def counted_search(query, limit=5, audit=True, session_id=""):
+        def counted_search(query, limit=5, audit=True, session_id="", project_root=None):
             calls["count"] += 1
-            return original(query, limit=limit, audit=audit, session_id=session_id)
+            return original(query, limit=limit, audit=audit, session_id=session_id, project_root=project_root)
 
         monkeypatch.setattr(service, "search", counted_search)
 

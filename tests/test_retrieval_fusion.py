@@ -64,7 +64,7 @@ def test_service_only_uses_graph_for_relational_intent(tmp_path, monkeypatch):
         service.ingest_text("项目 A 使用工具 B", source_kind="agent_interaction")
         calls = []
 
-        def fake_graph_search(entity, limit=10):
+        def fake_graph_search(entity, limit=10, project_root=None):
             calls.append(entity)
             return {"layers": {"summary": [], "entity_relation": [], "chunk": []}}
 
@@ -107,7 +107,7 @@ def test_general_query_result_is_unchanged_when_graph_has_no_signal(
         monkeypatch.setattr(
             service,
             "hierarchical_graph_search",
-            lambda entity, limit=10: {
+            lambda entity, limit=10, project_root=None: {
                 "layers": {
                     "summary": [{"memory_id": "unrelated-memory"}],
                     "entity_relation": [],
@@ -134,7 +134,7 @@ def test_relational_query_can_add_graph_only_candidate(tmp_path, monkeypatch):
         monkeypatch.setattr(
             service,
             "hierarchical_graph_search",
-            lambda entity, limit=10: {
+            lambda entity, limit=10, project_root=None: {
                 "layers": {
                     "summary": [{"memory_id": related.memory_id}],
                     "entity_relation": [],

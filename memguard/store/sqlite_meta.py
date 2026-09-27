@@ -1402,14 +1402,16 @@ class SQLiteMetaStore:
         limit: int,
         exclude_ids: Optional[List[str]] = None,
         session_id: str = "",
+        project_root: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         effective_limit = max(0, int(limit))
         if effective_limit == 0:
             return []
         excluded = list(dict.fromkeys(str(memory_id) for memory_id in (exclude_ids or []) if memory_id))
         sql = """SELECT * FROM memory WHERE deleted = 0 AND governance_state = 'active'
-                 AND (retention_session_id = '' OR retention_session_id = ?)"""
-        params: List[Any] = [session_id]
+                 AND (retention_session_id = '' OR retention_session_id = ?)
+                 AND (? IS NULL OR project_root = '' OR project_root = ?)"""
+        params: List[Any] = [session_id, project_root, project_root]
         if excluded:
             placeholders = ",".join("?" for _ in excluded)
             sql += " AND memory_id NOT IN (%s)" % placeholders
@@ -2006,6 +2008,7 @@ class SQLiteMetaStore:
         namespace: str,
         max_vectors: int,
         session_id: str = "",
+        project_root: Optional[str] = None,
     ) -> tuple[List[tuple[str, List[float]]], bool]:
         """Return a complete, governed vector snapshot or decline an oversized scan."""
         if max_vectors <= 0:
@@ -2022,12 +2025,14 @@ class SQLiteMetaStore:
               AND memory.trust_level IN ('trusted', 'verified', 'reviewed')
               AND memory.scope IN (SELECT value FROM json_each(?))
               AND (memory.retention_session_id = '' OR memory.retention_session_id = ?)
+              AND (? IS NULL OR memory.project_root = '' OR memory.project_root = ?)
               AND embedding.content_hash =
                   memguard_content_hash(memory.summary, memory.content)
             ORDER BY embedding.memory_id
             LIMIT ?
             """,
-            (backend, model_revision, json.dumps(scopes), session_id, max_vectors + 1),
+            (backend, model_revision, json.dumps(scopes), session_id,
+             project_root, project_root, max_vectors + 1),
         ).fetchall()
         if len(rows) > max_vectors:
             return [], False
@@ -2666,7 +2671,10 @@ class SQLiteMetaStore:
         )
         self.conn.commit()
 
-    def search_text(self, query: str, limit: int = 10, session_id: str = "") -> List[Dict[str, Any]]:
+    def search_text(
+        self, query: str, limit: int = 10, session_id: str = "",
+        project_root: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         query = query.strip()
         if not query:
             return []
@@ -2681,10 +2689,11 @@ class SQLiteMetaStore:
                         JOIN memory m ON m.memory_id = memory_fts.memory_id
                         WHERE memory_fts MATCH ? AND m.deleted = 0 AND m.governance_state = 'active'
                           AND (m.retention_session_id = '' OR m.retention_session_id = ?)
+                          AND (? IS NULL OR m.project_root = '' OR m.project_root = ?)
                         ORDER BY rank
                         LIMIT ?
                         """,
-                        (fts_query, session_id, limit),
+                        (fts_query, session_id, project_root, project_root, limit),
                     ).fetchall()
                     if rows:
                         return [dict(row) for row in rows]
@@ -2696,10 +2705,11 @@ class SQLiteMetaStore:
             SELECT *, 0.0 AS rank FROM memory
             WHERE deleted = 0 AND governance_state = 'active'
               AND (retention_session_id = '' OR retention_session_id = ?)
+              AND (? IS NULL OR project_root = '' OR project_root = ?)
               AND (content LIKE ? OR summary LIKE ? OR type LIKE ?)
             LIMIT ?
             """,
-            (session_id, pattern, pattern, pattern, limit),
+            (session_id, project_root, project_root, pattern, pattern, pattern, limit),
         ).fetchall()
         return [dict(row) for row in rows]
 
@@ -2717,7 +2727,10 @@ class SQLiteMetaStore:
             return "0:0:"
         return "%s:%s:%s" % (row["total_count"] or 0, row["live_count"] or 0, row["max_updated_at"] or "")
 
-    def graph_search(self, entity_query: str, limit: int = 10, session_id: str = "") -> List[Dict[str, Any]]:
+    def graph_search(
+        self, entity_query: str, limit: int = 10, session_id: str = "",
+        project_root: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         pattern = "%" + entity_query + "%"
         exact = entity_query.lower()
         rows = self.conn.execute(
@@ -2731,10 +2744,12 @@ class SQLiteMetaStore:
             JOIN memory m ON m.memory_id = me.memory_id
             WHERE m.deleted = 0 AND m.governance_state = 'active' AND me.entity LIKE ?
               AND (m.retention_session_id = '' OR m.retention_session_id = ?)
+              AND (? IS NULL OR m.project_root = '' OR m.project_root = ?)
             ORDER BY graph_rank DESC, m.updated_at ASC
             LIMIT ?
             """,
-            (exact, pattern.lower(), pattern.lower(), pattern, session_id, limit),
+            (exact, pattern.lower(), pattern.lower(), pattern, session_id,
+             project_root, project_root, limit),
         ).fetchall()
         return [dict(row) for row in rows]
 

@@ -2947,14 +2947,17 @@ class MemGuardService:
 
     def search(
         self, query: str, limit: int = 5, audit: bool = True, session_id: str = "",
+        project_root: Optional[str] = None,
     ) -> List[Dict[str, object]]:
         clean_query = query.strip()
         if not clean_query:
             return []
+        project_scope = str(Path(project_root).expanduser().resolve()) if project_root else project_root
         cache_key = (
             clean_query, max(1, int(limit)), self.meta.memory_revision(),
             self.meta.embedding_revision(self.EMBEDDING_BACKEND, self.EMBEDDING_MODEL_REVISION),
             session_id,
+            project_scope,
         )
         cached = self._search_cache.get(cache_key)
         if cached is not None:
@@ -2967,10 +2970,12 @@ class MemGuardService:
         started_at = perf_counter()
         intent = classify_query_intent(clean_query)
         candidates = self._search_candidates(
-            query, limit=max(limit * 8, 64), include_graph=False, session_id=session_id,
+            query, limit=max(limit * 8, 64), include_graph=False,
+            session_id=session_id, project_root=project_scope,
         )
         dense_ids, dense_query_vector, dense_status = self._dense_candidate_ids(
             clean_query, limit=max(limit * 4, 20), session_id=session_id,
+            project_root=project_scope,
         )
         recall_done_at = perf_counter()
         exact_ids: List[str] = []
@@ -2979,7 +2984,7 @@ class MemGuardService:
             known_ids = {str(item.get("memory_id") or "") for item in candidates}
             for memory_id in exact_ids:
                 record = self.meta.get_memory(memory_id)
-                if record and self._retrieval_record_is_eligible(record, session_id):
+                if record and self._retrieval_record_is_eligible(record, session_id, project_scope):
                     if memory_id not in known_ids:
                         candidates.insert(0, record)
                         known_ids.add(memory_id)
@@ -3112,7 +3117,7 @@ class MemGuardService:
             verified_dense_ids = []
             for memory_id in dense_ids:
                 record = self.meta.get_memory(memory_id)
-                if record is None or not self._retrieval_record_is_eligible(record, session_id):
+                if record is None or not self._retrieval_record_is_eligible(record, session_id, project_scope):
                     continue
                 verified_dense_ids.append(memory_id)
                 if memory_id not in by_id:
@@ -3128,8 +3133,9 @@ class MemGuardService:
             graph_result = (
                 self.hierarchical_graph_search(
                     clean_query, limit=max(limit * 3, 10), session_id=session_id,
+                    project_root=project_scope,
                 ) if session_id else self.hierarchical_graph_search(
-                    clean_query, limit=max(limit * 3, 10),
+                    clean_query, limit=max(limit * 3, 10), project_root=project_scope,
                 )
             )
             summary_rows = graph_result.get("layers", {}).get("summary", [])
@@ -3142,7 +3148,7 @@ class MemGuardService:
                 if memory_id in by_id:
                     continue
                 record = self.meta.get_memory(memory_id)
-                if record and self._retrieval_record_is_eligible(record, session_id):
+                if record and self._retrieval_record_is_eligible(record, session_id, project_scope):
                     item = dict(record)
                     item["_base_score"] = 0.0
                     item["_vector_backend"] = "graph"
@@ -3250,7 +3256,9 @@ class MemGuardService:
             results.append(item)
             seen.add(item["memory_id"])
         if not results:
-            for record in self.meta.search_text(query, limit=limit, session_id=session_id):
+            for record in self.meta.search_text(
+                query, limit=limit, session_id=session_id, project_root=project_scope,
+            ):
                 record["score"] = 0.1
                 record["match_source"] = "text"
                 results.append(record)
@@ -3287,6 +3295,7 @@ class MemGuardService:
 
     def _dense_candidate_ids(
         self, query: str, limit: int, session_id: str = "",
+        project_root: Optional[str] = None,
     ) -> Tuple[List[str], Optional[List[float]], str]:
         if not self.dense_candidates_enabled:
             return [], None, "disabled"
@@ -3300,7 +3309,7 @@ class MemGuardService:
         started = perf_counter()
         vectors, complete = self.meta.list_dense_candidate_vectors(
             self.EMBEDDING_BACKEND, self.EMBEDDING_MODEL_REVISION,
-            self.namespace, cap, session_id=session_id,
+            self.namespace, cap, session_id=session_id, project_root=project_root,
         )
         if not complete:
             return [], None, "scan_limit_exceeded"
@@ -3607,7 +3616,10 @@ class MemGuardService:
         if not clean_task:
             raise ValueError("task is required")
         project_scope = str(Path(project_root).expanduser().resolve()) if project_root else ""
-        search_hits = self.search(clean_task, limit=max(limit * 3, 24), audit=False, session_id=session_id)
+        search_hits = self.search(
+            clean_task, limit=max(limit * 3, 24), audit=False,
+            session_id=session_id, project_root=project_scope,
+        )
         preference_selection = self.select_preferences(
             agent_name=agent_name,
             session_id=session_id,
@@ -3840,6 +3852,7 @@ class MemGuardService:
         include_graph: bool = True,
         include_recent: bool = True,
         session_id: str = "",
+        project_root: Optional[str] = None,
     ) -> List[Dict[str, object]]:
         candidate_limit = max(1, int(limit))
         seen = set()
@@ -3867,22 +3880,32 @@ class MemGuardService:
                     text_query,
                     limit=candidate_limit - len(candidates),
                     session_id=session_id,
+                    project_root=project_root,
                 )
             )
         if include_graph and len(candidates) < candidate_limit:
             remaining = candidate_limit - len(candidates)
             graph_query = str(expanded.get("expanded_query") or query)
-            add_unique(self.meta.graph_search(graph_query, limit=max(10, remaining), session_id=session_id))
+            add_unique(self.meta.graph_search(
+                graph_query, limit=max(10, remaining), session_id=session_id,
+                project_root=project_root,
+            ))
         if include_recent and len(candidates) < candidate_limit:
             remaining = candidate_limit - len(candidates)
-            add_unique(self.meta.list_recent_memories(remaining, exclude_ids=list(seen), session_id=session_id))
+            add_unique(self.meta.list_recent_memories(
+                remaining, exclude_ids=list(seen), session_id=session_id,
+                project_root=project_root,
+            ))
         return candidates[:candidate_limit]
 
     @staticmethod
-    def _retrieval_record_is_eligible(record: Dict[str, object], session_id: str = "") -> bool:
+    def _retrieval_record_is_eligible(
+        record: Dict[str, object], session_id: str = "", project_root: Optional[str] = None,
+    ) -> bool:
         return (
             not bool(record.get("deleted"))
             and str(record.get("retention_session_id") or "") in {"", session_id}
+            and (project_root is None or str(record.get("project_root") or "") in {"", project_root})
             and str(record.get("governance_state") or "active") == "active"
             and str(record.get("trust_level") or "trusted")
             in {"trusted", "verified", "reviewed"}
@@ -3895,8 +3918,11 @@ class MemGuardService:
 
     def hierarchical_graph_search(
         self, entity_query: str, limit: int = 10, session_id: str = "",
+        project_root: Optional[str] = None,
     ) -> Dict[str, object]:
-        summary_rows = self.meta.graph_search(entity_query, limit=limit, session_id=session_id)
+        summary_rows = self.meta.graph_search(
+            entity_query, limit=limit, session_id=session_id, project_root=project_root,
+        )
         if not summary_rows:
             summary_rows = self._search_candidates(
                 entity_query,
@@ -3904,6 +3930,7 @@ class MemGuardService:
                 include_graph=False,
                 include_recent=False,
                 session_id=session_id,
+                project_root=project_root,
             )
 
         summary_layer = []

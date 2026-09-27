@@ -61,6 +61,38 @@ def test_search_fallback_keeps_the_same_session_scope(tmp_path, monkeypatch):
         service.close()
 
 
+def test_project_scope_applies_before_candidate_limit_and_to_dense_scan(tmp_path):
+    service = _service(tmp_path)
+    try:
+        owner = str((tmp_path / "owner").resolve())
+        other = str((tmp_path / "other").resolve())
+        expected = service.ingest_text(
+            "蓝河检索方案使用本地索引。", project_root=owner,
+        )["record"]
+        for index in range(25):
+            service.ingest_text(
+                "蓝河检索方案来自其他项目，编号 %s。" % index,
+                project_root=other,
+            )
+        hits = service.search("蓝河检索方案", limit=1, project_root=owner)
+        assert [item["memory_id"] for item in hits] == [expected.memory_id]
+        assert all(item["project_root"] != other for item in service.search(
+            "蓝河检索方案", limit=5, project_root=owner,
+        ))
+        for row in service.meta.list_memories():
+            service.meta.upsert_memory_embedding(
+                row["memory_id"], vector_content_hash(row["summary"], row["content"]),
+                service.EMBEDDING_BACKEND, service.EMBEDDING_MODEL_REVISION, [1.0, 0.0],
+            )
+        vectors, complete = service.meta.list_dense_candidate_vectors(
+            service.EMBEDDING_BACKEND, service.EMBEDDING_MODEL_REVISION,
+            service.namespace, 1, project_root=owner,
+        )
+        assert complete and [memory_id for memory_id, _ in vectors] == [expected.memory_id]
+    finally:
+        service.close()
+
+
 def test_session_facts_are_isolated_across_retrieval_and_updates(tmp_path):
     service = _service(tmp_path)
     try:
