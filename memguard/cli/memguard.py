@@ -52,6 +52,14 @@ def build_parser() -> argparse.ArgumentParser:
     context.add_argument("--limit", type=int, default=5, help="纳入上下文的记忆条数")
     context.add_argument("--token-budget", type=int, default=1200, help="上下文长度上限")
     sub.add_parser("preferences", help="查看当前生效偏好")
+    sub.add_parser("conflicts", help="查看待核对的知识事实冲突")
+    resolve_conflict = sub.add_parser("resolve-conflict", help="处理一条知识事实冲突")
+    resolve_conflict.add_argument("conflict_id")
+    resolve_conflict.add_argument(
+        "--decision", choices=["accept_incoming", "keep_existing"], required=True,
+    )
+    resolve_conflict.add_argument("--memory-id", default="")
+    resolve_conflict.add_argument("--expected-version-id", default="")
     sub.add_parser("audit", help="查看最近操作记录")
     end_session = sub.add_parser("end-session", help="结束会话并清理该会话的临时记忆")
     end_session.add_argument("--yes", action="store_true", help="确认清理")
@@ -60,6 +68,9 @@ def build_parser() -> argparse.ArgumentParser:
     forget.add_argument("--yes", action="store_true", help="确认执行遗忘")
     forget.add_argument("--compact", action="store_true", help="确认后整理存储文件")
     sub.add_parser("evidence", help="导出当前命名空间的轻量复核摘要")
+    lifecycle = sub.add_parser("lifecycle", help="查看一条记忆的原子、情节、证据和操作链")
+    lifecycle.add_argument("memory_id", nargs="?", help="记忆编号；省略时查看整体生命周期概览")
+    lifecycle.add_argument("--overview", action="store_true", help="查看当前记忆空间的生命周期覆盖情况")
     demo = sub.add_parser("demo", help="运行一轮可读的 Agent 记忆闭环演示")
     demo.add_argument("--task", default="查找精准遗忘的实现位置")
     compare_live = sub.add_parser("compare-live", help="用真实 Agent 对比关闭和开启记忆的同一任务")
@@ -93,12 +104,43 @@ def main(argv: list[str] | None = None) -> int:
             return _end_session(service, args.session_id, confirm=args.yes)
         if args.command == "preferences":
             return _preferences(service)
+        if args.command == "conflicts":
+            return _conflicts(service)
+        if args.command == "resolve-conflict":
+            result = service.resolve_fact_conflict(
+                args.conflict_id,
+                decision=args.decision,
+                memory_id=args.memory_id,
+                expected_version_id=args.expected_version_id,
+            )
+            _section("事实核对结果")
+            if result.get("resolved"):
+                print("[已完成] %s" % (
+                    "已接受新值并生成记忆版本。" if args.decision == "accept_incoming"
+                    else "已保留原值并关闭本条核对记录。"
+                ))
+                print("核对编号：%s" % args.conflict_id)
+                resolved_memory_id = result.get("resolved_memory_id") or result.get("memory_id")
+                if resolved_memory_id:
+                    print("记忆编号：%s" % resolved_memory_id)
+            else:
+                message = {
+                    "candidate_version_changed": "候选记忆已更新或遗忘，本次没有覆盖现有内容。请重新查看待核对事实。",
+                    "conflict_already_closed": "这条核对记录已处理，本次没有再次修改记忆。",
+                    "conflict_not_found": "未找到这条核对记录，请检查核对编号。",
+                    "candidate_memory_required": "请通过 --memory-id 指定要核对的候选记忆。",
+                }.get(str(result.get("reason") or ""), "本次核对未完成，请重新查看待核对事实及候选版本。")
+                print("[未执行] %s" % message)
+            print("下一步：运行 memguard conflicts 查看待核对事实，或 memguard memory 查看现有记忆。")
+            return 0 if result.get("resolved") else 2
         if args.command == "audit":
             return _audit_readable(service)
         if args.command == "forget":
             return _forget(service, args.request, confirm=args.yes, compact=args.compact)
         if args.command == "evidence":
             return _evidence(service)
+        if args.command == "lifecycle":
+            return _lifecycle(service, args.memory_id, overview=args.overview)
         if args.command == "demo":
             return _demo(service, args.task)
         if args.command == "compare-live":
@@ -350,11 +392,17 @@ def _print_confirmed_forget(result: dict) -> int:
     forgotten = list(
         result.get("forgotten") or result.get("forgotten_memory_ids") or []
     )
-    if forgotten:
+    report = result.get("verification_report") or {}
+    report_ok = bool(result.get("ok", True)) and not any(
+        step.get("status") == "failed"
+        for step in report.get("verification_steps") or []
+    )
+    if forgotten and report_ok:
         print("[已完成] 已遗忘 %d 条目标记忆。" % len(forgotten))
+    elif forgotten:
+        print("[需检查] 已写入遗忘结果，但验证报告未全部通过。")
     else:
         print("[未变更] 没有找到需要遗忘的目标记忆。")
-    report = result.get("verification_report") or {}
     steps = list(report.get("verification_steps") or [])
     if steps:
         print("验证结果")
@@ -364,6 +412,7 @@ def _print_confirmed_forget(result: dict) -> int:
             "agent_event_payload": "Agent 交互记录",
             "sqlite_fts": "文本检索索引",
             "graph_relations": "关联关系索引",
+            "fact_conflict": "事实核对队列",
             "search_cache": "检索缓存",
             "mmap_segment_compact": "本机存储整理",
             "plaintext_probe": "明文残留检查",
@@ -426,6 +475,57 @@ def _evidence(service: MemGuardService) -> int:
     return 0 if audit.get("ok") else 2
 
 
+def _lifecycle(service: MemGuardService, memory_id: str | None, *, overview: bool = False) -> int:
+    """Print the unified lifecycle projection in a readable product form."""
+
+    if overview or not memory_id:
+        result = service.lifecycle_overview()
+        counts = result.get("counts") or {}
+        tiers = result.get("tiers") or {}
+        _section("记忆生命周期概览")
+        print("记忆空间：%s" % result.get("namespace", service.namespace))
+        print("原子记忆：%s 条；有来源支撑：%s 条" % (
+            counts.get("active_atoms", 0), counts.get("with_support", 0),
+        ))
+        print("临时任务：%s 条；当前会话：%s 条；长期保留：%s 条" % (
+            tiers.get("working", 0), tiers.get("session", 0), tiers.get("long_term", 0),
+        ))
+        print("待处理写入：%s；待处理遗忘：%s" % (
+            counts.get("pending_writes", 0), counts.get("pending_erasures", 0),
+        ))
+        print("说明：原子负责可检索和可遗忘，情节与来源负责解释形成依据，操作链负责证明生命周期变化。")
+        return 0
+    result = service.lifecycle_snapshot(memory_id, include_events=True)
+    if not result.get("found"):
+        print("没有找到这条记忆：%s" % memory_id)
+        return 1
+    atom = result.get("atom") or {}
+    counts = result.get("counts") or {}
+    _section("记忆生命周期证据")
+    print("记忆编号：%s" % atom.get("memory_id", memory_id))
+    print("原子类型：%s · 子类型：%s · 状态：%s" % (
+        atom.get("kind", ""), atom.get("subtype", ""), atom.get("lifecycle_state", ""),
+    ))
+    print("保存层级：%s · 作用范围：%s · 版本：%s" % (
+        atom.get("tier", ""), atom.get("scope", ""), atom.get("version_id", ""),
+    ))
+    print("摘要：%s" % atom.get("summary", ""))
+    print("证据链：%s 个情节 · %s 个来源支持 · %s 次受管操作 · %s 次进入 Agent 上下文" % (
+        counts.get("episodes", 0), counts.get("supports", 0),
+        counts.get("operations", 0), counts.get("context_uses", 0),
+    ))
+    for episode in result.get("episodes", [])[:5]:
+        print("- 情节 %s：%s / %s，%s 个事件，任务类型 %s" % (
+            episode.get("episode_id", ""), episode.get("agent_name", ""),
+            episode.get("session_id", ""), episode.get("event_count", 0),
+            episode.get("task_type") or "未标注",
+        ))
+    boundary = result.get("forgetting_boundary") or {}
+    print("遗忘边界：%s" % boundary.get("state", ""))
+    print("受管面：%s" % "、".join(boundary.get("managed_surfaces") or []))
+    return 0
+
+
 def _preferences(service: MemGuardService) -> int:
     status = service.interaction_status()
     _section("当前生效偏好")
@@ -446,6 +546,37 @@ def _preferences(service: MemGuardService) -> int:
             item.get("distinct_sessions", 0),
         ))
     print("下一步：直接运行相关任务，系统会按适用阶段自动采用这些偏好。")
+    return 0
+
+
+def _conflicts(service: MemGuardService) -> int:
+    result = service.fact_conflicts(status="pending", limit=30)
+    _section("待核对事实")
+    cases = list(result.get("cases") or [])
+    if not cases:
+        print("暂无待核对的事实冲突。")
+        print("明确说“把某属性改为新值”后，系统会生成新版本并关闭对应核对记录。")
+        return 0
+    for index, case in enumerate(cases, 1):
+        print("%d. [%s] %s · %s" % (
+            index,
+            case.get("conflict_id", ""),
+            case.get("subject", ""),
+            case.get("predicate", ""),
+        ))
+        print("   新值：%s · 候选：%s" % (
+            case.get("incoming_value", ""),
+            "、".join(str(item) for item in case.get("candidate_memory_ids") or []) or "无",
+        ))
+        for candidate in case.get("candidates") or []:
+            print("   - %s [%s] %s" % (
+                candidate.get("memory_id", ""),
+                candidate.get("state", ""),
+                candidate.get("summary", ""),
+            ))
+        print("   处理：确认新值可用时输入“%s的%s改为%s”；保留原值可调用冲突编号单独关闭。" % (
+            case.get("subject", ""), case.get("predicate", ""), case.get("incoming_value", ""),
+        ))
     return 0
 
 
@@ -582,6 +713,15 @@ def _run_json(service: MemGuardService, args: argparse.Namespace) -> int:
         value = service.evict_session(args.session_id, confirm=args.yes)
     elif args.command == "preferences":
         value = service.interaction_status().get("preference_aggregates", [])
+    elif args.command == "conflicts":
+        value = service.fact_conflicts(status="pending", limit=30)
+    elif args.command == "resolve-conflict":
+        value = service.resolve_fact_conflict(
+            args.conflict_id,
+            decision=args.decision,
+            memory_id=args.memory_id,
+            expected_version_id=args.expected_version_id,
+        )
     elif args.command == "audit":
         value = service.audit(limit=12)
     elif args.command == "forget":
@@ -593,6 +733,12 @@ def _run_json(service: MemGuardService, args: argparse.Namespace) -> int:
             "agent": service.agent_dashboard_snapshot(limit=20),
             "notifications": service.recent_notifications(limit=20),
         }
+    elif args.command == "lifecycle":
+        value = (
+            service.lifecycle_overview()
+            if args.overview or not args.memory_id
+            else service.lifecycle_snapshot(args.memory_id)
+        )
     elif args.command == "demo":
         value = _demo_result(service, args.task)
     else:
@@ -601,6 +747,8 @@ def _run_json(service: MemGuardService, args: argparse.Namespace) -> int:
     if isinstance(value, dict) and value.get("ok") is False:
         return 2
     if args.command == "remember" and not value.get("stored"):
+        return 2
+    if args.command == "resolve-conflict" and not value.get("resolved"):
         return 2
     if args.command == "end-session" and args.yes and not value.get("evicted"):
         return 2
@@ -619,7 +767,7 @@ def _json_default(value: object) -> object:
 
 SHELL_COMMANDS = (
     "/guide /status /memory /memory on|off /preferences /search 关键词 "
-    "/context 任务 /forget 请求 /run 任务 /audit /evidence /demo /session /model /workspace /exit"
+    "/conflicts /context 任务 /lifecycle 记忆编号 /forget 请求 /run 任务 /audit /evidence /demo /session /model /workspace /exit"
 )
 
 _FORGET_CONFIRM_WORDS = {"yes", "y", "确认", "确定", "是", "继续"}
@@ -727,6 +875,8 @@ def _dispatch_shell_line(service: MemGuardService, line: str, state: dict) -> in
         return result
     if line == "/preferences":
         return _preferences(service)
+    if line == "/conflicts":
+        return _conflicts(service)
     if line == "/audit":
         return _audit_readable(service)
     if line == "/demo":
@@ -758,6 +908,9 @@ def _dispatch_shell_line(service: MemGuardService, line: str, state: dict) -> in
     if action == "preference_list":
         print("已识别为偏好查看请求。")
         return _preferences(service)
+    if action == "fact_conflict_list":
+        print("已识别为事实核对请求。")
+        return _conflicts(service)
     if action == "status":
         print("已识别为状态查看请求。")
         return _status(service)
@@ -913,6 +1066,8 @@ def _run_shell_line(service: MemGuardService, line: str, session_id: str = "") -
         return _memory(service)
     if line == "/preferences":
         return _preferences(service)
+    if line == "/conflicts":
+        return _conflicts(service)
     if line.startswith("/search "):
         return _search(service, line[len("/search "):].strip(), session_id=session_id)
     if line.startswith("/context "):
@@ -927,7 +1082,14 @@ def _run_shell_line(service: MemGuardService, line: str, session_id: str = "") -
         return _forget(service, request, confirm=confirm, compact=confirm)
     if line == "/evidence":
         return _evidence(service)
-    return _remember(service, line, session_id=session_id)
+    if line == "/lifecycle":
+        return _lifecycle(service, None)
+    if line.startswith("/lifecycle "):
+        return _lifecycle(service, line[len("/lifecycle "):].strip())
+    print("未识别的工作台命令：%s" % line)
+    print("可用命令：/status、/memory、/search 关键词、/context 任务、/preferences、/conflicts、/forget 目标、/run 任务、/evidence、/lifecycle [记忆编号]、/help")
+    print("这条输入没有写入记忆，也没有交给 Agent 执行。")
+    return 0
 
 
 def _run_agent_task(service: MemGuardService, task: str, state: dict) -> int:

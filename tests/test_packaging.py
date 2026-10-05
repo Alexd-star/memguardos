@@ -3,6 +3,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import hashlib
 import json
 import os
+import shutil
 import stat
 import subprocess
 import sys
@@ -152,6 +153,27 @@ def test_debian_package_set_has_real_apt_install_gate():
     assert "systemctl enable --now memguardd.service" in installer
     assert "apt_install=ok" in installer
     assert "install_deb_package_set.sh --no-build" in collector
+
+
+def test_debian_manifest_paths_survive_project_directory_move(tmp_path, monkeypatch):
+    root = tmp_path / "original-project"
+    output = root / "dist"
+    output.mkdir(parents=True)
+    builder = DebianPackageBuilder(root, output, root / "build", "1.0.1-4", "amd64", "x86_64-linux-gnu")
+
+    def build(command, **kwargs):
+        assert command[:3] == ["dpkg-deb", "--build", "--root-owner-group"]
+        Path(command[-1]).write_bytes(b"isolated package payload")
+
+    monkeypatch.setattr(deb_packages.subprocess, "run", build)
+    builder._build_one("memguardos-core", root / "build")
+    row = builder.outputs[0]
+    assert row["path"] == "dist/memguardos-core_1.0.1-4_amd64.deb"
+    moved = tmp_path / "another-machine-project"
+    shutil.copytree(root, moved)
+    assert hashlib.sha256((moved / row["path"]).read_bytes()).hexdigest() == row["sha256"]
+    deb_packages._write_sha256(moved / "SHA256SUMS", [moved / row["path"]])
+    assert row["sha256"] in (moved / "SHA256SUMS").read_text()
 
 
 def test_agent_showcase_prefers_installed_product_and_guides_first_run_setup():

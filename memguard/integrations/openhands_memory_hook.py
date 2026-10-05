@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 from contextlib import closing
 from pathlib import Path
+import hashlib
 import json
 import re
 import shlex
@@ -64,7 +65,100 @@ def deny(reason, category, **details):
     return 2
 
 
+RUNTIME_SCOPE_FIELDS = ("namespace", "project_root", "session_id", "agent_name", "task_type")
+RUNTIME_TRUST_LEVELS = {"trusted", "verified", "reviewed", "controlled", "limited"}
+
+
+def _valid_use_scope(scope):
+    return (
+        isinstance(scope, dict)
+        and set(scope) == set(RUNTIME_SCOPE_FIELDS)
+        and all(isinstance(scope[key], str) for key in RUNTIME_SCOPE_FIELDS)
+        and all(scope[key].strip() for key in ("namespace", "session_id", "agent_name"))
+        and (not scope["project_root"] or Path(scope["project_root"]).is_absolute())
+    )
+
+
+def _memory_applies(row, scope):
+    allowed = {scope["namespace"], "user"} if scope["namespace"] == "default" else {scope["namespace"]}
+    if (
+        row["scope"] not in allowed
+        or row["retention_session_id"] not in {"", scope["session_id"]}
+        or row["project_root"] not in {"", scope["project_root"]}
+    ):
+        return False
+    if row["type"] not in {"preference", "sensitive_policy"} or not row["preference_topic"]:
+        return True
+    return {
+        "global": True,
+        "agent": row["agent_name"] == scope["agent_name"],
+        "project": bool(scope["project_root"]) and row["project_root"] == scope["project_root"],
+        "task_type": bool(scope["task_type"]) and row["task_type"] == scope["task_type"],
+        "session": row["preference_session_id"] == scope["session_id"],
+    }.get(row["preference_scope"] or "global", False)
+
+
+def _memory_is_active(row):
+    return (
+        not row["deleted"] and row["governance_state"] == "active"
+        and row["valid_to"] is None and row["trust_level"] in RUNTIME_TRUST_LEVELS
+    )
+
+
+def _active_preference_signature(connection, scope):
+    # Sign all applicable candidates, not just winners: new overrides must invalidate
+    # old context even when the old memory version has not changed.
+    rows = connection.execute(
+        """SELECT memory_id, version_id, type, subtype, tier, scope, project_root,
+                  retention_session_id, preference_scope, preference_session_id,
+                  agent_name, task_type, preference_topic, preference_value,
+                  preference_explicit, updated_at, deleted, governance_state,
+                  valid_to, trust_level
+           FROM memory WHERE type IN ('preference', 'sensitive_policy')
+             AND preference_topic != '' ORDER BY memory_id"""
+    ).fetchall()
+    candidates = [
+        dict(row) for row in rows
+        if _memory_is_active(row) and _memory_applies(row, scope)
+    ]
+    event_orders = {}
+    if candidates:
+        # json_each is already used by the store and avoids SQLite's parameter
+        # limit without introducing one evidence query per preference candidate.
+        evidence = connection.execute(
+            """SELECT l.memory_id, e.timestamp, e.rowid AS ingest_order, e.sequence, e.event_id
+               FROM memory_event_links l JOIN agent_events e ON e.event_id = l.event_id
+               WHERE l.memory_id IN (SELECT value FROM json_each(?))""",
+            (json.dumps([item["memory_id"] for item in candidates]),),
+        ).fetchall()
+        for event in evidence:
+            memory_id = event["memory_id"]
+            order = (event["timestamp"] or "", event["ingest_order"], event["sequence"], event["event_id"])
+            event_orders[memory_id] = max(event_orders.get(memory_id, ("", 0, 0, "")), order)
+    for item in candidates:
+        item["event_order"] = event_orders.get(item["memory_id"], ("", 0, 0, ""))
+    canonical = json.dumps({"use_scope": scope, "candidates": candidates}, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def runtime_preference_signature(db_path, use_scope):
+    """Read-only baseline captured before building any stage context."""
+    if not _valid_use_scope(use_scope) or not Path(db_path).is_absolute():
+        raise ValueError("invalid runtime scope or memory store path")
+    uri = Path(db_path).resolve().as_uri() + "?mode=ro"
+    with closing(sqlite3.connect(uri, uri=True, timeout=1.0)) as connection:
+        connection.row_factory = sqlite3.Row
+        connection.execute("BEGIN")
+        return _active_preference_signature(connection, use_scope)
+
+
 def context_snapshot_status(payload):
+    """Validate at supported hook checkpoints, not during an executing tool.
+
+    A denial requires a new conversation; it does not erase existing model state.
+    """
+    if not isinstance(payload, dict):
+        return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
     snapshot = payload.get("memory_snapshot")
     stages = payload.get("stages")
     if stages is None and not payload.get("trace_id") and snapshot is None:
@@ -75,12 +169,16 @@ def context_snapshot_status(payload):
     for stage in stages.values():
         if not isinstance(stage, dict):
             return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
-        memories = stage.get("memories") or []
+        memories = stage.get("memories", [])
         if not isinstance(memories, list) or any(not isinstance(item, dict) for item in memories):
             return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
-        selected.extend(item for item in memories if item.get("memory_id"))
+        if any(not isinstance(item.get("memory_id"), str) or not item["memory_id"] for item in memories):
+            return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
+        selected.extend(memories)
     if not isinstance(snapshot, dict):
-        if payload.get("trace_id") and selected:
+        if snapshot is not None:
+            return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
+        if selected:
             return {"ok": False, "reason": "missing_snapshot", "stale_memory_ids": []}
         return {"ok": True, "reason": "", "stale_memory_ids": []}
     versions = snapshot.get("versions")
@@ -88,7 +186,11 @@ def context_snapshot_status(payload):
         return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
     if set(versions) != {str(memory["memory_id"]) for memory in selected}:
         return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
-    if not versions:
+    if snapshot.get("memory_enabled") is False:
+        if versions or any(stage.get("context") for stage in stages.values()):
+            return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
+        return {"ok": True, "reason": "", "stale_memory_ids": []}
+    if not versions and set(snapshot) == {"versions"} and not any(stage.get("context") for stage in stages.values()):
         return {"ok": True, "reason": "", "stale_memory_ids": []}
     if any(
         not isinstance(memory_id, str) or not memory_id
@@ -102,32 +204,44 @@ def context_snapshot_status(payload):
     namespace = str(snapshot.get("namespace") or "")
     if not db_path or not Path(db_path).is_absolute() or not namespace:
         return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
+    scope = snapshot.get("use_scope")
+    signature = snapshot.get("active_preference_signature")
+    if (
+        not _valid_use_scope(scope) or scope["namespace"] != namespace
+        or not isinstance(signature, str) or not re.fullmatch(r"[0-9a-f]{64}", signature)
+    ):
+        return {"ok": False, "reason": "invalid_snapshot", "stale_memory_ids": []}
+    if any(payload.get(key) != scope[key] for key in RUNTIME_SCOPE_FIELDS):
+        return {"ok": False, "reason": "scope_mismatch", "stale_memory_ids": []}
+    if any(
+        key in stage and stage[key] != scope[key]
+        for stage in stages.values() for key in RUNTIME_SCOPE_FIELDS
+    ):
+        return {"ok": False, "reason": "scope_mismatch", "stale_memory_ids": []}
     try:
         uri = Path(db_path).resolve().as_uri() + "?mode=ro"
         with closing(sqlite3.connect(uri, uri=True, timeout=1.0)) as connection:
             connection.row_factory = sqlite3.Row
             connection.execute("BEGIN")
             stale = []
-            allowed_scopes = {namespace, "user"} if namespace == "default" else {namespace}
             for memory_id, version_id in versions.items():
                 row = connection.execute(
-                    """SELECT version_id, deleted, governance_state, valid_to,
-                              trust_level, scope FROM memory WHERE memory_id = ?""",
+                    "SELECT * FROM memory WHERE memory_id = ?",
                     (memory_id,),
                 ).fetchone()
                 if (
                     row is None or row["version_id"] != version_id
-                    or row["deleted"] or row["governance_state"] != "active"
-                    or row["valid_to"] is not None
-                    or row["trust_level"] not in {
-                        "trusted", "verified", "reviewed", "controlled", "limited",
-                    }
-                    or row["scope"] not in allowed_scopes
+                    or not _memory_is_active(row) or not _memory_applies(row, scope)
                 ):
                     stale.append(memory_id)
+            preferences_changed = _active_preference_signature(connection, scope) != signature
     except (OSError, sqlite3.Error, ValueError):
         return {"ok": False, "reason": "memory_store_unavailable", "stale_memory_ids": []}
-    return {"ok": not stale, "reason": "memory_changed" if stale else "", "stale_memory_ids": stale}
+    return {
+        "ok": not stale and not preferences_changed,
+        "reason": "memory_changed" if stale else "preferences_changed" if preferences_changed else "",
+        "stale_memory_ids": stale,
+    }
 
 
 def violates_code_search_preference(command, preferred_tool):

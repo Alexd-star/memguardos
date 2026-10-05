@@ -9,6 +9,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -231,6 +232,7 @@ class KylinEmbeddingBackend:
 
     @staticmethod
     def embed_in_subprocess(text: str, timeout_seconds: float, include_vector: bool = True) -> Dict[str, object]:
+        deadline = time.monotonic() + max(0.0, float(timeout_seconds))
         code = """
 import json
 from memguard.retrieval.kylin_sdk import KylinEmbeddingBackend
@@ -243,12 +245,19 @@ if not %r:
     result.pop("vector", None)
 print(json.dumps(result, ensure_ascii=False))
 """ % (text, include_vector)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return {
+                "ok": False,
+                "error": "embedding probe subprocess timeout",
+                "timeout_seconds": timeout_seconds,
+            }
         try:
             proc = subprocess.run(
                 [sys.executable, "-c", code],
                 text=True,
                 capture_output=True,
-                timeout=max(1.0, timeout_seconds),
+                timeout=remaining,
             )
         except subprocess.TimeoutExpired as exc:
             return {
@@ -258,6 +267,8 @@ print(json.dumps(result, ensure_ascii=False))
                 "stdout_tail": (exc.stdout or "")[-1000:] if isinstance(exc.stdout, str) else "",
                 "stderr_tail": (exc.stderr or "")[-1000:] if isinstance(exc.stderr, str) else "",
             }
+        except OSError as exc:
+            return {"ok": False, "error": str(exc)}
         output = proc.stdout.strip().splitlines()
         parsed = None
         if output:
@@ -267,6 +278,9 @@ print(json.dumps(result, ensure_ascii=False))
                 parsed = None
         if isinstance(parsed, dict):
             parsed["subprocess_returncode"] = proc.returncode
+            if proc.returncode:
+                parsed["ok"] = False
+                parsed.setdefault("error", "embedding probe subprocess failed")
             if proc.stderr.strip():
                 parsed["stderr_tail"] = proc.stderr.strip()[-1000:]
             return parsed
@@ -345,6 +359,7 @@ print(json.dumps(result, ensure_ascii=False))
                 expected_uid=uid,
                 timeout=0.2,
                 root_user_runtime=True,
+                probe_mode="passive",
             )
             for name, path in sockets.items()
         }
@@ -555,6 +570,7 @@ class KylinVectorStoreProbe:
             expected_uid=uid,
             timeout=0.2,
             root_user_runtime=True,
+            probe_mode="passive",
         )
         report = {
             "backend": "kysdk_vector_engine_client",

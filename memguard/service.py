@@ -2,7 +2,7 @@ from pathlib import Path
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
-from time import perf_counter
+from time import monotonic, perf_counter
 from typing import Dict, List, Optional, Tuple, Union
 import json
 import math
@@ -60,6 +60,13 @@ from memguard.integrations.interaction_extractor import (
 from memguard.integrations.preference_enhancer import PreferenceEnhancer
 from memguard.eval.live_comparison import STAGES as LIVE_COMPARISON_STAGES, build_comparison as build_live_comparison
 from memguard.integrations.normalizer import normalize_event, normalize_events
+from memguard.lifecycle import (
+    atom_view,
+    episode_views,
+    lifecycle_contract,
+    operation_views,
+    support_views,
+)
 from memguard.models import AuditInfo, MemoryRecord, MemorySource, VersionInfo, make_memory, new_id, stable_hash, utc_now
 from memguard.natural_language import explicitly_requests_no_store, infer_retention_tier, looks_like_question
 from memguard.os_guard.events import parse_os_event
@@ -72,7 +79,23 @@ from memguard.retrieval.vector_cache import vector_content_hash
 from memguard.sensitivity.custom_patterns import PatternValidationError, load_patterns, save_pattern, save_pattern_from_instruction, suggest_pattern_from_instruction
 from memguard.sensitivity.detector import SensitiveDetector
 from memguard.store.mmap_store import AppendOnlyMemoryStore
-from memguard.store.sqlite_meta import FactSlotConflict, SQLiteMetaStore, fact_slot_scope
+from memguard.store.sqlite_meta import FactConflictChanged, FactSlotConflict, SQLiteMetaStore, fact_slot_scope
+
+
+def _optional_scope_kwargs(session_id: str = "", project_root: Optional[str] = None) -> Dict[str, object]:
+    """Pass scope arguments only when callers explicitly provide them.
+
+    Besides keeping the default path lean, this preserves compatibility with
+    small test and extension adapters that implement the original unscoped
+    metadata method signatures.
+    """
+
+    kwargs: Dict[str, object] = {}
+    if session_id:
+        kwargs["session_id"] = session_id
+    if project_root is not None:
+        kwargs["project_root"] = project_root
+    return kwargs
 
 
 class MemGuardService:
@@ -188,6 +211,8 @@ class MemGuardService:
                     self.meta.commit_staged_new_memory_write(
                         str(item["version_id"]), self._append_staged_record_once,
                     )
+            except FactConflictChanged:
+                continue
             except FactSlotConflict:
                 continue
             except ValueError:
@@ -244,12 +269,14 @@ class MemGuardService:
     def _persist_existing_memory(
         self, previous: MemoryRecord, record: MemoryRecord,
         source_link: Optional[Dict[str, object]] = None,
+        fact_conflict_id: str = "",
     ) -> MemoryRecord:
         self.meta.stage_existing_memory_write(
             previous, record, self.EMBEDDING_BACKEND,
             self.EMBEDDING_MODEL_REVISION,
             vector_content_hash(record.summary, record.content),
             source_link=source_link,
+            **({"fact_conflict_id": fact_conflict_id} if fact_conflict_id else {}),
         )
         try:
             return self.meta.commit_staged_existing_memory_write(
@@ -387,6 +414,7 @@ class MemGuardService:
         project_root: str = "",
         verified_tool_evidence: bool = False,
     ) -> Dict[str, object]:
+        project_root = str(Path(project_root).expanduser().resolve()) if project_root else ""
         self._recover_pending_memory_writes()
         if source_kind == "tool_result_verified" and not verified_tool_evidence:
             return {"stored": False, "reason": "verified_source_requires_internal_evidence"}
@@ -485,11 +513,14 @@ class MemGuardService:
         if fact is not None:
             candidates = self.meta.find_active_fact_candidates(
                 fact_slot_scope(self.namespace, session_scope), fact.subject, fact.predicate,
-                tier=effective_tier,
+                tier=effective_tier, project_root=project_root,
             )
             if len(candidates) > 1:
                 return self._fact_review_required(
-                    fact.predicate, candidates, source_kind, safe_source_uri,
+                    fact, candidates, source_kind, safe_source_uri,
+                    scope=fact_slot_scope(self.namespace, session_scope),
+                    tier=effective_tier, project_root=project_root,
+                    source_link=source_link,
                 )
             if candidates:
                 current = parse_fact_slot(str(candidates[0]["content"]))
@@ -503,8 +534,19 @@ class MemGuardService:
                     updated = self.update_memory(
                         str(candidates[0]["memory_id"]), fact.canonical_content,
                         reason="explicit fact correction", source_link=source_link,
+                        expected_version_id=str(candidates[0]["version_id"]),
                     )
                     if updated.get("updated"):
+                        self.meta.resolve_fact_conflicts(
+                            subject=fact.subject,
+                            predicate=fact.predicate,
+                            scope=fact_slot_scope(self.namespace, session_scope),
+                            resolution="explicit_update",
+                            resolved_memory_id=str(candidates[0]["memory_id"]),
+                            tier=effective_tier,
+                            project_root=project_root,
+                            incoming_value=fact.value,
+                        )
                         result = {
                             **updated, "stored": True, "fact_update": True,
                             "quality": quality.to_dict(),
@@ -519,7 +561,10 @@ class MemGuardService:
                     return {"stored": False, **updated}
                 else:
                     return self._fact_review_required(
-                        fact.predicate, candidates, source_kind, safe_source_uri,
+                        fact, candidates, source_kind, safe_source_uri,
+                        scope=fact_slot_scope(self.namespace, session_scope),
+                        tier=effective_tier, project_root=project_root,
+                        source_link=source_link,
                     )
         if existing is not None:
             existing_record = self.store.get_latest(str(existing["memory_id"]))
@@ -590,12 +635,15 @@ class MemGuardService:
                 raise
             candidates = self.meta.find_active_fact_candidates(
                 fact_slot_scope(self.namespace, session_scope), fact.subject, fact.predicate,
-                tier=effective_tier,
+                tier=effective_tier, project_root=project_root,
             )
             if not candidates:
                 raise
             return self._fact_review_required(
-                fact.predicate, candidates, source_kind, safe_source_uri,
+                fact, candidates, source_kind, safe_source_uri,
+                scope=fact_slot_scope(self.namespace, session_scope),
+                tier=effective_tier, project_root=project_root,
+                source_link=source_link,
             )
         audit = self._audit(
             "ingest",
@@ -636,17 +684,53 @@ class MemGuardService:
         return result
 
     def _fact_review_required(
-        self, predicate: str, candidates: List[Dict[str, object]],
+        self, fact: object, candidates: List[Dict[str, object]],
         source_kind: str, safe_source_uri: str,
+        *, scope: str = "", tier: str = "long_term", project_root: str = "",
+        source_link: Optional[Dict[str, object]] = None,
     ) -> Dict[str, object]:
         ids = [str(item["memory_id"]) for item in candidates]
+        subject = str(getattr(fact, "subject", "") or "")
+        predicate = str(getattr(fact, "predicate", "") or "")
+        incoming_value = str(getattr(fact, "value", "") or "")
+        incoming_content = str(getattr(fact, "canonical_content", "") or "")
+        candidate_versions = {
+            str(item.get("memory_id") or ""): str(item.get("version_id") or "")
+            for item in candidates
+            if item.get("memory_id")
+        }
+        try:
+            conflict = self.meta.create_fact_conflict(
+                scope=scope or self.namespace,
+                tier=tier,
+                project_root=project_root,
+                subject=subject,
+                predicate=predicate,
+                incoming_value=incoming_value,
+                incoming_content=incoming_content,
+                source_kind=source_kind,
+                source_uri=safe_source_uri,
+                candidate_memory_ids=ids,
+                candidate_version_ids=candidate_versions,
+                source_link=source_link,
+            )
+        except FactConflictChanged as exc:
+            return {"stored": False, "reason": exc.reason}
         audit = self._audit(
             "fact_conflict_requires_review", None,
-            {"predicate": predicate, "candidate_memory_ids": ids, "source_kind": source_kind},
+            {
+                "conflict_id": conflict["conflict_id"],
+                "predicate": predicate,
+                "candidate_memory_ids": ids,
+                "candidate_version_ids": candidate_versions,
+                "source_kind": source_kind,
+            },
         )
         result = {
             "stored": False, "reason": "fact_conflict_requires_review",
             "candidate_memory_ids": ids,
+            "conflict_id": conflict["conflict_id"],
+            "conflict": conflict,
             "audit_event_id": _audit_event_id(audit),
         }
         result["feedback"] = build_memory_change_summary(
@@ -663,6 +747,7 @@ class MemGuardService:
         source_uri: str = "memguard",
         session_id: str = "",
         tier: Optional[str] = None,
+        project_root: str = "",
     ) -> Dict[str, object]:
         """Ingest natural language through one semantic and safety decision path.
 
@@ -672,6 +757,7 @@ class MemGuardService:
         provenance and feedback contracts.
         """
 
+        project_root = str(Path(project_root).expanduser().resolve()) if project_root else ""
         requested_tier = tier or infer_retention_tier(text)
         if requested_tier in {"working", "session"} and not str(session_id or "").strip():
             return {"stored": False, "reason": "session_required", "tier": requested_tier}
@@ -690,6 +776,7 @@ class MemGuardService:
             event_type="user_message",
             role="user",
             content=event_text,
+            project_root=str(project_root or ""),
             source_uri=str(source_uri or source_kind),
             event_id=new_id("evt"),
         )
@@ -711,7 +798,7 @@ class MemGuardService:
                         )
                         if extract_interaction_preferences(clause_event).observations:
                             continue
-                        if not _independent_fact_clause(clause):
+                        if not _independent_memory_clause(clause):
                             continue
                         span = exact_source_span(safe_event, clause)
                         source = (
@@ -722,6 +809,7 @@ class MemGuardService:
                         knowledge = self.ingest_text(
                             clause, source_kind=source_kind, source_uri=source_uri, tier=requested_tier,
                             retention_session_id=effective_session_id,
+                            project_root=str(project_root or ""),
                             source_link={
                                 "event_id": event.event_id,
                                 "relation": "source_clause",
@@ -737,6 +825,15 @@ class MemGuardService:
                 for item in knowledge_results
                 for memory_id in item.get("candidate_memory_ids") or []
             ))
+            fact_conflict_case_ids = list(dict.fromkeys(
+                str(item.get("conflict_id") or "")
+                for item in knowledge_results
+                if item.get("conflict_id")
+            ))
+            fact_conflict_cases = [
+                item.get("conflict") for item in knowledge_results
+                if item.get("conflict")
+            ]
             records = [self.meta.get_memory(memory_id) for memory_id in memory_ids]
             records = [record for record in records if record]
             reason = ""
@@ -755,6 +852,8 @@ class MemGuardService:
                 "updated": any(item.get("updated") for item in knowledge_results),
                 "partial_conflict": bool(fact_conflict_ids),
                 "candidate_memory_ids": fact_conflict_ids,
+                "conflict_ids": fact_conflict_case_ids,
+                "conflicts": fact_conflict_cases,
                 "event_stored": bool(interaction.get("stored")),
                 "reason": reason,
                 "record": records[0] if records else None,
@@ -771,12 +870,26 @@ class MemGuardService:
                 "natural_intent": "mixed_preference_knowledge" if knowledge_results else "structured_preference",
                 "knowledge_results": knowledge_results,
             }
+        interaction = self.ingest_interaction(event)
+        safe_event, _ = self._sanitize_interaction_event(
+            normalize_event(event), extraction.remember_allowed,
+        )
+        span = exact_source_span(safe_event, str(text or ""))
+        source = (
+            span.to_dict()
+            if span and not self.detector.classify(str(text or ""), source_uri).labels
+            else None
+        )
         result = self.ingest_text(
             text,
             source_kind=source_kind,
             source_uri=source_uri,
             tier=requested_tier,
             retention_session_id=effective_session_id,
+            project_root=project_root,
+            source_link={
+                "event_id": event.event_id, "relation": "source_clause", "source": source,
+            } if interaction.get("stored") else None,
         )
         sensitivity = result.get("sensitivity")
         if sensitivity is not None and not isinstance(sensitivity, dict):
@@ -1575,12 +1688,353 @@ class MemGuardService:
                 "event_count": len(observed_events),
                 "last_stage": "tool_selection" if any(item.get("event_type") == "tool_call" for item in observed_events) else "暂无证据",
             },
+            "lifecycle": self.lifecycle_snapshot(str(memory_id), include_events=not light),
         }
         if memory.get("preference_topic") and not light:
             detail["preference_proof"] = self.preference_effect_proof(
                 str(memory_id), task=task, agent_name=agent_name, session_id=session_id
             )
         return detail
+
+    def lifecycle_snapshot(
+        self,
+        memory_id: str,
+        *,
+        include_events: bool = True,
+        audit_limit: int = 100,
+    ) -> Dict[str, object]:
+        """Return the explainable atom/episode/support/operation projection.
+
+        The projection is deliberately read-only.  The SQLite memory row and
+        append-only segment remain authoritative; this method only joins the
+        already governed evidence paths for UI, CLI and acceptance tooling.
+        """
+
+        clean_id = str(memory_id or "").strip()
+        if not clean_id:
+            return {"found": False, "memory_id": clean_id, "reason": "memory_id_required"}
+        row = self.meta.get_memory(clean_id)
+        if row is None:
+            return {"found": False, "memory_id": clean_id, "reason": "memory_not_found"}
+        deleted = bool(row.get("deleted"))
+        # SQLite is the commit authority.  Segment records are used only when
+        # their version id agrees with the committed metadata row; a crash can
+        # append a segment record before the metadata transaction commits.
+        segment_records = self.store.get_versions(clean_id)
+        records_by_version: Dict[str, MemoryRecord] = {}
+        for record in segment_records:
+            records_by_version[record.version.version_id] = record
+        committed_version_id = str(row.get("version_id") or "")
+        current_record = (
+            records_by_version.get(committed_version_id)
+            if not deleted and committed_version_id
+            else None
+        )
+        version_records: List[MemoryRecord] = []
+        cursor = committed_version_id
+        seen_versions = set()
+        while cursor and cursor not in seen_versions:
+            seen_versions.add(cursor)
+            record = records_by_version.get(cursor)
+            if record is None:
+                break
+            version_records.append(record)
+            cursor = str(record.version.parent_version_id or "")
+        segment_consistent = bool(deleted or current_record is not None)
+        view_row = dict(row)
+        if current_record is not None:
+            view_row.update(
+                {
+                    "confidence": current_record.confidence,
+                    "importance": current_record.importance,
+                    "language": current_record.language,
+                    "version_op": current_record.version.op,
+                    "parent_version_id": current_record.version.parent_version_id or "",
+                    "version_count": len(version_records),
+                }
+            )
+        else:
+            view_row["version_count"] = len(version_records)
+        events = self.meta.memory_event_evidence(clean_id)
+        supports = support_views(clean_id, events, redacted=deleted)
+        episodes = episode_views(
+            clean_id,
+            events,
+            supports,
+            include_event_summaries=bool(include_events),
+            redacted=deleted,
+        )
+        audits = self.meta.list_memory_audit(
+            clean_id, limit=max(1, min(int(audit_limit), 500))
+        )
+        operations = operation_views(clean_id, audits)
+        version_history = []
+        for record in version_records:
+            version_history.append(
+                {
+                    "version_id": record.version.version_id,
+                    "parent_version_id": record.version.parent_version_id or "",
+                    "op": record.version.op,
+                    "created_at": record.audit.created_at,
+                    "valid_from": record.temporal.valid_from,
+                    "valid_to": record.temporal.valid_to or "",
+                    "superseded_by": record.temporal.superseded_by or "",
+                    "active": (
+                        not deleted
+                        and record.version.version_id == committed_version_id
+                        and not record.deleted
+                        and record.temporal.valid_to is None
+                    ),
+                    "summary": "" if deleted or record.deleted else str(record.summary or "")[:240],
+                }
+            )
+        context_uses = []
+        for audit in self.meta.list_memory_context_uses(clean_id, limit=200):
+            try:
+                detail = json.loads(str(audit.get("detail") or "{}"))
+            except (TypeError, ValueError, json.JSONDecodeError):
+                detail = {}
+            if clean_id in [str(item) for item in (detail.get("memory_ids") or [])]:
+                context_uses.append(
+                    {
+                        "operation_id": "audit:%s" % str(audit.get("audit_id") or ""),
+                        "audit_id": audit.get("audit_id"),
+                        "created_at": audit.get("created_at", ""),
+                        "stage": detail.get("stage", ""),
+                        "agent_name": detail.get("agent_name", ""),
+                        "session_id": detail.get("session_id", ""),
+                    }
+                )
+        result = {
+            "schema": "memguardos-lifecycle-v1",
+            "found": True,
+            "memory_id": clean_id,
+            "contract": lifecycle_contract(),
+            "atom": atom_view(view_row),
+            "storage_consistency": {
+                "metadata_is_authority": True,
+                "committed_version_id": committed_version_id,
+                "segment_matches_committed_version": segment_consistent,
+                "uncommitted_segment_records_hidden": True,
+            },
+            "version_history": version_history,
+            "episodes": episodes,
+            "supports": supports,
+            "operations": operations,
+            "context_uses": context_uses[:50],
+            "counts": {
+                "episodes": len(episodes),
+                "supports": len(supports),
+                "operations": len(operations),
+                "context_uses": len(context_uses),
+                "versions": len(version_history),
+            },
+            "forgetting_boundary": {
+                "managed_surfaces": [
+                    "主记忆记录",
+                    "SQLite FTS 索引",
+                    "实体与关系索引",
+                    "持久化向量任务和缓存",
+                    "来源事件受管载荷与来源片段",
+                    "Agent 上下文授权快照",
+                    "审计链中的不含正文操作记录",
+                ],
+                "external_surfaces": [
+                    "OpenHands 原始日志",
+                    "模型服务商日志",
+                    "shell history、备份和虚拟机快照",
+                ],
+                "state": "已遗忘" if deleted else "仍受管并可按当前授权使用",
+            },
+        }
+        self._audit(
+            "lifecycle_snapshot",
+            clean_id,
+            {
+                "support_count": len(supports),
+                "episode_count": len(episodes),
+                "operation_count": len(operations),
+                "deleted": deleted,
+            },
+        )
+        return result
+
+    def fact_conflicts(self, status: str = "pending", limit: int = 100) -> Dict[str, object]:
+        """Return structured fact-review cases for operators and evaluators.
+
+        A conflict is a governance decision point, not a failed write.  The
+        queue exposes the structured slot and candidate ids while keeping the
+        original event behind the normal evidence authorization path.
+        """
+
+        cases = self.meta.list_fact_conflicts(status=status, limit=limit)
+        enriched = []
+        for case in cases:
+            item = dict(case)
+            candidates = []
+            for memory_id in item.get("candidate_memory_ids") or []:
+                row = self.meta.get_memory(str(memory_id))
+                if row is None:
+                    candidates.append({"memory_id": str(memory_id), "state": "missing"})
+                    continue
+                candidates.append(
+                    {
+                        "memory_id": str(memory_id),
+                        "state": "forgotten" if row.get("deleted") else str(row.get("governance_state") or "active"),
+                        "summary": "" if row.get("deleted") else str(row.get("summary") or "")[:240],
+                        "version_id": str(row.get("version_id") or ""),
+                        "updated_at": str(row.get("updated_at") or ""),
+                    }
+                )
+            item["candidates"] = candidates
+            item["candidate_count"] = len(candidates)
+            enriched.append(item)
+        return {
+            "schema": "memguardos-fact-conflicts-v1",
+            "namespace": self.namespace,
+            "status": status,
+            "count": len(enriched),
+            "cases": enriched,
+            "resolution_rule": "明确更正会形成新版本并关闭待核对记录；没有明确更正时不覆盖已有事实。",
+        }
+
+    def resolve_fact_conflict(
+        self,
+        conflict_id: str,
+        *,
+        decision: str,
+        memory_id: str = "",
+        expected_version_id: str = "",
+    ) -> Dict[str, object]:
+        """Apply one explicit fact-review decision with candidate CAS checks.
+
+        ``keep_existing`` closes only the review case. ``accept_incoming``
+        commits the recoverable memory version and closes that exact case
+        in the same metadata transaction.
+        """
+
+        case = self.meta.get_fact_conflict(str(conflict_id))
+        if case is None:
+            return {"resolved": False, "reason": "conflict_not_found", "conflict_id": conflict_id}
+        if str(case.get("status") or "") != "pending":
+            return {
+                "resolved": False,
+                "reason": "conflict_already_closed",
+                "conflict_id": conflict_id,
+                "status": case.get("status"),
+            }
+        candidates = [str(item) for item in case.get("candidate_memory_ids") or [] if str(item)]
+        target_id = str(memory_id or (candidates[0] if len(candidates) == 1 else ""))
+        snapshot = dict(case.get("candidate_version_ids") or {})
+        expected = str(expected_version_id or snapshot.get(target_id) or "")
+        if decision == "keep_existing":
+            result = self.meta.resolve_fact_conflict(
+                str(conflict_id), resolution="keep_existing",
+                resolved_memory_id=target_id,
+                expected_memory_id=target_id,
+                expected_version_id=expected,
+            )
+            if result.get("resolved"):
+                self._audit("fact_conflict_resolved", target_id or None, {
+                    "conflict_id": conflict_id, "resolution": "keep_existing",
+                })
+            return result
+        if decision != "accept_incoming":
+            return {"resolved": False, "reason": "unsupported_decision", "conflict_id": conflict_id}
+        if not target_id or target_id not in candidates:
+            return {"resolved": False, "reason": "candidate_memory_required", "conflict_id": conflict_id}
+        incoming_content = str(case.get("incoming_content") or "").strip()
+        if not incoming_content:
+            return {"resolved": False, "reason": "conflict_payload_redacted", "conflict_id": conflict_id}
+        current = self.meta.get_memory(target_id)
+        if current is None or current.get("deleted") or (expected and str(current.get("version_id") or "") != expected):
+            return {"resolved": False, "reason": "candidate_version_changed", "conflict_id": conflict_id}
+        updated = self.update_memory(
+            target_id, incoming_content, reason="accept fact conflict",
+            source_link=case.get("source_link") or None,
+            expected_version_id=expected,
+            fact_conflict_id=str(conflict_id),
+        )
+        if not updated.get("updated"):
+            return {"resolved": False, "reason": updated.get("reason", "update_failed"), "conflict_id": conflict_id}
+        return {
+            "resolved": True,
+            "conflict_id": conflict_id,
+            "status": "resolved",
+            "resolution": "accept_incoming",
+            "resolved_memory_id": target_id,
+            "updated": True,
+            "record": updated.get("record"),
+            "audit_event_id": updated.get("audit_event_id", ""),
+        }
+
+    def lifecycle_overview(self, limit: int = 500) -> Dict[str, object]:
+        """Summarize lifecycle coverage without exposing memory payloads."""
+
+        rows = self.meta.list_memories(
+            include_deleted=False,
+            governance_state="active",
+            limit=max(1, min(int(limit), 2000)),
+        )
+        tier_counts: Dict[str, int] = {}
+        kind_counts: Dict[str, int] = {}
+        subtype_counts: Dict[str, int] = {}
+        memory_ids = [str(row.get("memory_id") or "") for row in rows if row.get("memory_id")]
+        evidence_ids = set()
+        if memory_ids:
+            placeholders = ",".join("?" for _ in memory_ids)
+            evidence_ids = {
+                str(item["memory_id"])
+                for item in self.meta.conn.execute(
+                    """SELECT DISTINCT l.memory_id
+                       FROM memory_event_links l
+                       JOIN memory m ON m.memory_id = l.memory_id
+                       WHERE m.deleted = 0 AND m.governance_state = 'active'
+                         AND l.memory_id IN (%s)""" % placeholders,
+                    memory_ids,
+                ).fetchall()
+            }
+        for row in rows:
+            tier = str(row.get("tier") or "long_term")
+            subtype = str(row.get("subtype") or "general")
+            kind = "policy" if str(row.get("type") or "") == "sensitive_policy" else (
+                "preference" if str(row.get("type") or "") == "preference" else "knowledge"
+            )
+            tier_counts[tier] = tier_counts.get(tier, 0) + 1
+            kind_counts[kind] = kind_counts.get(kind, 0) + 1
+            subtype_counts[subtype] = subtype_counts.get(subtype, 0) + 1
+        pending_writes = self.meta.pending_memory_writes()
+        pending_erasures = self.meta.pending_erasures()
+        state_counts = {
+            str(item["governance_state"] or "active"): int(item["count"])
+            for item in self.meta.conn.execute(
+                """SELECT governance_state, COUNT(*) AS count FROM memory
+                   WHERE deleted = 0 GROUP BY governance_state"""
+            ).fetchall()
+        }
+        return {
+            "schema": "memguardos-lifecycle-v1",
+            "namespace": self.namespace,
+            "contract": lifecycle_contract(),
+            "counts": {
+                "active_atoms": len(rows),
+                "with_support": len(evidence_ids),
+                "without_support": max(0, len(rows) - len(evidence_ids)),
+                "governance_states": state_counts,
+                "pending_writes": len(pending_writes),
+                "pending_erasures": len(pending_erasures),
+            },
+            "tiers": dict(sorted(tier_counts.items())),
+            "kinds": dict(sorted(kind_counts.items())),
+            "subtypes": dict(sorted(subtype_counts.items())),
+            "policy": {
+                "working": "当前任务中使用，绑定会话并在结束后清理",
+                "session": "阶段性情节证据，绑定会话，可审核后晋升",
+                "long_term": "稳定原子记忆，带版本、来源和遗忘路径",
+                "write_rule": "先敏感识别和结构化校验，再进入事务写入",
+                "read_rule": "先授权范围和有效版本，再做词法、图和语义融合",
+            },
+        }
 
     def forget_verification_report(
         self,
@@ -2305,6 +2759,8 @@ class MemGuardService:
     def update_memory(
         self, memory_id: str, text: str, reason: str = "manual update",
         source_link: Optional[Dict[str, object]] = None,
+        expected_version_id: str = "",
+        fact_conflict_id: str = "",
     ) -> Dict[str, object]:
         self._recover_pending_memory_writes()
         row = self.meta.get_memory(memory_id)
@@ -2313,6 +2769,11 @@ class MemGuardService:
         previous = self.store.get_latest(memory_id)
         if previous is None:
             return {"updated": False, "reason": "memory_not_found", "memory_id": memory_id}
+        if expected_version_id and (
+            str(row.get("version_id") or "") != expected_version_id
+            or previous.version.version_id != expected_version_id
+        ):
+            return {"updated": False, "reason": "candidate_version_changed", "memory_id": memory_id}
 
         clean_text, quality = assess_text_quality(text, source_kind="update")
         if not quality.accepted:
@@ -2402,7 +2863,13 @@ class MemGuardService:
             governance_reason=previous.governance_reason,
         ).finalize_hash()
         self._enrich_graph(record)
-        record = self._persist_existing_memory(previous, record, source_link=source_link)
+        try:
+            record = self._persist_existing_memory(
+                previous, record, source_link=source_link,
+                **({"fact_conflict_id": fact_conflict_id} if fact_conflict_id else {}),
+            )
+        except FactConflictChanged as exc:
+            return {"updated": False, "reason": exc.reason, "memory_id": memory_id}
         audit = self._audit(
             "update",
             memory_id,
@@ -2980,6 +3447,7 @@ class MemGuardService:
             return results
 
         started_at = perf_counter()
+        semantic_deadline = monotonic() + max(0.0, self.retriever.kylin_rerank_budget_ms) / 1000
         intent = classify_query_intent(clean_query)
         candidates = self._search_candidates(
             query, limit=max(limit * 8, 64), include_graph=False,
@@ -2987,7 +3455,7 @@ class MemGuardService:
         )
         dense_ids, dense_query_vector, dense_status = self._dense_candidate_ids(
             clean_query, limit=max(limit * 4, 20), session_id=session_id,
-            project_root=project_scope,
+            project_root=project_scope, deadline=semantic_deadline,
         )
         recall_done_at = perf_counter()
         exact_ids: List[str] = []
@@ -3024,6 +3492,7 @@ class MemGuardService:
                 "latency_budget_exceeded", "query_vector_unavailable",
             },
             allow_ungrounded_kylin_candidates=not self.dense_candidates_enabled,
+            deadline=semantic_deadline,
         )
         base_ranked = []
         for base_score, record in base_pairs:
@@ -3142,13 +3611,10 @@ class MemGuardService:
             rankings["dense"] = verified_dense_ids
 
         if intent == QueryIntent.RELATIONAL:
-            graph_result = (
-                self.hierarchical_graph_search(
-                    clean_query, limit=max(limit * 3, 10), session_id=session_id,
-                    project_root=project_scope,
-                ) if session_id else self.hierarchical_graph_search(
-                    clean_query, limit=max(limit * 3, 10), project_root=project_scope,
-                )
+            graph_result = self.hierarchical_graph_search(
+                clean_query,
+                limit=max(limit * 3, 10),
+                **_optional_scope_kwargs(session_id, project_scope),
             )
             summary_rows = graph_result.get("layers", {}).get("summary", [])
             graph_ids = []
@@ -3269,7 +3735,8 @@ class MemGuardService:
             seen.add(item["memory_id"])
         if not results:
             for record in self.meta.search_text(
-                query, limit=limit, session_id=session_id, project_root=project_scope,
+                query, limit=limit,
+                **_optional_scope_kwargs(session_id, project_scope),
             ):
                 record["score"] = 0.1
                 record["match_source"] = "text"
@@ -3308,6 +3775,7 @@ class MemGuardService:
     def _dense_candidate_ids(
         self, query: str, limit: int, session_id: str = "",
         project_root: Optional[str] = None,
+        *, deadline: Optional[float] = None,
     ) -> Tuple[List[str], Optional[List[float]], str]:
         if not self.dense_candidates_enabled:
             return [], None, "disabled"
@@ -3318,7 +3786,12 @@ class MemGuardService:
             cap = max(1, min(int(os.environ.get("MEMGUARD_DENSE_SCAN_LIMIT", "2000")), 5000))
         except ValueError:
             cap = 2000
-        started = perf_counter()
+        started = monotonic()
+        budget_ms = self.retriever.kylin_rerank_budget_ms
+        local_deadline = started + max(0.0, budget_ms) / 1000
+        deadline = min(local_deadline, deadline) if deadline is not None else local_deadline
+        if monotonic() >= deadline:
+            return [], None, "latency_budget_exceeded"
         vectors, complete = self.meta.list_dense_candidate_vectors(
             self.EMBEDDING_BACKEND, self.EMBEDDING_MODEL_REVISION,
             self.namespace, cap, session_id=session_id, project_root=project_root,
@@ -3327,8 +3800,7 @@ class MemGuardService:
             return [], None, "scan_limit_exceeded"
         if not vectors:
             return [], None, "no_ready_vectors"
-        budget_ms = self.retriever.kylin_rerank_budget_ms
-        remaining = budget_ms / 1000 - (perf_counter() - started) if budget_ms > 0 else 0
+        remaining = deadline - monotonic()
         if remaining <= 0:
             return [], None, "latency_budget_exceeded"
         try:
@@ -3343,12 +3815,14 @@ class MemGuardService:
         normalized_query = normalize_vector(query_vector)
         scored = []
         for memory_id, vector in vectors:
+            if monotonic() >= deadline:
+                return [], query_vector, "latency_budget_exceeded"
             if len(vector) != len(query_vector):
                 continue
             similarity = cosine(normalized_query, normalize_vector(vector))
             if similarity >= 0.45:
                 scored.append((similarity, memory_id))
-        if (perf_counter() - started) * 1000 > budget_ms:
+        if monotonic() >= deadline:
             return [], query_vector, "latency_budget_exceeded"
         scored.sort(key=lambda item: (-item[0], item[1]))
         if not scored:
@@ -3362,7 +3836,14 @@ class MemGuardService:
         ]
         return close_candidates, query_vector, "ready"
 
-    def batch_search(self, queries: List[str], limit: int = 5, workers: int = 4) -> Dict[str, object]:
+    def batch_search(
+        self,
+        queries: List[str],
+        limit: int = 5,
+        workers: int = 4,
+        project_root: Optional[str] = None,
+        session_id: str = "",
+    ) -> Dict[str, object]:
         clean_queries = [query.strip() for query in queries if query and query.strip()]
         workers = max(1, min(int(workers), max(1, len(clean_queries)), 16))
         if not clean_queries:
@@ -3394,7 +3875,12 @@ class MemGuardService:
                 for index, query in items:
                     try:
                         query_started = perf_counter()
-                        hits = worker_service.search(query, limit=limit, audit=False)
+                        hits = worker_service.search(
+                            query,
+                            limit=limit,
+                            audit=False,
+                            **_optional_scope_kwargs(session_id, project_root),
+                        )
                         elapsed_ms = (perf_counter() - query_started) * 1000
                         partition_results.append(
                             {
@@ -3462,13 +3948,19 @@ class MemGuardService:
     def build_context(
         self, query: str, limit: int = 5, max_chars: int = 2000,
         token_budget: Optional[int] = None, session_id: str = "",
+        project_root: Optional[str] = None,
     ) -> Dict[str, object]:
+        project_scope = str(Path(project_root).expanduser().resolve()) if project_root else project_root
         effective_max_chars = max_chars
         if token_budget and token_budget > 0:
             # Conservative cap for mixed Chinese/English contexts; exact tokenizers
             # are provider-specific, so the package reports estimates instead.
             effective_max_chars = min(max_chars, max(256, int(token_budget / 0.65)))
-        hits = self.search(query, limit=limit, session_id=session_id)
+        hits = self.search(
+            query,
+            limit=limit,
+            **_optional_scope_kwargs(session_id, project_scope),
+        )
         memories = []
         lines = []
         selection_trace = []
@@ -3563,6 +4055,7 @@ class MemGuardService:
         context = "\n\n".join(lines)
         result = {
             "query": query,
+            "project_root": project_scope or "",
             "memory_count": len(memories),
             "max_chars": max_chars,
             "effective_max_chars": effective_max_chars,
@@ -3891,22 +4384,21 @@ class MemGuardService:
                 self.meta.search_text(
                     text_query,
                     limit=candidate_limit - len(candidates),
-                    session_id=session_id,
-                    project_root=project_root,
+                    **_optional_scope_kwargs(session_id, project_root),
                 )
             )
         if include_graph and len(candidates) < candidate_limit:
             remaining = candidate_limit - len(candidates)
             graph_query = str(expanded.get("expanded_query") or query)
             add_unique(self.meta.graph_search(
-                graph_query, limit=max(10, remaining), session_id=session_id,
-                project_root=project_root,
+                graph_query, limit=max(10, remaining),
+                **_optional_scope_kwargs(session_id, project_root),
             ))
         if include_recent and len(candidates) < candidate_limit:
             remaining = candidate_limit - len(candidates)
             add_unique(self.meta.list_recent_memories(
-                remaining, exclude_ids=list(seen), session_id=session_id,
-                project_root=project_root,
+                remaining, exclude_ids=list(seen),
+                **_optional_scope_kwargs(session_id, project_root),
             ))
         return candidates[:candidate_limit]
 
@@ -3923,8 +4415,19 @@ class MemGuardService:
             in {"trusted", "verified", "reviewed"}
         )
 
-    def graph_search(self, entity_query: str, limit: int = 10, session_id: str = "") -> List[Dict[str, object]]:
-        results = self.meta.graph_search(entity_query, limit=limit, session_id=session_id)
+    def graph_search(
+        self,
+        entity_query: str,
+        limit: int = 10,
+        session_id: str = "",
+        project_root: Optional[str] = None,
+    ) -> List[Dict[str, object]]:
+        project_scope = str(Path(project_root).expanduser().resolve()) if project_root else project_root
+        results = self.meta.graph_search(
+            entity_query,
+            limit=limit,
+            **_optional_scope_kwargs(session_id, project_scope),
+        )
         self._audit("graph_search", None, {"entity_query": entity_query, "count": len(results)})
         return results
 
@@ -3932,8 +4435,11 @@ class MemGuardService:
         self, entity_query: str, limit: int = 10, session_id: str = "",
         project_root: Optional[str] = None,
     ) -> Dict[str, object]:
+        project_scope = str(Path(project_root).expanduser().resolve()) if project_root else project_root
         summary_rows = self.meta.graph_search(
-            entity_query, limit=limit, session_id=session_id, project_root=project_root,
+            entity_query,
+            limit=limit,
+            **_optional_scope_kwargs(session_id, project_scope),
         )
         if not summary_rows:
             summary_rows = self._search_candidates(
@@ -3942,7 +4448,7 @@ class MemGuardService:
                 include_graph=False,
                 include_recent=False,
                 session_id=session_id,
-                project_root=project_root,
+                project_root=project_scope,
             )
 
         summary_layer = []
@@ -4037,12 +4543,23 @@ class MemGuardService:
         )
         return result
 
-    def related(self, memory_id: str, limit: int = 10, session_id: str = "") -> Dict[str, object]:
+    def related(
+        self,
+        memory_id: str,
+        limit: int = 10,
+        session_id: str = "",
+        project_root: Optional[str] = None,
+    ) -> Dict[str, object]:
+        project_scope = str(Path(project_root).expanduser().resolve()) if project_root else project_root
         seed = self.meta.get_memory(memory_id)
-        if seed is None or not self._retrieval_record_is_eligible(seed, session_id):
+        if seed is None or not self._retrieval_record_is_eligible(seed, session_id, project_scope):
             return {"graph": {"entities": [], "relations": []}, "related": []}
         graph = self.meta.memory_graph(memory_id)
-        related = self.meta.related_memories(memory_id, limit=limit, session_id=session_id)
+        related = self.meta.related_memories(
+            memory_id,
+            limit=limit,
+            **_optional_scope_kwargs(session_id, project_scope),
+        )
         result = {"graph": graph, "related": related}
         self._audit("related", memory_id, {"related_count": len(related), "entity_count": len(graph["entities"])})
         return result
@@ -4108,6 +4625,7 @@ class MemGuardService:
         deleted_preference_observations = effects["deleted_observations"]
         scrubbed_event_count = effects["scrubbed_events"]
         audit_payloads_redacted = effects["redacted_audit"]
+        fact_conflicts_redacted = effects.get("redacted_fact_conflicts", 0)
         storage_cleanup = (
             self._recover_pending_erasures()["storage_cleanup"]
             if forgotten else {"checkpoint": [], "vacuum": False}
@@ -4124,6 +4642,7 @@ class MemGuardService:
                 **_forget_audit_detail(plan, candidate_count=len(candidates)),
                 "forgotten": forgotten,
                 "deleted_preference_observation_count": deleted_preference_observations,
+                "redacted_fact_conflict_count": fact_conflicts_redacted,
                 "compact": compact,
             },
         )
@@ -4139,6 +4658,7 @@ class MemGuardService:
             "compact": compact,
             "storage_cleanup": storage_cleanup,
             "audit_payloads_redacted": audit_payloads_redacted,
+            "redacted_fact_conflict_count": fact_conflicts_redacted,
             "verification": verification,
             "search_cache_entries_dropped": cache_entries_dropped,
             "audit_chain_ok": bool(self.meta.verify_audit_chain().get("ok")),
@@ -4254,6 +4774,7 @@ class MemGuardService:
         deleted_preference_observations = effects["deleted_observations"]
         scrubbed_event_count = effects["scrubbed_events"]
         audit_payloads_redacted = effects["redacted_audit"]
+        fact_conflicts_redacted = effects.get("redacted_fact_conflicts", 0)
 
         storage_cleanup = (
             self._recover_pending_erasures()["storage_cleanup"]
@@ -4284,6 +4805,7 @@ class MemGuardService:
             "scrubbed_event_count": scrubbed_event_count,
             "storage_cleanup": storage_cleanup,
             "audit_payloads_redacted": audit_payloads_redacted,
+            "redacted_fact_conflict_count": fact_conflicts_redacted,
             "search_cache_entries_dropped": cache_entries_dropped,
             "external_residue": self._managed_forget_residue(confirm=True),
         }
@@ -4576,6 +5098,7 @@ class MemGuardService:
         fts_hit = False
         graph_hit = False
         fact_hit = False
+        fact_conflict_hit = False
         cache_hit = False
         errors: List[str] = []
         try:
@@ -4600,6 +5123,19 @@ class MemGuardService:
             ).fetchone() is not None
         except Exception as exc:
             errors.append("fact_slot: %s" % type(exc).__name__)
+        try:
+            for row in self.meta.conn.execute(
+                "SELECT candidate_memory_ids_json FROM fact_conflict WHERE status = 'pending'"
+            ).fetchall():
+                try:
+                    candidates = json.loads(row["candidate_memory_ids_json"] or "[]")
+                except (TypeError, ValueError, json.JSONDecodeError):
+                    candidates = []
+                if target in {str(item) for item in candidates}:
+                    fact_conflict_hit = True
+                    break
+        except Exception as exc:
+            errors.append("fact_conflict: %s" % type(exc).__name__)
         for cached in self._search_cache.values():
             if any(str(item.get("memory_id") or "") == target for item in cached):
                 cache_hit = True
@@ -4609,10 +5145,11 @@ class MemGuardService:
             "sqlite_fts_recallable": fts_hit,
             "graph_relations_recallable": graph_hit,
             "fact_slot_recallable": fact_hit,
+            "fact_conflict_recallable": fact_conflict_hit,
             "search_cache_recallable": cache_hit,
             "verified": not errors,
             "verification_errors": errors,
-            "any_surface_recallable": bool(fts_hit or graph_hit or fact_hit or cache_hit),
+            "any_surface_recallable": bool(fts_hit or graph_hit or fact_hit or fact_conflict_hit or cache_hit),
         }
 
     def _buffer_memory_hits(self, memory_ids: List[str]) -> None:
@@ -5141,14 +5678,18 @@ def _flatten_tool_args_text(value: object) -> str:
     return ""
 
 
-def _independent_fact_clause(text: str) -> bool:
-    """Only persist a second clause when it expresses an independent fact."""
+def _independent_memory_clause(text: str) -> bool:
+    """Preserve independent facts and untyped preferences without activating them."""
 
     clause = str(text or "").strip()
     return bool(
         len(clause) >= 6
         and not looks_like_question(clause)
-        and re.search(r"(?:是|为|位于|定于|属于|发布日|版本|日期|截止日|负责人|路径)", clause)
+        and re.search(
+            r"(?:是|为|位于|定于|属于|发布日|版本|日期|截止日|负责人|路径|"
+            r"优先|默认|以后|习惯|偏好|倾向|\bprefer\b|\bdefault\b|\balways\b)",
+            clause, flags=re.IGNORECASE,
+        )
     )
 
 

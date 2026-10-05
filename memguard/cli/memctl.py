@@ -101,6 +101,14 @@ def build_parser() -> argparse.ArgumentParser:
     temporal = sub.add_parser("temporal-status", help="Show temporal validity windows for active and superseded memories")
     temporal.add_argument("--limit", type=int, default=20)
 
+    lifecycle = sub.add_parser(
+        "lifecycle",
+        help="Explain one memory as atom/episode/support/operation, or show lifecycle coverage",
+    )
+    lifecycle.add_argument("memory_id", nargs="?", help="Memory id to explain")
+    lifecycle.add_argument("--overview", action="store_true", help="Show namespace lifecycle coverage")
+    lifecycle.add_argument("--limit", type=int, default=500)
+
     governance = sub.add_parser("governance", help="List and review quarantined memory sources")
     governance_sub = governance.add_subparsers(dest="governance_command", required=True)
     governance_list = governance_sub.add_parser("list", help="List quarantined memories")
@@ -188,6 +196,13 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("compact", help="Compact append-only segment and purge forgotten plaintext")
     sub.add_parser("verify-audit", help="Verify SQLite audit hash chain")
     sub.add_parser("resolve-conflicts", help="Resolve preference-memory conflicts")
+    fact_conflicts = sub.add_parser(
+        "fact-conflicts", help="List structured knowledge-fact conflicts awaiting review"
+    )
+    fact_conflicts.add_argument(
+        "--status", choices=["pending", "resolved", "dismissed"], default="pending"
+    )
+    fact_conflicts.add_argument("--limit", type=int, default=100)
 
     audit = sub.add_parser("audit", help="Show audit events")
     audit.add_argument("--limit", type=int, default=20)
@@ -341,8 +356,10 @@ def build_parser() -> argparse.ArgumentParser:
     agent_forget.add_argument("--no-compact", action="store_true")
     agent_forget.add_argument("--no-external-persistence", action="store_true")
 
-    for name in ("search", "build-context", "build-prompt", "generate-answer", "graph-search", "hierarchical-graph-search", "related"):
+    for name in ("search", "batch-search", "build-context", "build-prompt", "generate-answer", "graph-search", "hierarchical-graph-search", "related"):
         sub.choices[name].add_argument("--session-id", default=argparse.SUPPRESS, help="Session for temporary memory retrieval")
+    for name in ("ingest", "search", "batch-search", "build-context", "build-prompt", "generate-answer", "graph-search", "hierarchical-graph-search", "related"):
+        sub.choices[name].add_argument("--project-root", default=None, help="Project directory; an empty value selects global memories only")
     return parser
 
 
@@ -500,6 +517,7 @@ def main(argv: list[str] | None = None) -> int:
             result = service.ingest_text(
                 text, source_kind=args.source_kind, source_uri=source_uri, tier=args.tier,
                 retention_session_id=args.session_id,
+                project_root=args.project_root or "",
             )
             if result["stored"]:
                 record = result["record"]
@@ -659,6 +677,17 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(service.temporal_status(limit=args.limit), ensure_ascii=False, indent=2))
             return 0
 
+        if args.command == "lifecycle":
+            if args.overview:
+                print(json.dumps(service.lifecycle_overview(limit=args.limit), ensure_ascii=False, indent=2))
+                return 0
+            if not args.memory_id:
+                print(json.dumps({"ok": False, "error": "memory_id_required"}, ensure_ascii=False))
+                return 2
+            result = service.lifecycle_snapshot(args.memory_id, include_events=True)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result.get("found") else 2
+
         if args.command == "governance":
             if args.governance_command == "list":
                 print(json.dumps(service.list_quarantined_memories(limit=args.limit), ensure_ascii=False, indent=2))
@@ -705,18 +734,18 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "search":
-            print(json.dumps(service.search(args.query, limit=args.top_k, session_id=args.session_id), ensure_ascii=False, indent=2))
+            print(json.dumps(service.search(args.query, limit=args.top_k, session_id=args.session_id, project_root=args.project_root), ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "batch-search":
             queries = _read_batch_queries(args)
-            print(json.dumps(service.batch_search(queries, limit=args.top_k, workers=args.workers), ensure_ascii=False, indent=2))
+            print(json.dumps(service.batch_search(queries, limit=args.top_k, workers=args.workers, session_id=args.session_id, project_root=args.project_root), ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "build-context":
             print(
                 json.dumps(
-                    service.build_context(args.query, limit=args.top_k, max_chars=args.max_chars, token_budget=args.token_budget, session_id=args.session_id),
+                    service.build_context(args.query, limit=args.top_k, max_chars=args.max_chars, token_budget=args.token_budget, session_id=args.session_id, project_root=args.project_root),
                     ensure_ascii=False,
                     indent=2,
                 )
@@ -724,12 +753,12 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "build-prompt":
-            context_package = service.build_context(args.query, limit=args.top_k, max_chars=args.max_chars, token_budget=args.token_budget, session_id=args.session_id)
+            context_package = service.build_context(args.query, limit=args.top_k, max_chars=args.max_chars, token_budget=args.token_budget, session_id=args.session_id, project_root=args.project_root)
             print(render_generation_prompt(context_package))
             return 0
 
         if args.command == "generate-answer":
-            context_package = service.build_context(args.query, limit=args.top_k, max_chars=args.max_chars, token_budget=args.token_budget, session_id=args.session_id)
+            context_package = service.build_context(args.query, limit=args.top_k, max_chars=args.max_chars, token_budget=args.token_budget, session_id=args.session_id, project_root=args.project_root)
             prompt_text = render_generation_prompt(context_package)
             api_key = Path(args.api_key_file).read_text(encoding="utf-8").strip() if args.api_key_file else ""
             try:
@@ -749,15 +778,15 @@ def main(argv: list[str] | None = None) -> int:
                 return 2
 
         if args.command == "graph-search":
-            print(json.dumps(service.graph_search(args.entity, limit=args.limit, session_id=args.session_id), ensure_ascii=False, indent=2))
+            print(json.dumps(service.graph_search(args.entity, limit=args.limit, session_id=args.session_id, project_root=args.project_root), ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "hierarchical-graph-search":
-            print(json.dumps(service.hierarchical_graph_search(args.entity, limit=args.limit, session_id=args.session_id), ensure_ascii=False, indent=2))
+            print(json.dumps(service.hierarchical_graph_search(args.entity, limit=args.limit, session_id=args.session_id, project_root=args.project_root), ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "related":
-            print(json.dumps(service.related(args.memory_id, limit=args.limit, session_id=args.session_id), ensure_ascii=False, indent=2))
+            print(json.dumps(service.related(args.memory_id, limit=args.limit, session_id=args.session_id, project_root=args.project_root), ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "forget":
@@ -779,6 +808,16 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "resolve-conflicts":
             print(json.dumps(service.resolve_conflicts(), ensure_ascii=False, indent=2))
+            return 0
+
+        if args.command == "fact-conflicts":
+            print(
+                json.dumps(
+                    service.fact_conflicts(status=args.status, limit=args.limit),
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
             return 0
 
         if args.command == "audit":

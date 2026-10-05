@@ -5,6 +5,12 @@ from typing import Dict, List, Pattern
 import re
 
 from memguard.models import Sensitivity
+from memguard.sensitivity.credential_context import (
+    PASSWORD_REMEMBER_PATTERN,
+    PASSWORD_SECRET_PATTERN,
+    credential_value_is_present,
+    is_code_assignment_key,
+)
 
 
 @dataclass
@@ -50,24 +56,17 @@ class SensitiveDetector:
             "token_assignment": re.compile(r"(?i)\b[A-Z0-9_]*(?:api[_-]?key|access[_-]?key|token|secret|passwd|pwd|password)\s*[:=]\s*['\"]?[^'\"\s]{6,}"),
             "weak_password_hint_cn": re.compile(r"(?:口令|密码)\s*(?:是|为|[:=：])\s*\S{6,64}"),
             # Assignment context matters more than password length or alphabet.
-            "password_secret": re.compile(
-                r"(?i)(?<![A-Za-z0-9_])(?:密码|口令|password|passwd|passcode|pin(?:码)?)\s*"
-                r"(?:是|为|[:=：]|设为|设置为|设置成|is)\s*"
-                r"[\u4e00-\u9fffA-Za-z0-9!@#$%^&*._+\-]{2,64}"
-                r"(?![\u4e00-\u9fffA-Za-z0-9_])"
-            ),
-            "password_remember": re.compile(
-                r"(?i)(?:记住|保存|登录|解锁)(?:我的)?\s*"
-                r"(?:密码|口令|password|passwd|passcode|pin(?:码)?)\s+"
-                r"[\u4e00-\u9fffA-Za-z0-9!@#$%^&*._+\-]{2,64}"
-                r"(?![\u4e00-\u9fffA-Za-z0-9_])"
-            ),
+            "password_secret": PASSWORD_SECRET_PATTERN,
+            "password_remember": PASSWORD_REMEMBER_PATTERN,
             "one_time_code": re.compile(
                 r"(?i)(?:验证码|短信码|动态码|一次性口令|otp)\s*"
                 r"(?:是|为|[:=：])?\s*\d{4,8}(?!\d)"
             ),
             "private_key": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
         }
+        self._credential_context_labels = {
+            "password_secret", "password_remember", "weak_password_hint_cn",
+        } - (custom_patterns or {}).keys()
         self.custom_levels: Dict[str, str] = {}
         for name, spec in (custom_patterns or {}).items():
             regex, level = _normalize_custom_pattern(spec)
@@ -77,6 +76,13 @@ class SensitiveDetector:
 
     def detect(self, text: str, source_uri: str = "") -> List[SensitiveFinding]:
         findings: List[SensitiveFinding] = []
+        assignment_spans = [
+            # The legacy assignment regex leaves its closing quote outside the span.
+            (match.start(), match.end() + (1 if text[match.end():match.end() + 1] in {"'", '"'} else 0))
+            for match in self.patterns["token_assignment"].finditer(text)
+            if self._level("token_assignment", source_uri) == "high"
+            and not self._allowlist_hit(match.group(0), text)
+        ]
         id_spans = [
             (match.start(), match.end())
             for label in ("id_card_cn", "id_card_cn_legacy")
@@ -85,6 +91,15 @@ class SensitiveDetector:
         ]
         for label, pattern in self.patterns.items():
             for match in pattern.finditer(text):
+                if label in self._credential_context_labels and not credential_value_is_present(text, match):
+                    continue
+                if (
+                    label == "password_secret"
+                    and label in self._credential_context_labels
+                    and is_code_assignment_key(match)
+                    and any(start <= match.start() and match.end() <= end for start, end in assignment_spans)
+                ):
+                    continue
                 if self._allowlist_hit(match.group(0), text):
                     continue
                 if label == "bank_card":

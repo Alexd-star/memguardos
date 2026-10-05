@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import signal
 import threading
 from pathlib import Path
@@ -15,6 +16,7 @@ from memguard.os_guard.cgroup import cgroup_status
 from memguard.os_guard.journald import JournaldLogger
 from memguard.retrieval.kylin_sdk import kylin_sdk_status
 from memguard.service import MemGuardService
+from memguard.maintenance import EmbeddingMaintenance, MaintenancePolicy
 
 
 def daemon_health_snapshot(probe_sdk: bool = False, namespace: Optional[str] = None) -> Dict[str, object]:
@@ -43,6 +45,7 @@ def run_daemon(
     socket_mode: int = 0o660,
     auth_token: Optional[str] = None,
     namespace: Optional[str] = None,
+    maintenance_policy: Optional[MaintenancePolicy] = None,
 ) -> int:
     logger = JournaldLogger()
     namespace = normalize_namespace(namespace)
@@ -56,12 +59,18 @@ def run_daemon(
     signal.signal(signal.SIGINT, _stop)
 
     service = MemGuardService(namespace=namespace)
+    maintenance = None
     try:
         snapshot = daemon_health_snapshot(probe_sdk=probe_sdk, namespace=namespace)
         service._audit("daemon_started", None, snapshot)
         print(json.dumps(snapshot, ensure_ascii=False), flush=True)
         if once:
             return 0
+        if maintenance_policy is not None and service.retriever.kylin_provider is not None:
+            maintenance = EmbeddingMaintenance(
+                service.store.path, service.meta.path, namespace, maintenance_policy, stopping,
+            )
+            maintenance.start()
         socket_thread = None
         if socket_path:
             socket_thread = threading.Thread(
@@ -78,13 +87,18 @@ def run_daemon(
             )
             socket_thread.start()
         while not stopping.is_set():
-            logger.log("daemon_heartbeat", None, daemon_health_snapshot(probe_sdk=probe_sdk, namespace=namespace))
+            health = daemon_health_snapshot(probe_sdk=probe_sdk, namespace=namespace)
+            health["embedding_maintenance"] = maintenance.snapshot() if maintenance else {"status": "disabled"}
+            logger.log("daemon_heartbeat", None, health)
             stopping.wait(timeout=max(1.0, interval))
         if socket_thread is not None:
             socket_thread.join(timeout=2.0)
         service._audit("daemon_stopped", None, {"reason": "signal"})
         return 0
     finally:
+        stopping.set()
+        if maintenance is not None:
+            maintenance.join()
         service.close()
 
 
@@ -97,18 +111,30 @@ def main() -> int:
     parser.add_argument("--socket-mode", default="660", help="Octal permission mode for the Unix socket, for example 660 or 666")
     parser.add_argument("--auth-token-file", default="", help="Optional file containing the local API bearer token")
     parser.add_argument("--namespace", default=None, help="Memory namespace/session id. Defaults to MEMGUARD_NAMESPACE or 'default'.")
+    parser.add_argument("--maintenance-interval", type=float, default=30.0, help="Embedding maintenance interval; 0 disables it")
+    parser.add_argument("--maintenance-budget", type=float, default=2.0, help="Maximum embedding work seconds per maintenance cycle")
+    parser.add_argument("--maintenance-batch", type=int, default=8, help="Maximum embedding jobs per cycle")
     args = parser.parse_args()
     auth_token = ""
     if args.auth_token_file:
         auth_token = Path(args.auth_token_file).read_text(encoding="utf-8").strip()
+    enabled = args.maintenance_interval != 0 and os.environ.get("MEMGUARD_EMBEDDING_MAINTENANCE", "1") != "0"
+    try:
+        policy = MaintenancePolicy(args.maintenance_interval, args.maintenance_budget, args.maintenance_batch) if enabled else None
+        socket_mode = int(args.socket_mode, 8)
+        if not 0 <= socket_mode <= 0o777:
+            raise ValueError("socket mode must be between 000 and 777")
+    except ValueError as exc:
+        parser.error(str(exc))
     return run_daemon(
         interval=args.interval,
         once=args.once,
         probe_sdk=args.probe_sdk,
         socket_path=args.socket,
-        socket_mode=int(args.socket_mode, 8),
+        socket_mode=socket_mode,
         auth_token=auth_token or None,
         namespace=args.namespace,
+        maintenance_policy=policy,
     )
 
 

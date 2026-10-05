@@ -180,6 +180,24 @@ python scripts/generate_sbom.py
 
 ## 10. 结果解释原则
 
+新增的日常使用链路可以在临时目录中独立复跑：
+
+```bash
+python scripts/verify_finals_scenarios.py --output output/finals_scenarios.json
+```
+
+脚本通过产品 API 写入和纠正自然语言要求，再调用真实上下文构建、事实核对、作用域检索、遗忘与运行态快照检查。测试包括同句两个偏好、新会话复用、纠正后的旧上下文拒用、矛盾事实确认、临时记忆隔离、短密码拒存、单项遗忘后保留无关偏好，以及服务重开后不复活。数据只在自动创建的临时目录中形成，不使用正式记忆，也不替换产品算法。资源压力判断使用显式模拟读数检查调度分支，实际 cgroup/PSI 读数另行记录。该脚本验证服务和保护机制，不能用其结果代替真实模型的工具行动效果。
+
+五包安装后，应从源码目录之外核对实际安装模块：
+
+```bash
+cd /tmp
+PYTHONPATH=/opt/memguardos python3 /路径/scripts/verify_finals_scenarios.py \
+  --installed --output /路径/installed_scenarios.json
+```
+
+`--installed` 要求模块来自 `/opt/memguardos`，否则直接失败。输出记录模块路径与 SHA-256，避免源码验证掩盖安装版本滞后。尚未提交的开发版本使用文件级快照和包版本绑定证据，不能将 Git HEAD 当作工作树当前代码的唯一标识。
+
 - `PASS`：指定检查项达到门槛。
 - `passed`：pytest 已执行的测试通过；不代表未覆盖路径绝对没有缺陷。
 - `Warning`：当前不阻断发布，但必须说明影响和处理方法。

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from functools import lru_cache
 from collections import OrderedDict
+from concurrent.futures import Future, TimeoutError as FutureTimeoutError
 from importlib.resources import files
 from pathlib import Path
+from queue import Empty, SimpleQueue
+from threading import Lock
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 import hashlib
 import json
@@ -172,7 +175,7 @@ class KylinEmbeddingProvider:
         max_cache_entries: int = 1024,
         clock=time.monotonic,
     ):
-        self.timeout_seconds = max(0.01, timeout_seconds)
+        self.timeout_seconds = max(0.0, float(timeout_seconds))
         self.max_failures = max(1, max_failures)
         self.cooldown_seconds = max(1.0, cooldown_seconds)
         self.max_cache_entries = max(1, max_cache_entries)
@@ -183,58 +186,125 @@ class KylinEmbeddingProvider:
         self.last_error_at: float | None = None
         self.last_success_at: float | None = None
         self.cache: OrderedDict[str, List[float]] = OrderedDict()
+        self._lock = Lock()
+        self._inflight: Dict[str, Future] = {}
+        self._completions: SimpleQueue[Tuple[str, Future, Optional[List[float]], str, float]] = SimpleQueue()
         self.sdk = KylinEmbeddingBackend()
 
-    def vector(self, text: str, timeout_seconds: Optional[float] = None) -> Optional[List[float]]:
-        now = float(self.clock())
-        if self.disabled_reason and now < self.disabled_until:
-            return None
-        if self.disabled_reason:
-            self.disabled_reason = ""
-        key = hashlib.sha256(("kylin-sdk-v1\0" + text).encode("utf-8")).hexdigest()
-        if key in self.cache:
-            vector = self.cache.pop(key)
-            self.cache[key] = vector
-            return vector
-        effective_timeout = self.timeout_seconds
+    def vector(
+        self,
+        text: str,
+        timeout_seconds: Optional[float] = None,
+        *,
+        deadline: Optional[float] = None,
+    ) -> Optional[List[float]]:
+        """Use one monotonic deadline for lock waits, singleflight and inference."""
+        started = time.monotonic()
+        timeout = self.timeout_seconds
         if timeout_seconds is not None:
-            effective_timeout = max(0.01, min(self.timeout_seconds, float(timeout_seconds)))
-        result = self.sdk.embed_in_subprocess(text, effective_timeout, include_vector=True)
-        if result.get("ok") and isinstance(result.get("vector"), list) and result["vector"]:
-            vector = normalize_vector(result["vector"])
-            self.cache[key] = vector
-            while len(self.cache) > self.max_cache_entries:
-                self.cache.popitem(last=False)
-            self.failures = 0
-            self.disabled_reason = ""
-            self.disabled_until = 0.0
-            self.last_success_at = now
-            return vector
-        self.failures += 1
-        self.disabled_reason = str(result.get("error") or result.get("error_message") or "kylin embedding unavailable")
-        self.last_error_at = now
-        if self.failures < self.max_failures:
-            self.disabled_reason = ""
-        else:
-            self.disabled_until = now + self.cooldown_seconds
-        return None
+            timeout = min(timeout, max(0.0, float(timeout_seconds)))
+        deadline = min(started + timeout, deadline) if deadline is not None else started + timeout
+        key = hashlib.sha256(("kylin-sdk-v1\0" + text).encode("utf-8")).hexdigest()
+        remaining = deadline - time.monotonic()
+        if remaining <= 0 or not self._lock.acquire(timeout=remaining):
+            return None
+        try:
+            self._drain_completions(deadline)
+            if time.monotonic() >= deadline:
+                return None
+            now = float(self.clock())
+            if self.disabled_reason and now < self.disabled_until:
+                return None
+            if self.disabled_reason:
+                self.disabled_reason = ""
+            if key in self.cache:
+                vector = self.cache.pop(key)
+                self.cache[key] = vector
+                return vector
+            flight = self._inflight.get(key)
+            owner = flight is None
+            if owner:
+                flight = Future()
+                self._inflight[key] = flight
+        finally:
+            self._lock.release()
+
+        if not owner:
+            try:
+                vector = flight.result(timeout=max(0.0, deadline - time.monotonic()))
+                return vector if time.monotonic() < deadline else None
+            except FutureTimeoutError:
+                # A waiter's deadline must not cancel the owner or trip cooldown.
+                return None
+
+        vector = None
+        error = ""
+        try:
+            remaining = deadline - time.monotonic()
+            if remaining > 0:
+                result = self.sdk.embed_in_subprocess(text, remaining, include_vector=True)
+                if result.get("ok") and isinstance(result.get("vector"), list) and result["vector"]:
+                    vector = normalize_vector(result["vector"])
+                else:
+                    error = str(result.get("error") or result.get("error_message") or "kylin embedding unavailable")
+        except Exception as exc:
+            error = str(exc) or "kylin embedding unavailable"
+        finally:
+            if time.monotonic() >= deadline:
+                vector = None
+                error = error or "Kylin embedding exceeded deadline"
+            # Publish metadata before waking waiters; never wait for a bookkeeping lock.
+            self._completions.put((key, flight, vector, error, float(self.clock())))
+            flight.set_result(vector)
+            if time.monotonic() < deadline and self._lock.acquire(blocking=False):
+                try:
+                    self._drain_completions(deadline)
+                finally:
+                    self._lock.release()
+        return vector if time.monotonic() < deadline else None
+
+    def _drain_completions(self, deadline: Optional[float] = None) -> None:
+        """Apply each completion once under _lock, using its original timestamp."""
+        while deadline is None or time.monotonic() < deadline:
+            try:
+                key, flight, vector, error, completed_at = self._completions.get_nowait()
+            except Empty:
+                return
+            if self._inflight.get(key) is flight:
+                self._inflight.pop(key)
+            if vector is not None:
+                self.cache[key] = vector
+                while len(self.cache) > self.max_cache_entries:
+                    self.cache.popitem(last=False)
+                self.failures = 0
+                self.disabled_reason = ""
+                self.disabled_until = 0.0
+                self.last_success_at = completed_at
+            elif error:
+                self.failures += 1
+                self.last_error_at = completed_at
+                if self.failures >= self.max_failures:
+                    self.disabled_reason = error
+                    self.disabled_until = completed_at + self.cooldown_seconds
 
     def status(self) -> Dict[str, object]:
-        return {
-            "name": self.name,
-            "available": not bool(self.disabled_reason),
-            "timeout_seconds": self.timeout_seconds,
-            "failures": self.failures,
-            "disabled_reason": self.disabled_reason,
-            "degraded": bool(self.disabled_reason),
-            "disabled_until": self.disabled_until or None,
-            "last_error_at": self.last_error_at,
-            "last_success_at": self.last_success_at,
-            "cache_entries": len(self.cache),
-            "cache_capacity": self.max_cache_entries,
-            "cooldown_seconds": self.cooldown_seconds,
-            "fallback": "hash",
-        }
+        with self._lock:
+            self._drain_completions()
+            return {
+                "name": self.name,
+                "available": not bool(self.disabled_reason),
+                "timeout_seconds": self.timeout_seconds,
+                "failures": self.failures,
+                "disabled_reason": self.disabled_reason,
+                "degraded": bool(self.disabled_reason),
+                "disabled_until": self.disabled_until or None,
+                "last_error_at": self.last_error_at,
+                "last_success_at": self.last_success_at,
+                "cache_entries": len(self.cache),
+                "cache_capacity": self.max_cache_entries,
+                "cooldown_seconds": self.cooldown_seconds,
+                "fallback": "hash",
+            }
 
 
 def _configured_timeout() -> float:
@@ -453,7 +523,13 @@ class HybridRetriever:
         kylin_query_vector: Optional[List[float]] = None,
         allow_kylin_rerank: bool = True,
         allow_ungrounded_kylin_candidates: bool = True,
+        *,
+        deadline: Optional[float] = None,
     ) -> List[Tuple[float, Dict[str, str]]]:
+        """Rank with an optional absolute time.monotonic() deadline for Kylin."""
+        started = time.monotonic()
+        local_deadline = started + max(0.0, self.kylin_rerank_budget_ms) / 1000.0
+        deadline = min(local_deadline, deadline) if deadline is not None else local_deadline
         records = list(records)
         expanded_info = expand_query_aliases(query)
         expanded_query = str(expanded_info["expanded_query"])
@@ -488,9 +564,8 @@ class HybridRetriever:
         if self.kylin_provider is None or not semantic_pool or not allow_kylin_rerank:
             return self._tag_backend(scored[:limit], "hash")
 
-        sdk_started = time.perf_counter()
-        query_timeout = self._remaining_kylin_timeout(sdk_started)
-        if query_timeout == 0.0:
+        query_timeout = deadline - time.monotonic()
+        if query_timeout <= 0:
             return self._tag_backend(scored[:limit], "hash")
         if kylin_query_vector is None:
             try:
@@ -499,7 +574,7 @@ class HybridRetriever:
                 return self._tag_backend(scored[:limit], "hash")
         if kylin_query_vector is None:
             return self._tag_backend(scored[:limit], "hash")
-        if self._kylin_budget_exceeded(sdk_started):
+        if time.monotonic() >= deadline:
             return self._tag_backend(scored[:limit], "hash")
 
         vectors = persisted_vectors or {}
@@ -509,26 +584,37 @@ class HybridRetriever:
         reranked = []
         hit_count = 0
         for base_score, record in rerank_pool:
+            if time.monotonic() >= deadline:
+                return self._tag_backend(scored[:limit], "hash")
             item = dict(record)
             memory_id = str(item.get("memory_id") or "")
-            candidate_vector = vectors.get(memory_id)
-            if candidate_vector and len(candidate_vector) == len(kylin_query_vector):
-                kylin_score = self._score_with_vectors(
-                    expanded_query, item, kylin_query_vector, candidate_vector
+            try:
+                candidate_vector = vectors.get(memory_id)
+                kylin_score = (
+                    self._score_with_vectors(expanded_query, item, kylin_query_vector, candidate_vector)
+                    if candidate_vector and len(candidate_vector) == len(kylin_query_vector)
+                    else None
                 )
+            except Exception:
+                return self._tag_backend(scored[:limit], "hash")
+            if time.monotonic() >= deadline:
+                return self._tag_backend(scored[:limit], "hash")
+            if kylin_score is not None:
                 item["_kylin_score"] = round(kylin_score, 6)
                 item["_vector_backend"] = "kylin_sdk_persisted"
                 reranked.append((base_score + kylin_score, item))
-                self.persisted_vector_hits += 1
                 hit_count += 1
             else:
                 item["_kylin_score"] = 0.0
                 item["_vector_backend"] = "hash"
                 reranked.append((base_score, item))
-                self.persisted_vector_misses += 1
         reranked.sort(
             key=lambda pair: (-pair[0], str(pair[1].get("memory_id") or ""))
         )
+        if time.monotonic() >= deadline:
+            return self._tag_backend(scored[:limit], "hash")
+        self.persisted_vector_hits += hit_count
+        self.persisted_vector_misses += len(reranked) - hit_count
         if hit_count:
             self.last_backend_used = "kylin_sdk_persisted"
             return reranked[:limit]
@@ -566,23 +652,6 @@ class HybridRetriever:
         if lexical_hits == 1 and (query_tokens <= 2 or distinctive_latin_tokens == 1):
             return True
         return float(breakdown.get("entity_score", 0.0)) >= 0.2
-
-    def _kylin_budget_exceeded(self, started: float) -> bool:
-        if self.kylin_rerank_budget_ms <= 0:
-            return True
-        elapsed_ms = (time.perf_counter() - started) * 1000.0
-        if elapsed_ms <= self.kylin_rerank_budget_ms:
-            return False
-        if self.kylin_provider is not None:
-            self.kylin_provider.disabled_reason = "Kylin rerank exceeded latency budget; using stable fallback"
-            self.kylin_provider.disabled_until = float(self.kylin_provider.clock()) + self.kylin_provider.cooldown_seconds
-        return True
-
-    def _remaining_kylin_timeout(self, started: float) -> Optional[float]:
-        if self.kylin_rerank_budget_ms <= 0:
-            return 0.0
-        remaining = (self.kylin_rerank_budget_ms / 1000.0) - (time.perf_counter() - started)
-        return max(0.0, remaining)
 
     @staticmethod
     def _tag_backend(scored: List[Tuple[float, Dict[str, str]]], backend: str) -> List[Tuple[float, Dict[str, str]]]:

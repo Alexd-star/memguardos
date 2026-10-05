@@ -146,6 +146,21 @@ with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
 PY
 ```
 
+### 用户会话内的本机向量维护
+
+Kylin AI 运行时按桌面用户提供 socket。需要在当前用户会话内使用 SDK 和后台向量补齐时，五包同时提供独立的用户服务；安装软件包不会自动启用它：
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now memguardd-user.service
+systemctl --user status memguardd-user.service --no-pager
+systemctl --user show memguardd-user.service -p MemoryHigh -p MemoryMax -p CPUQuotaPerSecUSec
+```
+
+该服务使用 `~/.local/share/memguardos` 保存数据，socket 位于 `$XDG_RUNTIME_DIR/memguardos-user/memory.sock`，目录权限为 `0700`、socket 权限为 `0600`。它与系统服务以及 CLI 默认的 `~/.memguardos` 数据分开，不迁移或合并原有记忆。直接使用 CLI 查看这份用户服务数据时，应在同一用户下显式设置 `MEMGUARD_HOME="$HOME/.local/share/memguardos"`；已有 Agent 则连接上述用户 socket。操作系统用户身份才是安全边界，同一用户内部的 namespace 用于管理不同记忆空间。
+
+后台维护每 30 秒检查一次待补齐向量，单轮最多处理 8 项、总工作预算为 2 秒。内存接近 cgroup 上限、PSI 内存或 I/O 压力过高时暂停本轮任务；已完成向量带记忆版本和模型修订，更新或遗忘后不能作为当前版本继续使用。停止用户服务可执行 `systemctl --user disable --now memguardd-user.service`，原有数据保留。
+
 ## 5. journald 审计
 
 ```bash
@@ -188,13 +203,16 @@ python -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
 
 `openkylin-status` 默认面向 UKUI 设置页、托盘和日常状态刷新，只检查系统服务、插件文件、模型仓库、socket 和基础路径，不加载完整 Kylin SDK 推理链路；`--fast` 仍作为兼容参数保留。这样普通用户打开【设置】>【安全】时不会因为 embedding 模型冷启动而明显卡顿。需要采集真实 SDK 推理证据时，再运行 `sdk-status --probe-embedding` 或 `openkylin-status --probe-sdk --probe-timeout 90`；两类命令的输出语义不同，不能把快速状态等同于真实推理成功。
 
-如文本 embedding 探针未返回向量，先运行运行时修复脚本，再采集专项诊断包：
+如文本 embedding 探针未返回向量，先采集只读诊断。SDK 文件存在、socket 存在和服务 active 都不能代替实际向量推理成功：
 
 ```bash
-bash scripts/fix_kylin_embedding_runtime.sh --probe-timeout 180
+bash scripts/fix_kylin_embedding_runtime.sh --no-probe
 bash scripts/diagnose_kylin_embedding.sh --no-probe
-bash scripts/diagnose_kylin_embedding.sh --restart-runtime --probe-timeout 180
 ```
+
+修复脚本默认不补链接、不重启服务，也不执行推理。如果两个模型仓库出现同名模型，只在确认 `/opt` 条目是指向同一 `/usr` 模型的符号链接时，才可使用 `--fix-model-repo --restart-kytensor`：重复链接先移入带恢复清单的备份目录，全部唯一模型继续保留。名称相同但内容不同、仓库路径相同或存在未托管运行时进程时，脚本停止操作，交由管理员核对，不自行选择模型或删除 socket。
+
+重启桌面后，模型可能仍处于加载阶段。应同时查看 Triton 模型状态、内存及 swap 压力，并在就绪后做推理探针；短时间探针超时不能直接判定模型损坏。默认记忆检索在这段时间继续使用轻量后端，不等待完整模型加载。
 
 运行文本向量化 SDK 官方 C API 风格探针：
 
@@ -211,7 +229,7 @@ MEMGUARD_EMBEDDING_BACKEND=auto MEMGUARD_KYLIN_EMBEDDING_TIMEOUT=90 \
   python -m memguard.cli.memctl search "openKylin 服务内存限制" --top-k 2
 ```
 
-预期输出中命中项可能包含 `vector_backend: "kylin_sdk"`。如果 SDK 不可用、尚未预热或超过延迟预算，系统会保留默认 FTS/hash/graph 检索结果，不影响核心功能复现。`auto` 模式默认使用 `MEMGUARD_KYLIN_RERANK_BUDGET_MS=160` 的重排预算，目的是保护桌面交互流畅度；需要做 SDK 真实性能证据时，请使用显式 `MEMGUARD_EMBEDDING_BACKEND=kylin` 或 `MEMGUARD_EMBEDDING_BACKEND=kylin_sdk`，不要把证据探针和普通用户日常检索混为一谈。
+预期输出中命中项可能包含 `vector_backend: "kylin_sdk"`。如果 SDK 不可用、尚未预热或超过延迟预算，系统会保留 FTS/hash/graph 检索结果。语义候选和重排共用 `MEMGUARD_KYLIN_RERANK_BUDGET_MS=160` 的总预算，包括锁等待和推理等待。切换到 `kylin` 后端或单独提高 `MEMGUARD_KYLIN_EMBEDDING_TIMEOUT` 不会取消这项检索预算。需要测量语义效果时，应在隔离的评测进程中显式设置更大的总预算，同时报告延迟与降级情况；不能将长时间探针结果作为默认交互延迟成绩。
 
 运行向量数据库 SDK 探针：
 
@@ -284,7 +302,7 @@ bash scripts/smoke_peony_file_scan.sh
 - 控制中心首次打开应保持流畅，状态刷新使用轻量探针；点击【检查本机智能检索】或【预热本机智能检索】时才执行完整 SDK 检查，界面应提示用户等待并在结果区显示检查结果。
 - 托盘菜单可直接打开【记忆安全中心】、【本机智能检索】、【审计状态】和【最近一次阻断记录】。其中 SDK 和审计会定向到控制中心管理员页，敏感阻断会打开本地控制台审计页。
 
-实现细节、元数据 `version: 3.2.2` 的根因、只读 `/usr` 处理方式和人工截图证据见 `docs/Peony与UKUI桌面集成实现说明.md`。
+正式部署使用下一节的五包安装流程；插件可见性、动态链接和菜单入口由上述核查脚本验证。
 
 ## 11. Debian 安装包
 
@@ -314,13 +332,25 @@ mapfile -t packages < <(python3 -c 'import json; print(*[p["path"] for p in json
 sudo apt install "${packages[@]}"
 ```
 
-也可以使用项目提供的清单驱动安装门禁，它会构建五包、执行 `apt-get --reinstall`、启动服务，并检查 CLI、Polkit、托盘入口和审计链：
+推荐使用清单驱动安装门禁。它先核对系统是否允许安装，再检查五包归属、版本、架构和 SHA-256，执行 `apt-get --reinstall`，最后逐项核对实际安装版本和包内文件校验。检查通过后才启动服务并输出成功：
 
 ```bash
 bash scripts/install_deb_package_set.sh
+# 已有完整五包与清单时，不重复构建：
+bash scripts/install_deb_package_set.sh --no-build
 ```
 
-在 openKylin 启用系统包保护的环境中，普通模式可能拒绝向系统目录写入软件包。五包发布流程会在维护模式完成构建、文件冲突检查、离线生命周期验证和完整 `apt install --reinstall` 复验，并采集 `dpkg`、systemd、Peony/UKUI/托盘、Polkit、SDK、审计链和安装后用户流程证据。发布前应以 `docs/evidence/openkylin/source_revision.json` 为准，确认该证据与发布 Git HEAD 一致。
+openKylin 2.0 SP2 的普通模式可能把 `dpkg` 调用交给应用安装容器，而没有更新系统软件包。即使该命令返回 0，也必须核对实际安装版本。安装器遇到包管理包装器时，通过官方 D-Bus 查询维护模式，并用 `statvfs` 检查当前进程可见的 `/usr` 是否可写；查询失败、普通模式或只读状态均停止，不自行切换模式或重新挂载根目录。
+
+请先保存桌面工作，在【设置】的维护模式页面开启维护模式；系统可能立即注销。重新登录后执行安装器，确认成功，再在该页面退出维护模式，选择保留维护期间的更改并重新启动。部分版本的 `mm-cli -c -a` 不支持退出实时维护模式，此时使用系统设置页面，不选择“放弃更改”。重启后检查：
+
+```bash
+mm-cli -s
+dpkg-query -W memguardos memguardos-core memguardos-ukui memguardos-agent-bridge memguardos-doc
+systemctl is-active memguardd.service
+```
+
+发布证据应与对应源码和包清单匹配。已提交版本记录 Git 修订，未提交的开发版本还需记录文件级 SHA-256 快照，不能只用 Git HEAD 代表当前工作树。
 
 `memguardos-ukui` 安装后会刷新桌面菜单、图标缓存，重启 Peony，并关闭已打开的 UKUI 控制中心实例。用户重新打开文件管理器或设置后应能看到最新入口；如果仍看不到，先重新打开 Peony/控制中心，再执行 `bash scripts/verify_ukui_plugins.sh` 检查插件路径和 Qt 元数据。
 
@@ -369,4 +399,4 @@ sudo apt remove memguardos memguardos-ukui memguardos-agent-bridge memguardos-do
 
 - `.deb` 安装包面向 openKylin/Debian 系系统包验证，不替代竞赛平台要求的源码、文档和证据压缩包。
 - 如果构建机器缺少 `qmake`、`libpeony-dev` 或 `libukcc-dev`，桌面包构建会失败并给出明确提示；正式提交建议在 openKylin 上构建，保证 Peony、UKUI 控制中心和托盘都进入 `memguardos-ukui`。
-- openKylin 只读 `/usr` 环境中，普通脚本安装可用 bind mount 演示路径；正式 `.deb` 安装应在允许系统包写入的维护模式或等效环境中执行。新版五包的最终 `apt install` 证据应与最终 Git HEAD 保持一致。
+- openKylin 只读 `/usr` 环境中，正式 `.deb` 安装应通过系统提供的维护模式执行，保存更改并重启后复核。源码脚本的临时可见性验证不能代替软件包安装。

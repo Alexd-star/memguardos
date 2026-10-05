@@ -181,6 +181,11 @@ def run(output: Path | str | None = None, markdown: Path | str | None = None, la
                 "metrics": metric_block,
                 "split_metrics": split_metrics,
                 "failure_examples": failures,
+                "forgetting_protocol": {
+                    "version": "event-scoped-v2",
+                    "setup": "All candidates use the natural-memory API in one case-local session; no gold labels are used for scope or ingestion.",
+                    "interpretation": "Source-level candidate labels are scored against all derived memory atoms. Ingestion rejections remain failures.",
+                },
                 "runtime": {
                     "wall_time_ms": round((time.perf_counter() - wall_start) * 1000, 3),
                     "latency_queries": len(latencies),
@@ -355,28 +360,37 @@ def evaluate_forgetting(rows_by_file: dict[str, list[dict]], failures: list[dict
                     label = {}
                     text_by_memory_id = {}
                     ingest_failures = []
+                    context = {
+                        "agent_name": "memguardos",
+                        "session_id": "case-" + row["id"],
+                        "project_root": str((root / "project").resolve()),
+                    }
                     for index, candidate in enumerate(row["candidates"]):
-                        ingested = service.ingest_text(
-                            candidate["text"],
-                            source_kind="evidencebench_v2",
+                        ingested = service.ingest_natural_memory(
+                            candidate["text"], source_kind="evidencebench_v2",
+                            session_id=context["session_id"], project_root=context["project_root"],
                             source_uri="evidencebench://%s/candidate/%s" % (row["id"], index),
                         )
-                        if ingested.get("stored"):
-                            memory_id = ingested["record"].memory_id
-                            label[memory_id] = candidate["id"]
-                            text_by_memory_id[memory_id] = candidate["text"]
+                        records = list(ingested.get("records") or [])
+                        if ingested.get("record") is not None and not records:
+                            records = [ingested["record"]]
+                        if ingested.get("stored") and records:
+                            for record in records:
+                                memory_id = record["memory_id"] if isinstance(record, dict) else record.memory_id
+                                label[memory_id] = candidate["id"]
+                                text_by_memory_id[memory_id] = candidate["text"]
                         else:
                             ingest_failures.append(candidate["id"])
-                    plan = service.forget(row["request"])
+                    plan = service.forget_by_intent(row["request"], context=context, confirm=False)["result"]
                     actual = [label.get(item["memory_id"], item["memory_id"]) for item in plan["candidates"]]
                     precisions.append(precision(row["expected_delete"], actual))
                     recalls.append(recall_at_k(row["expected_delete"], actual, len(actual)))
                     keep_ok = not bool(set(row["expected_keep"]) & set(actual))
                     keep.append(1.0 if keep_ok else 0.0)
-                    done = service.forget(row["request"], confirm=True, compact=True)
+                    done = service.forget_by_intent(row["request"], context=context, confirm=True, compact=True)["result"]
                     probes = [
                         service.verify_forget_probe(memory_id, text_by_memory_id.get(memory_id, ""))
-                        for memory_id in done["forgotten"]
+                        for memory_id in done.get("forgotten", done.get("forgotten_memory_ids", []))
                     ]
                     leak = any(not probe["irreversible_ok"] for probe in probes)
                     residual.append(1.0 if leak else 0.0)

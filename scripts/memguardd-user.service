@@ -1,0 +1,28 @@
+[Unit]
+Description=MemGuardOS user memory service and bounded embedding maintenance
+Documentation=file:/opt/memguardos/README.md
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/memguardos
+Environment=PYTHONPATH=/opt/memguardos
+Environment=MEMGUARD_HOME=%h/.local/share/memguardos
+Environment=MEMGUARD_EMBEDDING_BACKEND=auto
+ExecStartPre=/usr/bin/mkdir -p %h/.local/share/memguardos
+ExecStart=/usr/bin/python3 -m memguard.daemon --interval 30 --socket %t/memguardos-user/memory.sock --socket-mode 600 --maintenance-interval 30 --maintenance-budget 2 --maintenance-batch 8
+RuntimeDirectory=memguardos-user
+RuntimeDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=yes
+MemoryHigh=384M
+MemoryMax=512M
+CPUQuota=50%
+TasksMax=64
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+
+[Install]
+WantedBy=default.target

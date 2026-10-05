@@ -7,12 +7,16 @@ import json
 import os
 import re
 import shlex
+import sqlite3
 import subprocess
 import sys
 from time import perf_counter
 
 from memguard.ingestion.tool_result import ToolResult
-from memguard.integrations.openhands_memory_hook import context_snapshot_status
+from memguard.integrations.openhands_memory_hook import (
+    context_snapshot_status,
+    runtime_preference_signature,
+)
 from memguard.feedback import build_preference_effect_proof, merge_memory_change_summaries
 from memguard.integrations.adherence import (
     build_adherence_repair_message,
@@ -112,6 +116,26 @@ class OpenHandsMemoryRunner:
         if os.name != "nt":
             self.state_dir.chmod(0o700)
         trace_id = new_id("ctx")
+        use_scope = {
+            "namespace": self.service.namespace if self.memory_enabled else "",
+            "project_root": self.project_root,
+            "session_id": self.session_id,
+            "agent_name": "openhands",
+            "task_type": self.task_type,
+        }
+        snapshot = {"versions": {}, "memory_enabled": self.memory_enabled}
+        if self.memory_enabled:
+            snapshot.update({
+                "db_path": str(Path(self.service.meta.path).resolve()),
+                "namespace": self.service.namespace,
+                "use_scope": use_scope,
+            })
+            try:
+                snapshot["active_preference_signature"] = runtime_preference_signature(
+                    snapshot["db_path"], use_scope,
+                )
+            except (OSError, sqlite3.Error, ValueError) as exc:
+                raise RuntimeError("Runtime memory snapshot could not be verified") from exc
         stages = {}
         for stage in ("planning", "tool_selection", "response_generation"):
             if self.memory_enabled:
@@ -142,17 +166,12 @@ class OpenHandsMemoryRunner:
                 if memory_id in versions and versions[memory_id] != version_id:
                     raise RuntimeError("Agent 上下文包含冲突的记忆版本")
                 versions[memory_id] = version_id
-        snapshot = {"versions": versions}
-        if self.memory_enabled:
-            snapshot.update({
-                "db_path": str(self.service.meta.path),
-                "namespace": self.service.namespace,
-            })
+        snapshot["versions"] = versions
         payload = {
-            "schema_version": "1.1",
+            "schema_version": "1.2",
             "trace_id": trace_id,
             "created_at": utc_now(),
-            "session_id": self.session_id,
+            **use_scope,
             "user_task": clean_task,
             "allowed_tools": (
                 ["terminal", "finish"] if self.tool_profile == "terminal" else []
@@ -175,14 +194,26 @@ class OpenHandsMemoryRunner:
             temporary_file.unlink(missing_ok=True)
             raise
         return {
+            **use_scope,
             "trace_id": trace_id,
             "context_file": str(context_file),
             "stages": stages,
             "memory_snapshot": snapshot,
         }
 
-    @staticmethod
-    def _require_fresh_context(payload: Dict[str, object]) -> None:
+    def _require_fresh_context(self, payload: Dict[str, object]) -> None:
+        snapshot = payload.get("memory_snapshot")
+        if self.memory_enabled and (
+            not isinstance(snapshot, dict) or snapshot.get("memory_enabled") is not True
+            or any(payload.get(key) != value for key, value in {
+                "namespace": self.service.namespace,
+                "project_root": self.project_root,
+                "session_id": self.session_id,
+                "agent_name": "openhands",
+                "task_type": self.task_type,
+            }.items())
+        ):
+            raise RuntimeError("Runtime memory snapshot scope does not match this runner")
         status = context_snapshot_status(payload)
         if not status["ok"]:
             raise RuntimeError("记忆已更新或撤回，当前 Agent 任务已停止；请重新开始以获取最新上下文。")
@@ -1390,6 +1421,8 @@ def create_openhands_conversation(**kwargs: Any) -> Any:
 
     context_file = Path(kwargs["context_file"]).resolve()
     hook_command = _openhands_hook_shell_command(context_file)
+    # Only these existing SDK checkpoints are guarded. No in-flight tool preemption
+    # or deletion of conversation/model state is implied by a stale-context denial.
     hooks = HookConfig(
         user_prompt_submit=[
             HookMatcher(

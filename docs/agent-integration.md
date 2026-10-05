@@ -239,6 +239,8 @@ python -m memguard.cli.memctl --namespace realagent-demo agent forget \
 
 验证结果应包含 `all_stages_absent=true`、`event_payload_scrubbed=true` 和 `segment_plaintext_absent=true`。若 OpenHands、终端历史、远程模型服务或外部日志仍保留副本，结果会提示外部持久化风险。MemGuardOS 只能保证自己管理的存储边界，不能替代外部系统的数据删除接口。
 
+已经构建的 OpenHands 上下文携带作用域、所选版本和适用偏好签名。工具前检查点会重新读取当前状态；记忆被遗忘、更新、移出当前范围，或新加入适用的覆盖偏好时，当前上下文失效，任务停止并提示重新开始。重新开始后仍有效的其他记忆继续参与任务。此机制防止旧上下文在后续检查点继续发挥作用，不中断已经开始执行的工具，也不删除外部模型的内部缓存。接入其他 Agent 时须在其上下文与工具调用边界实现对应检查。
+
 ## 9. 证据采集
 
 ```bash

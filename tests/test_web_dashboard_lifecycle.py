@@ -5,6 +5,7 @@ from pathlib import Path
 from threading import Thread
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+from urllib.parse import urlencode
 import json
 import os
 import re
@@ -352,3 +353,41 @@ def test_memctl_web_reports_invalid_token_file_without_traceback(tmp_path, monke
     assert "无法启动本地控制台" in captured.err
     assert "访问凭据文件" in captured.err
     assert "Traceback" not in captured.err
+
+
+def test_dashboard_http_preserves_project_scope_for_ingest_and_retrieval(tmp_path):
+    service, thread, _state_file, _lock_file, state = _start_runtime_dashboard(
+        tmp_path, idle_timeout=0.25,
+    )
+    base = "http://127.0.0.1:%d" % state["port"]
+    owner = str((tmp_path / "owner").resolve())
+    foreign = str((tmp_path / "foreign").resolve())
+    try:
+        ids = []
+        for index, project in enumerate((owner, foreign, "")):
+            status, response = _request_json(
+                base + "/api/ingest", token="desktop-secret", method="POST",
+                content_type="application/json",
+                body=json.dumps({
+                    "text": "systemd 通过 journalctl 查看服务日志，配置编号 %s。" % index,
+                    "project_root": project, "natural": True,
+                }).encode("utf-8"),
+            )
+            assert status == 200 and response["ok"] and response["result"]["stored"]
+            ids.append(response["result"]["memory_id"])
+        for route, rows in (
+            ("/api/search", lambda result: result),
+            ("/api/context", lambda result: result["memories"]),
+            ("/api/hierarchical-graph", lambda result: result["layers"]["summary"]),
+        ):
+            for project, expected in ((owner, {ids[0], ids[2]}), ("", {ids[2]})):
+                status, response = _request_json(
+                    base + route + "?" + urlencode({"q": "systemd", "project_root": project}),
+                    token="desktop-secret",
+                )
+                assert status == 200 and response["ok"]
+                assert {row["memory_id"] for row in rows(response["result"])} == expected
+        thread.join(timeout=3)
+        assert not thread.is_alive()
+    finally:
+        service.close()

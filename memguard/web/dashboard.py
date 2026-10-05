@@ -404,6 +404,35 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                 }
             )
             return
+        if parsed.path == "/api/memory-lifecycle":
+            params = parse_qs(parsed.query)
+            self._send_api(
+                {
+                    "command": "lifecycle_snapshot",
+                    "memory_id": params.get("memory_id", [""])[0],
+                    "include_events": params.get("include_events", ["1"])[0] in {"1", "true", "yes"},
+                }
+            )
+            return
+        if parsed.path == "/api/lifecycle-overview":
+            params = parse_qs(parsed.query)
+            self._send_api(
+                {
+                    "command": "lifecycle_overview",
+                    "limit": _safe_int(params.get("limit", ["500"])[0], 500),
+                }
+            )
+            return
+        if parsed.path == "/api/fact-conflicts":
+            params = parse_qs(parsed.query)
+            self._send_api(
+                {
+                    "command": "fact_conflicts",
+                    "status": params.get("status", ["pending"])[0],
+                    "limit": _safe_int(params.get("limit", ["100"])[0], 100),
+                }
+            )
+            return
         if parsed.path == "/api/preference-proof":
             params = parse_qs(parsed.query)
             self._send_api(
@@ -430,22 +459,25 @@ class _DashboardHandler(BaseHTTPRequestHandler):
             )
             return
         if parsed.path == "/api/search":
-            params = parse_qs(parsed.query)
+            params = parse_qs(parsed.query, keep_blank_values=True)
+            scope = {"project_root": params["project_root"][0]} if "project_root" in params else {}
             query = params.get("q", [""])[0]
             limit = _safe_int(params.get("top_k", ["5"])[0], 5)
-            self._send_api({"command": "search", "query": query, "limit": limit, "session_id": params.get("session_id", [""])[0]})
+            self._send_api({"command": "search", "query": query, "limit": limit, "session_id": params.get("session_id", [""])[0], **scope})
             return
         if parsed.path == "/api/context":
-            params = parse_qs(parsed.query)
+            params = parse_qs(parsed.query, keep_blank_values=True)
+            scope = {"project_root": params["project_root"][0]} if "project_root" in params else {}
             query = params.get("q", [""])[0]
             budget = _safe_int(params.get("token_budget", ["1200"])[0], 1200)
-            self._send_api({"command": "build_context", "query": query, "limit": 5, "token_budget": budget, "session_id": params.get("session_id", [""])[0]})
+            self._send_api({"command": "build_context", "query": query, "limit": 5, "token_budget": budget, "session_id": params.get("session_id", [""])[0], **scope})
             return
         if parsed.path == "/api/hierarchical-graph":
-            params = parse_qs(parsed.query)
+            params = parse_qs(parsed.query, keep_blank_values=True)
+            scope = {"project_root": params["project_root"][0]} if "project_root" in params else {}
             entity = params.get("q", [""])[0]
             limit = _safe_int(params.get("limit", ["8"])[0], 8)
-            self._send_api({"command": "hierarchical_graph_search", "entity": entity, "limit": limit, "session_id": params.get("session_id", [""])[0]})
+            self._send_api({"command": "hierarchical_graph_search", "entity": entity, "limit": limit, "session_id": params.get("session_id", [""])[0], **scope})
             return
         if parsed.path == "/api/audit":
             params = parse_qs(parsed.query)
@@ -483,6 +515,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
             "/api/forget-memory": "admin",
             "/api/forget": "operator",
             "/api/agent-forget": "operator",
+            "/api/resolve-fact-conflict": "admin",
             "/api/governance-review": "admin",
             "/api/acceptance-run": "admin",
             "/api/acceptance-report": "admin",
@@ -516,6 +549,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                     "tier": payload.get("tier") or None,
                     "natural": bool(payload.get("natural", True)),
                     "session_id": str(payload.get("session_id", "")),
+                    **({"project_root": payload["project_root"]} if "project_root" in payload else {}),
                 }
             )
             return
@@ -547,6 +581,19 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                     "memory_ids": payload.get("memory_ids") if isinstance(payload.get("memory_ids"), list) else [],
                     "reason": str(payload.get("reason", "user forget")),
                     "compact": bool(payload.get("compact", True)),
+                }
+            )
+            return
+        if parsed.path == "/api/resolve-fact-conflict":
+            if not self._require_role("admin"):
+                return
+            self._send_api(
+                {
+                    "command": "resolve_fact_conflict",
+                    "conflict_id": str(payload.get("conflict_id", "")),
+                    "decision": str(payload.get("decision", "")),
+                    "memory_id": str(payload.get("memory_id", "")),
+                    "expected_version_id": str(payload.get("expected_version_id", "")),
                 }
             )
             return
@@ -1530,6 +1577,7 @@ def _dashboard_html() -> str:
           <div id="memorySearchSummary" class="search-summary">默认展示最近记忆；搜索后优先显示最相关的三条。</div>
           <div id="memoryWorkspaceResults" class="memory-result-list"><div class="empty-state">正在读取记忆列表…</div></div>
           <details id="memoryMoreResults" class="more-results" hidden><summary>更多相关结果</summary><div id="memoryMoreResultsBody" class="memory-result-list"></div></details>
+          <div class="section-block" style="margin-top:14px"><div class="section-block-header"><strong>事实核对队列</strong><span class="muted">新值不会悄悄覆盖已有事实</span></div><div id="factConflictPanel" class="section-block-body"><div class="empty-state">正在检查待核对事实…</div></div></div>
           <details><summary>查看完整技术结果</summary><pre id="memoryWorkspaceOut" class="advanced-output"></pre></details>
           <div class="actions" style="justify-content:flex-end"><button class="secondary" data-min-role="admin" onclick="endBrowserMemorySession(event)">结束当前会话</button></div>
         </div>
@@ -1893,6 +1941,7 @@ def _dashboard_html() -> str:
       else if (action === 'copy-memory-id') copyMemoryId(button.dataset.memoryId || '');
       else if (action === 'preference-proof') loadPreferenceProof(actionEvent, button.dataset.memoryId || '');
       else if (action === 'preference-evidence') loadPreferenceEvidence(actionEvent, button.dataset.memoryId || '');
+      else if (action === 'resolve-fact-conflict') resolveFactConflict(actionEvent, button.dataset.conflictId || '', button.dataset.decision || '', button.dataset.memoryId || '', button.dataset.versionId || '');
       else if (action === 'notification-target') openNotificationTarget(button.dataset.notificationAction || '');
       else if (action === 'diagnostic-warning') runDiagnosticWarning(actionEvent, button.dataset.warningAction || '');
       else if (action === 'return-memory-detail') returnFromMemoryDetail();
@@ -3104,6 +3153,13 @@ def _dashboard_html() -> str:
         const payload = await fetchFeedbackHome(30, 10000, Boolean(event));
         const memories = (payload.result || {}).recent_memories || [];
         renderMemoryWorkspaceRows(memories, 'recent');
+        try {
+          const conflictPayload = await getJson('/api/fact-conflicts?status=pending&limit=30');
+          renderFactConflicts(conflictPayload);
+        } catch (_err) {
+          const conflictBox = document.getElementById('factConflictPanel');
+          if (conflictBox) conflictBox.innerHTML = '<div class="empty-state"><strong>事实核对队列暂时无法读取</strong><span>记忆列表仍可正常使用，请稍后重新检查。</span></div>';
+        }
         const summary = document.getElementById('memorySearchSummary');
         if (summary) summary.textContent = memories.length
           ? '共读取 ' + memories.length + ' 条最近记忆，完整编号可复制，点击可查看来源和作用范围。'
@@ -3113,6 +3169,48 @@ def _dashboard_html() -> str:
       };
       if (event) return withBusy(event, work);
       return work();
+    }
+    function renderFactConflicts(payload) {
+      const box = document.getElementById('factConflictPanel');
+      if (!box) return;
+      const cases = ((payload || {}).result || {}).cases || [];
+      if (!cases.length) {
+        box.innerHTML = '<div class="empty-state"><strong>暂无待核对事实</strong><span>当新事实与已有属性冲突时，系统会先停在这里，等待明确决定。</span></div>';
+        return;
+      }
+      box.innerHTML = cases.map(item => {
+        const candidates = item.candidates || [];
+        const candidate = candidates[0] || {};
+        const candidateId = String(candidate.memory_id || (item.candidate_memory_ids || [])[0] || '');
+        const versionId = String(candidate.version_id || (item.candidate_version_ids || {})[candidateId] || '');
+        const candidateMarkup = candidateId
+          ? '<button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(candidateId) + '">查看现有事实</button>'
+          : '<span class="muted">现有候选已不可查看</span>';
+        const adminMarkup = currentRoleRank >= roleRanks.admin && candidateId
+          ? '<button class="secondary" data-action="resolve-fact-conflict" data-conflict-id="' + esc(item.conflict_id || '') + '" data-decision="keep_existing" data-memory-id="' + esc(candidateId) + '" data-version-id="' + esc(versionId) + '">保留原值</button><button class="primary" data-action="resolve-fact-conflict" data-conflict-id="' + esc(item.conflict_id || '') + '" data-decision="accept_incoming" data-memory-id="' + esc(candidateId) + '" data-version-id="' + esc(versionId) + '">接受新值并生成版本</button>'
+          : '<span class="muted">需要管理员确认处理</span>';
+        return '<div class="item"><div class="health"><div class="item-title">' + esc(item.subject || '未命名事实') + ' · ' + esc(item.predicate || '属性') + '</div><span class="badge warn">待核对</span></div>'
+          + '<div class="muted">新值：' + esc(item.incoming_value || '内容已被保护') + ' · 候选：' + esc(item.candidate_count || 0) + ' 条 · 核对编号：' + esc(shortMemoryId(item.conflict_id || '')) + '</div>'
+          + '<div class="mini-actions">' + candidateMarkup + adminMarkup + '</div></div>';
+      }).join('');
+    }
+    async function resolveFactConflict(event, conflictId, decision, memoryId, versionId) {
+      const actionText = decision === 'accept_incoming' ? '接受新值并生成新版本' : '保留已有事实';
+      if (!window.confirm('确认' + actionText + '？系统会校验候选版本，避免覆盖刚刚发生的更新。')) return null;
+      return withMutation(event, actionText, async () => {
+        const payload = await postJson('/api/resolve-fact-conflict', {
+          conflict_id: conflictId, decision: decision, memory_id: memoryId, expected_version_id: versionId
+        });
+        setRawOutput('memoryWorkspaceOut', payload);
+        await loadMemoryWorkspace(null);
+        const reasons = {
+          candidate_version_changed: '候选记忆已更新或遗忘，本次没有覆盖现有内容。请核对刷新后的记录。',
+          conflict_already_closed: '这条核对记录已经处理，本次没有再次修改记忆。',
+          conflict_not_found: '这条核对记录已不可用，请查看刷新后的队列。'
+        };
+        const reason = (payload.result || {}).reason || '';
+        return operationFeedback(payload.ok ? actionText + '已完成。' : (reasons[reason] || '事实核对没有完成，请重新读取候选。'), payload.ok ? 'ok' : 'warn');
+      });
     }
     async function searchMemoryWorkspace(event) {
       return withBusy(event, async () => {
@@ -3320,6 +3418,27 @@ def _dashboard_html() -> str:
     function returnFromMemoryDetail() {
       return openTab(memoryDetailReturnTab || 'memory', {force:true});
     }
+    function renderLifecyclePanel(lifecycle) {
+      const value = lifecycle || {};
+      if (!value.found) return '';
+      const atom = value.atom || {};
+      const counts = value.counts || {};
+      const episodes = value.episodes || [];
+      const supports = value.supports || [];
+      const operations = value.operations || [];
+      const episodeText = episodes.length
+        ? episodes.slice(0, 4).map(item => '<div class="list-row"><div><div class="item-title">情节 · ' + esc(item.agent_name || '未知 Agent') + ' / ' + esc(item.session_id || '未知会话') + '</div><div class="muted">' + esc(item.event_count || 0) + ' 个事件 · ' + esc(item.task_type || '未标注任务') + '</div></div><span class="badge">' + esc((item.event_types || []).join('、')) + '</span></div>').join('')
+        : '<div class="muted">暂无可展示的来源情节。</div>';
+      const operationText = operations.length
+        ? operations.slice(-5).reverse().map(item => '<div class="list-row"><div><div class="item-title">' + esc(item.label || item.operation) + '</div><div class="muted">' + esc(item.created_at || '') + '</div></div><span class="badge ' + (item.status === 'blocked' ? 'bad' : (item.status === 'review_required' ? 'warn' : 'ok')) + '">' + esc(item.status || 'completed') + '</span></div>').join('')
+        : '<div class="muted">暂无受管操作记录。</div>';
+      return '<div class="section-block" style="margin-top:14px"><div class="section-block-header"><strong>生命周期证据</strong><span class="badge">原子 · 情节 · 证据 · 操作</span></div><div class="section-block-body">'
+        + '<div class="grid two"><div class="item"><div class="item-title">当前原子</div><div class="muted">' + esc(atom.kind || '') + ' · ' + esc(atom.lifecycle_state || '') + ' · ' + esc(atom.tier || '') + '</div><div class="muted">版本 ' + esc(atom.version_id || '') + ' · 来源 ' + esc(atom.source_kind || '未知') + '</div></div><div class="item"><div class="item-title">受管影响面</div><div class="muted">' + esc((value.forgetting_boundary || {}).managed_surfaces ? (value.forgetting_boundary || {}).managed_surfaces.length : 0) + ' 个受管派生面</div><div class="muted">' + esc((value.forgetting_boundary || {}).state || '') + '</div></div></div>'
+        + '<div class="item" style="margin-top:10px"><div class="health"><div class="item-title">形成与使用</div><span class="badge">' + esc(counts.episodes || 0) + ' 情节 · ' + esc(counts.supports || 0) + ' 支持 · ' + esc(counts.context_uses || 0) + ' 次使用</span></div><div class="linear-list" style="margin-top:8px">' + episodeText + '</div></div>'
+        + '<details style="margin-top:10px"><summary>查看受管操作链</summary><div class="linear-list" style="margin-top:8px">' + operationText + '</div></details>'
+        + '<div class="muted" style="margin-top:10px">来源支持片段：' + esc(supports.length) + ' 条；遗忘只处理受管数据，外部 Agent 日志和备份需在对应系统中单独清理。</div>'
+        + '</div></div>';
+    }
     async function loadMemoryDetail(event) {
       const idInput = document.getElementById('memoryDetailId');
       const id = String(idInput.value || '').replace(/[\\s\\u2026]+/g, '');
@@ -3350,7 +3469,11 @@ def _dashboard_html() -> str:
         }
         const result = payload.result || {};
         const memory = result.memory || {};
-        document.getElementById('memoryDetailCards').innerHTML = result.found ? '<div class="item"><div class="health"><div><div class="item-title">' + esc(memorySummaryLabel(memory)) + '</div><div class="memory-id">完整编号 ' + esc(memory.memory_id || id) + '</div></div><button class="secondary" onclick="copyMemoryId(\\'' + esc(memory.memory_id || id) + '\\')">复制编号</button></div><div class="muted">' + esc(memoryTypeLabel(memory.type || 'memory')) + ' · ' + esc(memorySubtypeLabel(memory.subtype || memory.type)) + ' · ' + esc(tierLabel(memory.tier || '')) + '</div><div class="muted">适用范围：' + esc(scopeLabel(memory.preference_scope || memory.scope || '')) + ' · 来源：' + esc(sourceLabel(memory.source_kind || (memory.source || {}).kind || '')) + '</div></div><div class="grid two"><div class="panel"><div class="item-title">来源与版本</div><div class="muted">来源事件 ' + esc((result.source_events || []).length) + ' 条 · 版本 ' + esc((result.versions || []).length) + ' 个</div><div class="muted">最近使用阶段：' + esc(stageLabel((result.agent_usage || {}).last_stage || '')) + '</div></div><div class="panel"><div class="item-title">关联信息</div><div class="muted">实体 ' + esc(((result.graph || {}).entities || []).length) + ' 个 · 关系 ' + esc(((result.graph || {}).relations || []).length) + ' 条</div></div></div>' : '<div class="item"><div class="item-title">没有找到这条记忆</div><div class="muted">请从记忆中心重新选择。</div></div>';
+        const detailHtml = result.found
+          ? '<div class="item"><div class="health"><div><div class="item-title">' + esc(memorySummaryLabel(memory)) + '</div><div class="memory-id">完整编号 ' + esc(memory.memory_id || id) + '</div></div><button class="secondary" onclick="copyMemoryId(\\'' + esc(memory.memory_id || id) + '\\')">复制编号</button></div><div class="muted">' + esc(memoryTypeLabel(memory.type || 'memory')) + ' · ' + esc(memorySubtypeLabel(memory.subtype || memory.type)) + ' · ' + esc(tierLabel(memory.tier || '')) + '</div><div class="muted">适用范围：' + esc(scopeLabel(memory.preference_scope || memory.scope || '')) + ' · 来源：' + esc(sourceLabel(memory.source_kind || (memory.source || {}).kind || '')) + '</div></div><div class="grid two"><div class="panel"><div class="item-title">来源与版本</div><div class="muted">来源事件 ' + esc((result.source_events || []).length) + ' 条 · 版本 ' + esc((result.versions || []).length) + ' 个</div><div class="muted">最近使用阶段：' + esc(stageLabel((result.agent_usage || {}).last_stage || '')) + '</div></div><div class="panel"><div class="item-title">关联信息</div><div class="muted">实体 ' + esc(((result.graph || {}).entities || []).length) + ' 个 · 关系 ' + esc(((result.graph || {}).relations || []).length) + ' 条</div></div></div>'
+            + renderLifecyclePanel(result.lifecycle)
+          : '<div class="item"><div class="item-title">没有找到这条记忆</div><div class="muted">请从记忆中心重新选择。</div></div>';
+        document.getElementById('memoryDetailCards').innerHTML = detailHtml;
         setRawOutput('memoryDetailOut', payload);
         return operationFeedback(result.found ? '记忆详情已加载。' : '没有找到这条记忆。', result.found ? 'ok' : 'warn');
       });
@@ -3555,7 +3678,10 @@ def _dashboard_html() -> str:
       }
       const items = (feedback.updated_memories || []).concat(feedback.new_memories || []);
       const candidates = result.candidate_memory_ids || [];
-      const conflictBanner = candidates.length ? '<div class="item"><div class="health"><div class="item-title">事实内容需要核对</div><span class="badge warn">未覆盖旧值</span></div><div class="muted">同一属性已有不同记录。确认后请明确提出更正。</div><div class="mini-actions">'
+      const conflict = result.conflict || {};
+      const conflictLabel = result.conflict_id ? '核对编号：' + shortMemoryId(result.conflict_id) + '。' : '';
+      const conflictValue = conflict.incoming_value ? '待写入的新值：' + conflict.incoming_value + '。' : '';
+      const conflictBanner = candidates.length ? '<div class="item"><div class="health"><div class="item-title">事实内容需要核对</div><span class="badge warn">未覆盖旧值</span></div><div class="muted">同一属性已有不同记录。' + esc(conflictLabel + conflictValue) + '确认后请明确提出更正。</div><div class="mini-actions">'
         + candidates.map(id => '<button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(id) + '">核对原记忆 ' + esc(shortMemoryId(id)) + '</button>').join('') + '</div></div>' : '';
       if (!items.length) {
         box.innerHTML = '<div class="item"><div class="item-title">本次没有新增记忆</div><div class="muted">'

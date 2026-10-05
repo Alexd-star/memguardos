@@ -551,6 +551,40 @@ def make_service(tmp_path):
     )
 
 
+@pytest.fixture
+def prepared_hook_context(tmp_path):
+    service = make_service(tmp_path)
+
+    def prepare(preference_text, topic, value):
+        session_id = "session-hook-policy"
+        created = service.ingest_interaction(interaction_event(
+            preference_text, "evt-hook-policy", 1, session_id=session_id,
+        ))
+        assert created["stored"]
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id=session_id,
+            workspace=tmp_path / "workspace",
+            state_dir=tmp_path / "state",
+            tool_profile="terminal",
+        )
+        bundle = runner.prepare_context("查找项目代码并运行 Python 测试，确认高风险操作。")
+        assert any(
+            item.get("preference_topic") == topic and item.get("preference_value") == value
+            for result in bundle["stages"].values() for item in result["memories"]
+        )
+        context_file = Path(bundle["context_file"])
+        stored = json.loads(context_file.read_text(encoding="utf-8"))
+        assert stored["memory_snapshot"]["use_scope"] == bundle["memory_snapshot"]["use_scope"]
+        assert context_snapshot_status(stored)["ok"]
+        return context_file
+
+    try:
+        yield prepare
+    finally:
+        service.close()
+
+
 def test_runner_builds_traceable_three_stage_context_without_changing_user_prompt(tmp_path):
     service = make_service(tmp_path)
     try:
@@ -595,6 +629,9 @@ def test_agent_context_snapshot_blocks_updated_and_forgotten_memories(tmp_path):
         first = runner.prepare_context("蓝河项目的部署版本是什么？")
         assert memory_id in first["memory_snapshot"]["versions"]
         assert context_snapshot_status(first)["ok"]
+        stored = json.loads(Path(first["context_file"]).read_text(encoding="utf-8"))
+        assert stored["memory_snapshot"]["use_scope"] == first["memory_snapshot"]["use_scope"]
+        assert context_snapshot_status(stored)["ok"]
         script = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
 
         def guard(context_file, guard_tool=True):
@@ -1887,39 +1924,38 @@ def test_selected_values_include_procedural_command_executables():
 
 
 def test_openhands_hook_contract_probes_injection_allow_and_preference_deny(tmp_path):
-    stages = {
-        "planning": {"context": "", "memories": []},
-        "tool_selection": {
-            "context": "",
-            "memories": [
-                {
-                    "memory_id": "mem-grep",
-                    "preference_topic": "code_search_tool",
-                    "preference_value": "grep",
-                }
-            ],
-        },
-        "response_generation": {"context": "", "memories": []},
-    }
-    context_file = tmp_path / "hook-contract.json"
-    context_file.write_text(
-        json.dumps(
-            {
-                "additional_context": "受管测试上下文",
-                "allowed_tools": [],
-                "stages": stages,
-            },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
-    )
+    service = make_service(tmp_path)
+    try:
+        session_id = "session-hook-contract"
+        created = service.ingest_interaction(interaction_event(
+            "以后搜索项目代码优先使用 grep。", "evt-hook-contract", 1, session_id=session_id,
+        ))
+        assert created["stored"]
+        runner = OpenHandsMemoryRunner(
+            service=service,
+            session_id=session_id,
+            workspace=tmp_path / "workspace",
+            state_dir=tmp_path / "state",
+        )
+        bundle = runner.prepare_context("查找 build_agent_context 的实现。")
+        context_file = Path(bundle["context_file"])
+        stored = json.loads(context_file.read_text(encoding="utf-8"))
+        assert stored["memory_snapshot"]["use_scope"] == bundle["memory_snapshot"]["use_scope"]
+        assert context_snapshot_status(stored)["ok"]
+        assert any(
+            item.get("preference_topic") == "code_search_tool" and item.get("preference_value") == "grep"
+            for item in bundle["stages"]["tool_selection"]["memories"]
+        )
 
-    result = verify_openhands_hook_contract(context_file, stages)
+        result = verify_openhands_hook_contract(context_file, bundle["stages"])
 
-    assert result["ok"] is True
-    assert result["context_injection"] is True
-    assert result["benign_tool"] is True
-    assert result["preference_enforcement"] is True
+        assert result["ok"] is True
+        assert result["context_injection"] is True
+        assert result["benign_tool"] is True
+        assert result["preference_enforcement"] is True
+        assert result["preferred_search_tool"] == "grep"
+    finally:
+        service.close()
 
 
 @pytest.mark.parametrize(
@@ -2081,29 +2117,9 @@ def test_openhands_hook_injects_context_and_blocks_high_risk_commands(tmp_path):
     assert "not allowed" in json.loads(disallowed.stdout)["reason"]
 
 
-def test_openhands_hook_enforces_selected_code_search_preference(tmp_path):
-    context_file = tmp_path / "context.json"
-    context_file.write_text(
-        json.dumps(
-            {
-                "additional_context": "使用已筛选记忆。",
-                "allowed_tools": ["terminal", "finish"],
-                "stages": {
-                    "planning": {"memories": []},
-                    "tool_selection": {
-                        "memories": [
-                            {
-                                "preference_topic": "code_search_tool",
-                                "preference_value": "rg",
-                            }
-                        ]
-                    },
-                    "response_generation": {"memories": []},
-                },
-            },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
+def test_openhands_hook_enforces_selected_code_search_preference(prepared_hook_context):
+    context_file = prepared_hook_context(
+        "以后搜索项目代码优先使用 rg。", "code_search_tool", "rg",
     )
     script = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
 
@@ -2157,30 +2173,11 @@ def test_openhands_hook_enforces_selected_code_search_preference(tmp_path):
 
 
 def test_openhands_hook_blocks_bare_pytest_when_test_runner_preference_is_active(
-    tmp_path,
+    prepared_hook_context,
 ):
-    context_file = tmp_path / "context.json"
-    context_file.write_text(
-        json.dumps(
-            {
-                "additional_context": "使用已筛选记忆。",
-                "allowed_tools": ["terminal", "finish"],
-                "stages": {
-                    "planning": {"memories": []},
-                    "tool_selection": {
-                        "memories": [
-                            {
-                                "preference_topic": "test_runner_command",
-                                "preference_value": "python -m pytest",
-                            }
-                        ]
-                    },
-                    "response_generation": {"memories": []},
-                },
-            },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
+    context_file = prepared_hook_context(
+        "以后运行 Python 测试时优先使用 python -m pytest，不要直接用 pytest。",
+        "test_runner_command", "python -m pytest",
     )
     script = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
 
@@ -2233,29 +2230,10 @@ def test_openhands_hook_blocks_bare_pytest_when_test_runner_preference_is_active
     assert json.loads(allowed.stdout)["decision"] == "allow"
 
 
-def test_openhands_hook_blocks_false_high_risk_finish_completion(tmp_path):
-    context_file = tmp_path / "context.json"
-    context_file.write_text(
-        json.dumps(
-            {
-                "additional_context": "使用已筛选记忆。",
-                "allowed_tools": ["terminal", "finish"],
-                "stages": {
-                    "planning": {
-                        "memories": [
-                            {
-                                "preference_topic": "high_risk_confirmation",
-                                "preference_value": "required",
-                            }
-                        ]
-                    },
-                    "tool_selection": {"memories": []},
-                    "response_generation": {"memories": []},
-                },
-            },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
+def test_openhands_hook_blocks_false_high_risk_finish_completion(prepared_hook_context):
+    context_file = prepared_hook_context(
+        "涉及 rm、systemctl disable、重启服务这类高风险命令时，必须先说明风险并等待确认。",
+        "high_risk_confirmation", "required",
     )
     script = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
 

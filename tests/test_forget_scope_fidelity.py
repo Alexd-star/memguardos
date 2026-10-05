@@ -8,6 +8,8 @@ loses memories from months ago. These tests pin the boundary.
 from datetime import datetime, timedelta, timezone
 
 from memguard.service import MemGuardService
+from memguard.forgetting.plan import ErasurePlan
+from memguard.integrations.events import AgentInteractionEvent
 
 
 def _age(service: MemGuardService, memory_id: str, days: int) -> None:
@@ -196,5 +198,32 @@ def test_time_words_inside_record_reference_are_not_timestamp_filters(tmp_path):
 
         assert preview["time_window"]["applied"] is False
         assert record.memory_id in {item["memory_id"] for item in preview["candidates"]}
+    finally:
+        service.close()
+
+
+def test_source_scope_requires_agent_and_session_on_same_event(tmp_path):
+    service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")
+    try:
+        target = service.ingest_natural_memory(
+            "journalctl 用于查询服务的运行日志。", session_id="target-session",
+        )["record"]
+        other = service.ingest_natural_memory(
+            "journalctl 用于查询其他服务的运行日志。", session_id="other-session",
+        )["record"]
+        event = AgentInteractionEvent(
+            agent_name="other-agent", agent_version="1", session_id="target-session",
+            turn_id="turn", sequence=1, event_type="user_message", role="user",
+            content="journalctl 用于查询其他服务的运行日志。",
+        )
+        service.ingest_interaction(event)
+        service.meta.link_memory_event(other.memory_id, event.event_id, "source_clause")
+        compiled = service.compile_erasure_intent(
+            "忘记当前 Agent 会话中关于 journalctl 的知识", context={
+                "agent_name": "memguardos", "session_id": "target-session",
+            },
+        )
+        selected = service.meta.select_forget_candidates(ErasurePlan.from_intent(compiled))
+        assert {row["memory_id"] for row in selected} == {target.memory_id}
     finally:
         service.close()

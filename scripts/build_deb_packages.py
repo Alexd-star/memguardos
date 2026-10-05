@@ -38,6 +38,7 @@ def build_package_plan(version: str, architecture: str, multiarch: str) -> Dict[
                 "/lib/systemd/system/memguardd.service",
                 "/lib/systemd/system/memguardd@.service",
                 "/usr/lib/systemd/user/memguard-kylin-warmup.service",
+                "/usr/lib/systemd/user/memguardd-user.service",
                 "/usr/share/polkit-1/actions/org.memguardos.policy",
                 "/usr/lib/memguardos/memguardos-native-helper.sh",
                 "/opt/memguardos/memguard/service.py",
@@ -149,7 +150,7 @@ class DebianPackageBuilder:
         }
         manifest_path = self.output_dir / "memguardos_debian_packages.json"
         manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        _write_sha256(self.output_dir / "memguardos_debian_packages_SHA256SUMS.txt", [Path(item["path"]) for item in self.outputs])
+        _write_sha256(self.output_dir / "memguardos_debian_packages_SHA256SUMS.txt", [self.root / item["path"] for item in self.outputs])
         return manifest
 
     def _new_stage(self, package: str) -> Path:
@@ -180,6 +181,7 @@ class DebianPackageBuilder:
         for unit in ("memguardd.service", "memguardd@.service"):
             self._copy_file(self.root / "scripts" / unit, stage / "lib/systemd/system" / unit)
         self._copy_file(self.root / "scripts/memguard-kylin-warmup.service", stage / "usr/lib/systemd/user/memguard-kylin-warmup.service")
+        self._copy_file(self.root / "scripts/memguardd-user.service", stage / "usr/lib/systemd/user/memguardd-user.service")
         self._copy_file(self.root / "scripts/memguardos-native-helper.sh", stage / "usr/lib/memguardos/memguardos-native-helper.sh", executable=True)
         self._copy_file(self.root / "packaging/polkit/org.memguardos.policy", stage / "usr/share/polkit-1/actions/org.memguardos.policy")
 
@@ -365,12 +367,16 @@ class DebianPackageBuilder:
         architecture = str(self.plan[package]["architecture"])
         output = (self.output_dir / f"{package}_{self.version}_{architecture}.deb").resolve()
         subprocess.run(["dpkg-deb", "--build", "--root-owner-group", str(stage), str(output)], check=True)
+        try:
+            manifest_path = output.relative_to(self.root.resolve()).as_posix()
+        except ValueError:
+            manifest_path = str(output)
         self.outputs.append(
             {
                 "package": package,
                 "version": self.version,
                 "architecture": architecture,
-                "path": str(output),
+                "path": manifest_path,
                 "bytes": output.stat().st_size,
                 "sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
             }

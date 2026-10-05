@@ -110,6 +110,7 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
             expected_uid=uid,
             timeout=0.2,
             root_user_runtime=True,
+            probe_mode="passive",
         )
         for name, path in runtime_sockets.items()
     }
@@ -131,6 +132,7 @@ def _fast_sdk_status(services: Dict[str, object]) -> Dict[str, object]:
         expected_uid=uid,
         timeout=0.2,
         root_user_runtime=True,
+        probe_mode="passive",
     )
     vector_binary = Path("/usr/bin/kylin-ai-vector-engine")
     vector_header = Path("/usr/include/kysdk-vector-engine-client/Database.h")

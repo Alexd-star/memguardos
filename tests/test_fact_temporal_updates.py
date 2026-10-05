@@ -66,6 +66,33 @@ def test_explicit_fact_correction_reuses_version_chain_and_rollback(tmp_path):
         service.close()
 
 
+def test_fact_conflict_is_a_queryable_review_case_and_closes_after_correction(tmp_path):
+    service = _service(tmp_path)
+    try:
+        original = service.ingest_natural_memory("白鹭项目发布日是周三。")
+        memory_id = original["record"].memory_id
+        conflict = service.ingest_natural_memory("白鹭项目发布日是周四。")
+
+        assert conflict["reason"] == "fact_conflict_requires_review"
+        assert conflict["conflict_id"].startswith("conflict_")
+        pending = service.fact_conflicts()
+        assert pending["count"] == 1
+        case = pending["cases"][0]
+        assert case["conflict_id"] == conflict["conflict_id"]
+        assert case["incoming_value"] == "周四"
+        assert case["candidate_memory_ids"] == [memory_id]
+        assert case["candidates"][0]["state"] == "active"
+
+        corrected = service.ingest_natural_memory("白鹭项目发布日期改为周四。")
+        assert corrected["updated"] is True
+        assert service.fact_conflicts()["count"] == 0
+        resolved = service.fact_conflicts(status="resolved")
+        assert resolved["count"] == 1
+        assert resolved["cases"][0]["resolved_memory_id"] == memory_id
+    finally:
+        service.close()
+
+
 def test_mixed_fact_correction_links_event_and_replays_after_failure(tmp_path, monkeypatch):
     service = _service(tmp_path)
     original = service.ingest_text("白鹭项目发布日是周三。")
@@ -278,3 +305,57 @@ def test_startup_replay_resolves_two_staged_facts_without_duplicate(tmp_path):
         assert recovered.meta.verify_audit_chain()["ok"] is True
     finally:
         recovered.close()
+
+
+def test_fact_conflict_snapshot_is_project_scoped_and_scrubbed_by_forgetting(tmp_path):
+    service = _service(tmp_path)
+    project_a = str((tmp_path / "project-a").resolve())
+    project_b = str((tmp_path / "project-b").resolve())
+    try:
+        original = service.ingest_text(
+            "白鹭项目发布日是周三。", project_root=project_a,
+        )["record"]
+        isolated = service.ingest_text(
+            "白鹭项目发布日是周四。", project_root=project_b,
+        )
+        assert isolated["stored"] is True
+        conflict = service.ingest_text(
+            "白鹭项目发布日是周四。", project_root=project_a,
+        )
+        assert conflict["reason"] == "fact_conflict_requires_review"
+        case = service.meta.get_fact_conflict(conflict["conflict_id"])
+        assert case["project_root"] == project_a
+        assert case["candidate_version_ids"][original.memory_id] == original.version.version_id
+        assert service.forget_memory_ids([original.memory_id], reason="scrub conflict", compact=True)["ok"] is True
+        closed = service.fact_conflicts(status="dismissed")["cases"]
+        scrubbed = [item for item in closed if item["conflict_id"] == conflict["conflict_id"]][0]
+        assert scrubbed["incoming_value"] == ""
+        assert scrubbed["incoming_content"] == ""
+        assert scrubbed["candidate_memory_ids"] == []
+        assert scrubbed["resolution"] == "redacted_for_forgetting"
+        checked = service.verify_forget_probe(original.memory_id, "白鹭项目发布日是周三")
+        assert checked["retrieval_surfaces"]["fact_conflict_recallable"] is False
+    finally:
+        service.close()
+
+
+def test_fact_conflict_can_keep_old_value_or_accept_new_value_with_cas(tmp_path):
+    service = _service(tmp_path)
+    try:
+        original = service.ingest_text("白鹭项目发布日是周三。")["record"]
+        pending = service.ingest_text("白鹭项目发布日是周四。")
+        kept = service.resolve_fact_conflict(
+            pending["conflict_id"], decision="keep_existing",
+        )
+        assert kept["resolved"] is True
+        assert service.meta.get_memory(original.memory_id)["content"] == "白鹭项目发布日是周三。"
+
+        pending_again = service.ingest_text("白鹭项目发布日是周五。")
+        accepted = service.resolve_fact_conflict(
+            pending_again["conflict_id"], decision="accept_incoming",
+        )
+        assert accepted["resolved"] is True
+        assert accepted["updated"] is True
+        assert service.meta.get_memory(original.memory_id)["content"] == "白鹭项目发布日是周五"
+    finally:
+        service.close()

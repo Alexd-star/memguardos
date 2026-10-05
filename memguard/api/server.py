@@ -45,12 +45,16 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         query = _string_param(request, "query", "", max_chars=2048)
         limit = _int_param(request, "limit", 5, minimum=1, maximum=50)
         session_id = _string_param(request, "session_id", "", max_chars=256)
-        return {"ok": True, "result": service.search(query, limit=limit, session_id=session_id)}
+        return {"ok": True, "result": service.search(query, limit=limit, session_id=session_id, **_project_scope_param(request))}
     if command == "batch_search":
         queries = _string_list_param(request, "queries", max_items=100, max_chars=512)
         limit = _int_param(request, "limit", 5, minimum=1, maximum=50)
         workers = _int_param(request, "workers", 4, minimum=1, maximum=16)
-        return {"ok": True, "result": service.batch_search(queries, limit=limit, workers=workers)}
+        session_id = _string_param(request, "session_id", "", max_chars=256)
+        scope = _project_scope_param(request)
+        if session_id:
+            scope["session_id"] = session_id
+        return {"ok": True, "result": service.batch_search(queries, limit=limit, workers=workers, **scope)}
     if command == "build_context":
         query = _string_param(request, "query", "", max_chars=2048)
         limit = _int_param(request, "limit", 5, minimum=1, maximum=50)
@@ -58,12 +62,22 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         token_budget = request.get("token_budget")
         token_budget = _int_param(request, "token_budget", 0, minimum=64, maximum=32000) if token_budget else None
         session_id = _string_param(request, "session_id", "", max_chars=256)
-        return {"ok": True, "result": service.build_context(query, limit=limit, max_chars=max_chars, token_budget=token_budget, session_id=session_id)}
+        return {"ok": True, "result": service.build_context(query, limit=limit, max_chars=max_chars, token_budget=token_budget, session_id=session_id, **_project_scope_param(request))}
     if command == "hierarchical_graph_search":
         entity = _string_param(request, "entity", request.get("query", ""), max_chars=1024)
         limit = _int_param(request, "limit", 10, minimum=1, maximum=50)
         session_id = _string_param(request, "session_id", "", max_chars=256)
-        return {"ok": True, "result": service.hierarchical_graph_search(entity, limit=limit, session_id=session_id)}
+        return {"ok": True, "result": service.hierarchical_graph_search(entity, limit=limit, session_id=session_id, **_project_scope_param(request))}
+    if command == "graph_search":
+        entity = _string_param(request, "entity", request.get("query", ""), max_chars=1024)
+        limit = _int_param(request, "limit", 10, minimum=1, maximum=50)
+        session_id = _string_param(request, "session_id", "", max_chars=256)
+        return {"ok": True, "result": service.graph_search(entity, limit=limit, session_id=session_id, **_project_scope_param(request))}
+    if command == "related":
+        memory_id = _string_param(request, "memory_id", "", max_chars=128)
+        limit = _int_param(request, "limit", 10, minimum=1, maximum=50)
+        session_id = _string_param(request, "session_id", "", max_chars=256)
+        return {"ok": True, "result": service.related(memory_id, limit=limit, session_id=session_id, **_project_scope_param(request))}
     if command == "explain_extraction":
         text = _string_param(request, "text", "", max_chars=200000)
         source_kind = _string_param(request, "source_kind", "manual", max_chars=64)
@@ -105,6 +119,36 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                 }
             )
         return response
+    if command == "lifecycle_snapshot":
+        memory_id = _string_param(request, "memory_id", "", max_chars=128)
+        include_events = bool(request.get("include_events", True))
+        result = service.lifecycle_snapshot(memory_id, include_events=include_events)
+        return {
+            "ok": bool(result.get("found")),
+            "error": "memory_not_found" if not result.get("found") else "",
+            "result": _jsonable(result),
+        }
+    if command == "lifecycle_overview":
+        limit = _int_param(request, "limit", 500, minimum=1, maximum=2000)
+        return {"ok": True, "result": _jsonable(service.lifecycle_overview(limit=limit))}
+    if command == "fact_conflicts":
+        status = _string_param(request, "status", "pending", max_chars=16)
+        limit = _int_param(request, "limit", 100, minimum=1, maximum=1000)
+        return {"ok": True, "result": _jsonable(service.fact_conflicts(status=status, limit=limit))}
+    if command == "resolve_fact_conflict":
+        conflict_id = _string_param(request, "conflict_id", "", max_chars=128)
+        decision = _string_param(request, "decision", "", max_chars=32)
+        memory_id = _string_param(request, "memory_id", "", max_chars=128)
+        expected_version_id = _string_param(request, "expected_version_id", "", max_chars=128)
+        if not conflict_id or decision not in {"accept_incoming", "keep_existing"}:
+            return {"ok": False, "error": "invalid_fact_conflict_decision"}
+        result = service.resolve_fact_conflict(
+            conflict_id,
+            decision=decision,
+            memory_id=memory_id,
+            expected_version_id=expected_version_id,
+        )
+        return {"ok": bool(result.get("resolved")), "result": _jsonable(result)}
     if command == "preference_effect_proof":
         memory_id = _string_param(request, "memory_id", "", max_chars=128)
         task = _string_param(request, "task", "验证当前偏好是否生效", max_chars=4096)
@@ -313,6 +357,7 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                 source_uri=source_uri,
                 session_id=_string_param(request, "session_id", "", max_chars=256),
                 tier=selected_tier,
+                **_project_scope_param(request),
             )
             if bool(request.get("natural", False))
             else service.ingest_text(
@@ -321,6 +366,7 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                 source_uri=source_uri,
                 tier=selected_tier,
                 retention_session_id=_string_param(request, "session_id", "", max_chars=256),
+                **_project_scope_param(request),
             )
         )
         if result.get("stored"):
@@ -333,6 +379,8 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                     "updated": bool(result.get("updated")),
                     "partial_conflict": bool(result.get("partial_conflict")),
                     "candidate_memory_ids": result.get("candidate_memory_ids") or [],
+                    "conflict_id": result.get("conflict_id", ""),
+                    "conflict": result.get("conflict"),
                     "memory_id": record_value.get("memory_id", ""),
                     "memory_ids": result.get("memory_ids") or [record_value.get("memory_id", "")],
                     "type": record_value.get("type", ""),
@@ -360,6 +408,8 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                 "memory_id": getattr(result.get("record"), "memory_id", ""),
                 "partial_conflict": bool(result.get("partial_conflict")),
                 "candidate_memory_ids": result.get("candidate_memory_ids") or [],
+                "conflict_id": result.get("conflict_id", ""),
+                "conflict": result.get("conflict"),
                 "sensitivity": sensitivity_value,
                 "feedback": result.get("feedback"),
                 "sensitive_notice": result.get("sensitive_notice"),
@@ -377,6 +427,17 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
             },
         }
     return {"ok": False, "error": "unknown_command", "command": command}
+
+
+def _project_scope_param(request: Dict[str, object]) -> Dict[str, str]:
+    # An omitted scope preserves administrative cross-project queries;
+    # an explicit empty scope selects only global memories.
+    if "project_root" not in request:
+        return {}
+    value = request["project_root"]
+    if not isinstance(value, str) or len(value) > 2048:
+        raise ValueError("project_root must be a string of at most 2048 characters")
+    return {"project_root": value}
 
 
 def _int_param(request: Dict[str, object], name: str, default: int, *, minimum: int, maximum: int) -> int:

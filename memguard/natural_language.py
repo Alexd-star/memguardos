@@ -53,6 +53,15 @@ def interpret_user_input(text: str) -> NaturalActionDecision:
         "显示当前偏好",
     }:
         return NaturalActionDecision("preference_list", reason="explicit_preference_list_request")
+    if compact in {
+        "查看事实冲突",
+        "查看待核对事实",
+        "待核对事实",
+        "有哪些事实冲突",
+        "有哪些待核对内容",
+        "显示待核对内容",
+    }:
+        return NaturalActionDecision("fact_conflict_list", reason="explicit_fact_conflict_request")
     if compact in {"查看状态", "系统状态", "记忆状态", "服务正常吗"}:
         return NaturalActionDecision("status", reason="explicit_status_request")
     imperative = _strip_polite_prefixes(clean)

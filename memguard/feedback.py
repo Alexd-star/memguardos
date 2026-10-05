@@ -96,6 +96,7 @@ _VERIFICATION_NAMES = (
     "sqlite_fts",
     "graph_relations",
     "fact_slot",
+    "fact_conflict",
     "search_cache",
     "mmap_segment_compact",
     "plaintext_probe",
@@ -654,7 +655,7 @@ def _verification_statuses(result: Mapping[str, Any], *, confirmed: bool, dry_ru
                 event_clean = False
             status = "passed" if event_clean else "failed"
             detail = "关联事件载荷已核实脱敏。" if status == "passed" else "关联事件载荷仍需复核。"
-        elif name in {"sqlite_fts", "graph_relations", "fact_slot", "search_cache"} and result.get("confirmed"):
+        elif name in {"sqlite_fts", "graph_relations", "fact_slot", "fact_conflict", "search_cache"} and result.get("confirmed"):
             # 真实回查每个检索面，而不是凭 confirmed 标志直接判定通过。
             status, detail = _retrieval_surface_status(name, result)
         elif name == "mmap_segment_compact" and result.get("compact") is not None:
@@ -680,6 +681,7 @@ _SURFACE_FIELDS = {
     "sqlite_fts": ("sqlite_fts_recallable", "文本检索索引"),
     "graph_relations": ("graph_relations_recallable", "关联关系索引"),
     "fact_slot": ("fact_slot_recallable", "事实属性索引"),
+    "fact_conflict": ("fact_conflict_recallable", "事实核对队列"),
     "search_cache": ("search_cache_recallable", "检索缓存"),
 }
 

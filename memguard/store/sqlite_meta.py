@@ -69,6 +69,10 @@ _ALLOWED_COLUMN_MIGRATIONS = {
     ("pending_memory_write", "expected_version_id", "TEXT NOT NULL DEFAULT ''"),
     ("pending_memory_write", "previous_record_json", "TEXT NOT NULL DEFAULT ''"),
     ("pending_memory_write", "source_link_json", "TEXT NOT NULL DEFAULT ''"),
+    ("pending_memory_write", "fact_conflict_id", "TEXT NOT NULL DEFAULT ''"),
+    ("fact_conflict", "project_root", "TEXT NOT NULL DEFAULT ''"),
+    ("fact_conflict", "candidate_version_ids_json", "TEXT NOT NULL DEFAULT '{}'"),
+    ("fact_conflict", "source_link_json", "TEXT NOT NULL DEFAULT ''"),
 }
 
 
@@ -76,6 +80,12 @@ class FactSlotConflict(ValueError):
     def __init__(self, candidate_memory_ids: List[str]):
         super().__init__("fact slot already has an active memory")
         self.candidate_memory_ids = candidate_memory_ids
+
+
+class FactConflictChanged(ValueError):
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
 
 
 class SQLiteMetaStore:
@@ -208,6 +218,7 @@ class SQLiteMetaStore:
                 expected_version_id TEXT NOT NULL DEFAULT '',
                 previous_record_json TEXT NOT NULL DEFAULT '',
                 source_link_json TEXT NOT NULL DEFAULT '',
+                fact_conflict_id TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL
             )
             """
@@ -215,6 +226,7 @@ class SQLiteMetaStore:
         self._ensure_column("pending_memory_write", "expected_version_id", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("pending_memory_write", "previous_record_json", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("pending_memory_write", "source_link_json", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("pending_memory_write", "fact_conflict_id", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("memory", "subtype", "TEXT NOT NULL DEFAULT 'general'")
         self._ensure_column("memory", "tier", "TEXT NOT NULL DEFAULT 'long_term'")
         self._ensure_column("memory", "sensitivity_redacted", "INTEGER NOT NULL DEFAULT 0")
@@ -405,6 +417,39 @@ class SQLiteMetaStore:
         )
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_fact_slot_key ON fact_slot(scope, subject, predicate)"
+        )
+        self.conn.execute(
+            """CREATE TABLE IF NOT EXISTS fact_conflict (
+                conflict_id TEXT PRIMARY KEY,
+                scope TEXT NOT NULL,
+                tier TEXT NOT NULL,
+                project_root TEXT NOT NULL DEFAULT '',
+                subject TEXT NOT NULL,
+                predicate TEXT NOT NULL,
+                incoming_value TEXT NOT NULL,
+                incoming_content TEXT NOT NULL,
+                source_kind TEXT NOT NULL,
+                source_uri TEXT NOT NULL,
+                candidate_memory_ids_json TEXT NOT NULL,
+                candidate_version_ids_json TEXT NOT NULL DEFAULT '{}',
+                source_link_json TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL CHECK(status IN ('pending', 'resolved', 'dismissed')),
+                resolution TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                resolved_at TEXT NOT NULL DEFAULT '',
+                resolved_memory_id TEXT NOT NULL DEFAULT ''
+            )"""
+        )
+        self._ensure_column("fact_conflict", "project_root", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("fact_conflict", "candidate_version_ids_json", "TEXT NOT NULL DEFAULT '{}'")
+        self._ensure_column("fact_conflict", "source_link_json", "TEXT NOT NULL DEFAULT ''")
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_fact_conflict_status "
+            "ON fact_conflict(status, created_at DESC)"
+        )
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_fact_conflict_slot "
+            "ON fact_conflict(scope, subject, predicate, status, created_at DESC)"
         )
         self.conn.execute(
             """CREATE TABLE IF NOT EXISTS verified_tool_outcome (
@@ -745,6 +790,7 @@ class SQLiteMetaStore:
         self, previous: MemoryRecord, record: MemoryRecord,
         backend: str, model_revision: str, content_hash: str,
         source_link: Optional[Dict[str, Any]] = None,
+        fact_conflict_id: str = "",
     ) -> None:
         if (
             previous.memory_id != record.memory_id
@@ -757,6 +803,11 @@ class SQLiteMetaStore:
             raise ValueError("invalid staged memory version transition")
         with self.conn:
             self.conn.execute("BEGIN IMMEDIATE")
+            conflict_source_json = ""
+            if fact_conflict_id:
+                conflict_source_json = self._validate_fact_conflict_write_no_commit(
+                    fact_conflict_id, previous, record,
+                )
             row = self.conn.execute(
                 "SELECT version_id, deleted FROM memory WHERE memory_id = ?",
                 (record.memory_id,),
@@ -768,19 +819,23 @@ class SQLiteMetaStore:
             ).fetchone() is not None:
                 raise ValueError("memory id already has a pending write")
             source_link_json = self._staged_source_link_json(source_link)
+            if fact_conflict_id:
+                if source_link is not None and source_link_json != conflict_source_json:
+                    raise FactConflictChanged("candidate_version_changed")
+                source_link_json = conflict_source_json
             self.conn.execute(
                 """
                 INSERT INTO pending_memory_write(
                     version_id, memory_id, record_json, backend, model_revision,
                     content_hash, expected_version_id, previous_record_json,
-                    source_link_json, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    source_link_json, fact_conflict_id, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     record.version.version_id, record.memory_id, record.to_json(),
                     backend, model_revision, content_hash,
                     previous.version.version_id, previous.to_json(), source_link_json,
-                    utc_now(),
+                    fact_conflict_id, utc_now(),
                 ),
             )
 
@@ -814,7 +869,7 @@ class SQLiteMetaStore:
 
     def pending_memory_writes(self) -> List[Dict[str, Any]]:
         return [dict(row) for row in self.conn.execute(
-            """SELECT version_id, memory_id, expected_version_id
+            """SELECT version_id, memory_id, expected_version_id, fact_conflict_id
                FROM pending_memory_write ORDER BY created_at, version_id"""
         )]
 
@@ -842,7 +897,7 @@ class SQLiteMetaStore:
             if fact is not None:
                 candidates = self.find_active_fact_candidates(
                     fact_slot_scope(record.scope, record.retention_session_id), fact.subject, fact.predicate,
-                    tier=record.tier,
+                    tier=record.tier, project_root=record.project_root,
                 )
                 if candidates:
                     ids = [str(item["memory_id"]) for item in candidates]
@@ -908,6 +963,26 @@ class SQLiteMetaStore:
                 "SELECT version_id, deleted FROM memory WHERE memory_id = ?",
                 (record.memory_id,),
             ).fetchone()
+            fact_conflict_id = str(row["fact_conflict_id"] or "")
+            if fact_conflict_id:
+                try:
+                    conflict_source_json = self._validate_fact_conflict_write_no_commit(
+                        fact_conflict_id, previous, record,
+                    )
+                    if conflict_source_json != str(row["source_link_json"] or ""):
+                        raise FactConflictChanged("candidate_version_changed")
+                except FactConflictChanged as exc:
+                    # Cancellation is durable before recovery sees the error;
+                    # neither the segment nor committed memory has changed.
+                    self.conn.execute(
+                        "DELETE FROM pending_memory_write WHERE version_id = ?", (version_id,),
+                    )
+                    self._add_audit_no_commit(
+                        "fact_conflict_write_cancelled", record.memory_id,
+                        {"conflict_id": fact_conflict_id, "version_id": version_id, "reason": exc.reason},
+                    )
+                    self.conn.commit()
+                    raise
             if current is None or current["deleted"] or current["version_id"] != row["expected_version_id"]:
                 raise ValueError("stale memory version")
             append_version(previous, record)
@@ -920,11 +995,27 @@ class SQLiteMetaStore:
                 "memory_version_committed", record.memory_id,
                 self._version_audit_detail(record),
             )
+            if fact_conflict_id:
+                self.conn.execute(
+                    """UPDATE fact_conflict
+                       SET status = 'resolved', resolution = 'accept_incoming',
+                           resolved_at = ?, resolved_memory_id = ?
+                       WHERE conflict_id = ? AND status = 'pending'""",
+                    (utc_now(), record.memory_id, fact_conflict_id),
+                )
+                self._add_audit_no_commit(
+                    "fact_conflict_resolved", record.memory_id,
+                    {"conflict_id": fact_conflict_id, "resolution": "accept_incoming",
+                     "version_id": record.version.version_id},
+                )
             self.conn.execute(
                 "DELETE FROM pending_memory_write WHERE version_id = ?", (version_id,)
             )
             self.conn.commit()
             return record
+        except FactConflictChanged:
+            self.conn.rollback()
+            raise
         except Exception:
             self.conn.rollback()
             raise
@@ -1100,7 +1191,8 @@ class SQLiteMetaStore:
         """Apply a previewed batch atomically or leave every target untouched."""
 
         totals = {"scrubbed_events": 0, "deleted_observations": 0,
-                  "deleted_tool_outcomes": 0, "redacted_audit": 0}
+                  "deleted_tool_outcomes": 0, "redacted_audit": 0,
+                  "redacted_fact_conflicts": 0}
         memory_ids = []
         plaintexts = []
         linked_event_ids = set()
@@ -1217,6 +1309,7 @@ class SQLiteMetaStore:
                 sorted(linked_event_ids)
             )
             if memory_ids:
+                totals["redacted_fact_conflicts"] = self._redact_fact_conflicts_no_commit(memory_ids)
                 totals["redacted_audit"] = self._redact_audit_payloads_no_commit(
                     memory_ids, plaintexts
                 )
@@ -1252,6 +1345,32 @@ class SQLiteMetaStore:
         preference_types = bool(requested & {"preference", "security_policy"})
         knowledge_type = "knowledge" in requested
         tool_trace_type = "tool_trace" in requested
+        scope_sql = ""
+        scope_params: List[Any] = []
+        if plan.scope_level in {"agent", "session"}:
+            event_conditions = ["e.forgotten = 0"]
+            record_conditions = []
+            for field, value in (("agent_name", plan.agent_name), ("session_id", plan.session_id)):
+                if not value:
+                    continue
+                event_conditions.append("e.%s = ?" % field)
+                if field == "session_id":
+                    record_conditions.append("(memory.preference_session_id = ? OR memory.retention_session_id = ?)")
+                    scope_params.extend([value, value])
+                else:
+                    record_conditions.append("memory.agent_name = ?")
+                    scope_params.append(value)
+            # Apply agent/session to the same source event, never two unrelated
+            # links. Applicability scope and the origin of a memory are distinct.
+            scope_sql = " AND ((%s) OR EXISTS (SELECT 1 FROM memory_event_links l " \
+                "JOIN agent_events e ON e.event_id = l.event_id " \
+                "WHERE l.memory_id = memory.memory_id AND %s))" % (
+                    " AND ".join(record_conditions), " AND ".join(event_conditions),
+                )
+            scope_params.extend(value for value in (plan.agent_name, plan.session_id) if value)
+        elif plan.scope_level == "project":
+            scope_sql = " AND project_root = ?"
+            scope_params.append(plan.project_root)
         rows = self.conn.execute(
             """
             SELECT * FROM memory
@@ -1267,12 +1386,7 @@ class SQLiteMetaStore:
                   )
               AND (? = '' OR COALESCE(NULLIF(valid_from, ''), updated_at) >= ?)
               AND (? = '' OR COALESCE(NULLIF(valid_from, ''), updated_at) <= ?)
-              AND (? != 'agent' OR agent_name = ?)
-              AND (? != 'session' OR preference_session_id = ?)
-              AND (? != 'session' OR ? = '' OR agent_name = ?)
-              AND (? != 'project' OR project_root = ?)
-            ORDER BY updated_at DESC
-            """,
+            """ + scope_sql + " ORDER BY updated_at DESC",
             (
                 int(filter_types),
                 int(preference_types),
@@ -1282,15 +1396,7 @@ class SQLiteMetaStore:
                 plan.start_time,
                 plan.end_time,
                 plan.end_time,
-                plan.scope_level,
-                plan.agent_name,
-                plan.scope_level,
-                plan.session_id,
-                plan.scope_level,
-                plan.agent_name,
-                plan.agent_name,
-                plan.scope_level,
-                plan.project_root,
+                *scope_params,
             ),
         ).fetchall()
         return [dict(row) for row in rows]
@@ -1330,7 +1436,7 @@ class SQLiteMetaStore:
             detail = str(row["detail"] or "")
             matches = str(row["memory_id"] or "") in targets or any(
                 probe in detail for probe in probes
-            )
+            ) or any(target in detail for target in targets)
             if not matches:
                 continue
             try:
@@ -1538,6 +1644,369 @@ class SQLiteMetaStore:
     def get_memory(self, memory_id: str) -> Optional[Dict[str, Any]]:
         row = self.conn.execute("SELECT * FROM memory WHERE memory_id = ?", (memory_id,)).fetchone()
         return dict(row) if row else None
+
+    @staticmethod
+    def _decode_fact_conflict(row: Any) -> Dict[str, Any]:
+        item = dict(row)
+        for column, key, empty in (
+            ("candidate_memory_ids_json", "candidate_memory_ids", []),
+            ("candidate_version_ids_json", "candidate_version_ids", {}),
+            ("source_link_json", "source_link", {}),
+        ):
+            try:
+                decoded = json.loads(item.pop(column, "") or json.dumps(empty))
+            except (TypeError, ValueError):
+                decoded = empty
+            item[key] = decoded if isinstance(decoded, type(empty)) else empty
+        return item
+
+    def _validate_fact_candidate_snapshot_no_commit(
+        self, *, scope: str, tier: str, project_root: str,
+        subject: str, predicate: str, candidates: List[str],
+        versions: Optional[Dict[str, str]],
+    ) -> Dict[str, str]:
+        live = self.find_active_fact_candidates(
+            scope, subject, predicate, tier=tier, project_root=project_root,
+        )
+        live_versions = {str(row["memory_id"]): str(row["version_id"]) for row in live}
+        if (
+            not candidates
+            or set(candidates) != set(live_versions)
+            or any(row.get("valid_to") or row.get("superseded_by") for row in live)
+            or (versions is not None and versions != live_versions)
+        ):
+            raise FactConflictChanged("candidate_version_changed")
+        return live_versions
+
+    def _validate_fact_conflict_write_no_commit(
+        self, conflict_id: str, previous: MemoryRecord, record: MemoryRecord,
+    ) -> str:
+        row = self.conn.execute(
+            "SELECT * FROM fact_conflict WHERE conflict_id = ?", (str(conflict_id),),
+        ).fetchone()
+        if row is None:
+            raise FactConflictChanged("conflict_not_found")
+        if row["status"] != "pending":
+            raise FactConflictChanged("conflict_already_closed")
+        case = self._decode_fact_conflict(row)
+        target_id = previous.memory_id
+        if (
+            target_id not in case["candidate_memory_ids"]
+            or case["candidate_version_ids"].get(target_id) != previous.version.version_id
+            or record.memory_id != target_id
+            or record.content != str(case["incoming_content"] or "")
+            or not record.content
+            or record.scope != previous.scope
+            or record.tier != previous.tier
+            or record.retention_session_id != previous.retention_session_id
+            or record.project_root != previous.project_root
+        ):
+            raise FactConflictChanged("candidate_version_changed")
+        self._validate_fact_candidate_snapshot_no_commit(
+            scope=case["scope"], tier=case["tier"], project_root=case["project_root"],
+            subject=case["subject"], predicate=case["predicate"],
+            candidates=case["candidate_memory_ids"], versions=case["candidate_version_ids"],
+        )
+        incoming = parse_fact_slot(record.content) if record.type == "knowledge" else None
+        if (
+            incoming is None
+            or incoming.subject != case["subject"]
+            or incoming.predicate != case["predicate"]
+            or incoming.value != case["incoming_value"]
+            or fact_slot_scope(previous.scope, previous.retention_session_id) != case["scope"]
+            or previous.tier != case["tier"]
+            or previous.project_root != case["project_root"]
+        ):
+            raise FactConflictChanged("candidate_version_changed")
+        try:
+            source_link_json = self._staged_source_link_json(case["source_link"])
+        except (TypeError, ValueError, AttributeError) as exc:
+            raise FactConflictChanged("candidate_version_changed") from exc
+        if source_link_json != str(row["source_link_json"] or ""):
+            raise FactConflictChanged("candidate_version_changed")
+        return source_link_json
+
+    def create_fact_conflict(
+        self,
+        *,
+        scope: str,
+        tier: str,
+        project_root: str = "",
+        subject: str,
+        predicate: str,
+        incoming_value: str,
+        incoming_content: str,
+        source_kind: str,
+        source_uri: str,
+        candidate_memory_ids: List[str],
+        candidate_version_ids: Optional[Dict[str, str]] = None,
+        source_link: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Persist a bounded fact-review case without storing hidden payloads.
+
+        The incoming value is the structured fact slot value, not an arbitrary
+        user message.  This makes the review queue useful to operators while
+        keeping the source event and full text behind the existing governed
+        evidence path.
+        """
+
+        candidates = list(dict.fromkeys(str(item) for item in candidate_memory_ids if str(item)))
+        if not candidates:
+            raise ValueError("fact conflict requires at least one candidate")
+        candidate_versions = None if candidate_version_ids is None else {
+            str(memory_id): str(version_id or "")
+            for memory_id, version_id in candidate_version_ids.items()
+            if str(memory_id) in candidates
+        }
+        now = utc_now()
+        # Serialize the read-then-insert pair.  A review request is idempotent
+        # even when two Agent events report the same fact concurrently.
+        self.conn.execute("BEGIN IMMEDIATE")
+        try:
+            candidate_versions = self._validate_fact_candidate_snapshot_no_commit(
+                scope=scope, tier=tier, project_root=project_root,
+                subject=subject, predicate=predicate, candidates=candidates,
+                versions=candidate_versions,
+            )
+            try:
+                source_link_json = self._staged_source_link_json(source_link)
+            except (TypeError, ValueError, AttributeError) as exc:
+                raise FactConflictChanged("candidate_version_changed") from exc
+            existing_rows = self.conn.execute(
+                """SELECT * FROM fact_conflict
+                   WHERE scope = ? AND tier = ? AND project_root = ?
+                     AND subject = ? AND predicate = ?
+                     AND incoming_value = ? AND status = 'pending'
+                   ORDER BY created_at DESC""",
+                (scope, tier, project_root, subject, predicate, incoming_value),
+            ).fetchall()
+            existing = None
+            for row in existing_rows:
+                item = self._decode_fact_conflict(row)
+                if (
+                    set(item["candidate_memory_ids"]) == set(candidates)
+                    and item["candidate_version_ids"] == candidate_versions
+                    and str(row["source_link_json"] or "") == source_link_json
+                ):
+                    existing = item
+                else:
+                    self.conn.execute(
+                        """UPDATE fact_conflict
+                           SET status = 'dismissed', resolution = 'candidate_snapshot_changed',
+                               resolved_at = ?, resolved_memory_id = '',
+                               incoming_value = '', incoming_content = '', subject = '',
+                               project_root = '', source_kind = 'forgotten', source_uri = '',
+                               source_link_json = ''
+                           WHERE conflict_id = ?""",
+                        (now, row["conflict_id"]),
+                    )
+            if existing is not None:
+                self.conn.commit()
+                return existing
+            conflict_id = new_id("conflict")
+            self.conn.execute(
+                """INSERT INTO fact_conflict(
+                    conflict_id, scope, tier, project_root, subject, predicate,
+                    incoming_value, incoming_content, source_kind, source_uri,
+                    candidate_memory_ids_json, candidate_version_ids_json,
+                    source_link_json,
+                    status, resolution, created_at, resolved_at, resolved_memory_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', '', ?, '', '')""",
+                (
+                    conflict_id, scope, tier, project_root, subject, predicate,
+                    incoming_value, incoming_content, source_kind, source_uri,
+                    json.dumps(candidates, ensure_ascii=False),
+                    json.dumps(candidate_versions, ensure_ascii=False, sort_keys=True),
+                    source_link_json,
+                    now,
+                ),
+            )
+            self.conn.commit()
+            return {
+                "conflict_id": conflict_id,
+                "scope": scope,
+                "tier": tier,
+                "project_root": project_root,
+                "subject": subject,
+                "predicate": predicate,
+                "incoming_value": incoming_value,
+                "incoming_content": incoming_content,
+                "source_kind": source_kind,
+                "source_uri": source_uri,
+                "candidate_memory_ids": candidates,
+                "candidate_version_ids": candidate_versions,
+                "source_link": json.loads(source_link_json) if source_link_json else {},
+                "status": "pending",
+                "resolution": "",
+                "created_at": now,
+                "resolved_at": "",
+                "resolved_memory_id": "",
+            }
+        except Exception:
+            self.conn.rollback()
+            raise
+
+    def list_fact_conflicts(
+        self, *, status: Optional[str] = "pending", limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        clauses = []
+        params: List[Any] = []
+        if status:
+            if status not in {"pending", "resolved", "dismissed"}:
+                raise ValueError("invalid fact conflict status")
+            clauses.append("status = ?")
+            params.append(status)
+        sql = "SELECT * FROM fact_conflict"
+        if clauses:
+            sql += " WHERE " + " AND ".join(clauses)
+        sql += " ORDER BY created_at DESC, conflict_id DESC LIMIT ?"
+        params.append(max(1, min(int(limit), 1000)))
+        return [self._decode_fact_conflict(row) for row in self.conn.execute(sql, params)]
+
+    def resolve_fact_conflicts(
+        self,
+        *,
+        subject: str,
+        predicate: str,
+        scope: str,
+        resolution: str,
+        resolved_memory_id: str = "",
+        tier: str = "",
+        project_root: str = "",
+        incoming_value: str = "",
+    ) -> int:
+        clauses = ["scope = ?", "subject = ?", "predicate = ?", "project_root = ?", "status = 'pending'"]
+        params: List[Any] = [scope, subject, predicate, project_root]
+        if tier:
+            clauses.append("tier = ?")
+            params.append(tier)
+        if resolved_memory_id:
+            clauses.append(
+                "EXISTS (SELECT 1 FROM json_each(fact_conflict.candidate_memory_ids_json) WHERE value = ?)"
+            )
+            params.append(resolved_memory_id)
+        if incoming_value:
+            clauses.append("incoming_value = ?")
+            params.append(incoming_value)
+        params = [resolution, utc_now(), resolved_memory_id, *params]
+        with self.conn:
+            cursor = self.conn.execute(
+                """UPDATE fact_conflict
+                   SET status = 'resolved', resolution = ?, resolved_at = ?,
+                       resolved_memory_id = ?
+                   WHERE %s""" % " AND ".join(clauses),
+                params,
+            )
+        return int(cursor.rowcount)
+
+    def get_fact_conflict(self, conflict_id: str) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute(
+            "SELECT * FROM fact_conflict WHERE conflict_id = ?", (str(conflict_id),)
+        ).fetchone()
+        if row is None:
+            return None
+        return self._decode_fact_conflict(row)
+
+    def resolve_fact_conflict(
+        self,
+        conflict_id: str,
+        *,
+        resolution: str,
+        resolved_memory_id: str = "",
+        expected_memory_id: str = "",
+        expected_version_id: str = "",
+    ) -> Dict[str, Any]:
+        """Resolve one review case with optional candidate/version CAS checks."""
+
+        allowed = {"accept_incoming", "keep_existing", "dismissed", "redacted_for_forgetting"}
+        if resolution not in allowed:
+            raise ValueError("invalid fact conflict resolution")
+        self.conn.execute("BEGIN IMMEDIATE")
+        try:
+            row = self.conn.execute(
+                "SELECT * FROM fact_conflict WHERE conflict_id = ?", (str(conflict_id),)
+            ).fetchone()
+            if row is None:
+                self.conn.rollback()
+                return {"resolved": False, "reason": "conflict_not_found", "conflict_id": conflict_id}
+            if str(row["status"]) != "pending":
+                self.conn.commit()
+                return {"resolved": False, "reason": "conflict_already_closed", "conflict_id": conflict_id, "status": row["status"]}
+            candidates = json.loads(row["candidate_memory_ids_json"] or "[]")
+            versions = json.loads(row["candidate_version_ids_json"] or "{}")
+            if expected_memory_id and expected_memory_id not in candidates:
+                self.conn.rollback()
+                return {"resolved": False, "reason": "candidate_changed", "conflict_id": conflict_id}
+            if expected_version_id and expected_memory_id and str(versions.get(expected_memory_id) or "") != expected_version_id:
+                self.conn.rollback()
+                return {"resolved": False, "reason": "candidate_version_changed", "conflict_id": conflict_id}
+            if expected_version_id and expected_memory_id:
+                current = self.conn.execute(
+                    "SELECT version_id, deleted FROM memory WHERE memory_id = ?",
+                    (expected_memory_id,),
+                ).fetchone()
+                if current is None or current["deleted"] or str(current["version_id"]) != expected_version_id:
+                    self.conn.rollback()
+                    return {"resolved": False, "reason": "candidate_version_changed", "conflict_id": conflict_id}
+            status = "dismissed" if resolution in {"dismissed", "redacted_for_forgetting"} else "resolved"
+            self.conn.execute(
+                """UPDATE fact_conflict
+                   SET status = ?, resolution = ?, resolved_at = ?, resolved_memory_id = ?
+                   WHERE conflict_id = ? AND status = 'pending'""",
+                (status, resolution, utc_now(), resolved_memory_id, str(conflict_id)),
+            )
+            self.conn.commit()
+            return {
+                "resolved": True,
+                "conflict_id": conflict_id,
+                "status": status,
+                "resolution": resolution,
+                "resolved_memory_id": resolved_memory_id,
+            }
+        except Exception:
+            self.conn.rollback()
+            raise
+
+    def redact_fact_conflicts(self, memory_ids: List[str]) -> int:
+        with self.conn:
+            return self._redact_fact_conflicts_no_commit(memory_ids)
+
+    def _redact_fact_conflicts_no_commit(self, memory_ids: List[str]) -> int:
+        targets = {str(item) for item in memory_ids if str(item)}
+        if not targets:
+            return 0
+        changed = 0
+        for row in self.conn.execute("SELECT * FROM fact_conflict").fetchall():
+            case = self._decode_fact_conflict(row)
+            candidates = case["candidate_memory_ids"]
+            if (
+                not targets.intersection(str(item) for item in candidates)
+                and str(row["resolved_memory_id"] or "") not in targets
+            ):
+                continue
+            surviving = [str(item) for item in candidates if str(item) not in targets]
+            self._redact_fact_conflict_no_commit(case, surviving)
+            changed += 1
+        return changed
+
+    def _redact_fact_conflict_no_commit(
+        self, case: Dict[str, Any], surviving: List[str],
+    ) -> None:
+        surviving_versions = {
+            key: value for key, value in case["candidate_version_ids"].items() if key in surviving
+        }
+        self.conn.execute(
+            """UPDATE fact_conflict
+               SET incoming_value = '', incoming_content = '', subject = '', project_root = '',
+                   source_kind = 'forgotten', source_uri = '', source_link_json = '',
+                   candidate_memory_ids_json = ?, candidate_version_ids_json = ?,
+                   status = 'dismissed', resolution = 'redacted_for_forgetting',
+                   resolved_at = ?, resolved_memory_id = ''
+               WHERE conflict_id = ?""",
+            (json.dumps(surviving, ensure_ascii=False),
+             json.dumps(surviving_versions, ensure_ascii=False, sort_keys=True),
+             utc_now(), case["conflict_id"]),
+        )
 
     def _enqueue_memory_embedding_no_commit(
         self,
@@ -2158,15 +2627,23 @@ class SQLiteMetaStore:
 
     def find_active_fact_candidates(
         self, scope: str, subject: str, predicate: str, tier: Optional[str] = None,
+        project_root: str = "",
     ) -> List[Dict[str, Any]]:
         tier_filter = "AND m.tier = ?" if tier else ""
-        params = (scope, subject, predicate, tier) if tier else (scope, subject, predicate)
+        # Reading may reuse global facts; updating a fact slot stays within
+        # its exact project so a local correction cannot rewrite global data.
+        project_filter = "AND COALESCE(m.project_root, '') = ?"
+        params = (
+            (scope, subject, predicate, tier, project_root)
+            if tier
+            else (scope, subject, predicate, project_root)
+        )
         return [dict(row) for row in self.conn.execute(
             """SELECT m.* FROM fact_slot f
                JOIN memory m ON m.memory_id = f.memory_id
                WHERE f.scope = ? AND f.subject = ? AND f.predicate = ?
                  AND m.deleted = 0 AND m.governance_state = 'active'
-            """ + tier_filter + " ORDER BY m.updated_at DESC, m.memory_id LIMIT 2",
+            """ + tier_filter + " " + project_filter + " ORDER BY m.updated_at DESC, m.memory_id LIMIT 2",
             params,
         )]
 
@@ -2396,6 +2873,17 @@ class SQLiteMetaStore:
     def _forget_agent_event_payloads_no_commit(self, event_ids: List[str]) -> int:
         if not event_ids:
             return 0
+        targets = {str(event_id) for event_id in event_ids}
+        redacted_conflict_ids = []
+        for row in self.conn.execute(
+            "SELECT * FROM fact_conflict WHERE source_link_json <> ''"
+        ).fetchall():
+            case = self._decode_fact_conflict(row)
+            if str(case["source_link"].get("event_id") or "") in targets:
+                self._redact_fact_conflict_no_commit(case, case["candidate_memory_ids"])
+                redacted_conflict_ids.append(str(case["conflict_id"]))
+        if redacted_conflict_ids:
+            self._redact_audit_payloads_no_commit([], redacted_conflict_ids)
         placeholders = ",".join("?" for _ in event_ids)
         # Only SQLite parameter markers are interpolated; event IDs remain bound parameters.
         update_query = (
@@ -2791,19 +3279,29 @@ class SQLiteMetaStore:
         ).fetchall()
         return [dict(row) for row in rows]
 
-    def related_memories(self, memory_id: str, limit: int = 10, session_id: str = "") -> List[Dict[str, Any]]:
+    def related_memories(
+        self, memory_id: str, limit: int = 10, session_id: str = "",
+        project_root: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         rows = self.conn.execute(
             """
-            SELECT DISTINCT m.*, me.entity AS via_entity
+            SELECT m.*, MIN(me.entity) AS via_entity
             FROM memory_entity seed
+            JOIN memory origin ON origin.memory_id = seed.memory_id
             JOIN memory_entity me ON me.entity = seed.entity AND me.memory_id != seed.memory_id
             JOIN memory m ON m.memory_id = me.memory_id
             WHERE seed.memory_id = ? AND m.deleted = 0 AND m.governance_state = 'active'
               AND (m.retention_session_id = '' OR m.retention_session_id = ?)
-            ORDER BY m.updated_at DESC
+              AND (? IS NULL OR m.project_root = '' OR m.project_root = ?)
+              AND origin.deleted = 0 AND origin.governance_state = 'active'
+              AND (origin.retention_session_id = '' OR origin.retention_session_id = ?)
+              AND (? IS NULL OR origin.project_root = '' OR origin.project_root = ?)
+            GROUP BY m.memory_id
+            ORDER BY m.updated_at DESC, m.memory_id
             LIMIT ?
             """,
-            (memory_id, session_id, limit),
+            (memory_id, session_id, project_root, project_root,
+             session_id, project_root, project_root, limit),
         ).fetchall()
         return [dict(row) for row in rows]
 
@@ -2866,6 +3364,42 @@ class SQLiteMetaStore:
                 "SELECT * FROM audit ORDER BY audit_id DESC LIMIT ?",
                 (limit,),
             ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_memory_audit(self, memory_id: str, limit: int = 200) -> List[Dict[str, Any]]:
+        """List the complete bounded audit history for one memory id.
+
+        The generic recent-audit view is intentionally global and can miss an
+        older version operation when the namespace is busy.  Lifecycle views
+        need a memory-scoped query so their evidence counts remain truthful.
+        """
+
+        rows = self.conn.execute(
+            """SELECT * FROM audit
+               WHERE memory_id = ?
+               ORDER BY audit_id ASC
+               LIMIT ?""",
+            (str(memory_id), max(1, min(int(limit), 2000))),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_memory_context_uses(self, memory_id: str, limit: int = 200) -> List[Dict[str, Any]]:
+        """Find bounded Agent-context audit entries that name one memory.
+
+        Context audits store selected ids as structured JSON.  The id is
+        generated by the service and is therefore safe to use as an exact
+        token probe; this scoped query avoids scanning an arbitrary global
+        audit window for every lifecycle detail request.
+        """
+
+        rows = self.conn.execute(
+            """SELECT * FROM audit
+               WHERE event_type = 'agent_context_build'
+                 AND detail LIKE ?
+               ORDER BY audit_id DESC
+               LIMIT ?""",
+            ("%%%s%%" % str(memory_id), max(1, min(int(limit), 1000))),
+        ).fetchall()
         return [dict(row) for row in rows]
 
     def verify_audit_chain(self) -> Dict[str, Any]:
