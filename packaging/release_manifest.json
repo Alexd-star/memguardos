@@ -58,6 +58,7 @@
     "scripts/verify_video_demo.py",
     "scripts/verify_procedure_showcase.py",
     "scripts/verify_finals_scenarios.py",
+    "scripts/verify_real_agent_showcase.py",
     "scripts/validate_real_agent_matrix.py",
     "scripts/build_source_manifest.py",
     "scripts/collect_openkylin_native_evidence.sh",

@@ -220,6 +220,23 @@ def _content_text(content: Any) -> str:
     return "\n".join(parts)
 
 
+def event_display_fields(raw_event: Any) -> Dict[str, Any]:
+    """Keep visible SDK text formatting separate from normalized memory events."""
+    name = raw_event.__class__.__name__
+    if name == "MessageEvent":
+        return {"display_content": _content_text(getattr(raw_event.llm_message, "content", []))}
+    if name == "ObservationEvent":
+        return {"display_tool_result": _content_text(getattr(getattr(raw_event, "observation", None), "content", []))}
+    if name == "ActionEvent":
+        arguments = getattr(getattr(raw_event, "tool_call", None), "arguments", "{}")
+        try:
+            values = json.loads(arguments) if isinstance(arguments, str) else dict(arguments or {})
+        except (TypeError, ValueError):
+            return {}
+        return {"display_tool_args": values} if isinstance(values, dict) else {}
+    return {}
+
+
 def _source_name(source: Any) -> str:
     value = getattr(source, "value", source)
     clean = str(value).strip().lower()

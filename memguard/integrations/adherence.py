@@ -227,12 +227,12 @@ def final_visible_output(events: list[Dict[str, object]]) -> str:
     for event in events:
         event_type = str(event.get("event_type") or "")
         if event_type in {"assistant_message", "task_complete"}:
-            outputs.append(str(event.get("content") or ""))
+            outputs.append(str(event.get("display_content", event.get("content")) or ""))
         elif (
             event_type == "tool_result"
             and str(event.get("tool_name") or "") == "finish"
         ):
-            outputs.append(str(event.get("tool_result") or ""))
+            outputs.append(str(event.get("display_tool_result", event.get("tool_result")) or ""))
     return outputs[-1] if outputs else ""
 
 
@@ -276,6 +276,9 @@ def response_starts_with_command_or_conclusion(
     commands: list[str] | tuple[str, ...] = (),
 ) -> bool:
     clean = str(output or "").lstrip()
+    fence = re.match(r"^(?:```|~~~)[A-Za-z0-9_+-]*[ \t]*\n", clean)
+    if fence:
+        clean = clean[fence.end():].lstrip()
     if clean.startswith(("命令", "结论", "Command", "Conclusion", "$")):
         return True
     first_line = clean.splitlines()[0].strip() if clean else ""

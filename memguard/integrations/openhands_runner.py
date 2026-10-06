@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 import json
@@ -37,7 +38,7 @@ from memguard.integrations.adherence import (
     successful_terminal_commands,
     terminal_commands,
 )
-from memguard.integrations.openhands_adapter import OpenHandsEventAdapter
+from memguard.integrations.openhands_adapter import OpenHandsEventAdapter, event_display_fields
 from memguard.integrations.events import AgentInteractionEvent
 from memguard.models import new_id, utc_now
 
@@ -107,6 +108,7 @@ class OpenHandsMemoryRunner:
         self._processed_tool_results = set()
         self._verified_tool_results = []
         self._live_events = []
+        self._captured_events = []
 
     def prepare_context(self, task: str) -> Dict[str, object]:
         clean_task = str(task).strip()
@@ -223,10 +225,26 @@ class OpenHandsMemoryRunner:
         if event is None:
             self._unknown_events[raw_event.__class__.__name__] += 1
             return
-        self._ingest_event(event)
+        self._ingest_event(event, display_fields=event_display_fields(raw_event))
 
-    def _ingest_event(self, event: AgentInteractionEvent) -> None:
-        self._live_events.append(event.to_dict())
+    def _ingest_event(self, event: AgentInteractionEvent, *, display_fields: Optional[Dict[str, Any]] = None) -> None:
+        live_event = event.to_dict()
+        live_event.update(display_fields or {})
+        self._live_events.append(live_event)
+        safe_event, sensitivity = self.service._sanitize_interaction_event(event, remember_allowed=True)
+        captured = safe_event.to_dict()
+        captured["capture_origin"] = "sdk_callback" if display_fields is not None else "adapter_generated"
+        display_fields = dict(display_fields or {})
+        display_sensitive = self.service.detector.classify(json.dumps(display_fields, ensure_ascii=False), event.source_uri)
+        captured["capture_redacted"] = bool(sensitivity.labels or display_sensitive.labels)
+        if sensitivity.level != "high" and display_sensitive.level != "high":
+            for key, value in display_fields.items():
+                captured[key] = self.service._redact_tool_args(value, event.source_uri)
+        else:
+            for key in ("content", "tool_result", "state_before", "state_after", "user_feedback"):
+                captured[key] = ""
+            captured["tool_args"] = {}
+        self._captured_events.append(captured)
         self._event_types[event.event_type] += 1
         tool_call_id = self.adapter.tool_call_id_for(event.event_id)
         tool_key = tool_call_id or event.turn_id
@@ -424,7 +442,7 @@ class OpenHandsMemoryRunner:
             agent_name="openhands",
             project_root=self.project_root,
             task_type=self.task_type,
-        )
+        ) if self.memory_enabled else {"preference_effect_proofs": []}
         runtime_effect_proofs = _runtime_preference_effect_proofs(
             context_bundle["stages"],
             self._live_events,
@@ -450,7 +468,7 @@ class OpenHandsMemoryRunner:
                 task_verified=task_verified,
             ) if self.memory_enabled else {"recorded": 0, "promoted": [], "reason": "memory_disabled"}
         )
-        execution_trace = _execution_trace(self._live_events)
+        execution_trace = _execution_trace(self.recorded_events())
         failed_terminal_commands = sum(
             1
             for item in execution_trace
@@ -466,6 +484,7 @@ class OpenHandsMemoryRunner:
             "hook_health": hook_health,
             "duration_ms": round((perf_counter() - started) * 1000.0, 3),
             "memory_enabled": self.memory_enabled,
+            "events": self.recorded_events(),
             "context": context_summary,
             "execution_trace": execution_trace,
             "structured_intent_recovery": structured_recovery,
@@ -516,6 +535,10 @@ class OpenHandsMemoryRunner:
             ),
         }
 
+    def recorded_events(self) -> list[Dict[str, object]]:
+        """Return a detached, redacted transcript even when memory is disabled."""
+        return deepcopy(self._captured_events)
+
     def _reset_run_state(self) -> None:
         self._event_results.clear()
         self._event_types.clear()
@@ -526,6 +549,7 @@ class OpenHandsMemoryRunner:
         self._processed_tool_results.clear()
         self._verified_tool_results.clear()
         self._live_events.clear()
+        self._captured_events.clear()
         self.adapter.begin_run()
 
     def _recover_structured_tool_intent(

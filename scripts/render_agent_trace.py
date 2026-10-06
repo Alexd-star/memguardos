@@ -523,9 +523,9 @@ def _event(
         "tool": "工具",
         "system": "系统／适配器",
     }.get(role, role)
-    args = event.get("tool_args") or {}
+    args = event.get("display_tool_args", event.get("tool_args")) or {}
     origin = str(event.get("execution_origin") or args.get("execution_origin") or "")
-    intervention = any(
+    intervention = event.get("capture_origin") == "adapter_generated" or any(
         marker in origin.lower() or marker in event_type.lower()
         for marker in ADAPTER_ORIGINS
     )
@@ -575,7 +575,13 @@ def _event(
     }
     if metadata:
         parts.append(_details("事件元数据（原始字段）", metadata))
+    if event.get("capture_redacted"):
+        parts.append('<p class="muted">本事件含敏感内容，展示记录已脱敏或隐藏。</p>')
     if event_type == "tool_call":
+        if event.get("tool_name") == "finish":
+            answer = next((args[key] for key in ("message", "summary", "output", "response") if args.get(key)), None)
+            if answer is not None:
+                parts.append('<p class="tag">Agent 最终答复（完成工具原文）</p>' + _block(answer))
         command = args.get("command", event.get("command"))
         parts.append('<p class="tag">工具命令</p>')
         parts.append(
@@ -586,8 +592,14 @@ def _event(
         if args:
             parts.append(_details("工具参数（已脱敏）", args))
     if event_type == "tool_result":
-        output = event.get("tool_result", event.get("content"))
+        output = event.get("display_tool_result", event.get("tool_result", event.get("content")))
         parts.append('<p class="tag">工具输出</p>')
+        if isinstance(event.get("exit_code"), int) and not isinstance(event.get("exit_code"), bool):
+            code = event["exit_code"]
+            parts.append('<p class="%s tag">工具退出码：%s%s</p>' % (
+                "success" if code == 0 else "failure", code,
+                "（执行成功，不等同于任务完成）" if code == 0 else "（执行未成功）",
+            ))
         if output is None:
             parts.append('<p class="empty">工具输出未记录</p>')
         elif output == "":
@@ -598,7 +610,7 @@ def _event(
             if key in event:
                 parts.append('<p class="tag">%s</p>%s' % (key, _block(event[key])))
     elif "content" in event or "message" in event:
-        parts.append(_block(event.get("content", event.get("message"))))
+        parts.append(_block(event.get("display_content", event.get("content", event.get("message")))))
     elif event_type != "tool_call":
         parts.append('<p class="empty">消息正文未记录</p>')
     parts.append("</article>")

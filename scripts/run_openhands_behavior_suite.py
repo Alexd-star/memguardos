@@ -157,6 +157,8 @@ def ingest_setup_events(service, case, workspace: Path | None = None):
 
 
 def run_case(case, output_dir: Path, args, memory_mode: str = "on", paired_layout: bool = False):
+    if memory_mode not in {"on", "off"}:
+        raise ValueError("case memory_mode must be on or off")
     case_id = str(case["case_id"])
     case_dir = output_dir / "cases" / case_id
     if paired_layout:
@@ -177,6 +179,10 @@ def run_case(case, output_dir: Path, args, memory_mode: str = "on", paired_layou
         store_path=state_dir / "memory.segment",
         db_path=state_dir / "memory.sqlite3",
     )
+    runner = None
+    api_key = os.environ.get(args.api_key_env, "")
+    safe_task = service.detector.redact(str(case["task"]))
+    setup_events = []
     try:
         setup_results = (
             ingest_setup_events(service, case, workspace=workspace)
@@ -193,6 +199,7 @@ def run_case(case, output_dir: Path, args, memory_mode: str = "on", paired_layou
                 external_persistence=False,
             )
         model = str(case.get("model") or args.model).strip()
+        setup_events = service.meta.list_agent_events(limit=10000) if memory_mode == "on" else []
         runner = OpenHandsMemoryRunner(
             service=service,
             session_id="%s-live" % case_id.lower(),
@@ -201,13 +208,14 @@ def run_case(case, output_dir: Path, args, memory_mode: str = "on", paired_layou
             project_root=str(workspace),
             task_type=str(case.get("task_type") or "code_assistance"),
             model=model,
-            api_key=os.environ.get(args.api_key_env, ""),
+            api_key=api_key,
             base_url=args.base_url,
             max_iterations=int(case.get("max_iterations") or 6),
             tool_profile=str(case.get("tool_profile") or "terminal"),
+            memory_enabled=memory_mode == "on",
         )
         run_result = runner.run(str(case["task"]))
-        events = service.meta.list_agent_events(limit=10000)
+        events = [*setup_events, *runner.recorded_events()]
         context = flatten_context(
             run_result.get("context") or {},
             adherence=run_result.get("adherence") or {},
@@ -227,10 +235,12 @@ def run_case(case, output_dir: Path, args, memory_mode: str = "on", paired_layou
             "title": case["title"],
             "category": case["category"],
             "model": model,
+            "task": safe_task,
             "memory_mode": memory_mode,
             "arm_source": "real_agent_run",
             "expected_tool": str(case.get("expected_tool") or ""),
             "setup_event_count": len(setup_results),
+            "recording_mode": "redacted_sdk_transcript_independent_of_memory_storage",
             "forget_result": forget_result,
             "run": run_result,
             "evaluation": evaluation,
@@ -239,19 +249,21 @@ def run_case(case, output_dir: Path, args, memory_mode: str = "on", paired_layou
             "workspace_after": workspace_manifest(workspace),
         }
     except Exception as exc:
-        events = service.meta.list_agent_events(limit=10000)
+        events = [*setup_events, *(runner.recorded_events() if runner is not None else [])]
         result = {
             "case_id": case_id,
             "title": case["title"],
             "category": case["category"],
             "model": str(case.get("model") or args.model),
+            "task": safe_task,
             "memory_mode": memory_mode,
             "arm_source": "real_agent_run",
+            "recording_mode": "redacted_sdk_transcript_independent_of_memory_storage",
             "expected_tool": str(case.get("expected_tool") or ""),
             "run_exception": {
                 "type": exc.__class__.__name__,
-                "message": str(exc),
-                "traceback": traceback.format_exc(),
+                "message": service.detector.redact(str(exc)).replace(api_key, "[REDACTED:credential]") if api_key else service.detector.redact(str(exc)),
+                "traceback": service.detector.redact(traceback.format_exc()).replace(api_key, "[REDACTED:credential]") if api_key else service.detector.redact(traceback.format_exc()),
             },
             "evaluation": {
                 "status": "fail",

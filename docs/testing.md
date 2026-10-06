@@ -233,3 +233,20 @@ python scripts/render_agent_trace.py \
 默认保留已有 HTML，更新同一文件时需显式添加 `--overwrite`。输入中的失败、缺失输出与未完成状态会保留；适配器纠正、接管和模型行动分别标记。报告不重新计算评分，也不将“记忆被选择”改成“模型已经遵循”。对照侧是否真正关闭记忆，还需核对原始 `run.memory_enabled`，不能只依据目录名或 `memory_mode` 判断。
 
 报告使用已有敏感识别器脱敏，并移除凭据字段；公开展示前仍需核对原始任务和路径。JSON 文件的 SHA-256 显示在报告中，以便对应原始记录。对话按输入中的顺序呈现，长内容可展开；截图属于该次运行的离线报告，不能标成实时 Agent 界面。
+
+## 12. 最新能力的真实模型闭环
+
+`verify_real_agent_showcase.py` 在隔离的临时记忆和项目中调用真实 OpenHands Agent。七次会话依次检查：同一查找任务的记忆开启与关闭对照、工具偏好的自然语言纠正、只撤回工具偏好并保留回答偏好、核对矛盾事实并使用新版本，以及复核文件后学习流程、在新文件上复用流程、来源变更后停止使用旧流程。原始任务、实际工具命令及输出、各阶段上下文、文件修改前后内容、产品操作与失败信息分别保存，不依赖预设成功回复。
+
+```bash
+python scripts/verify_real_agent_showcase.py \
+  --model "$OPENHANDS_MODEL" --base-url "$OPENHANDS_BASE_URL" \
+  --output-dir output/real_showcase
+
+python scripts/render_agent_trace.py --input output/real_showcase \
+  --case-id A01 --output output/real_showcase/A01_compare.html
+```
+
+密钥通过 `OPENHANDS_API_KEY` 或 `--api-key-env` 指定的环境变量传入，不放入命令参数或报告。输出目录必须尚不存在，避免覆盖此前尝试。安装态运行时在源码目录之外设置 `PYTHONPATH=/opt/memguardos` 并添加 `--installed`；报告逐个记录产品模块位置和哈希。默认调用真实模型，单元测试注入替身时明确标成 `in_process_test_factory`，两者不能混计。
+
+流程规范由客户端通过正式 API 提交，且仅在 Agent 实际修改文件、独立后置条件检查通过后才能学习。该实验检验的是已验证流程的参数化复用和来源治理，不把客户端提供的流程步骤称为模型自动抽取。敏感写入拒绝和会话隔离作为独立产品检查记录，也不计成模型任务。七次会话是功能展示案例，不能当作大规模基准的泛化成绩；SDK 每次会话可能包含多次模型请求及纠正行动。
