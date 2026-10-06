@@ -164,6 +164,20 @@ python -m memguard.cli.memguard --workspace "$PWD" context \
 
 openKylin 采集脚本会在隔离存储中运行 `scripts/collect_context_compaction_evidence.py`，输出不同阶段的上下文表示、预算变化和收据校验结果。该证据用于证明功能来自当前部署版本，不把单次模型回答当作上下文编排能力的替代指标。
 
+### 5.5 行动结果反馈闭环回归
+
+`tests/test_action_feedback.py` 将执行前行动契约与外部结果回写放在同一条测试链路中：代码搜索偏好先返回 `redirect`，实际改用 `rg` 后记录 `success`；实际仍使用 `grep` 时记录 `deviation`，不会伪装成成功强化；重复提交同一幂等键只保留一条；记忆版本变化后旧收据不能回写；精准遗忘会同步删除与该记忆关联的行动账本。`action_outcome_stats` 提供成功率和最近成功时间，衰减计划将真实成功证据作为保留信号，但显式偏好、敏感治理和版本状态仍优先。
+
+```bash
+python -m pytest -q tests/test_action_feedback.py
+python scripts/collect_action_feedback_evidence.py --output output/action_feedback_evidence.json
+memctl agent record-outcome --preflight-file preflight.json \
+  --tool-input '{"command":"rg -n target ."}' --exit-code 0
+memctl agent action-outcomes --memory-id mem_example
+```
+
+openKylin 采集脚本会在隔离存储中运行同一证据脚本，输出预检判定、成功遵循、偏离、重试去重、统计结果和旧收据拒绝结果。该测试证明的是记忆证据与行动结果之间的系统契约；它不把一次确定性工具调用等同于所有模型或所有 Agent 的长期泛化效果。
+
 ## 6. 记忆价值实验
 
 记忆价值实验分为两种口径。

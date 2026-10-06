@@ -48,6 +48,7 @@ from memguard.integrations.adherence import (
     successful_terminal_commands,
 )
 from memguard.integrations.action_contract import evaluate_action
+from memguard.integrations.action_feedback import classify_action_outcome
 from memguard.integrations.context_injector import (
     stage_allows_memory,
     stage_allows_preference,
@@ -3534,6 +3535,7 @@ class MemGuardService(ProcedureServiceMixin):
                         "preference_explicit": source_record.preference_explicit,
                     }
                 )
+            candidate_row["action_outcome_stats"] = self.meta.action_outcome_stats(memory_id)
             expected_versions[memory_id] = str(row.get("version_id") or "")
             candidates.append(
                 self._decay_candidate(
@@ -3672,6 +3674,7 @@ class MemGuardService(ProcedureServiceMixin):
                     "governance_state": current_record.governance_state,
                     "deleted": current_record.deleted,
                     "preference_explicit": current_record.preference_explicit,
+                    "action_outcome_stats": self.meta.action_outcome_stats(memory_id),
                 },
                 as_of=str(plan.get("as_of") or ""),
                 max_age_days=int(plan.get("max_age_days", 30)),
@@ -3756,6 +3759,10 @@ class MemGuardService(ProcedureServiceMixin):
         frequency = min(1.0, math.log1p(hit_count) / math.log1p(10))
         recency = math.exp(-age_days / 30.0)
         score = round(0.35 * frequency + 0.25 * recency + 0.25 * importance + 0.15 * confidence, 4)
+        action_stats = row.get("action_outcome_stats") if isinstance(row.get("action_outcome_stats"), dict) else {}
+        action_success_count = max(0, int(action_stats.get("success_count") or 0))
+        action_failure_count = max(0, int(action_stats.get("failure_count") or 0))
+        action_adherence_rate = float(action_stats.get("adherence_rate") or 0.0)
         sensitivity = str(row.get("sensitivity_level") or "none")
         explicit = bool(row.get("preference_explicit")) and str(row.get("type") or "") in {
             "preference", "sensitive_policy"
@@ -3769,8 +3776,8 @@ class MemGuardService(ProcedureServiceMixin):
             action, reason = "retain_governance_review", "治理状态需要专门处理，衰减计划不越权"
         elif age_days >= max_age_days and hit_count == 0 and score < score_threshold:
             action, reason = "demote_to_session", "长期未使用且未达到重要性与置信度保留门槛"
-        elif hit_count > 0 or score >= score_threshold:
-            action, reason = "retain_reinforced", "存在检索强化证据或综合健康度达到保留门槛"
+        elif hit_count > 0 or action_success_count > 0 or score >= score_threshold:
+            action, reason = "retain_reinforced", "存在检索或真实行动成功强化证据，或综合健康度达到保留门槛"
         else:
             action, reason = "retain_review", "暂不满足可逆降级条件，继续观察"
         return {
@@ -3785,6 +3792,10 @@ class MemGuardService(ProcedureServiceMixin):
             "confidence": round(confidence, 4),
             "importance": round(importance, 4),
             "decay_score": score,
+            "action_success_count": action_success_count,
+            "action_failure_count": action_failure_count,
+            "action_adherence_rate": round(action_adherence_rate, 4),
+            "action_last_success_at": str(action_stats.get("last_success_at") or ""),
             "recommended_action": action,
             "reason": reason,
         }
@@ -5270,6 +5281,11 @@ class MemGuardService(ProcedureServiceMixin):
                     "project_root": context.get("project_root", project_root),
                     "task_type": task_type,
                 },
+                "outcome_feedback": {
+                    "required_after_execution": True,
+                    "command": "record_agent_action_outcome",
+                    "memory_evidence_count": len(decision.get("evidence") or []),
+                },
             }
         )
         self._audit(
@@ -5284,6 +5300,133 @@ class MemGuardService(ProcedureServiceMixin):
             },
         )
         return decision
+
+    def record_agent_action_outcome(
+        self,
+        preflight: Dict[str, object],
+        *,
+        tool_input: Optional[Dict[str, object]] = None,
+        exit_code: Optional[int] = None,
+        tool_result: object = None,
+        task_status: str = "",
+        actual_tool_name: str = "",
+        agent_name: str = "",
+        session_id: str = "",
+        project_root: str = "",
+        task_type: str = "",
+        idempotency_key: str = "",
+    ) -> Dict[str, object]:
+        """Close the preflight -> execution -> evidence loop.
+
+        A caller supplies the result from its own tool runtime.  MemGuardOS
+        stores only hashes and structured outcome metadata, then exposes the
+        result to decay and lifecycle views.  A stale receipt is rejected so a
+        late result cannot reinforce a memory that has already changed or been
+        forgotten.
+        """
+
+        if not isinstance(preflight, dict):
+            return {"ok": False, "stored": 0, "reason": "invalid_preflight"}
+        receipt = preflight.get("context_receipt")
+        if receipt is not None:
+            receipt_status = self.verify_agent_context_receipt(receipt)
+            if not receipt_status.get("valid"):
+                return {
+                    "ok": False,
+                    "stored": 0,
+                    "reason": "stale_memory_context",
+                    "receipt_status": receipt_status,
+                }
+        clean_input = tool_input if isinstance(tool_input, dict) else {}
+        scope = preflight.get("scope") if isinstance(preflight.get("scope"), dict) else {}
+        effective_agent = str(agent_name or scope.get("agent_name") or "generic-agent")
+        effective_session = str(session_id or scope.get("session_id") or "action-feedback")
+        effective_project = str(project_root or scope.get("project_root") or "")
+        effective_task_type = str(task_type or scope.get("task_type") or "")
+        classified = classify_action_outcome(
+            preflight,
+            exit_code=exit_code,
+            tool_result=tool_result,
+            task_status=task_status,
+            actual_tool_name=actual_tool_name,
+            actual_tool_input=clean_input,
+        )
+        command_hash = stable_hash(json.dumps(clean_input, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
+        fingerprint = str((receipt or {}).get("fingerprint") or "") if isinstance(receipt, dict) else ""
+        evidence = preflight.get("evidence") if isinstance(preflight.get("evidence"), list) else []
+        rows = []
+        stale_ids = []
+        for item in evidence:
+            if not isinstance(item, dict):
+                continue
+            memory_id = str(item.get("memory_id") or "").strip()
+            version_id = str(item.get("version_id") or "").strip()
+            if not memory_id or not version_id:
+                continue
+            current = self.meta.get_memory(memory_id)
+            if current is None or bool(current.get("deleted")) or str(current.get("version_id") or "") != version_id:
+                stale_ids.append(memory_id)
+                continue
+            row_key = str(idempotency_key or "").strip()
+            if not row_key:
+                row_key = stable_hash("|".join([
+                    fingerprint, memory_id, version_id, command_hash,
+                    str(classified.get("outcome") or ""), str(exit_code if exit_code is not None else ""),
+                ]))
+            rows.append({
+                "idempotency_key": row_key + ":" + memory_id,
+                "memory_id": memory_id,
+                "version_id": version_id,
+                "decision": str(preflight.get("decision") or ""),
+                "outcome": classified["outcome"],
+                "adherence": classified["adherence"],
+                "tool_name": classified["tool_name"],
+                "command_hash": command_hash,
+                "exit_code": classified.get("exit_code"),
+                "agent_name": effective_agent,
+                "session_id": effective_session,
+                "project_root": effective_project,
+                "task_type": effective_task_type,
+                "context_fingerprint": fingerprint,
+            })
+        if stale_ids:
+            return {
+                "ok": False,
+                "stored": 0,
+                "reason": "stale_memory_evidence",
+                "stale_memory_ids": sorted(set(stale_ids)),
+                "next_action": "重新构建上下文并重新执行预检",
+            }
+        stored = self.meta.record_agent_action_outcomes(rows)
+        successful_ids = [row["memory_id"] for row in rows if row["outcome"] == "success"]
+        self._audit(
+            "agent_action_outcome",
+            None,
+            {
+                "decision": str(preflight.get("decision") or ""),
+                "outcome": classified["outcome"],
+                "adherence": classified["adherence"],
+                "tool_name": classified["tool_name"],
+                "command_hash": command_hash,
+                "memory_ids": [row["memory_id"] for row in rows],
+                "successful_memory_ids": successful_ids,
+                "stored": stored["stored"],
+                "duplicates": stored["duplicates"],
+            },
+        )
+        return {
+            "ok": True,
+            "schema": "memguardos-agent-action-feedback-v1",
+            "stored": stored["stored"],
+            "duplicates": stored["duplicates"],
+            "action_outcome_ids": stored["action_outcome_ids"],
+            "outcome": classified["outcome"],
+            "adherence": classified["adherence"],
+            "reinforced_memory_ids": successful_ids if classified["reinforce"] else [],
+            "evidence_count": len(rows),
+            "reason": classified["reason"],
+            "privacy": "只保存命令摘要哈希，不保存命令正文或工具输出",
+        }
 
     def _fit_context_line(self, line: str, remaining_chars: int, remaining_tokens: int) -> str:
         if remaining_chars <= 0 or remaining_tokens <= 0:

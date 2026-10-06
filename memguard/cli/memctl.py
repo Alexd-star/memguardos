@@ -394,6 +394,24 @@ def build_parser() -> argparse.ArgumentParser:
     agent_preflight.add_argument("--project-root", default="")
     agent_preflight.add_argument("--task-type", default="")
     agent_preflight.add_argument("--context-receipt-file", default="", help="Optional JSON file containing context_receipt")
+    agent_outcome = agent_sub.add_parser(
+        "record-outcome",
+        help="Record the external Agent tool result against the preflight memory evidence",
+    )
+    agent_outcome.add_argument("--preflight-file", required=True, help="JSON file produced by preflight-action")
+    agent_outcome.add_argument("--tool-input", default="{}", help="JSON object actually sent to the tool")
+    agent_outcome.add_argument("--exit-code", type=int, default=None)
+    agent_outcome.add_argument("--task-status", default="")
+    agent_outcome.add_argument("--actual-tool-name", default="")
+    agent_outcome.add_argument("--agent-name", default="")
+    agent_outcome.add_argument("--session-id", default="")
+    agent_outcome.add_argument("--project-root", default="")
+    agent_outcome.add_argument("--task-type", default="")
+    agent_outcome.add_argument("--idempotency-key", default="")
+    agent_outcome.add_argument("--tool-result-file", default="", help="Optional JSON tool result containing exit_code")
+    agent_stats = agent_sub.add_parser("action-outcomes", help="Show memory-linked Agent action outcome evidence")
+    agent_stats.add_argument("--memory-id", default="")
+    agent_stats.add_argument("--limit", type=int, default=50)
     agent_sub.add_parser("status", help="Show Agent event and preference aggregation status")
     agent_evidence = agent_sub.add_parser("evidence", help="Show interaction evidence for one memory")
     agent_evidence.add_argument("memory_id")
@@ -574,6 +592,39 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
                 return 0 if result.get("decision") == "allow" else 2
+            if args.agent_command == "record-outcome":
+                payload = json.loads(Path(args.preflight_file).read_text(encoding="utf-8"))
+                preflight = payload.get("result", payload) if isinstance(payload, dict) else None
+                if not isinstance(preflight, dict):
+                    raise ValueError("--preflight-file must contain a preflight object")
+                tool_input = json.loads(args.tool_input)
+                if not isinstance(tool_input, dict):
+                    raise ValueError("--tool-input must be a JSON object")
+                tool_result = None
+                if args.tool_result_file:
+                    tool_result = json.loads(Path(args.tool_result_file).read_text(encoding="utf-8"))
+                result = service.record_agent_action_outcome(
+                    preflight,
+                    tool_input=tool_input,
+                    exit_code=args.exit_code,
+                    tool_result=tool_result,
+                    task_status=args.task_status,
+                    actual_tool_name=args.actual_tool_name,
+                    agent_name=args.agent_name,
+                    session_id=args.session_id,
+                    project_root=args.project_root,
+                    task_type=args.task_type,
+                    idempotency_key=args.idempotency_key,
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+                return 0 if result.get("ok") else 2
+            if args.agent_command == "action-outcomes":
+                result = {
+                    "stats": service.meta.action_outcome_stats(args.memory_id),
+                    "outcomes": service.meta.list_agent_action_outcomes(args.memory_id, args.limit),
+                }
+                print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+                return 0
             if args.agent_command == "status":
                 print(json.dumps(service.interaction_status(), ensure_ascii=False, indent=2))
                 return 0

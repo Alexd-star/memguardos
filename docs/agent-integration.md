@@ -93,6 +93,8 @@ memctl agent ingest-adapted-session \
 
 若 Agent 使用自己的 SDK，则直接实现 `convert(raw_event) -> AgentInteractionEvent` 并注册到 `AgentAdapterRegistry`，再调用 `MemGuardService.ingest_interaction`。上下文仍通过 `build_agent_context` 按规划、工具选择和回答生成阶段请求；工具执行前调用 `preflight_agent_action`，根据 `allow`、`redirect`、`confirm` 或 `deny` 决定继续、改写、请求确认或停止。遗忘仍调用统一的 `forget` 或 `forget_agent_interactions` 接口；不建议在适配器中自行拼接长期记忆或直接操作 SQLite。
 
+工具执行完成后，适配器应把同一份预检结果和外部运行状态提交给 `record_agent_action_outcome`。接口会重新核对上下文收据与记忆版本，区分实际遵循、成功偏离、失败、拦截和未知结果；成功遵循才进入行动强化统计，重复回写由幂等键去重。适配器只需保留预检对象和本地工具结果，不需要把命令正文写入 MemGuardOS。记忆更新或遗忘后，旧预检不能继续回写，行动账本随受管记忆同步清理。
+
 上下文请求默认使用 `compaction=adaptive`。规划阶段的普通知识会优先以摘要进入，工具选择阶段的工具偏好和已验证流程保留可执行内容，回答生成阶段使用带来源和版本的证据表示；需要逐字复核时可以显式传入 `compaction=full`。每条记忆的表示方式、压缩原因和预算节省量都会进入上下文收据，适配器只负责传递收据，不应自行重写上下文正文。
 
 ## 3. 安装可选 Agent 环境

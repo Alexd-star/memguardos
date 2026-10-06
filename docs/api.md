@@ -97,6 +97,26 @@ Unix socket API 位于 `memguard/api/server.py`，用于本地 Agent 直接调�
 
 返回结果包含 `decision`、`policy_category`、`reason`、`evidence` 和 `context_receipt`。`evidence` 只记录记忆编号与版本编号，不把完整记忆正文复制到行动审计中；上下文发生更新或遗忘后，旧收据会被拒绝。
 
+### Agent 行动结果反馈
+
+`record_agent_action_outcome` 由 Agent 适配器在外部工具执行完成后调用。它不执行命令，只接收预检结果、实际工具输入摘要和退出状态，并再次检查上下文收据及证据记忆版本。返回的 `success`、`failure`、`deviation`、`blocked` 和 `unknown` 分别表示成功遵循、执行失败、成功但偏离偏好、执行前拦截和无法判定；只有成功遵循的结果会作为行动强化证据。命令正文不写入 MemGuardOS，持久化账本只保留摘要哈希、版本、退出码、作用域和上下文指纹。
+
+```json
+{
+  "command": "record_agent_action_outcome",
+  "preflight": {"decision": "redirect", "tool_name": "terminal", "expected_value": "rg", "evidence": []},
+  "tool_input": {"command": "rg -n build_agent_context ."},
+  "exit_code": 0,
+  "agent_name": "local-agent",
+  "session_id": "session-001",
+  "idempotency_key": "tool-call-001"
+}
+```
+
+同一个幂等键重复提交不会重复强化；如果记忆已被更新或遗忘，接口返回 `stale_memory_context` 或 `stale_memory_evidence`，调用方应重新构建上下文并重新预检。使用 `action_outcome_stats` 可以查看某条记忆的成功、失败、偏离、拦截和未知计数。
+
+CLI 对应入口为 `memctl agent record-outcome --preflight-file preflight.json --tool-input '{"command":"rg -n target ."}' --exit-code 0`，查询入口为 `memctl agent action-outcomes --memory-id <memory_id>`。
+
 ### 会话记忆巩固
 
 巩固接口把会话层内容整理成可审核的长期记忆晋级计划。计划保存 `schema`、`plan_id`、会话范围、项目范围、候选版本映射和候选动作；调用方可以先展示候选，再只提交明确选择的记忆编号。`confirm` 未开启时只返回待确认结果，不改变记忆状态。

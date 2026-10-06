@@ -448,6 +448,38 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                 )
             ),
         }
+    if command == "record_agent_action_outcome":
+        preflight = request.get("preflight")
+        if not isinstance(preflight, dict):
+            raise ValueError("preflight must be an object")
+        tool_input = request.get("tool_input") or {}
+        if not isinstance(tool_input, dict):
+            raise ValueError("tool_input must be an object")
+        raw_exit_code = request.get("exit_code")
+        exit_code = None if raw_exit_code in (None, "") else int(raw_exit_code)
+        result = service.record_agent_action_outcome(
+            preflight,
+            tool_input=tool_input,
+            exit_code=exit_code,
+            tool_result=request.get("tool_result"),
+            task_status=_string_param(request, "task_status", "", max_chars=64),
+            actual_tool_name=_string_param(request, "actual_tool_name", "", max_chars=128),
+            agent_name=_string_param(request, "agent_name", "", max_chars=128),
+            session_id=_string_param(request, "session_id", "", max_chars=256),
+            project_root=_string_param(request, "project_root", "", max_chars=2048),
+            task_type=_string_param(request, "task_type", "", max_chars=128),
+            idempotency_key=_string_param(request, "idempotency_key", "", max_chars=256),
+        )
+        return {"ok": bool(result.get("ok")), "result": _jsonable(result)}
+    if command == "action_outcome_stats":
+        memory_id = _string_param(request, "memory_id", "", max_chars=128)
+        return {
+            "ok": True,
+            "result": _jsonable({
+                "stats": service.meta.action_outcome_stats(memory_id),
+                "outcomes": service.meta.list_agent_action_outcomes(memory_id, _int_param(request, "limit", 50, minimum=1, maximum=500)),
+            }),
+        }
     if command == "preference_evidence":
         memory_id = _string_param(request, "memory_id", "", max_chars=128)
         result = _jsonable(service.preference_evidence(memory_id))

@@ -197,6 +197,8 @@ run_capture "decay_evidence" "${PYTHON_BIN}" scripts/collect_decay_evidence.py \
   --output "${OUT_DIR}/decay_evidence.json"
 run_capture "context_compaction_evidence" "${PYTHON_BIN}" scripts/collect_context_compaction_evidence.py \
   --output "${OUT_DIR}/context_compaction_evidence.json"
+run_capture "action_feedback_evidence" "${PYTHON_BIN}" scripts/collect_action_feedback_evidence.py \
+  --output "${OUT_DIR}/action_feedback_evidence.json"
 run_capture "sdk_status" "${PYTHON_BIN}" -m memguard.cli.memctl sdk-status
 run_capture "sdk_embedding_probe" "${PYTHON_BIN}" -m memguard.cli.memctl sdk-status --probe-embedding --probe-timeout 90
 if [ -f scripts/diagnose_kylin_embedding.sh ]; then

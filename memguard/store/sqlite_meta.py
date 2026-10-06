@@ -347,6 +347,28 @@ class SQLiteMetaStore(DependencyStoreMixin):
         self._ensure_column("agent_events", "forgotten_at", "TEXT")
         self.conn.execute(
             """
+            CREATE TABLE IF NOT EXISTS agent_action_outcome (
+                action_outcome_id TEXT PRIMARY KEY,
+                idempotency_key TEXT NOT NULL UNIQUE,
+                memory_id TEXT NOT NULL,
+                version_id TEXT NOT NULL,
+                decision TEXT NOT NULL,
+                outcome TEXT NOT NULL CHECK(outcome IN ('success', 'failure', 'deviation', 'blocked', 'unknown')),
+                adherence TEXT NOT NULL CHECK(adherence IN ('followed', 'violated', 'not_applicable')),
+                tool_name TEXT NOT NULL,
+                command_hash TEXT NOT NULL DEFAULT '',
+                exit_code INTEGER,
+                agent_name TEXT NOT NULL DEFAULT '',
+                session_id TEXT NOT NULL DEFAULT '',
+                project_root TEXT NOT NULL DEFAULT '',
+                task_type TEXT NOT NULL DEFAULT '',
+                context_fingerprint TEXT NOT NULL DEFAULT '',
+                observed_at TEXT NOT NULL
+            )
+            """
+        )
+        self.conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS memory_event_links (
                 memory_id TEXT NOT NULL,
                 event_id TEXT NOT NULL,
@@ -524,6 +546,14 @@ class SQLiteMetaStore(DependencyStoreMixin):
             "ON agent_events(agent_name, session_id, sequence)"
         )
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_events_type ON agent_events(event_type, created_at DESC)")
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_action_outcome_memory "
+            "ON agent_action_outcome(memory_id, observed_at DESC)"
+        )
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_action_outcome_scope "
+            "ON agent_action_outcome(project_root, agent_name, session_id, observed_at DESC)"
+        )
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_memory_event_links_event "
             "ON memory_event_links(event_id, memory_id)"
@@ -1307,8 +1337,8 @@ class SQLiteMetaStore(DependencyStoreMixin):
         """Apply a previewed batch atomically or leave every target untouched."""
 
         totals = {"scrubbed_events": 0, "deleted_observations": 0,
-                  "deleted_tool_outcomes": 0, "redacted_audit": 0,
-                  "redacted_fact_conflicts": 0}
+                  "deleted_tool_outcomes": 0, "deleted_action_outcomes": 0,
+                  "redacted_audit": 0, "redacted_fact_conflicts": 0}
         memory_ids = []
         plaintexts = []
         linked_event_ids = set()
@@ -1387,8 +1417,12 @@ class SQLiteMetaStore(DependencyStoreMixin):
                         tuple(promotion),
                     ).rowcount
             if memory_ids:
-                self._erase_dependency_metadata_no_commit(memory_ids)
                 placeholders = ",".join("?" for _ in memory_ids)
+                totals["deleted_action_outcomes"] = self.conn.execute(
+                    "DELETE FROM agent_action_outcome WHERE memory_id IN (%s)" % placeholders,
+                    memory_ids,
+                ).rowcount
+                self._erase_dependency_metadata_no_commit(memory_ids)
                 self.conn.execute(
                     """UPDATE memory_event_links
                        SET source_field = '', source_start = -1,
@@ -2782,6 +2816,94 @@ class SQLiteMetaStore(DependencyStoreMixin):
         )
         self.conn.commit()
         return len(unique)
+
+    def record_agent_action_outcomes(self, outcomes: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Persist per-memory action feedback idempotently.
+
+        The table is an evidence ledger, not a direct preference writer.  It
+        is intentionally keyed by the caller's idempotency key so retries from
+        an Agent bridge cannot inflate reinforcement counts.
+        """
+
+        if not outcomes:
+            return {"stored": 0, "duplicates": 0, "action_outcome_ids": []}
+        stored_ids: List[str] = []
+        duplicates = 0
+        with self.conn:
+            self.conn.execute("BEGIN IMMEDIATE")
+            for item in outcomes:
+                key = str(item.get("idempotency_key") or "").strip()
+                memory_id = str(item.get("memory_id") or "").strip()
+                version_id = str(item.get("version_id") or "").strip()
+                if not key or not memory_id or not version_id:
+                    raise ValueError("action outcome requires idempotency_key, memory_id and version_id")
+                outcome_id = str(item.get("action_outcome_id") or new_id("act"))
+                cursor = self.conn.execute(
+                    """
+                    INSERT OR IGNORE INTO agent_action_outcome(
+                        action_outcome_id, idempotency_key, memory_id, version_id,
+                        decision, outcome, adherence, tool_name, command_hash,
+                        exit_code, agent_name, session_id, project_root, task_type,
+                        context_fingerprint, observed_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        outcome_id, key, memory_id, version_id,
+                        str(item.get("decision") or ""), str(item.get("outcome") or "unknown"),
+                        str(item.get("adherence") or "not_applicable"), str(item.get("tool_name") or ""),
+                        str(item.get("command_hash") or ""), item.get("exit_code"),
+                        str(item.get("agent_name") or ""), str(item.get("session_id") or ""),
+                        str(item.get("project_root") or ""), str(item.get("task_type") or ""),
+                        str(item.get("context_fingerprint") or ""), str(item.get("observed_at") or utc_now()),
+                    ),
+                )
+                if cursor.rowcount:
+                    stored_ids.append(outcome_id)
+                else:
+                    duplicates += 1
+        return {"stored": len(stored_ids), "duplicates": duplicates, "action_outcome_ids": stored_ids}
+
+    def action_outcome_stats(self, memory_id: str = "") -> Dict[str, Any]:
+        """Return bounded aggregate feedback without exposing command text."""
+
+        clause = "WHERE memory_id = ?" if str(memory_id or "").strip() else ""
+        params = (str(memory_id).strip(),) if clause else ()
+        row = self.conn.execute(
+            """
+            SELECT COUNT(*) AS total_count,
+                   SUM(CASE WHEN outcome = 'success' THEN 1 ELSE 0 END) AS success_count,
+                   SUM(CASE WHEN outcome = 'failure' THEN 1 ELSE 0 END) AS failure_count,
+                   SUM(CASE WHEN outcome = 'deviation' THEN 1 ELSE 0 END) AS deviation_count,
+                   SUM(CASE WHEN outcome = 'blocked' THEN 1 ELSE 0 END) AS blocked_count,
+                   SUM(CASE WHEN outcome = 'unknown' THEN 1 ELSE 0 END) AS unknown_count,
+                   MAX(CASE WHEN outcome = 'success' THEN observed_at ELSE '' END) AS last_success_at,
+                   MAX(observed_at) AS last_observed_at
+            FROM agent_action_outcome %s
+            """ % clause,
+            params,
+        ).fetchone()
+        payload = dict(row) if row else {}
+        for key in ("total_count", "success_count", "failure_count", "deviation_count", "blocked_count", "unknown_count"):
+            payload[key] = int(payload.get(key) or 0)
+        total = payload["total_count"]
+        payload["adherence_rate"] = round(
+            payload["success_count"] / max(1, total - payload["blocked_count"] - payload["unknown_count"]), 4
+        )
+        if memory_id:
+            payload["memory_id"] = str(memory_id)
+        return payload
+
+    def list_agent_action_outcomes(self, memory_id: str = "", limit: int = 50) -> List[Dict[str, Any]]:
+        params: List[Any] = []
+        clause = ""
+        if str(memory_id or "").strip():
+            clause = "WHERE memory_id = ?"
+            params.append(str(memory_id).strip())
+        params.append(max(1, min(int(limit), 500)))
+        return [dict(row) for row in self.conn.execute(
+            "SELECT * FROM agent_action_outcome %s ORDER BY observed_at DESC LIMIT ?" % clause,
+            params,
+        ).fetchall()]
 
     def set_governance_state(
         self,
