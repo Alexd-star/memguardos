@@ -330,9 +330,9 @@ class Showcase:
         if self.current["errors"] or not self.current["run"].get("ok"):
             failures.append("runner failed or did not verify completion")
         if self.current["run"].get("memory_enabled") is not enabled:
-            self.check("actual memory_enabled matches requested switch", False)
+            self.check("实际记忆开关与请求一致", False)
         self.check(
-            "context switch and scoped session",
+            "上下文绑定当前会话、项目与记忆开关",
             snapshot.get("session_id") == self.current["session_id"]
             and snapshot.get("project_root") == str(self.project)
             and (snapshot.get("memory_snapshot") or {}).get("memory_enabled")
@@ -340,7 +340,7 @@ class Showcase:
         )
         if not enabled:
             self.check(
-                "off context contains no memories",
+                "关闭记忆后各阶段没有注入历史内容",
                 bool(stages)
                 and not any(stage.get("memories") for stage in stages.values()),
             )
@@ -376,7 +376,7 @@ def preferences(d):
         row["memory_id"] for row in rows if row["preference_topic"] == "response_order"
     }
     d.check(
-        "one sentence learns independent tool and answer preferences",
+        "一句话拆成工具与回答两条独立偏好",
         learned.get("stored")
         and bool(d.style_ids)
         and any(row["preference_topic"] == "code_search_tool" for row in rows),
@@ -386,7 +386,7 @@ def preferences(d):
 def correct_tool(d):
     result = d.remember("纠正一下：以后搜索项目代码优先使用 grep。", "correction")
     d.check(
-        "natural correction retains answer preference",
+        "纠正工具偏好后保留原有回答偏好",
         result.get("stored")
         and all(not d.service.meta.get_memory(mid)["deleted"] for mid in d.style_ids),
     )
@@ -414,7 +414,7 @@ def forget_tool(d):
             for mid in ids
         )
     )
-    d.check("preview selects only tool preference", safe, preview=preview)
+    d.check("遗忘预览只选工具偏好", safe, preview=preview)
     if safe:
         versions = {mid: d.service.meta.get_memory(mid)["version_id"] for mid in ids}
         receipt = d.api(
@@ -425,7 +425,7 @@ def forget_tool(d):
             expected_versions=versions,
         )
         d.check(
-            "CAS forget removes tools and retains answer",
+            "按预览版本遗忘工具偏好，保留回答偏好",
             receipt.get("ok")
             and all(
                 not d.service.meta.get_memory(mid)["deleted"] for mid in d.style_ids
@@ -439,7 +439,7 @@ def facts(d):
     first = d.remember("青山项目发布日是周三。")
     pending = d.remember("青山项目发布日是周五。")
     d.check(
-        "contradictory Friday fact awaits review",
+        "矛盾事实进入核对队列，确认前没有覆盖旧值",
         not pending.get("stored")
         and pending.get("reason") == "fact_conflict_requires_review",
     )
@@ -449,7 +449,7 @@ def facts(d):
         decision="accept_incoming",
     )
     d.check(
-        "accepting Friday creates a version and preserves independent knowledge",
+        "接受周五新值形成版本链，并保留独立知识",
         accepted.get("resolved")
         and len(d.service.versions(first["memory_id"])) == 2
         and not d.service.meta.get_memory(independent["memory_id"])["deleted"],
@@ -492,7 +492,7 @@ def release_setup(d):
         ProcedureSpec.from_dict(SPEC), d.project, {"file": "release-a.md"}
     )
     d.check(
-        "release-a initial TODO fails independent checks",
+        "未复核的文件尚不满足完成条件",
         before["overall"] == "fail",
         verification=before,
     )
@@ -506,7 +506,7 @@ def learn_release(d):
         ProcedureSpec.from_dict(SPEC), d.project, arguments
     )
     d.check(
-        "Agent release-a action passes independent postconditions",
+        "Agent 实际复核后的文件满足独立完成条件",
         verified["overall"] == "pass",
         verification=verified,
     )
@@ -522,7 +522,7 @@ def learn_release(d):
         )
         d.procedure_id = learned.get("memory_id", "")
         d.check(
-            "client spec learned only after verification with source version",
+            "验证通过后学习客户端流程规范，并绑定来源版本",
             learned.get("verified")
             and learned.get("stored")
             and learned.get("dependencies")
@@ -560,7 +560,7 @@ def reuse_setup(d):
         arguments=d.arguments,
     )
     d.check(
-        "new task supplies release-b parameter and initially fails",
+        "新任务绑定不同文件参数，执行前检查为未完成",
         before.get("overall") == "fail"
         and bool(recalled)
         and "release-b.md" in recalled[0]["steps"][1],
@@ -584,7 +584,7 @@ def revoke_release(d):
         for row in stage.get("memories", [])
     }
     d.check(
-        "Agent reuses selected workflow and release-b changes fail to pass",
+        "Agent 采用召回流程完成新文件，检查由失败转为通过",
         completed.get("verified") and d.procedure_id in selected,
         verification=completed,
     )
@@ -609,7 +609,7 @@ def revoke_release(d):
         for row in stage.get("memories", [])
     }
     d.check(
-        "two-maintainer source update invalidates old snapshot and excludes old procedure",
+        "来源更新后旧上下文失效，新上下文排除旧流程",
         updated.get("updated") and not stale["ok"] and d.procedure_id not in ids,
         old_snapshot_status=stale,
         new_context=fresh,
@@ -628,7 +628,7 @@ def revoke_release(d):
         },
     )
     d.check(
-        "source withdrawal clears hard closure, dependencies and feedback, retains independent memory",
+        "撤回来源同步清理派生流程与反馈，并保留独立记忆",
         receipt.get("ok")
         and {d.source["memory_id"], d.procedure_id}.issubset(
             receipt.get("forgotten_memory_ids", [])

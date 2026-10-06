@@ -39,6 +39,19 @@ def _export(tmp_path, data):
     return output.read_text(encoding="utf-8")
 
 
+def test_product_checks_and_real_file_changes_are_visible_and_escaped(tmp_path):
+    html = _export(tmp_path, _result(
+        product_checks=[{"name": "保留无关偏好 <script>", "passed": True},
+                        {"name": "流程检查", "passed": False}],
+        workspace_before={"release.md": {"text": "Version 1\nTODO\n"}},
+        workspace_after={"release.md": {"text": "Version 1\nREVIEWED\n"}},
+    ))
+    assert "产品链路检查" in html and "实际文件变化" in html
+    assert "保留无关偏好 &lt;script&gt;" in html
+    assert 'class="failure">未通过' in html
+    assert "Version 1\nTODO" in html and "Version 1\nREVIEWED" in html
+
+
 class Tags(HTMLParser):
     def __init__(self, html):
         super().__init__()

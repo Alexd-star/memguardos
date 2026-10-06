@@ -61,6 +61,9 @@ details{margin:8px 0}summary{cursor:pointer;color:#53606b}dl{margin:6px 0}
 dt{color:#69747d;font-size:12px}dd{margin:0 0 6px;overflow-wrap:anywhere}
 .source{border-top:1px solid #e5eaed;margin-top:14px;padding-top:8px}
 nav{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}
+table{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px}
+th,td{text-align:left;vertical-align:top;padding:8px;border-bottom:1px solid #e5eaed;overflow-wrap:anywhere}
+th{background:#f3f6f7}td:last-child{width:90px}
 @media(max-width:900px){main{padding:16px}.arms{grid-template-columns:minmax(0,1fr);gap:18px}}
 @media print{main{padding:0}.case{break-before:auto}.event{break-inside:avoid}nav{display:none}}
 """
@@ -717,6 +720,25 @@ def _arm(source: Source, redactor: Redactor) -> str:
         )
     )
     parts.append(_context(run.get("context") or {}))
+    checks = data.get("product_checks") or []
+    if checks:
+        parts.append('<section class="band product-checks"><h3>产品链路检查</h3><table><thead><tr><th>检查项目</th><th>结果</th></tr></thead><tbody>')
+        for check in checks:
+            passed = check.get("passed")
+            label, style = ("通过", "success") if passed is True else ("未通过", "failure")
+            parts.append('<tr><td>%s</td><td class="%s">%s</td></tr>' % (
+                escape(str(check.get("name") or "未命名检查")), style, label))
+        parts.append('</tbody></table><p class="muted">检查来自客户端产品 API 与后置条件验证，不计作模型对话。</p></section>')
+    before, after = data.get("workspace_before") or {}, data.get("workspace_after") or {}
+    changed = {name: {"before": before.get(name), "after": after.get(name)}
+               for name in sorted(set(before) | set(after)) if before.get(name) != after.get(name)}
+    if changed:
+        parts.append('<section class="band workspace-changes"><h3>实际文件变化</h3>')
+        for name, change in changed.items():
+            parts.append('<h4>%s</h4><p class="tag">执行前</p>%s<p class="tag">执行后</p>%s' % (
+                escape(name), _block((change["before"] or {}).get("text", "文件不存在")),
+                _block((change["after"] or {}).get("text", "文件不存在"))))
+        parts.append('</section>')
     adapter = {
         key: run[key]
         for key in (
