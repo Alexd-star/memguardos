@@ -287,7 +287,7 @@ memguard-agent-setup
 memguard-agent-showcase "$HOME/要操作的项目"
 ```
 
-通过上述入口启动 OpenHands 时，MemGuardOS 会自动挂载事件采集与上下文适配；其他 Agent 可按照统一 AgentEvent 协议接入。源码开发环境也可直接使用 `memguard --workspace "$(pwd)" --model "<模型名称>" shell`。
+通过上述入口启动 OpenHands 时，MemGuardOS 会自动挂载事件采集、上下文适配和执行前行动检查；其他 Agent 可按照统一 AgentEvent 协议接入，并在工具调用前使用同一行动契约。源码开发环境也可直接使用 `memguard --workspace "$(pwd)" --model "<模型名称>" shell`。
 
 交互工作台内可以完成一轮清晰的记忆效果对照：
 
@@ -356,6 +356,7 @@ flowchart TB
 
     subgraph S4["Agent 使用与系统治理"]
         C["规划 / 工具 / 回答上下文"]
+        G2["执行前行动契约<br/>allow · redirect · confirm · deny"]
         F["精准遗忘预览与执行"]
         Z["审计链、systemd、cgroup、BPF LSM"]
         UI["UKUI / Peony / 托盘 / Web / CLI"]
@@ -375,7 +376,7 @@ flowchart TB
     D --> H
     G --> H
     R --> H
-    H --> C --> A
+    H --> C --> G2 --> A
     UI --> F
     F --> M
     F --> D
@@ -405,6 +406,7 @@ flowchart TB
 4. **上下文按 Agent 阶段拆分。** 规划阶段关注目标和约束，工具阶段关注工具偏好与失败经验，回答阶段关注格式和表达偏好，减少无关记忆挤占 Prompt。
 5. **遗忘是结构化计划。** 自然语言先解析成主题、类型、时间、来源和 namespace 过滤条件，生成可预览的 `ErasurePlan`，确认后清理所有受管检索表面并执行残留验证。
 6. **把操作系统能力纳入记忆治理。** systemd 管理服务，cgroup 限制资源，auditd 和哈希链记录审计，Polkit 管理高权限动作，BPF LSM 提供敏感路径强制策略。
+7. **让记忆参与行动决策。** Agent 收到上下文后，工具真正执行前还要经过当前版本、项目范围和参数的行动预检；偏好冲突可以改道，高风险操作必须确认，已知破坏性命令直接阻断。
 
 详细模块边界、数据结构与时序见 [系统架构](docs/architecture.md) 和 [开发者指南](docs/developer-guide.md)。
 
@@ -443,6 +445,7 @@ flowchart TB
 | 通用功能 | 217 条可复现种子与用例 | Recall@5、跨语言 Recall@5、敏感阻断 F1 与遗忘候选召回率为 1.0000；遗忘候选精确率为 0.9425 | [测试与评测](docs/testing.md) |
 | Agent 交互专项 | 200 条，其中 60 条匿名化真实风格、140 条合成边界样例 | 跨会话偏好遵循率 1.0000，敏感泄漏率 0，P95 113.966 ms | [Agent 证据](docs/evidence/agent/) |
 | 真实 OpenHands | 基础 12 次、扩展 8 次、留出 8 次 | 28 次运行均保留上下文、工具事件与结果记录 | [真实 Agent 说明](docs/testing.md#6-记忆价值实验) |
+| 行动契约回归 | 8 个 allow、redirect、confirm、deny 及无关工具场景 | 判定准确率 1.0000，四类决策均有覆盖 | `data/benchmarks/action_contract.jsonl` |
 | openKylin 10k 负载 | 10,000 条记忆、150 次查询 | P95 10.105 ms，P99 75.255 ms，RSS 低于 256 MB 目标 | [性能证据](docs/evidence/performance_latest/) |
 | 检索 v2 三轮 | openKylin、1,000 条、120 次查询、6 worker | 三轮 Recall@5 均为 1.0000；质量路径和并发路径 P99 均低于 500 ms | [三轮门禁摘要](docs/evidence/openkylin/retrieval_v2.txt) |
 | 持续集成与发布门禁 | Python 3.10、3.11、3.12 | 编译、静态检查、完整测试、隔离安装、文档链接、安全扫描、Web 烟测、评测与提交包复验全部通过 | [CI 配置](.github/workflows/ci.yml)与[证据索引](docs/evidence/README.md) |
@@ -457,6 +460,7 @@ python -m ruff check memguard tests scripts
 python -m pytest -q
 python scripts/check_docs_links.py
 python scripts/check_metric_consistency.py
+python -m memguard.eval.action_contract --input data/benchmarks/action_contract.jsonl
 python scripts/web_dashboard_smoke.py
 python scripts/smoke_python_distribution.py
 python scripts/package_submission.py

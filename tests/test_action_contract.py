@@ -1,5 +1,6 @@
 from memguard.integrations.events import AgentInteractionEvent
 from memguard.api.server import handle_request
+from memguard.integrations.openhands_runner import OpenHandsMemoryRunner
 from memguard.service import MemGuardService
 
 
@@ -115,3 +116,36 @@ def test_action_preflight_api_returns_same_contract(tmp_path):
     assert response["ok"] is True
     assert response["result"]["decision"] == "redirect"
     assert response["result"]["context_receipt"]["fingerprint"]
+
+
+def test_openhands_hook_enforces_action_contract_before_tool_execution(tmp_path):
+    import json
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    service = _service(tmp_path)
+    runner = OpenHandsMemoryRunner(
+        service,
+        session_id="session-a",
+        workspace=tmp_path,
+        state_dir=tmp_path / "state",
+        project_root="/work/demo",
+        task_type="maintenance",
+    )
+    bundle = runner.prepare_context("安装依赖")
+    hook = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
+    completed = subprocess.run(
+        [sys.executable, str(hook), "--context-file", bundle["context_file"], "--guard-tool"],
+        input=json.dumps(
+            {"tool_name": "terminal", "tool_input": {"command": "sudo apt install ripgrep"}},
+            ensure_ascii=False,
+        ),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 2
+    payload = json.loads(completed.stdout)
+    assert payload["action_decision"] == "confirm"
+    assert payload["policy_category"] == "high_risk_confirmation"

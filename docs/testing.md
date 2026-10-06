@@ -107,6 +107,18 @@ openKylin 10k 负载使用 10,000 条记忆和 150 次查询。精选结果为�
 
 专项 benchmark 验证事件归一化、偏好提取、检索、作用域遗忘和指标计算。由于部分场景是合成数据，结果不能单独证明所有自然语言表达都具备同样泛化能力。
 
+### 5.1 记忆到行动的执行前评测
+
+`data/benchmarks/action_contract.jsonl` 单独评估记忆对工具行动的影响，避免把“检索到了偏好”和“Agent 真的按偏好行动”混成一个指标。样例覆盖正常允许、工具偏好改道、高风险确认、破坏性命令拒绝、测试入口改道和无关工具放行六类路径。评测只调用 provider-neutral 行动契约，不执行命令；每条结果同时输出期望决策、实际决策、策略类别和原因。
+
+```bash
+python -m memguard.eval.action_contract \
+  --input data/benchmarks/action_contract.jsonl \
+  --output output/action_contract_report.json
+```
+
+当前固定协议包含 8 条用例，四类决策均有覆盖，报告中的准确率为 1.0000。该结果证明的是行动契约对固定安全边界和偏好场景的确定性一致性；真实 Agent 是否采纳建议，还需结合 OpenHands Hook 的工具事件和任务完成结果进行验证。
+
 ## 6. 记忆价值实验
 
 记忆价值实验分为两种口径。

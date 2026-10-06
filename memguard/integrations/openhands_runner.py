@@ -180,6 +180,9 @@ class OpenHandsMemoryRunner:
                 ["terminal", "finish"] if self.tool_profile == "terminal" else []
             ),
             "stages": stages,
+            "context_receipt": dict(
+                stages.get("tool_selection", {}).get("context_receipt") or {}
+            ),
             "memory_snapshot": snapshot,
             "additional_context": format_agent_context(trace_id, stages, task=clean_task),
         }
@@ -407,6 +410,12 @@ class OpenHandsMemoryRunner:
             and str(dict(event.get("tool_args") or {}).get("decision") or "").lower()
             == "deny"
         )
+        action_preflight_decisions = Counter(
+            str(dict(event.get("tool_args") or {}).get("action_decision") or "")
+            for event in self._live_events
+            if str(event.get("event_type") or "") == "policy_decision"
+            and dict(event.get("tool_args") or {}).get("action_decision")
+        )
         context_summary = {
             "trace_id": context_bundle["trace_id"],
             "stage_budgets": {
@@ -514,6 +523,11 @@ class OpenHandsMemoryRunner:
                 "successful_terminal_commands": len(successful_commands),
                 "failed_terminal_commands": failed_terminal_commands,
                 "blocked_tool_attempts": blocked_tool_attempts,
+                "action_preflight_decisions": dict(action_preflight_decisions),
+                "action_preflight_blocked": sum(
+                    count for decision, count in action_preflight_decisions.items()
+                    if decision in {"confirm", "deny"}
+                ),
                 "procedural_memories": len(self._procedural_memories),
                 "procedural_memory_ids": list(self._procedural_memories),
                 "task_errors": task_errors,

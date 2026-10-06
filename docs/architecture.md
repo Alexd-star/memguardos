@@ -69,7 +69,7 @@ flowchart LR
 | 遗忘规划器 | 自然语言候选选择 | `memguard/forgetting/planner.py` |
 | OS Guard | namespace、cgroup、journald、auditd、OS 事件 | `memguard/config.py`、`memguard/os_guard` |
 | 评测模块 | 指标、延迟负载、报告 | `memguard/eval/run_eval.py` |
-| Agent 适配层 | 能力注册、通用 JSON/JSONL 事件映射、OpenHands 事件规范化、上下文注入、习惯聚合与真实 runner | `memguard/integrations/adapter_registry.py`、`memguard/integrations/` |
+| Agent 适配层 | 能力注册、通用 JSON/JSONL 事件映射、OpenHands 事件规范化、上下文注入、执行前行动契约、习惯聚合与真实 runner | `memguard/integrations/adapter_registry.py`、`memguard/integrations/` |
 | Agent bridge | systemd 受限队列任务执行 | `scripts/memguard_agent_bridge.py`、`memguard-agent@.service` |
 
 ## 4. 记忆生命周期
@@ -84,6 +84,7 @@ flowchart LR
 8. **遗忘**：写入 tombstone、清理索引、compact、验证明文无泄漏。
 9. **审计**：关键事件进入哈希链审计日志，并可镜像到 journald。
 10. **跨会话复用**：新会话分别在任务规划、工具选择和结果生成阶段读取相关偏好与知识。
+11. **执行前行动核验**：工具调用提交给 Agent runtime 前，依据当前记忆版本和作用域生成行动契约，记录允许、改用、确认或拒绝的结果。
 
 对外的生命周期视图将一条记忆组织为四部分：记忆原子描述当前内容、类型、范围和版本；情节视图按 Agent、会话、项目与任务归集形成过程；支持证据标明来源事件及原文跨度；操作记录连接写入、更新、使用与遗忘的审计信息。四部分来自现有权威记录和证据关系，统一用于 CLI、API 与 Web 详情展示。查看时可通过 `memctl lifecycle <记忆编号>` 追溯具体记录，通过 `memctl lifecycle --overview` 查看当前记忆空间的覆盖情况。
 

@@ -477,6 +477,35 @@ def main() -> int:
         )
     tool_input = hook_input.get("tool_input") or {}
     preferences = selected_preferences(payload)
+    # Keep the provider-neutral action contract in the real pre-tool path.
+    # The import is local because action_contract reuses this module's shell
+    # parsing helpers; loading it here avoids an import cycle during startup.
+    from memguard.integrations.action_contract import evaluate_action
+
+    action_memories = []
+    for stage in ("planning", "tool_selection", "response_generation"):
+        action_memories.extend(
+            list(dict(payload.get("stages") or {}).get(stage, {}).get("memories") or [])
+        )
+    action_result = evaluate_action(
+        tool_name=tool_name,
+        tool_input=tool_input,
+        memories=action_memories,
+    )
+    if action_result.get("decision") in {"deny", "confirm"}:
+        return deny(
+            str(action_result.get("reason") or "MemGuardOS requires an action preflight decision."),
+            str(action_result.get("policy_category") or "action_preflight"),
+            action_decision=action_result.get("decision"),
+            evidence=action_result.get("evidence", []),
+            context_fingerprint=(dict(payload.get("context_receipt") or {}).get("fingerprint")
+                                 or dict(payload.get("memory_snapshot") or {}).get("fingerprint", "")),
+            **{
+                key: value
+                for key, value in action_result.items()
+                if key in {"blocked_marker", "confirmation_required", "preference_topic", "expected_value"}
+            },
+        )
     finish_violation = (
         finish_high_risk_violation_marker(tool_input, preferences)
         if tool_name == "finish"

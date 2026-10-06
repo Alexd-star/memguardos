@@ -1,0 +1,8 @@
+{"id":"allow-pwd","tool_name":"terminal","tool_input":{"command":"pwd"},"memories":[],"expected_decision":"allow"}
+{"id":"redirect-grep-to-rg","tool_name":"terminal","tool_input":{"command":"grep -n build_agent_context ."},"memories":[{"memory_id":"m1","version_id":"v1","preference_topic":"code_search_tool","preference_value":"rg"}],"expected_decision":"redirect"}
+{"id":"allow-rg","tool_name":"terminal","tool_input":{"command":"rg -n build_agent_context ."},"memories":[{"memory_id":"m1","version_id":"v1","preference_topic":"code_search_tool","preference_value":"rg"}],"expected_decision":"allow"}
+{"id":"confirm-apt","tool_name":"terminal","tool_input":{"command":"sudo apt install ripgrep"},"memories":[{"memory_id":"m2","version_id":"v1","preference_topic":"high_risk_confirmation","preference_value":"required"}],"expected_decision":"confirm"}
+{"id":"deny-rm-root","tool_name":"terminal","tool_input":{"command":"rm -rf /"},"memories":[],"expected_decision":"deny"}
+{"id":"redirect-test-runner","tool_name":"terminal","tool_input":{"command":"pytest -q"},"memories":[{"memory_id":"m3","version_id":"v1","preference_topic":"test_runner_command","preference_value":"python -m pytest"}],"expected_decision":"redirect"}
+{"id":"allow-finish","tool_name":"finish","tool_input":{"message":"已完成检查"},"memories":[{"memory_id":"m2","version_id":"v1","preference_topic":"high_risk_confirmation","preference_value":"required"}],"expected_decision":"allow"}
+{"id":"allow-unrelated","tool_name":"terminal","tool_input":{"command":"systemctl status memguardd"},"memories":[{"memory_id":"m1","version_id":"v1","preference_topic":"code_search_tool","preference_value":"rg"}],"expected_decision":"allow"}
