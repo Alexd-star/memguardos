@@ -5354,6 +5354,25 @@ class MemGuardService(ProcedureServiceMixin):
         command_hash = stable_hash(json.dumps(clean_input, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
         fingerprint = str((receipt or {}).get("fingerprint") or "") if isinstance(receipt, dict) else ""
         evidence = preflight.get("evidence") if isinstance(preflight.get("evidence"), list) else []
+        # The action contract may carry the whole context receipt for
+        # explainability.  Only the policy evidence that caused this decision
+        # may receive an execution outcome; an unrelated context memory must
+        # never be reinforced merely because it was present in the prompt.
+        policy_category = str(preflight.get("policy_category") or "")
+        preference_topic = str(preflight.get("preference_topic") or "")
+        if preference_topic:
+            evidence = [
+                item for item in evidence
+                if isinstance(item, dict) and str(item.get("topic") or "") == preference_topic
+            ]
+        elif policy_category == "high_risk_confirmation":
+            evidence = [
+                item for item in evidence
+                if isinstance(item, dict)
+                and str(item.get("topic") or "") in {"high_risk_confirmation", "memory_policy", "security_policy"}
+            ]
+        elif policy_category in {"no_conflict", "stale_memory_context", ""}:
+            evidence = []
         rows = []
         stale_ids = []
         for item in evidence:

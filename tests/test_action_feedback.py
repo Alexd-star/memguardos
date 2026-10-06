@@ -118,6 +118,19 @@ def test_stale_context_and_forget_remove_action_feedback(tmp_path):
     assert service.meta.action_outcome_stats(memory_id)["total_count"] == 0
 
 
+def test_allow_with_unrelated_context_does_not_reinforce_every_memory(tmp_path):
+    service = _service(tmp_path)
+    preflight = service.preflight_agent_action(
+        "读取当前目录", tool_name="terminal", tool_input={"command": "pwd"},
+        agent_name="generic-agent", session_id="session-a", project_root=str(tmp_path),
+    )
+    assert preflight["decision"] == "allow"
+    result = service.record_agent_action_outcome(preflight, tool_input={"command": "pwd"}, exit_code=0)
+    assert result["ok"] is True
+    assert result["stored"] == 0
+    assert result["evidence_count"] == 0
+
+
 def test_action_feedback_api_contract(tmp_path):
     service = _service(tmp_path)
     preflight = service.preflight_agent_action(
