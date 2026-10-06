@@ -55,6 +55,18 @@ def test_dashboard_exposes_value_aware_memory_budget_maintenance():
     assert "/api/apply-budget" in page
 
 
+def test_dashboard_exposes_agent_action_impact_quality_gate():
+    page = dashboard_module._dashboard_html()
+
+    agent = re.search(r'<section id="agent"[^>]*>(?P<section>[\s\S]*?)</section>', page)
+    assert agent is not None
+    section = agent.group("section")
+    assert "记忆驱动动作质量" in section
+    assert "loadAgentActionImpact" in section
+    assert "/api/agent-action-impact?" in page
+    assert "Wilson" not in section  # implementation detail stays in the JSON receipt
+
+
 def test_dashboard_separates_daily_actions_and_humanizes_agent_records():
     page = dashboard_module._dashboard_html()
 

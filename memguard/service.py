@@ -49,6 +49,11 @@ from memguard.integrations.adherence import (
 )
 from memguard.integrations.action_contract import evaluate_action
 from memguard.integrations.action_feedback import classify_action_outcome
+from memguard.integrations.action_impact import (
+    attach_observational_baseline,
+    cohort_key,
+    summarize_action_outcomes,
+)
 from memguard.integrations.context_injector import (
     stage_allows_memory,
     stage_allows_preference,
@@ -5719,6 +5724,140 @@ class MemGuardService(ProcedureServiceMixin):
             "reason": classified["reason"],
             "privacy": "只保存命令摘要哈希，不保存命令正文或工具输出",
         }
+
+    def agent_action_impact_report(
+        self,
+        *,
+        memory_id: str = "",
+        agent_name: str = "",
+        project_root: str = "",
+        task_type: str = "",
+        limit: int = 5000,
+    ) -> Dict[str, object]:
+        """Build a conservative quality report for memory-conditioned actions.
+
+        This closes the loop from ``preflight_agent_action`` to a reviewable
+        memory-quality decision.  It is deliberately a report, not an
+        automatic promotion or demotion command: same-cohort lift is
+        observational and must not be presented as a causal experiment.
+        """
+
+        clean_memory_id = str(memory_id or "").strip()
+        clean_agent = str(agent_name or "").strip()
+        clean_project = str(project_root or "").strip()
+        clean_task_type = str(task_type or "").strip()
+        bounded_limit = max(1, min(int(limit), 5000))
+        all_outcomes = self.meta.list_agent_action_outcomes(clean_memory_id, bounded_limit)
+        outcomes = [
+            item for item in all_outcomes
+            if (not clean_agent or str(item.get("agent_name") or "") == clean_agent)
+            and (not clean_project or str(item.get("project_root") or "") == clean_project)
+            and (not clean_task_type or str(item.get("task_type") or "") == clean_task_type)
+        ]
+        if clean_memory_id:
+            cohort_outcomes = list(outcomes)
+        else:
+            cohort_outcomes = outcomes
+        memory_rows = {
+            str(row.get("memory_id") or ""): row
+            for row in self.meta.list_memories(include_deleted=True, governance_state=None)
+        }
+        grouped: Dict[str, List[Dict[str, object]]] = {}
+        for item in outcomes:
+            item_memory_id = str(item.get("memory_id") or "").strip()
+            if item_memory_id:
+                grouped.setdefault(item_memory_id, []).append(item)
+        # A report for one requested memory should still show an empty
+        # observation state rather than silently changing the query meaning.
+        if clean_memory_id and clean_memory_id not in grouped:
+            grouped[clean_memory_id] = []
+        cohort_groups: Dict[tuple[str, str, str], List[Dict[str, object]]] = {}
+        for item in cohort_outcomes:
+            cohort_groups.setdefault(cohort_key(item), []).append(item)
+        records: List[Dict[str, object]] = []
+        for item_memory_id, items in sorted(grouped.items()):
+            metrics = summarize_action_outcomes(items)
+            first = items[0] if items else {}
+            key = cohort_key(first) if items else (clean_agent, clean_project, clean_task_type)
+            attach_observational_baseline(
+                metrics,
+                memory_outcomes=items,
+                cohort_outcomes=cohort_groups.get(key, []),
+            )
+            row = memory_rows.get(item_memory_id, {})
+            records.append({
+                "memory_id": item_memory_id,
+                "current_version_id": str(row.get("version_id") or ""),
+                "current_tier": str(row.get("tier") or "unknown"),
+                "current_governance_state": str(row.get("governance_state") or "unknown"),
+                "memory_type": str(row.get("type") or "unknown"),
+                "memory_subtype": str(row.get("subtype") or ""),
+                "scope": {
+                    "agent_name": str(first.get("agent_name") or clean_agent),
+                    "project_root": str(first.get("project_root") or clean_project),
+                    "task_type": str(first.get("task_type") or clean_task_type),
+                },
+                "last_observed_at": max(
+                    (str(item.get("observed_at") or "") for item in items),
+                    default="",
+                ),
+                "metrics": metrics,
+            })
+        total = summarize_action_outcomes(outcomes)
+        baseline_groups = {
+            ":".join(key): summarize_action_outcomes(values)
+            for key, values in sorted(cohort_groups.items())
+        }
+        report = {
+            "schema": "memguardos-agent-action-impact-report-v1",
+            "namespace": self.namespace,
+            "scope": {
+                "memory_id": clean_memory_id,
+                "agent_name": clean_agent,
+                "project_root": clean_project,
+                "task_type": clean_task_type,
+            },
+            "method": {
+                "observed_outcomes": "success, failure, deviation, blocked and unknown",
+                "executed_denominator": "success + failure + deviation; blocked/unknown are not executions",
+                "confidence": "Wilson 95% lower bound with a small-sample evidence factor",
+                "baseline": "same agent/project/task cohort, observational only",
+                "decision": "report-only; review is required before any lifecycle change",
+            },
+            "summary": {
+                "memory_count": len(records),
+                "outcome_count": len(outcomes),
+                "executed_count": total["executed_count"],
+                "success_count": total["success_count"],
+                "failure_count": total["failure_count"],
+                "deviation_count": total["deviation_count"],
+                "blocked_count": total["blocked_count"],
+                "unknown_count": total["unknown_count"],
+                "success_rate": total["success_rate"],
+                "wilson_success_lower_bound": total["wilson_success_lower_bound"],
+                "quality_gate": total["quality_gate"],
+            },
+            "records": records,
+            "cohort_baselines": baseline_groups,
+            "privacy": "不包含命令正文、工具输出或模型提示词，仅保存结构化反馈和作用域元数据",
+            "next_action": (
+                "对 review 记录进行人工复核，再决定是否降级或更新记忆；"
+                "对 observe 记录继续收集真实 Agent 结果。"
+            ),
+        }
+        self._audit(
+            "agent_action_impact_report",
+            clean_memory_id or None,
+            {
+                "memory_count": len(records),
+                "outcome_count": len(outcomes),
+                "executed_count": total["executed_count"],
+                "quality_gate": total["quality_gate"],
+                "agent_name": clean_agent,
+                "task_type": clean_task_type,
+            },
+        )
+        return report
 
     def _fit_context_line(self, line: str, remaining_chars: int, remaining_tokens: int) -> str:
         if remaining_chars <= 0 or remaining_tokens <= 0:

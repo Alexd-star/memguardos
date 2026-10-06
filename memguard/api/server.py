@@ -503,6 +503,17 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                 "outcomes": service.meta.list_agent_action_outcomes(memory_id, _int_param(request, "limit", 50, minimum=1, maximum=500)),
             }),
         }
+    if command == "action_impact_report":
+        return {
+            "ok": True,
+            "result": _jsonable(service.agent_action_impact_report(
+                memory_id=_string_param(request, "memory_id", "", max_chars=128),
+                agent_name=_string_param(request, "agent_name", "", max_chars=128),
+                project_root=_string_param(request, "project_root", "", max_chars=2048),
+                task_type=_string_param(request, "task_type", "", max_chars=128),
+                limit=_int_param(request, "limit", 5000, minimum=1, maximum=5000),
+            )),
+        }
     if command == "preference_evidence":
         memory_id = _string_param(request, "memory_id", "", max_chars=128)
         result = _jsonable(service.preference_evidence(memory_id))

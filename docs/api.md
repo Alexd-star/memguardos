@@ -27,6 +27,7 @@ CLI 是最常用入口，适合人工演示、脚本复验和调试。
 | `memctl agent adapters` | 查看 Agent 适配能力 | 无 | 已注册适配器、事件类型、上下文阶段和检查点能力 |
 | `memctl agent ingest-adapted-session` | 接入通用 Agent JSONL 会话 | JSONL 文件、适配器与会话范围 | 规范化事件、提取结果、去重和审计摘要 |
 | `memctl agent preflight-action` | 在 Agent 工具执行前检查记忆约束 | 任务、工具名称、工具参数和作用域 | `allow`、`redirect`、`confirm` 或 `deny`，以及版本化记忆证据 |
+| `memctl agent action-impact` | 汇总真实工具结果并评估记忆驱动动作质量 | 可选记忆、Agent、项目和任务类型 | 成功下界、遵循率、失败/偏离风险、同类观察性差值与质量门控 |
 | `memctl consolidation-plan` | 生成会话记忆巩固计划 | 会话编号、项目范围、数量上限 | 晋级、保留或清理复核候选，以及版本快照 |
 | `memctl consolidate` | 按审核计划晋级长期记忆 | 计划 JSON、可选记忆编号、确认标记 | 实际晋级、失败项和仍保留的会话记忆 |
 | `memctl decay-plan` | 生成长期记忆健康度与衰减计划 | 观察时间、年龄门槛、健康度门槛 | 强化保留、保护复核和可逆降级候选 |
@@ -158,6 +159,16 @@ CLI 对应入口为 `memctl agent record-outcome --preflight-file preflight.json
 ```
 
 CLI 对应入口为 `memctl budget-plan --target-bytes 1048576` 和 `memctl budget --plan-file budget-plan.json --target-session-id budget-review --yes`。预算计划与衰减、巩固共用版本链和审计链，用户仍可通过巩固计划将仍有价值的 session 记忆重新提升。
+
+### 动作质量报告
+
+`action_impact_report` 读取行动反馈账本，按记忆和作用域统计 `success`、`failure`、`deviation`、`blocked` 与 `unknown`。执行次数只包含前三类已实际发生的工具结果；拦截和未知状态保留在总数中，但不会被误计为成功或失败。报告使用 Wilson 95% 成功下界抑制小样本偶然性，并把同一 Agent、项目和任务类型下的其他行动作为观察性基线。
+
+```json
+{"command":"action_impact_report","agent_name":"openhands","task_type":"code_search","limit":5000}
+```
+
+返回 `memguardos-agent-action-impact-report-v1`。每条记录的 `recommendation` 可能是 `retain_reinforced`、`retain_observe`、`collect_more_evidence`、`review_or_demote` 或 `observe`。该命令只生成报告，不自动改变记忆层级；需要调整生命周期时，应将报告与巩固、衰减或预算计划一起审核。CLI 等价命令为 `memctl agent action-impact --agent-name openhands --task-type code_search`。
 
 ### Agent 适配器与通用事件
 

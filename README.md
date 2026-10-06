@@ -453,6 +453,7 @@ flowchart TB
 | 真实 OpenHands | 基础 12 次、扩展 8 次、留出 8 次 | 28 次运行均保留上下文、工具事件与结果记录 | [真实 Agent 说明](docs/testing.md#6-记忆价值实验) |
 | 行动契约回归 | 8 个 allow、redirect、confirm、deny 及无关工具场景 | 判定准确率 1.0000，四类决策均有覆盖 | `data/benchmarks/action_contract.jsonl` |
 | 行动结果反馈闭环 | 执行成功、偏好偏离、重复回写、旧收据和遗忘联动 | 成功与偏离分别计数，重试幂等，旧版本拒绝回写，遗忘后行动证据同步清理 | [行动反馈证据](docs/evidence/openkylin/action_feedback_evidence_20261007.json) |
+| 记忆驱动动作质量 | 将工具执行结果按记忆、Agent、项目和任务类型聚合 | Wilson 成功下界、小样本置信度、失败/偏离风险与同类观察性差值共同形成保留、观察或复核门控 | [动作质量证据](docs/evidence/openkylin/action_impact_evidence_20261007.json) |
 | 会话巩固、衰减与上下文编排回归 | openKylin 隔离会话中的偏好、知识、长期记忆和 Agent 上下文 | 证据分类、确认晋级、健康度衰减、可逆降级、阶段表示、预算节省和旧计划 CAS 拒绝均通过 | [巩固证据](docs/evidence/openkylin/consolidation_evidence_20261007.json)、[衰减证据](docs/evidence/openkylin/decay_evidence_20261007.json)、[上下文证据](docs/evidence/openkylin/context_compaction_evidence_20261007.json) |
 | 价值感知记忆预算 | openKylin 隔离空间中的价值、风险、字节成本和可逆降级计划 | 保护显式偏好，按单位存储成本排序普通记忆，确认后降级到 session 层并保留版本链 | [预算治理证据](docs/evidence/openkylin/memory_budget_evidence_20261007.json) |
 | openKylin 10k 负载 | 10,000 条记忆、150 次查询 | P95 10.105 ms，P99 75.255 ms，RSS 低于 256 MB 目标 | [性能证据](docs/evidence/performance_latest/) |

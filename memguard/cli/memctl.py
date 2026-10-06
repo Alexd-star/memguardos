@@ -428,6 +428,15 @@ def build_parser() -> argparse.ArgumentParser:
     agent_stats = agent_sub.add_parser("action-outcomes", help="Show memory-linked Agent action outcome evidence")
     agent_stats.add_argument("--memory-id", default="")
     agent_stats.add_argument("--limit", type=int, default=50)
+    agent_impact = agent_sub.add_parser(
+        "action-impact",
+        help="Report memory-conditioned action quality, confidence and review recommendations",
+    )
+    agent_impact.add_argument("--memory-id", default="")
+    agent_impact.add_argument("--agent-name", default="")
+    agent_impact.add_argument("--project-root", default="")
+    agent_impact.add_argument("--task-type", default="")
+    agent_impact.add_argument("--limit", type=int, default=5000)
     agent_sub.add_parser("status", help="Show Agent event and preference aggregation status")
     agent_evidence = agent_sub.add_parser("evidence", help="Show interaction evidence for one memory")
     agent_evidence.add_argument("memory_id")
@@ -639,6 +648,16 @@ def main(argv: list[str] | None = None) -> int:
                     "stats": service.meta.action_outcome_stats(args.memory_id),
                     "outcomes": service.meta.list_agent_action_outcomes(args.memory_id, args.limit),
                 }
+                print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+                return 0
+            if args.agent_command == "action-impact":
+                result = service.agent_action_impact_report(
+                    memory_id=args.memory_id,
+                    agent_name=args.agent_name,
+                    project_root=args.project_root,
+                    task_type=args.task_type,
+                    limit=args.limit,
+                )
                 print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
                 return 0
             if args.agent_command == "status":

@@ -382,6 +382,17 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                 service.close()
             self._send_json({"ok": True, "result": result})
             return
+        if parsed.path == "/api/agent-action-impact":
+            params = parse_qs(parsed.query, keep_blank_values=True)
+            self._send_api({
+                "command": "action_impact_report",
+                "memory_id": params.get("memory_id", [""])[0],
+                "agent_name": params.get("agent_name", [""])[0],
+                "project_root": params.get("project_root", [""])[0],
+                "task_type": params.get("task_type", [""])[0],
+                "limit": _safe_int(params.get("limit", ["5000"])[0], 5000),
+            })
+            return
         if parsed.path == "/api/agent-evidence":
             params = parse_qs(parsed.query)
             self._send_api(
@@ -1680,7 +1691,7 @@ def _dashboard_html() -> str:
             <div><label for="agentMode">运行方式</label><select id="agentMode"><option value="replay">本地回放（可复现）</option><option value="dry-run">只读预览</option><option value="openhands" disabled>真实 OpenHands（请从 Agent 接入入口运行）</option></select></div>
             <div><label for="agentName">Agent</label><select id="agentName"><option value="openhands">OpenHands</option></select></div>
           </div>
-          <div class="actions"><button class="primary" data-min-role="operator" onclick="runAgentTask(event)">运行任务</button><button class="secondary" onclick="loadAgentOverview(event)">查看已有记录</button><button class="secondary" onclick="exportDiagnostics(event)">导出系统报告</button></div>
+          <div class="actions"><button class="primary" data-min-role="operator" onclick="runAgentTask(event)">运行任务</button><button class="secondary" onclick="loadAgentOverview(event)">查看已有记录</button><button class="secondary" onclick="loadAgentActionImpact(event)">动作质量</button><button class="secondary" onclick="exportDiagnostics(event)">导出系统报告</button></div>
           <p class="muted">本地回放用于检查完整记忆流程；只读预览不会写入新内容。真实 OpenHands 由已配置的 Agent 接入入口运行，本页不会把回放结果标成真实模型结果。</p>
         </div>
         <div id="agentRunFeedback" class="list" style="margin-top:14px"></div>
@@ -1691,6 +1702,7 @@ def _dashboard_html() -> str:
         </div>
         <div class="panel" style="margin-top:14px"><div class="item-title">三阶段上下文对比</div><div id="agentContexts" class="stage-columns" style="margin-top:12px"></div></div>
         <div class="panel" style="margin-top:14px"><div class="item-title">偏好生效证明</div><p class="muted">只有观察到实际工具命令或回答内容时才会判定“通过”；没有真实行为时显示“暂无证据”，不会把上下文注入误当成 Agent 已遵循。</p><div id="preferenceProofs" class="list" style="margin-top:12px"></div></div>
+        <div class="panel" style="margin-top:14px"><div class="health"><div><div class="item-title">记忆驱动动作质量</div><div class="muted">依据真实 Agent 工具结果评估成功下界、失败与偏离风险；同类基线仅作观察性比较，不替代对照实验。</div></div><button class="secondary" onclick="loadAgentActionImpact(event)">刷新</button></div><div id="agentActionImpact" class="list" style="margin-top:12px"><div class="muted">点击“动作质量”查看记忆是否真正改善了工具行为。</div></div></div>
         <div class="panel" style="margin-top:14px">
           <div class="item-title">按交互主题精准遗忘</div>
           <div class="grid two">
@@ -2941,6 +2953,50 @@ def _dashboard_html() -> str:
         const payload = await getJson(url);
         renderAgentOverview(payload);
         setRawOutput('agentOut', payload);
+      });
+    }
+    function actionImpactRecommendation(value) {
+      return {
+        retain_reinforced:'保留并强化',
+        retain_observe:'保留并继续观察',
+        collect_more_evidence:'继续收集证据',
+        review_or_demote:'需要人工复核',
+        observe:'尚无足够行为证据'
+      }[String(value || '')] || String(value || '待观察');
+    }
+    function renderAgentActionImpact(payload) {
+      const box = document.getElementById('agentActionImpact');
+      if (!box) return;
+      const result = payload.result || {};
+      if (!payload.ok || result.schema !== 'memguardos-agent-action-impact-report-v1') {
+        box.innerHTML = '<div class="empty-state"><strong>动作质量报告暂时不可用</strong><span>' + esc(payload.error || '请先产生一条真实 Agent 工具结果。') + '</span></div>';
+        return;
+      }
+      const summary = result.summary || {};
+      const gate = String(summary.quality_gate || 'observe');
+      const gateClass = gate === 'pass' ? 'ok' : gate === 'review' ? 'bad' : 'warn';
+      const head = '<div class="compare-verdict ' + (gate === 'pass' ? '' : gate === 'review' ? 'warn' : 'info') + '"><div class="compare-verdict-mark">' + (gate === 'pass' ? '✓' : gate === 'review' ? '!' : '·') + '</div><div><strong>' + esc(gate === 'pass' ? '当前记忆已观察到稳定的动作收益' : gate === 'review' ? '存在失败或偏离信号，需要人工复核' : '当前证据不足以给出稳定结论') + '</strong><span>执行 ' + esc(summary.executed_count || 0) + ' 次 · 成功率 ' + esc(summary.success_rate || 0) + ' · 成功下界 ' + esc(summary.wilson_success_lower_bound || 0) + '</span></div></div>';
+      const rows = (result.records || []).slice(0, 12).map(item => {
+        const metrics = item.metrics || {};
+        const recommendation = actionImpactRecommendation(metrics.recommendation);
+        const cls = metrics.quality_gate === 'pass' ? 'ok' : metrics.quality_gate === 'review' ? 'bad' : 'warn';
+        const lift = metrics.observed_success_lift == null ? '暂无同类基线' : '同类差值 ' + metrics.observed_success_lift;
+        return '<div class="item"><div class="health"><div class="item-title">' + esc(shortMemoryId(item.memory_id)) + ' · ' + esc(item.memory_subtype || item.memory_type) + '</div><span class="badge ' + cls + '">' + esc(recommendation) + '</span></div><div class="muted">成功 ' + esc(metrics.success_count || 0) + ' · 失败 ' + esc(metrics.failure_count || 0) + ' · 偏离 ' + esc(metrics.deviation_count || 0) + ' · 遵循率 ' + esc(metrics.adherence_rate || 0) + ' · ' + esc(lift) + '</div><div class="muted">当前层级：' + esc(item.current_tier) + ' · 作用域：' + esc((item.scope || {}).task_type || '未分类') + '</div></div>';
+      }).join('');
+      box.innerHTML = head + '<div class="list-row"><div><div class="item-title">质量门控</div><div class="muted">' + esc(actionImpactRecommendation(gate === 'pass' ? 'retain_reinforced' : gate === 'review' ? 'review_or_demote' : 'observe')) + '；报告只提供复核依据，不自动改变记忆生命周期。</div></div><span class="badge ' + gateClass + '">' + esc(gate) + '</span></div>' + (rows || '<div class="empty-state"><strong>暂无动作反馈</strong><span>先通过 Agent 接入完成一次预检、工具执行和结果回传。</span></div>');
+    }
+    async function loadAgentActionImpact(event) {
+      return withBusy(event, async () => {
+        const params = new URLSearchParams({
+          agent_name: document.getElementById('agentName').value || '',
+          project_root: '',
+          task_type: '',
+          limit: '5000'
+        });
+        const payload = await getJson('/api/agent-action-impact?' + params.toString());
+        renderAgentActionImpact(payload);
+        setRawOutput('agentOut', payload);
+        return operationFeedback(payload.ok ? '动作质量报告已更新。' : '动作质量报告暂时没有生成。', payload.ok ? 'ok' : 'warn');
       });
     }
     async function loadPreferenceEvidence(event, memoryId) {

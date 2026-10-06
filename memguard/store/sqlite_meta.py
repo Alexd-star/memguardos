@@ -2899,7 +2899,7 @@ class SQLiteMetaStore(DependencyStoreMixin):
         if str(memory_id or "").strip():
             clause = "WHERE memory_id = ?"
             params.append(str(memory_id).strip())
-        params.append(max(1, min(int(limit), 500)))
+        params.append(max(1, min(int(limit), 5000)))
         return [dict(row) for row in self.conn.execute(
             "SELECT * FROM agent_action_outcome %s ORDER BY observed_at DESC LIMIT ?" % clause,
             params,

@@ -178,7 +178,19 @@ memctl agent action-outcomes --memory-id mem_example
 
 openKylin 采集脚本会在隔离存储中运行同一证据脚本，输出预检判定、成功遵循、偏离、重试去重、统计结果和旧收据拒绝结果。该测试证明的是记忆证据与行动结果之间的系统契约；它不把一次确定性工具调用等同于所有模型或所有 Agent 的长期泛化效果。
 
-### 5.6 价值感知记忆预算回归
+### 5.6 记忆驱动动作质量回归
+
+`tests/test_action_impact.py` 在同一 Agent、项目和任务类型下构造成功与失败的行动反馈，检查报告是否区分实际执行与拦截/未知状态，是否计算 Wilson 成功下界，是否给出同类观察性差值，以及小样本是否保持“继续观察”而不是直接判定稳定。报告不保存命令正文，也不会自行修改记忆层级。
+
+```bash
+python -m pytest -q tests/test_action_impact.py
+python scripts/collect_action_impact_evidence.py --output output/action_impact_evidence.json
+memctl agent action-impact --agent-name openhands --task-type code_search
+```
+
+openKylin 采集脚本使用同一 service、同一反馈表和同一门控逻辑生成 `action_impact_evidence.json`。证据中的正向差值是同类观察结果，成功下界用于抑制小样本偶然性；它可以证明质量报告链路已工作，不能替代严格的随机对照实验。
+
+### 5.7 价值感知记忆预算回归
 
 `tests/test_memory_budget.py` 验证长期存储预算的完整生命周期：候选同时输出价值、风险、估算字节数和单位字节价值；明确偏好保持在长期层；普通记忆按单位成本的净价值进入可逆降级计划；执行前必须确认；确认后追加 session 版本；计划所依赖的版本或正文大小发生变化时，旧计划返回 `stale_memory_budget_plan`。API 契约和独立证据脚本使用同一 service 实现，避免测试只验证展示层排序。
 
