@@ -181,13 +181,18 @@ def test_extraction_evaluator_scores_all_rows_and_real_conflict_update_logic(tmp
         service.close()
 
     assert metrics["extraction_cases_evaluated"] == 40
-    assert metrics["extraction_type_accuracy"] == 1.0
-    assert metrics["extraction_subtype_accuracy"] == 1.0
+    # Keep the historical gold labels unchanged: ten rows authorize preferences
+    # from raw tool text, which the production provenance boundary now refuses.
+    assert metrics["extraction_type_accuracy"] == 0.75
+    assert metrics["extraction_subtype_accuracy"] == 0.75
+    assert metrics["tool_result_to_preference_extraction_accuracy"] == 0.0
     assert metrics["extraction_topic_accuracy"] == 1.0
     assert metrics["conflict_cases_evaluated"] == 5
     assert metrics["conflict_resolution_accuracy"] == 1.0
     assert metrics["memory_update_accuracy"] == 1.0
-    assert failures == []
+    assert len(failures) == 10
+    assert all(item["failure_type"] == "extraction_schema_mismatch" for item in failures)
+    assert all(item["expected"]["type"] == "preference" and item["actual"]["type"] == "knowledge" for item in failures)
 
 
 def test_agent_evaluator_checks_every_row_hint_scope_and_selection(tmp_path):
