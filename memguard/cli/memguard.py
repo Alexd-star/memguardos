@@ -53,6 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
     context.add_argument("--limit", type=int, default=5, help="纳入上下文的记忆条数")
     context.add_argument("--token-budget", type=int, default=1200, help="上下文长度上限")
     context.add_argument("--stage", choices=["planning", "tool_selection", "response_generation"], default="tool_selection", help="预览实际 Agent 阶段；默认工具选择")
+    context.add_argument("--compaction", choices=["adaptive", "full"], default="adaptive", help="上下文表示策略；默认按阶段压缩")
     context.add_argument("--agent-name", default="openhands", help="应用偏好的 Agent 名称")
     context.add_argument("--task-type", default="", help="任务类型；用于限定任务偏好")
     learn = sub.add_parser("learn-procedure", help="从本地检查依据形成可复用流程")
@@ -119,7 +120,8 @@ def main(argv: list[str] | None = None) -> int:
             return _search(service, args.query, limit=args.limit, session_id=args.session_id)
         if args.command == "context":
             return _context(service, args.task, limit=args.limit, token_budget=args.token_budget, session_id=args.session_id,
-                            stage=args.stage, agent_name=args.agent_name, task_type=args.task_type, project_root=args.workspace)
+                            stage=args.stage, agent_name=args.agent_name, task_type=args.task_type, project_root=args.workspace,
+                            compaction=args.compaction)
         if args.command == "end-session":
             return _end_session(service, args.session_id, confirm=args.yes)
         if args.command == "preferences":
@@ -526,19 +528,25 @@ def _print_retrieval_timings(explanation: object) -> None:
 
 
 def _context_payload(service: MemGuardService, task: str, limit: int, token_budget: int, session_id: str,
-                     stage: str, agent_name: str, task_type: str, project_root: str) -> dict:
+                     stage: str, agent_name: str, task_type: str, project_root: str, compaction: str = "adaptive") -> dict:
     return service.build_agent_context(task=task, limit=max(1, limit), token_budget=max(64, token_budget),
         session_id=session_id, stage=stage, agent_name=agent_name, task_type=task_type,
-        project_root=str(Path(project_root).expanduser().resolve()) if project_root else "")
+        project_root=str(Path(project_root).expanduser().resolve()) if project_root else "", compaction=compaction)
 
 
 def _context(service: MemGuardService, task: str, limit: int = 5, token_budget: int = 1200, session_id: str = "",
-             stage: str = "tool_selection", agent_name: str = "openhands", task_type: str = "", project_root: str = "") -> int:
-    context = _context_payload(service, task, limit, token_budget, session_id, stage, agent_name, task_type, project_root)
+             stage: str = "tool_selection", agent_name: str = "openhands", task_type: str = "", project_root: str = "",
+             compaction: str = "adaptive") -> int:
+    context = _context_payload(service, task, limit, token_budget, session_id, stage, agent_name, task_type, project_root, compaction)
     _section("记忆注入")
     memories = context.get("memories", [])
     print("任务：%s" % task)
     print("阶段：%s；Agent：%s" % ({"planning": "任务规划", "tool_selection": "工具选择", "response_generation": "回答生成"}[stage], agent_name))
+    print("上下文策略：%s；表示分布：%s；预计节省：%s tokens" % (
+        context.get("compaction", compaction),
+        context.get("budget", {}).get("representation_counts", {}),
+        context.get("budget", {}).get("estimated_saved_tokens", 0),
+    ))
     print("可用记忆：%d 条" % len(memories))
     for index, memory in enumerate(memories[: max(1, limit)], 1):
         if memory.get("preference_topic"):
@@ -913,7 +921,7 @@ def _run_json(service: MemGuardService, args: argparse.Namespace) -> int:
         value = service.search(args.query, limit=max(1, args.limit), session_id=args.session_id)
     elif args.command == "context":
         value = _context_payload(service, args.task, args.limit, args.token_budget, args.session_id,
-                                 args.stage, args.agent_name, args.task_type, args.workspace)
+                                 args.stage, args.agent_name, args.task_type, args.workspace, args.compaction)
     elif args.command == "end-session":
         value = service.evict_session(args.session_id, confirm=args.yes)
     elif args.command == "preferences":

@@ -53,6 +53,11 @@ from memguard.integrations.context_injector import (
     stage_allows_preference,
     validate_agent_context_stage,
 )
+from memguard.integrations.context_compaction import (
+    choose_representation,
+    normalize_compaction_policy,
+    render_representation,
+)
 from memguard.integrations.habit_aggregator import PreferenceAggregate
 from memguard.integrations.interaction_extractor import (
     InteractionExtractionResult,
@@ -4851,8 +4856,10 @@ class MemGuardService(ProcedureServiceMixin):
         limit: int = 8,
         max_chars: int = 4000,
         token_budget: int = 800,
+        compaction: str = "adaptive",
     ) -> Dict[str, object]:
         clean_stage = validate_agent_context_stage(stage)
+        clean_compaction = normalize_compaction_policy(compaction)
         clean_task = str(task).strip()
         if not clean_task:
             raise ValueError("task is required")
@@ -4934,6 +4941,10 @@ class MemGuardService(ProcedureServiceMixin):
         context_lines = []
         used_chars = 0
         used_tokens = 0
+        representation_counts: Dict[str, int] = {}
+        representation_reasons: Dict[str, int] = {}
+        estimated_full_tokens = 0
+        estimated_saved_tokens = 0
         for candidate in candidates:
             if len(memories) >= limit:
                 filtered.append(
@@ -4946,21 +4957,11 @@ class MemGuardService(ProcedureServiceMixin):
                 )
                 continue
             memory_id = str(candidate.get("memory_id") or "")
-            summary = " ".join(str(candidate.get("summary") or "").split())
-            content = " ".join(str(candidate.get("content") or "").split())
-            line = (
-                "[%s] type=%s subtype=%s reason=%s\nsummary: %s\nevidence: %s"
-                % (
-                    memory_id,
-                    candidate.get("type", ""),
-                    candidate.get("subtype", ""),
-                    candidate.get("selection_reason", ""),
-                    summary[:300],
-                    content[:500],
-                )
-            )
             remaining_chars = max_chars - used_chars
             remaining_tokens = token_budget - used_tokens
+            sensitivity = self._row_sensitivity(candidate)
+            representation = "full"
+            representation_reason = "procedure_context_requires_verified_steps"
             if candidate.get("source_kind") == "verified_procedure":
                 line, reason = self.procedure_context_line(memory_id, project_root)
                 if not line or len(line) > remaining_chars or self.estimate_tokens(line) > remaining_tokens:
@@ -4968,7 +4969,32 @@ class MemGuardService(ProcedureServiceMixin):
                                      "subtype": "workflow", "reason": reason or "context_budget_exhausted"})
                     continue
             else:
-                line = self._fit_context_line(line, remaining_chars, remaining_tokens)
+                preferred, representation_reason = choose_representation(
+                    candidate,
+                    stage=clean_stage,
+                    policy=clean_compaction,
+                    remaining_tokens=remaining_tokens,
+                    sensitivity_level=str(sensitivity.get("level") or "none"),
+                )
+                representation_order = [preferred]
+                if clean_compaction == "adaptive":
+                    representation_order.extend(
+                        item for item in ("evidence", "summary") if item not in representation_order
+                    )
+                else:
+                    representation_order = ["full"]
+                line = ""
+                for candidate_representation in representation_order:
+                    raw_line = render_representation(
+                        candidate,
+                        representation=candidate_representation,
+                        selection_reason=str(candidate.get("selection_reason") or ""),
+                    )
+                    fitted = self._fit_context_line(raw_line, remaining_chars, remaining_tokens)
+                    if fitted:
+                        line = fitted
+                        representation = candidate_representation
+                        break
             if not line:
                 filtered.append(
                     {
@@ -4984,6 +5010,16 @@ class MemGuardService(ProcedureServiceMixin):
                 evidence = self.preference_evidence(memory_id)
                 source_event_ids = [str(item["event_id"]) for item in evidence.get("events", [])]
             line_tokens = self.estimate_tokens(line)
+            full_line = render_representation(
+                candidate,
+                representation="full",
+                selection_reason=str(candidate.get("selection_reason") or ""),
+            )
+            full_tokens = self.estimate_tokens(full_line)
+            estimated_full_tokens += full_tokens
+            estimated_saved_tokens += max(0, full_tokens - line_tokens)
+            representation_counts[representation] = representation_counts.get(representation, 0) + 1
+            representation_reasons[representation_reason] = representation_reasons.get(representation_reason, 0) + 1
             used_chars += len(line)
             used_tokens += line_tokens
             context_lines.append(line)
@@ -4999,6 +5035,10 @@ class MemGuardService(ProcedureServiceMixin):
                     "preference_value": candidate.get("preference_value", ""),
                     "preference_scope": candidate.get("preference_scope", ""),
                     "selection_reason": candidate.get("selection_reason"),
+                    "representation": representation,
+                    "representation_reason": representation_reason,
+                    "source_kind": candidate.get("source_kind", ""),
+                    "sensitivity_level": sensitivity.get("level"),
                     "source_event_ids": source_event_ids,
                     "estimated_tokens": line_tokens,
                 }
@@ -5018,6 +5058,12 @@ class MemGuardService(ProcedureServiceMixin):
             "task_digest": stable_hash(clean_task),
             "task_type": task_type,
             "memory_versions": selected_versions,
+            "representations": {
+                str(item["memory_id"]): str(item.get("representation") or "full")
+                for item in memories
+                if item.get("memory_id")
+            },
+            "compaction": clean_compaction,
             "filtered": [
                 {
                     "memory_id": str(item.get("memory_id") or ""),
@@ -5034,6 +5080,12 @@ class MemGuardService(ProcedureServiceMixin):
             "memory_versions": selected_versions,
             "selected_count": len(memories),
             "filtered_count": len(filtered),
+            "compaction": clean_compaction,
+            "representations": {
+                str(item["memory_id"]): str(item.get("representation") or "full")
+                for item in memories
+                if item.get("memory_id")
+            },
             "scope": {
                 "agent_name": agent_name,
                 "session_id": session_id,
@@ -5049,6 +5101,7 @@ class MemGuardService(ProcedureServiceMixin):
             "session_id": session_id,
             "project_root": project_root,
             "task_type": task_type,
+            "compaction": clean_compaction,
             "retrieval_passes": 1,
             "memory_count": len(memories),
             "context": context,
@@ -5059,12 +5112,19 @@ class MemGuardService(ProcedureServiceMixin):
                     {
                         "memory_id": item["memory_id"],
                         "reason": item["selection_reason"],
+                        "representation": item.get("representation", "full"),
+                        "representation_reason": item.get("representation_reason", ""),
                         "source_event_ids": item["source_event_ids"],
                     }
                     for item in memories
                 ],
                 "filtered": filtered,
                 "stage_policy": clean_stage,
+                "compaction_policy": clean_compaction,
+                "representation_counts": representation_counts,
+                "representation_reasons": representation_reasons,
+                "estimated_full_tokens": estimated_full_tokens,
+                "estimated_saved_tokens": estimated_saved_tokens,
                 "preference_scope_order": ["session", "project", "task_type", "agent", "global"],
             },
             "budget": {
@@ -5074,6 +5134,9 @@ class MemGuardService(ProcedureServiceMixin):
                 "estimated_context_tokens": self.estimate_tokens(context),
                 "truncated": any(item["reason"] in {"context_budget_exhausted", "stage_limit_reached"} for item in filtered),
                 "estimator": "cjk_chars_plus_latin_chars_div_4",
+                "representation_counts": representation_counts,
+                "estimated_full_tokens": estimated_full_tokens,
+                "estimated_saved_tokens": estimated_saved_tokens,
             },
         }
         self._audit(
@@ -5089,6 +5152,9 @@ class MemGuardService(ProcedureServiceMixin):
                 "memory_ids": [item["memory_id"] for item in memories],
                 "filtered_count": len(filtered),
                 "estimated_context_tokens": result["budget"]["estimated_context_tokens"],
+                "compaction": clean_compaction,
+                "representation_counts": representation_counts,
+                "estimated_saved_tokens": estimated_saved_tokens,
             },
         )
         return result

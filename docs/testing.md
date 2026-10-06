@@ -152,6 +152,18 @@ memctl decay-plan --max-age-days 30 --score-threshold 0.35 > decay-plan.json
 memctl decay --plan-file decay-plan.json --target-session-id maintenance-review
 ```
 
+### 5.4 阶段感知上下文编排回归
+
+`tests/test_context_compaction.py` 验证上下文表示层的三个边界：规划阶段的普通知识可以压缩为摘要，工具选择阶段的偏好保留可执行指令和来源，程序性流程在行动阶段保留完整步骤；上下文收据会记录表示映射、压缩原因和预计节省量。测试同时检查 `full` 策略仍可用于离线复核，且压缩不会改写记忆正文。
+
+```bash
+python -m pytest -q tests/test_context_compaction.py
+python -m memguard.cli.memguard --workspace "$PWD" context \
+  "查找项目构建流程" --stage planning --token-budget 500
+```
+
+openKylin 采集脚本会在隔离存储中运行 `scripts/collect_context_compaction_evidence.py`，输出不同阶段的上下文表示、预算变化和收据校验结果。该证据用于证明功能来自当前部署版本，不把单次模型回答当作上下文编排能力的替代指标。
+
 ## 6. 记忆价值实验
 
 记忆价值实验分为两种口径。

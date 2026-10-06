@@ -46,6 +46,7 @@ memguard-agent-showcase "$HOME/要操作的项目"
 | `openhands_adapter.py` | 读取 OpenHands 会话事件并完成角色、轮次和工具字段映射 |
 | `openhands_runner.py` | 创建会话、注入记忆上下文、运行 Agent 并回收真实事件 |
 | `context_injector.py` | 分别构建任务规划、工具选择和结果生成上下文 |
+| `context_compaction.py` | 按阶段、预算和敏感等级选择完整、证据或摘要表示，并返回可审计原因 |
 | `interaction_extractor.py` | 从用户与 Agent 的交互中提取显式偏好、纠正和反馈 |
 | `habit_aggregator.py` | 聚合跨轮次隐式习惯，避免把一次性动作误判为长期偏好 |
 | `bridge.py` | 接收 systemd 队列任务并在受限进程中运行 OpenHands |
@@ -91,6 +92,8 @@ memctl agent ingest-adapted-session \
 长期运行的 Agent 还可以在空闲维护阶段调用 `decay-plan`，将实际检索强化、最近使用时间、重要性和置信度纳入记忆健康度评估。冷记忆只会生成可解释的降级候选，确认后追加 session 版本；它不会在 Agent 正常推理路径中直接删除内容。下一次检索或用户重新确认后，记忆仍可通过巩固计划重新进入长期层。
 
 若 Agent 使用自己的 SDK，则直接实现 `convert(raw_event) -> AgentInteractionEvent` 并注册到 `AgentAdapterRegistry`，再调用 `MemGuardService.ingest_interaction`。上下文仍通过 `build_agent_context` 按规划、工具选择和回答生成阶段请求；工具执行前调用 `preflight_agent_action`，根据 `allow`、`redirect`、`confirm` 或 `deny` 决定继续、改写、请求确认或停止。遗忘仍调用统一的 `forget` 或 `forget_agent_interactions` 接口；不建议在适配器中自行拼接长期记忆或直接操作 SQLite。
+
+上下文请求默认使用 `compaction=adaptive`。规划阶段的普通知识会优先以摘要进入，工具选择阶段的工具偏好和已验证流程保留可执行内容，回答生成阶段使用带来源和版本的证据表示；需要逐字复核时可以显式传入 `compaction=full`。每条记忆的表示方式、压缩原因和预算节省量都会进入上下文收据，适配器只负责传递收据，不应自行重写上下文正文。
 
 ## 3. 安装可选 Agent 环境
 

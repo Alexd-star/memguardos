@@ -58,6 +58,26 @@ Unix socket API 位于 `memguard/api/server.py`，用于本地 Agent 直接调�
 
 启用令牌后，调用方应在请求 JSON 中写入 `token` 字段；Web 控制台则使用 `Authorization: Bearer <token>` 请求头。未携带正确令牌时，接口返回 `{"ok": false, "error": "unauthorized"}`，不会继续执行诊断、抽取解释、写入、检索或导出操作。
 
+### Agent 上下文构建与自适应表示
+
+`build_agent_context` 按 `planning`、`tool_selection` 或 `response_generation` 阶段构建当前 Agent 可用的记忆上下文。除 `task`、`stage`、`agent_name`、`session_id`、`project_root`、`task_type` 和预算参数外，还可传入 `compaction`：`adaptive` 根据阶段和记忆风险选择完整、证据或摘要表示，`full` 用于需要完整正文的离线复核。服务不会修改权威记忆正文；压缩只作用于本轮上下文，并在返回结果中给出每条记忆的 `representation`、`representation_reason`、表示分布和预计节省 token 数。
+
+```json
+{
+  "command": "build_agent_context",
+  "task": "查找项目构建流程",
+  "stage": "planning",
+  "agent_name": "local-agent",
+  "session_id": "session-001",
+  "project_root": "/home/luo/project-alpha",
+  "task_type": "code_assistance",
+  "token_budget": 500,
+  "compaction": "adaptive"
+}
+```
+
+返回的 `context_receipt` 会同时绑定记忆版本和表示映射。记忆更新、遗忘、适用偏好变化或表示策略变化后，调用方必须重新构建上下文，不能沿用旧收据继续执行工具。
+
 ### Agent 行动预检
 
 `preflight_agent_action` 将记忆作用于拟执行的工具调用。它接收 `task`、`tool_name`、`tool_input`、`agent_name`、`session_id` 和可选的 `project_root`、`task_type`；服务在工具选择阶段重新构建当前上下文，并返回带有 `context_receipt` 的行动契约。`allow` 表示未发现适用冲突，`redirect` 表示应按偏好改用建议工具，`confirm` 表示需要用户确认，`deny` 表示命中不可执行的安全或过期上下文条件。该接口只判定不执行命令，适合被 OpenHands 或其他 Agent 适配器作为统一的执行前检查点。

@@ -168,6 +168,7 @@ EOF
 | `memory_policy.txt` | 记忆冷热分层、存储占用、cgroup 状态和淘汰候选证据 |
 | `consolidation_evidence.json` | 会话记忆巩固、人工确认、版本 CAS 与短期保留证据 |
 | `decay_evidence.json` | 检索强化、健康度衰减、可逆降级与旧计划 CAS 证据 |
+| `context_compaction_evidence.json` | 规划、工具选择、回答阶段的上下文表示与预算证据 |
 | `manifest.json` | 证据包文件大小与 SHA256 摘要清单 |
 | `SHA256SUMS.txt` | 可由 `sha256sum -c SHA256SUMS.txt` 复核的证据包哈希 |
 EOF
@@ -194,6 +195,8 @@ run_capture "consolidation_evidence" "${PYTHON_BIN}" scripts/collect_consolidati
   --output "${OUT_DIR}/consolidation_evidence.json"
 run_capture "decay_evidence" "${PYTHON_BIN}" scripts/collect_decay_evidence.py \
   --output "${OUT_DIR}/decay_evidence.json"
+run_capture "context_compaction_evidence" "${PYTHON_BIN}" scripts/collect_context_compaction_evidence.py \
+  --output "${OUT_DIR}/context_compaction_evidence.json"
 run_capture "sdk_status" "${PYTHON_BIN}" -m memguard.cli.memctl sdk-status
 run_capture "sdk_embedding_probe" "${PYTHON_BIN}" -m memguard.cli.memctl sdk-status --probe-embedding --probe-timeout 90
 if [ -f scripts/diagnose_kylin_embedding.sh ]; then

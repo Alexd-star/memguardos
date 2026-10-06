@@ -399,6 +399,7 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         limit = _int_param(request, "limit", 8, minimum=1, maximum=50)
         max_chars = _int_param(request, "max_chars", 4000, minimum=128, maximum=20000)
         token_budget = _int_param(request, "token_budget", 800, minimum=64, maximum=32000)
+        compaction = _string_param(request, "compaction", "adaptive", max_chars=32)
         return {
             "ok": True,
             "result": _jsonable(
@@ -412,6 +413,7 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                     limit=limit,
                     max_chars=max_chars,
                     token_budget=token_budget,
+                    compaction=compaction,
                 )
             ),
         }

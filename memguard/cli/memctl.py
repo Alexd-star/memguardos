@@ -379,6 +379,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_context.add_argument("--limit", type=int, default=8)
     agent_context.add_argument("--max-chars", type=int, default=4000)
     agent_context.add_argument("--token-budget", type=int, default=800)
+    agent_context.add_argument("--compaction", choices=["adaptive", "full"], default="adaptive")
     agent_verify_context = agent_sub.add_parser("verify-context", help="Verify a previously built Agent context receipt")
     agent_verify_context.add_argument("--file", required=True, help="JSON file containing context_receipt")
     agent_preflight = agent_sub.add_parser(
@@ -543,6 +544,7 @@ def main(argv: list[str] | None = None) -> int:
                     limit=args.limit,
                     max_chars=args.max_chars,
                     token_budget=args.token_budget,
+                    compaction=args.compaction,
                 )
                 print(json.dumps(result, ensure_ascii=False, indent=2))
                 return 0

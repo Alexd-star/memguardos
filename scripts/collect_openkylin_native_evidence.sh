@@ -117,6 +117,9 @@ python3 scripts/collect_consolidation_evidence.py \
 python3 scripts/collect_decay_evidence.py \
   --output "${OUT_DIR}/decay_evidence.json" \
   >"${OUT_DIR}/decay_evidence.stdout.txt" 2>&1
+python3 scripts/collect_context_compaction_evidence.py \
+  --output "${OUT_DIR}/context_compaction_evidence.json" \
+  >"${OUT_DIR}/context_compaction_evidence.stdout.txt" 2>&1
 
 TMP_SAMPLE_DIR="$(mktemp -d)"
 SAMPLE_A="${TMP_SAMPLE_DIR}/peony_preference.md"
