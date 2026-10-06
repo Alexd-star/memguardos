@@ -214,3 +214,22 @@ PYTHONPATH=/opt/memguardos python3 /路径/scripts/verify_finals_scenarios.py \
 - `F1`：精确率与召回率的调和平均，适合同时关注误报和漏报。
 
 发布前应同时检查自动测试、真实用户流程、openKylin 原生安装、证据源修订和提交包哈希。任何单一漂亮指标都不能替代完整链路。
+
+## 11. 阅读真实 Agent 运行记录
+
+真实 Agent 套件的逐案例 `result.json` 可以导出为本地 HTML。报告把任务、各阶段的记忆选择、原始对话、工具命令、工具输出和判定放在同一页面，双臂结果按案例并列。它只读取已有结果，不调用模型或执行命令；在 Windows 或 openKylin 中打开 HTML 即可查看。
+
+```bash
+python scripts/render_agent_trace.py \
+  --input output/real_agent/cases/R09/memory_on/result.json \
+  --output output/real_agent/R09.html
+
+python scripts/render_agent_trace.py \
+  --input output/real_agent \
+  --case-id R09 \
+  --output output/real_agent/R09_compare.html
+```
+
+默认保留已有 HTML，更新同一文件时需显式添加 `--overwrite`。输入中的失败、缺失输出与未完成状态会保留；适配器纠正、接管和模型行动分别标记。报告不重新计算评分，也不将“记忆被选择”改成“模型已经遵循”。对照侧是否真正关闭记忆，还需核对原始 `run.memory_enabled`，不能只依据目录名或 `memory_mode` 判断。
+
+报告使用已有敏感识别器脱敏，并移除凭据字段；公开展示前仍需核对原始任务和路径。JSON 文件的 SHA-256 显示在报告中，以便对应原始记录。对话按输入中的顺序呈现，长内容可展开；截图属于该次运行的离线报告，不能标成实时 Agent 界面。

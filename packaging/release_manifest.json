@@ -52,6 +52,7 @@
     "scripts/verify_deb_package_set.sh",
     "scripts/verify_deb_lifecycle.sh",
     "scripts/run_openhands_behavior_suite.py",
+    "scripts/render_agent_trace.py",
     "scripts/memguard-agent-showcase.sh",
     "scripts/openhands_memory_hook.py",
     "scripts/verify_video_demo.py",

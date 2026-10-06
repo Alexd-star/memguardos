@@ -1,0 +1,46 @@
+{
+  "schema": "memguardos-installed-payload-v1",
+  "generated_at": "2026-10-06T01:35:23.482220+00:00",
+  "mode": "normal_mode_read_only_verification",
+  "passed": true,
+  "packages": [
+    {
+      "package": "memguardos-core",
+      "version": "1.0.1-7+finals20261006",
+      "archive_sha256": "e5ff38ab3f8528642bc0b41cc801aac96bf45a81f0b461670dbe665284d60ce3",
+      "payload_files_checked": 118,
+      "matched": true
+    },
+    {
+      "package": "memguardos-ukui",
+      "version": "1.0.1-7+finals20261006",
+      "archive_sha256": "d51c0fd4d49c248e4ee8477e9530c802c0c14b4ff30171d9ce7a2795dd01bd69",
+      "payload_files_checked": 5,
+      "matched": true
+    },
+    {
+      "package": "memguardos-agent-bridge",
+      "version": "1.0.1-7+finals20261006",
+      "archive_sha256": "2ab9cc0472e392a379a32b88ff5eaf77ff1dc5fce0640cccabfe8080c1f332e6",
+      "payload_files_checked": 7,
+      "matched": true
+    },
+    {
+      "package": "memguardos-doc",
+      "version": "1.0.1-7+finals20261006",
+      "archive_sha256": "e774cea94ac82849a7e9abd03e0af99be1058373a0289989f164d042e8203cce",
+      "payload_files_checked": 16,
+      "matched": true
+    },
+    {
+      "package": "memguardos",
+      "version": "1.0.1-7+finals20261006",
+      "archive_sha256": "d0a98ebb322480e7a45ae28013f86094d5c3ed5785fc6fc6e7dd41bb2e53acc2",
+      "payload_files_checked": 0,
+      "matched": true
+    }
+  ],
+  "payload_files_checked": 146,
+  "source_revision": "53f5eaac867e7d0e5610ab8ab0ac853b458f4d76",
+  "required_source_files_matched": 70
+}
