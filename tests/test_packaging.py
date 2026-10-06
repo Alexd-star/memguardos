@@ -370,6 +370,36 @@ def test_native_evidence_revision_allows_generated_readiness_reports(monkeypatch
     assert "追加/更新原生证据" in result.detail
 
 
+def test_native_evidence_revision_strict_mode_rejects_compatible_stale_evidence(monkeypatch, tmp_path):
+    expected = "b" * 40
+    revision = tmp_path / "source_revision.json"
+    revision.write_text(json.dumps({"source_revision": "a" * 40, "dirty": False}), encoding="utf-8")
+    monkeypatch.setattr(
+        readiness,
+        "_revision_delta_paths",
+        lambda _source, _target: ["README.md", "docs/evidence/openkylin/openkylin_status.txt"],
+    )
+
+    result = readiness.check_native_evidence_revision(tmp_path, expected, require_exact_revision=True)
+
+    assert result.ok is False
+    assert result.severity == "P0"
+    assert "严格模式" in result.detail
+    assert "重新采集" in result.detail
+
+
+def test_native_evidence_revision_strict_mode_accepts_exact_current_evidence(tmp_path):
+    expected = "a" * 40
+    (tmp_path / "source_revision.json").write_text(
+        json.dumps({"source_revision": expected, "dirty": False}),
+        encoding="utf-8",
+    )
+
+    result = readiness.check_native_evidence_revision(tmp_path, expected, require_exact_revision=True)
+
+    assert result.ok is True
+
+
 def test_native_evidence_revision_rejects_runtime_changes_after_collection(monkeypatch, tmp_path):
     expected = "b" * 40
     revision = tmp_path / "source_revision.json"

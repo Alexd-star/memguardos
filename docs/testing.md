@@ -169,6 +169,17 @@ python scripts/check_competition_ready.py \
 
 发布门禁要求源修订与发布 HEAD 一致。证据提交自身只追加证据文件时允许通过；任何核心代码、测试、打包或采集脚本在证据之后变化，都必须重新采集。
 
+正式决赛发布前使用严格模式，禁止将历史实机证据作为当前版本的验收依据：
+
+```bash
+python scripts/check_competition_ready.py --require-current-evidence
+```
+
+严格模式要求 `docs/evidence/openkylin/source_revision.json` 中的修订号与当前
+`HEAD` 完全一致；即使当前提交只新增了文档或证据清单，也必须重新在当前代码上采集
+openKylin 实机证据。开发阶段如需检查其余交付项并暂时保留历史证据，可继续使用
+`--allow-missing-openkylin`，但该模式不适合作为最终提交前的通过依据。
+
 ## 9. 安全与供应链
 
 ```bash

@@ -133,7 +133,16 @@ def main() -> int:
     )
     parser.add_argument("--output", default="", help="Optional JSON report path")
     parser.add_argument("--markdown", default="", help="Optional Markdown report path")
-    parser.add_argument("--allow-missing-openkylin", action="store_true", help="Downgrade missing openKylin evidence files to P1 warnings")
+    parser.add_argument(
+        "--allow-missing-openkylin",
+        action="store_true",
+        help="Downgrade missing openKylin evidence files to P1 warnings",
+    )
+    parser.add_argument(
+        "--require-current-evidence",
+        action="store_true",
+        help="Require openKylin evidence to be collected from the exact current Git HEAD",
+    )
     args = parser.parse_args()
 
     eval_path = _resolve(args.eval)
@@ -144,12 +153,13 @@ def main() -> int:
     checks.extend(check_docs())
     checks.extend(check_sources())
     checks.extend(check_eval(eval_path))
-    native_evidence_severity = "P1" if args.allow_missing_openkylin else "P0"
+    native_evidence_severity = "P0" if args.require_current_evidence else ("P1" if args.allow_missing_openkylin else "P0")
     checks.extend(
         check_native_openkylin_evidence(
             native_evidence_dir,
             expected_revision=_git_head(),
             severity=native_evidence_severity,
+            require_exact_revision=args.require_current_evidence,
         )
     )
     checks.extend(check_performance_evidence(performance_evidence_dir, severity="P0"))
@@ -389,7 +399,12 @@ def check_openkylin_evidence(evidence_dir: Path, allow_missing: bool = False) ->
     return checks
 
 
-def check_native_evidence_revision(evidence_dir: Path, expected_revision: str, severity: str = "P0") -> Check:
+def check_native_evidence_revision(
+    evidence_dir: Path,
+    expected_revision: str,
+    severity: str = "P0",
+    require_exact_revision: bool = False,
+) -> Check:
     path = evidence_dir / "source_revision.json"
     payload = _load_evidence_json(path)
     if not payload:
@@ -403,7 +418,19 @@ def check_native_evidence_revision(evidence_dir: Path, expected_revision: str, s
     if revision != expected_revision:
         delta_paths = _revision_delta_paths(revision, expected_revision)
         if delta_paths is None or not delta_paths or any(not _is_allowed_native_evidence_delta(path) for path in delta_paths):
-            return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, f"证据 {revision[:12]} 与当前 {expected_revision[:12]} 不一致", severity=severity)
+            detail = f"证据 {revision[:12]} 与当前 {expected_revision[:12]} 不一致"
+            if require_exact_revision:
+                detail += "；严格模式要求在当前 HEAD 重新采集 openKylin 实机证据"
+            return Check("openKylin原生证据", "证据对应当前 Git HEAD", False, detail, severity=severity)
+        if require_exact_revision:
+            return Check(
+                "openKylin原生证据",
+                "证据对应当前 Git HEAD",
+                False,
+                "证据 %s 与当前 %s 不一致；严格模式不接受仅追加证据或文档后的兼容通过，请重新采集实机证据"
+                % (revision[:12], expected_revision[:12]),
+                severity=severity,
+            )
         return Check(
             "openKylin原生证据",
             "证据对应当前 Git HEAD",
@@ -420,7 +447,12 @@ def _is_allowed_native_evidence_delta(path: str) -> bool:
     return path.startswith("docs/evidence/openkylin/") or path in POST_NATIVE_EVIDENCE_ALLOWED_PATHS
 
 
-def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, severity: str) -> List[Check]:
+def check_native_openkylin_evidence(
+    evidence_dir: Path,
+    expected_revision: str,
+    severity: str,
+    require_exact_revision: bool = False,
+) -> List[Check]:
     required = [
         "source_revision.json",
         "environment.txt",
@@ -449,7 +481,14 @@ def check_native_openkylin_evidence(evidence_dir: Path, expected_revision: str, 
     for name in required:
         path = evidence_dir / name
         checks.append(Check("openKylin原生证据", name, path.exists() and path.stat().st_size > 0, "存在且非空" if path.exists() and path.stat().st_size > 0 else "缺失或为空", severity=severity))
-    checks.append(check_native_evidence_revision(evidence_dir, expected_revision, severity=severity))
+    checks.append(
+        check_native_evidence_revision(
+            evidence_dir,
+            expected_revision,
+            severity=severity,
+            require_exact_revision=require_exact_revision,
+        )
+    )
     security_values = _parse_result_key_values(_read_text_if_exists(evidence_dir / "systemd_security.txt"))
     try:
         exposure = float(security_values.get("overall_exposure", ""))
