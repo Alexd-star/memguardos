@@ -1,10 +1,10 @@
 {
   "schema": "memguardos-consolidation-evidence-v1",
-  "revision": "11be73e",
+  "revision": "c2b1780",
   "platform": "Linux-6.6.0-25-generic-x86_64-with-glibc2.38",
   "python": "3.12.2",
   "plan": {
-    "plan_id": "c51a1975f1883e0419ca5385d1f551f85b3b42a1a1eefef5675e96244d1e5048",
+    "plan_id": "0414bf3ad9aeac456467248300636426d6fbafc6e39dbb46295a610c874a9f53",
     "summary": {
       "candidate_count": 3,
       "promote_count": 1,
@@ -13,22 +13,22 @@
     },
     "candidates": [
       {
-        "memory_id": "mem_9dc38c65ebda42d9",
+        "memory_id": "mem_537030253a304af0",
         "recommended_action": "evict_review",
         "reason": "working memory remains task-local until explicit review",
-        "version_id": "ver_1f788727f8ac4cbb"
+        "version_id": "ver_02c45cf89d214359"
       },
       {
-        "memory_id": "mem_b02da13c4763418d",
+        "memory_id": "mem_592416dfd6bd4850",
         "recommended_action": "retain_session",
         "reason": "insufficient independent evidence for long-term promotion",
-        "version_id": "ver_182d92d1aa454803"
+        "version_id": "ver_d971e21efd9842eb"
       },
       {
-        "memory_id": "mem_7fcc140e0739498a",
+        "memory_id": "mem_5a107a7c8d1544a8",
         "recommended_action": "promote",
         "reason": "explicit preference evidence",
-        "version_id": "ver_5602b95dfd2d4181"
+        "version_id": "ver_a4495670abdb4b20"
       }
     ]
   },
@@ -48,20 +48,20 @@
       "reason": "confirmation_required",
       "session_id": "demo-session",
       "selected_memory_ids": [
-        "mem_7fcc140e0739498a"
+        "mem_5a107a7c8d1544a8"
       ],
       "expected_versions": {
-        "mem_7fcc140e0739498a": "ver_5602b95dfd2d4181"
+        "mem_5a107a7c8d1544a8": "ver_a4495670abdb4b20"
       }
     },
     "applied": {
       "applied": true,
       "session_id": "demo-session",
-      "plan_id": "c51a1975f1883e0419ca5385d1f551f85b3b42a1a1eefef5675e96244d1e5048",
+      "plan_id": "0414bf3ad9aeac456467248300636426d6fbafc6e39dbb46295a610c874a9f53",
       "promoted": [
         {
-          "memory_id": "mem_7fcc140e0739498a",
-          "version_id": "ver_6bf279ad05b24744"
+          "memory_id": "mem_5a107a7c8d1544a8",
+          "version_id": "ver_34f164de76fe4ccb"
         }
       ],
       "failures": [],
@@ -71,7 +71,7 @@
       "applied": false,
       "reason": "stale_consolidation_plan",
       "expected_versions": {
-        "mem_7fcc140e0739498a": "ver_5602b95dfd2d4181"
+        "mem_5a107a7c8d1544a8": "ver_a4495670abdb4b20"
       },
       "current_versions": {}
     }

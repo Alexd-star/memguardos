@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "file_count": 31,
+  "file_count": 32,
   "files": [
     {
       "path": "agent_filesystem_scope.json",
@@ -10,7 +10,7 @@
     {
       "path": "consolidation_evidence_20261007.json",
       "bytes": 2361,
-      "sha256": "f295bbe218a00d4f2ba01f7650a089c635708bba43d4cfd54556a18893469e3b"
+      "sha256": "dbd03aaa8dc211921903fbe0f14a4c31a004ebbdfd8634d379ce301e59f02a82"
     },
     {
       "path": "dashboard_ui_tests.txt",
@@ -31,6 +31,11 @@
       "path": "debian_packages.txt",
       "bytes": 9815,
       "sha256": "a1bc4bc23aa72627d7b50fe1a8ba66ed38ad8962ef16e4a3c99cd0b417883a4c"
+    },
+    {
+      "path": "decay_evidence_20261007.json",
+      "bytes": 2491,
+      "sha256": "c86382d25b3b805b74b4cb087e3cf30ebcc60f929792433189164d7429ed15ab"
     },
     {
       "path": "desktop_build.txt",
