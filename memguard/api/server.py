@@ -373,6 +373,32 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         if not isinstance(receipt, dict):
             raise ValueError("receipt must be an object")
         return {"ok": True, "result": _jsonable(service.verify_agent_context_receipt(receipt))}
+    if command == "preflight_agent_action":
+        task = _string_param(request, "task", "", max_chars=4096)
+        tool_name = _string_param(request, "tool_name", "", max_chars=128)
+        if not task or not tool_name:
+            raise ValueError("task and tool_name are required")
+        tool_input = request.get("tool_input") or {}
+        if not isinstance(tool_input, dict):
+            raise ValueError("tool_input must be an object")
+        receipt = request.get("context_receipt")
+        if receipt is not None and not isinstance(receipt, dict):
+            raise ValueError("context_receipt must be an object")
+        return {
+            "ok": True,
+            "result": _jsonable(
+                service.preflight_agent_action(
+                    task,
+                    tool_name=tool_name,
+                    tool_input=tool_input,
+                    agent_name=_string_param(request, "agent_name", "generic-agent", max_chars=128),
+                    session_id=_string_param(request, "session_id", "action-preflight", max_chars=256),
+                    project_root=_string_param(request, "project_root", "", max_chars=2048),
+                    task_type=_string_param(request, "task_type", "", max_chars=128),
+                    context_receipt=receipt,
+                )
+            ),
+        }
     if command == "preference_evidence":
         memory_id = _string_param(request, "memory_id", "", max_chars=128)
         result = _jsonable(service.preference_evidence(memory_id))

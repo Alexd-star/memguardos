@@ -47,6 +47,7 @@ from memguard.integrations.adherence import (
     response_starts_with_command_or_conclusion,
     successful_terminal_commands,
 )
+from memguard.integrations.action_contract import evaluate_action
 from memguard.integrations.context_injector import (
     stage_allows_memory,
     stage_allows_preference,
@@ -4565,6 +4566,79 @@ class MemGuardService(ProcedureServiceMixin):
             },
         )
         return result
+
+    def preflight_agent_action(
+        self,
+        task: str,
+        *,
+        tool_name: str,
+        tool_input: Optional[Dict[str, object]] = None,
+        agent_name: str = "generic-agent",
+        session_id: str = "action-preflight",
+        project_root: str = "",
+        task_type: str = "",
+        context_receipt: Optional[Dict[str, object]] = None,
+    ) -> Dict[str, object]:
+        """Turn applicable memory into an auditable pre-execution action contract.
+
+        The method is intentionally provider-neutral.  An adapter can enforce
+        the decision before calling its own tool runtime; MemGuardOS never
+        executes the proposed action itself.
+        """
+
+        if context_receipt is not None:
+            receipt_status = self.verify_agent_context_receipt(context_receipt)
+            if not receipt_status.get("valid"):
+                result = {
+                    "decision": "deny",
+                    "policy_category": "stale_memory_context",
+                    "reason": "记忆上下文已变化，必须重新构建上下文后才能执行工具。",
+                    "continue": False,
+                    "receipt_status": receipt_status,
+                    "evidence": [],
+                }
+                self._audit("agent_action_preflight", None, result)
+                return result
+
+        context = self.build_agent_context(
+            task,
+            stage="tool_selection",
+            agent_name=agent_name,
+            session_id=session_id,
+            project_root=project_root,
+            task_type=task_type,
+        )
+        decision = evaluate_action(
+            tool_name=tool_name,
+            tool_input=tool_input or {},
+            memories=context.get("memories") or [],
+        )
+        decision.update(
+            {
+                "task": str(task).strip(),
+                "tool_name": str(tool_name),
+                "context_receipt": context.get("context_receipt"),
+                "context_memory_count": int(context.get("memory_count") or 0),
+                "scope": {
+                    "agent_name": agent_name,
+                    "session_id": session_id,
+                    "project_root": context.get("project_root", project_root),
+                    "task_type": task_type,
+                },
+            }
+        )
+        self._audit(
+            "agent_action_preflight",
+            None,
+            {
+                "decision": decision.get("decision"),
+                "policy_category": decision.get("policy_category"),
+                "tool_name": tool_name,
+                "memory_ids": [item.get("memory_id") for item in decision.get("evidence", [])],
+                "context_fingerprint": (decision.get("context_receipt") or {}).get("fingerprint"),
+            },
+        )
+        return decision
 
     def _fit_context_line(self, line: str, remaining_chars: int, remaining_tokens: int) -> str:
         if remaining_chars <= 0 or remaining_tokens <= 0:

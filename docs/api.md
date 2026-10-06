@@ -26,12 +26,13 @@ CLI 是最常用入口，适合人工演示、脚本复验和调试。
 | `memctl governance states` | 查看治理状态机 | 无 | 状态、终态和合法流转 |
 | `memctl agent adapters` | 查看 Agent 适配能力 | 无 | 已注册适配器、事件类型、上下文阶段和检查点能力 |
 | `memctl agent ingest-adapted-session` | 接入通用 Agent JSONL 会话 | JSONL 文件、适配器与会话范围 | 规范化事件、提取结果、去重和审计摘要 |
+| `memctl agent preflight-action` | 在 Agent 工具执行前检查记忆约束 | 任务、工具名称、工具参数和作用域 | `allow`、`redirect`、`confirm` 或 `deny`，以及版本化记忆证据 |
 | `doctor` | 系统诊断 | 可选 namespace | 环境和能力报告 |
 | `web` | 启动本地控制台 | host、port | Web 服务 |
 
 ## 2. Unix socket API
 
-Unix socket API 位于 `memguard/api/server.py`，用于本地 Agent 直接调用。请求是 JSON 对象，统一使用 `command` 字段表示动作名称，并携带对应参数。响应也是 JSON 对象，包含 `ok`、`result` 或 `error`。API 支持 `health`、`ingest`、`search`、`batch_search`、`build_context`、`forget`、`audit` 等命令。
+Unix socket API 位于 `memguard/api/server.py`，用于本地 Agent 直接调用。请求是 JSON 对象，统一使用 `command` 字段表示动作名称，并携带对应参数。响应也是 JSON 对象，包含 `ok`、`result` 或 `error`。API 支持 `health`、`ingest`、`search`、`batch_search`、`build_context`、`preflight_agent_action`、`forget`、`audit` 等命令。
 
 根据当前代码推断，API 重点服务本机可信 Agent，不是公网服务。它支持请求大小限制和可选 token 校验。若要对外暴露，应增加更完整的鉴权、限流、TLS 和审计策略。
 
@@ -52,6 +53,25 @@ Unix socket API 位于 `memguard/api/server.py`，用于本地 Agent 直接调�
 ```
 
 启用令牌后，调用方应在请求 JSON 中写入 `token` 字段；Web 控制台则使用 `Authorization: Bearer <token>` 请求头。未携带正确令牌时，接口返回 `{"ok": false, "error": "unauthorized"}`，不会继续执行诊断、抽取解释、写入、检索或导出操作。
+
+### Agent 行动预检
+
+`preflight_agent_action` 将记忆作用于拟执行的工具调用。它接收 `task`、`tool_name`、`tool_input`、`agent_name`、`session_id` 和可选的 `project_root`、`task_type`；服务在工具选择阶段重新构建当前上下文，并返回带有 `context_receipt` 的行动契约。`allow` 表示未发现适用冲突，`redirect` 表示应按偏好改用建议工具，`confirm` 表示需要用户确认，`deny` 表示命中不可执行的安全或过期上下文条件。该接口只判定不执行命令，适合被 OpenHands 或其他 Agent 适配器作为统一的执行前检查点。
+
+```json
+{
+  "command": "preflight_agent_action",
+  "task": "搜索项目代码中的 build_agent_context",
+  "tool_name": "terminal",
+  "tool_input": {"command": "grep -n build_agent_context ."},
+  "agent_name": "local-agent",
+  "session_id": "session-001",
+  "project_root": "/home/luo/project-alpha",
+  "task_type": "code_search"
+}
+```
+
+返回结果包含 `decision`、`policy_category`、`reason`、`evidence` 和 `context_receipt`。`evidence` 只记录记忆编号与版本编号，不把完整记忆正文复制到行动审计中；上下文发生更新或遗忘后，旧收据会被拒绝。
 
 ### Agent 适配器与通用事件
 

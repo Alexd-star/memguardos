@@ -349,6 +349,18 @@ def build_parser() -> argparse.ArgumentParser:
     agent_context.add_argument("--token-budget", type=int, default=800)
     agent_verify_context = agent_sub.add_parser("verify-context", help="Verify a previously built Agent context receipt")
     agent_verify_context.add_argument("--file", required=True, help="JSON file containing context_receipt")
+    agent_preflight = agent_sub.add_parser(
+        "preflight-action",
+        help="Evaluate a proposed Agent tool action against scoped memory before execution",
+    )
+    agent_preflight.add_argument("--task", required=True)
+    agent_preflight.add_argument("--tool-name", required=True)
+    agent_preflight.add_argument("--tool-input", default="{}", help="JSON object, for example '{\"command\":\"rg -n foo .\"}'")
+    agent_preflight.add_argument("--agent-name", default="generic-agent")
+    agent_preflight.add_argument("--session-id", default="action-preflight")
+    agent_preflight.add_argument("--project-root", default="")
+    agent_preflight.add_argument("--task-type", default="")
+    agent_preflight.add_argument("--context-receipt-file", default="", help="Optional JSON file containing context_receipt")
     agent_sub.add_parser("status", help="Show Agent event and preference aggregation status")
     agent_evidence = agent_sub.add_parser("evidence", help="Show interaction evidence for one memory")
     agent_evidence.add_argument("memory_id")
@@ -508,6 +520,26 @@ def main(argv: list[str] | None = None) -> int:
                 result = service.verify_agent_context_receipt(receipt)
                 print(json.dumps(result, ensure_ascii=False, indent=2))
                 return 0 if result.get("ok") and result.get("valid") else 2
+            if args.agent_command == "preflight-action":
+                tool_input = json.loads(args.tool_input)
+                if not isinstance(tool_input, dict):
+                    raise ValueError("--tool-input must be a JSON object")
+                receipt = None
+                if args.context_receipt_file:
+                    payload = json.loads(Path(args.context_receipt_file).read_text(encoding="utf-8"))
+                    receipt = payload.get("context_receipt", payload) if isinstance(payload, dict) else None
+                result = service.preflight_agent_action(
+                    args.task,
+                    tool_name=args.tool_name,
+                    tool_input=tool_input,
+                    agent_name=args.agent_name,
+                    session_id=args.session_id,
+                    project_root=args.project_root,
+                    task_type=args.task_type,
+                    context_receipt=receipt,
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+                return 0 if result.get("decision") == "allow" else 2
             if args.agent_command == "status":
                 print(json.dumps(service.interaction_status(), ensure_ascii=False, indent=2))
                 return 0
