@@ -1,0 +1,19 @@
+{
+  "schema": "memguardos-security-scan-v1",
+  "ok": true,
+  "policy": {
+    "bandit_high_severity_allowed": 0,
+    "bandit_medium_severity_allowed": 0,
+    "pip_audit_known_vulnerabilities_allowed": 0,
+    "missing_tools_allowed": false,
+    "dependency_scope": "runtime"
+  },
+  "summary": {
+    "bandit_high_count": 0,
+    "bandit_medium_count": 0,
+    "bandit_low_count": 119,
+    "pip_audit_vulnerability_count": 0,
+    "missing_tools": []
+  },
+  "source_notes": "Static bound SQL, reviewed internal predicates and local-path classification; no gate thresholds changed."
+}

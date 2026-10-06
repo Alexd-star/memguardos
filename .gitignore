@@ -19,3 +19,5 @@ local_notes/
 artifacts/
 .source_manifest.json
 .source_revision
+/.tmp-commitment-review/
+/.tmp-memory-value-audit-2/

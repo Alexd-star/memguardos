@@ -1206,10 +1206,6 @@ class SQLiteMetaStore(DependencyStoreMixin):
         expected_version_id: Optional[str] = None,
     ) -> int:
         now = utc_now()
-        version_guard = " AND deleted = 0 AND version_id = ?" if expected_version_id else ""
-        params = (now, superseded_by, now, memory_id)
-        if expected_version_id:
-            params += (expected_version_id,)
         cursor = self.conn.execute(
             """
             UPDATE memory
@@ -1223,8 +1219,9 @@ class SQLiteMetaStore(DependencyStoreMixin):
                 governance_reason = '',
                 valid_to = ?, superseded_by = ?, updated_at = ?
             WHERE memory_id = ?
-            """ + version_guard,
-            params,
+              AND (? = 0 OR (deleted = 0 AND version_id = ?))
+            """,
+            (now, superseded_by, now, memory_id, int(bool(expected_version_id)), expected_version_id),
         )
         if cursor.rowcount == 0:
             return 0
@@ -1432,18 +1429,22 @@ class SQLiteMetaStore(DependencyStoreMixin):
                     scope_params.append(value)
             # Apply agent/session to the same source event, never two unrelated
             # links. Applicability scope and the origin of a memory are distinct.
-            scope_sql = " AND ((%s) OR EXISTS (SELECT 1 FROM memory_event_links l " \
-                "JOIN agent_events e ON e.event_id = l.event_id " \
-                "WHERE l.memory_id = memory.memory_id AND %s))" % (
-                    " AND ".join(record_conditions), " AND ".join(event_conditions),
-                )
+            # Only fixed predicates and the internal agent_name/session_id field
+            # pair form this SQL; all scope values are bound via scope_params.
+            scope_sql = (
+                " AND ((%s) OR EXISTS (SELECT 1 FROM memory_event_links l "  # nosec B608
+                "JOIN agent_events e ON e.event_id = l.event_id "
+                "WHERE l.memory_id = memory.memory_id AND %s))"
+            ) % (" AND ".join(record_conditions), " AND ".join(event_conditions))
             scope_params.extend(value for value in (plan.agent_name, plan.session_id) if value)
         elif plan.scope_level == "project":
             scope_sql = " AND project_root = ?"
             scope_params.append(plan.project_root)
+        # scope_sql contains only the fixed predicates above; user scope, type
+        # and time values remain bound execute parameters.
         rows = self.conn.execute(
+            "SELECT * FROM memory "  # nosec B608
             """
-            SELECT * FROM memory
             WHERE deleted = 0 AND governance_state = 'active'
               AND (
                     ? = 0
@@ -1456,7 +1457,9 @@ class SQLiteMetaStore(DependencyStoreMixin):
                   )
               AND (? = '' OR COALESCE(NULLIF(valid_from, ''), updated_at) >= ?)
               AND (? = '' OR COALESCE(NULLIF(valid_from, ''), updated_at) <= ?)
-            """ + scope_sql + " ORDER BY updated_at DESC",
+            %s
+            ORDER BY updated_at DESC
+            """ % scope_sql,
             (
                 int(filter_types),
                 int(preference_types),
@@ -1945,27 +1948,26 @@ class SQLiteMetaStore(DependencyStoreMixin):
         project_root: str = "",
         incoming_value: str = "",
     ) -> int:
-        clauses = ["scope = ?", "subject = ?", "predicate = ?", "project_root = ?", "status = 'pending'"]
-        params: List[Any] = [scope, subject, predicate, project_root]
-        if tier:
-            clauses.append("tier = ?")
-            params.append(tier)
-        if resolved_memory_id:
-            clauses.append(
-                "EXISTS (SELECT 1 FROM json_each(fact_conflict.candidate_memory_ids_json) WHERE value = ?)"
-            )
-            params.append(resolved_memory_id)
-        if incoming_value:
-            clauses.append("incoming_value = ?")
-            params.append(incoming_value)
-        params = [resolution, utc_now(), resolved_memory_id, *params]
         with self.conn:
             cursor = self.conn.execute(
                 """UPDATE fact_conflict
                    SET status = 'resolved', resolution = ?, resolved_at = ?,
                        resolved_memory_id = ?
-                   WHERE %s""" % " AND ".join(clauses),
-                params,
+                   WHERE scope = ? AND subject = ? AND predicate = ?
+                     AND project_root = ? AND status = 'pending'
+                     AND (? = 0 OR tier = ?)
+                     AND (? = 0 OR EXISTS (
+                         SELECT 1 FROM json_each(fact_conflict.candidate_memory_ids_json)
+                         WHERE value = ?
+                     ))
+                     AND (? = 0 OR incoming_value = ?)""",
+                (
+                    resolution, utc_now(), resolved_memory_id,
+                    scope, subject, predicate, project_root,
+                    int(bool(tier)), tier,
+                    int(bool(resolved_memory_id)), resolved_memory_id,
+                    int(bool(incoming_value)), incoming_value,
+                ),
             )
         return int(cursor.rowcount)
 
@@ -2680,18 +2682,16 @@ class SQLiteMetaStore(DependencyStoreMixin):
         self, content: str, scope: str, tier: Optional[str] = None,
         retention_session_id: str = "", project_root: str = "",
     ) -> Optional[Dict[str, Any]]:
-        tier_filter = "AND tier = ? AND retention_session_id = ?" if tier else ""
-        params = (scope, content, project_root, tier, retention_session_id) if tier else (scope, content, project_root)
         row = self.conn.execute(
             """
             SELECT * FROM memory
             WHERE deleted = 0 AND governance_state = 'active'
               AND scope = ? AND content = ? AND project_root = ?
-            """ + tier_filter + """
+              AND (? = 0 OR (tier = ? AND retention_session_id = ?))
             ORDER BY updated_at DESC
             LIMIT 1
             """,
-            params,
+            (scope, content, project_root, int(bool(tier)), tier, retention_session_id),
         ).fetchone()
         return dict(row) if row else None
 
@@ -2699,22 +2699,17 @@ class SQLiteMetaStore(DependencyStoreMixin):
         self, scope: str, subject: str, predicate: str, tier: Optional[str] = None,
         project_root: str = "",
     ) -> List[Dict[str, Any]]:
-        tier_filter = "AND m.tier = ?" if tier else ""
         # Reading may reuse global facts; updating a fact slot stays within
         # its exact project so a local correction cannot rewrite global data.
-        project_filter = "AND COALESCE(m.project_root, '') = ?"
-        params = (
-            (scope, subject, predicate, tier, project_root)
-            if tier
-            else (scope, subject, predicate, project_root)
-        )
         return [dict(row) for row in self.conn.execute(
             """SELECT m.* FROM fact_slot f
                JOIN memory m ON m.memory_id = f.memory_id
                WHERE f.scope = ? AND f.subject = ? AND f.predicate = ?
                  AND m.deleted = 0 AND m.governance_state = 'active'
-            """ + tier_filter + " " + project_filter + " ORDER BY m.updated_at DESC, m.memory_id LIMIT 2",
-            params,
+                 AND (? = 0 OR m.tier = ?)
+                 AND COALESCE(m.project_root, '') = ?
+               ORDER BY m.updated_at DESC, m.memory_id LIMIT 2""",
+            (scope, subject, predicate, int(bool(tier)), tier, project_root),
         )]
 
     def record_memory_hits(self, memory_ids: List[str]) -> int:

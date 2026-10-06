@@ -1,0 +1,32 @@
+{
+  "schema": "memguardos-normal-mode-persistence-v1",
+  "generated_at": "2026-10-06T01:03:05.293980+00:00",
+  "boot_mode": "('normal',)",
+  "package_versions": {
+    "memguardos": "1.0.1-6+finals20261006",
+    "memguardos-core": "1.0.1-6+finals20261006",
+    "memguardos-ukui": "1.0.1-6+finals20261006",
+    "memguardos-agent-bridge": "1.0.1-6+finals20261006",
+    "memguardos-doc": "1.0.1-6+finals20261006"
+  },
+  "service_status": {
+    "memguardd": "active",
+    "memguard-agent@luo": "active"
+  },
+  "module": "/var/opt/memguardos/memguard/service.py",
+  "source_match_normalized_newlines": {
+    "memguard/service.py": true,
+    "memguard/procedural.py": true,
+    "memguard/procedure_service.py": true,
+    "memguard/store/dependencies.py": true,
+    "memguard/store/sqlite_meta.py": true,
+    "memguard/retrieval/hybrid.py": true,
+    "memguard/forgetting/planner.py": true,
+    "memguard/forgetting/natural_intent.py": true,
+    "memguard/api/server.py": true,
+    "memguard/cli/memguard.py": true,
+    "memguard/web/dashboard.py": true
+  },
+  "root_capacity": "文件系统        大小  已用  可用 已用% 挂载点\n/dev/sda5        31G   19G  9.5G   67% /",
+  "passed": true
+}

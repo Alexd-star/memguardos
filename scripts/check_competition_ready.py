@@ -24,6 +24,8 @@ IGNORED_HYGIENE_PARTS = {
     ".ruff_cache",
     ".venv",
     ".worktrees",
+    ".tmp-commitment-review",
+    ".tmp-memory-value-audit-2",
     "__pycache__",
     "artifacts",
     "dist",

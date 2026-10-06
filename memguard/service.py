@@ -2065,7 +2065,6 @@ class MemGuardService(ProcedureServiceMixin):
         memory_ids = [str(row.get("memory_id") or "") for row in rows if row.get("memory_id")]
         evidence_ids = set()
         if memory_ids:
-            placeholders = ",".join("?" for _ in memory_ids)
             evidence_ids = {
                 str(item["memory_id"])
                 for item in self.meta.conn.execute(
@@ -2073,8 +2072,8 @@ class MemGuardService(ProcedureServiceMixin):
                        FROM memory_event_links l
                        JOIN memory m ON m.memory_id = l.memory_id
                        WHERE m.deleted = 0 AND m.governance_state = 'active'
-                         AND l.memory_id IN (%s)""" % placeholders,
-                    memory_ids,
+                         AND l.memory_id IN (SELECT value FROM json_each(?))""",
+                    (json.dumps(memory_ids),),
                 ).fetchall()
             }
         for row in rows:
@@ -5236,12 +5235,11 @@ class MemGuardService(ProcedureServiceMixin):
         except Exception as exc:
             errors.append("sqlite_fts: %s" % type(exc).__name__)
         try:
-            graph_hit = any(
-                self.meta.conn.execute(
-                    "SELECT 1 FROM %s WHERE memory_id = ? LIMIT 1" % table, (target,)
-                ).fetchone() is not None
-                for table in ("memory_entity", "relation")
-            )
+            graph_hit = self.meta.conn.execute(
+                """SELECT 1 FROM memory_entity WHERE memory_id = ?
+                   UNION ALL SELECT 1 FROM relation WHERE memory_id = ? LIMIT 1""",
+                (target, target),
+            ).fetchone() is not None
         except Exception as exc:
             errors.append("graph_relations: %s" % type(exc).__name__)
         try:

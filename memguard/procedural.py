@@ -252,7 +252,8 @@ def _sensitive(path: Path) -> bool:
     else:
         # openKylin's /tmp resolves to /var/tmp. Explicit child workspaces
         # remain bounded by pinned handles; other /var state stays protected.
-        temporary_root = Path("/var/tmp")
+        # This classifies an explicit path; it never creates a shared temp file.
+        temporary_root = Path("/var/tmp")  # nosec B108
         if temporary_root in path.parents:
             return False
         roots = [Path(value) for value in _SYSTEM_ROOTS]

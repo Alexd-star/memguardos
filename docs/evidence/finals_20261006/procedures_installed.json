@@ -1,6 +1,6 @@
 {
   "schema": "memguardos-procedure-validation-v1",
-  "generated_at": "2026-10-06T00:36:48.211513+00:00",
+  "generated_at": "2026-10-06T01:15:18.274843+00:00",
   "mode": "offline_product_api_with_scripted_file_actions",
   "external_llm_used": false,
   "passed": true,
@@ -105,7 +105,7 @@
   "modules": {
     "memguard.procedural": {
       "path": "/var/opt/memguardos/memguard/procedural.py",
-      "sha256": "e1fca771237c39bccd28fcc926b7512c6ddb7d0ba939d4886cb6b7f157dfdc1b"
+      "sha256": "928a343bc65aa7c434e8f9a5a08ce68cf0d78a8cf0491104f0885cc27136cc3a"
     },
     "memguard.procedure_service": {
       "path": "/var/opt/memguardos/memguard/procedure_service.py",
@@ -117,7 +117,7 @@
     },
     "memguard.service": {
       "path": "/var/opt/memguardos/memguard/service.py",
-      "sha256": "92e41d63adedba8e2934a6f342a5dda43fc210aa70360db60c339e6b131a2f84"
+      "sha256": "9abfcd1f5b85327e52afccf56ba5c4c4573f66b5da5f32364a869242480998ca"
     }
   }
 }

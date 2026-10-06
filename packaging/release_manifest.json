@@ -2,7 +2,6 @@
   "schema_version": "memguardos-release-inventory-v1",
   "formal_docs": [
     "README.md",
-    "SECURITY.md",
     "docs/README.md",
     "docs/architecture.md",
     "docs/installation.md",
@@ -18,7 +17,6 @@
   "required_paths": [
     "README.md",
     "LICENSE",
-    "SECURITY.md",
     "pyproject.toml",
     "memguard/service.py",
     "memguard/procedural.py",
@@ -138,7 +136,6 @@
   "competition_include_files": [
     "README.md",
     "LICENSE",
-    "SECURITY.md",
     "pyproject.toml",
     "requirements-dev.txt",
     "Makefile",

@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-10-06T00:51:21.840007+00:00",
+  "generated_at": "2026-10-06T01:24:56.975199+00:00",
   "root": "docs/evidence/finals_20261006",
-  "file_count": 7,
-  "total_bytes": 11933,
+  "file_count": 10,
+  "total_bytes": 15759,
   "files": [
     {
       "path": "cli_interfaces.txt",
@@ -20,9 +20,14 @@
       "sha256": "31aac402fdef86f326728ed4bdc0d22852f9311fa16c562aadda7d1511e050b3"
     },
     {
+      "path": "normal_mode.json",
+      "bytes": 1194,
+      "sha256": "fee4dad4e010e88db47b7e37c39f25504ffb6ead9983416fe4de6a4df682cea2"
+    },
+    {
       "path": "procedures_installed.json",
       "bytes": 3377,
-      "sha256": "ce0d43343db4ed560a1986d3622e88c780ac45d772b1dad590b40285d72b7620"
+      "sha256": "70d6009563b89eeddc2ec7b3b9dc7e91a25100bf72d3f573851dabb37a304f06"
     },
     {
       "path": "pytest_openkylin.txt",
@@ -31,8 +36,18 @@
     },
     {
       "path": "README.md",
-      "bytes": 2784,
-      "sha256": "884967eb9394ff05010c9a44ccf12a5829a9b44eb3f4147f5165e10d64d64eb5"
+      "bytes": 4661,
+      "sha256": "5fde978225a8c4f7c1301ce8548b0f4b8e3f572e26f54ff5c27e327e2e8b0867"
+    },
+    {
+      "path": "security_summary.json",
+      "bytes": 576,
+      "sha256": "bc1c8922bbc75c96fd81291fe3bb833b79725fd316707a460b99f751469905de"
+    },
+    {
+      "path": "sql_security_tests.txt",
+      "bytes": 179,
+      "sha256": "3453060ca5090a8c445b970e9a28b1778cee89b73b0da7eab49c6d3fd47254c8"
     },
     {
       "path": "web_ui.json",

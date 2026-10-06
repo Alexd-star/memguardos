@@ -409,6 +409,29 @@ def test_deb_package_set_verifier_is_in_release_inventory():
     assert required in inventory["required_paths"]
 
 
+def test_release_inventory_uses_existing_security_document_and_excludes_private_review():
+    inventory = json.loads((ROOT / "packaging/release_manifest.json").read_text(encoding="utf-8"))
+    assert "docs/security.md" in inventory["formal_docs"]
+    assert "SECURITY.md" not in inventory["required_paths"]
+    assert should_skip(ROOT / ".tmp-commitment-review" / "private-draft.md")
+    assert should_skip(ROOT / ".tmp-memory-value-audit-2" / "D01" / "memory.sqlite3")
+
+
+def test_hygiene_preserves_local_audit_data_but_rejects_product_runtime_files(monkeypatch, tmp_path):
+    local_data = tmp_path / ".tmp-memory-value-audit-2" / "D01"
+    local_data.mkdir(parents=True)
+    (local_data / "memory.sqlite3").touch()
+    monkeypatch.setattr(readiness, "ROOT", tmp_path)
+    checks = readiness.check_repository_hygiene()
+    assert next(check for check in checks if check.name == "运行时文件未混入提交主体").ok
+
+    product = tmp_path / "memguard"
+    product.mkdir()
+    (product / "memory.sqlite3").touch()
+    checks = readiness.check_repository_hygiene()
+    assert not next(check for check in checks if check.name == "运行时文件未混入提交主体").ok
+
+
 def test_openkylin_evidence_separates_sdk_path_from_latency_budget_fallback():
     source = (ROOT / "scripts/collect_openkylin_evidence.sh").read_text(encoding="utf-8")
 
