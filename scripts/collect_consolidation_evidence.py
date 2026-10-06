@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import platform
 import subprocess
 import sys
@@ -19,6 +20,9 @@ from memguard.service import MemGuardService
 
 
 def git_revision() -> str:
+    supplied = os.environ.get("MEMGUARD_SOURCE_REVISION", "").strip()
+    if supplied:
+        return supplied
     try:
         return subprocess.check_output(
             ["git", "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL
