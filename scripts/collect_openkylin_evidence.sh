@@ -169,6 +169,7 @@ EOF
 | `consolidation_evidence.json` | 会话记忆巩固、人工确认、版本 CAS 与短期保留证据 |
 | `decay_evidence.json` | 检索强化、健康度衰减、可逆降级与旧计划 CAS 证据 |
 | `context_compaction_evidence.json` | 规划、工具选择、回答阶段的上下文表示与预算证据 |
+| `memory_budget_evidence.json` | 价值/风险/字节成本、受保护偏好和可逆预算降级结果 |
 | `manifest.json` | 证据包文件大小与 SHA256 摘要清单 |
 | `SHA256SUMS.txt` | 可由 `sha256sum -c SHA256SUMS.txt` 复核的证据包哈希 |
 EOF
@@ -199,6 +200,8 @@ run_capture "context_compaction_evidence" "${PYTHON_BIN}" scripts/collect_contex
   --output "${OUT_DIR}/context_compaction_evidence.json"
 run_capture "action_feedback_evidence" "${PYTHON_BIN}" scripts/collect_action_feedback_evidence.py \
   --output "${OUT_DIR}/action_feedback_evidence.json"
+run_capture "memory_budget_evidence" "${PYTHON_BIN}" scripts/collect_memory_budget_evidence.py \
+  --output "${OUT_DIR}/memory_budget_evidence.json"
 run_capture "sdk_status" "${PYTHON_BIN}" -m memguard.cli.memctl sdk-status
 run_capture "sdk_embedding_probe" "${PYTHON_BIN}" -m memguard.cli.memctl sdk-status --probe-embedding --probe-timeout 90
 if [ -f scripts/diagnose_kylin_embedding.sh ]; then

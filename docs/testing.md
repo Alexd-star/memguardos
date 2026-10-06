@@ -178,6 +178,20 @@ memctl agent action-outcomes --memory-id mem_example
 
 openKylin 采集脚本会在隔离存储中运行同一证据脚本，输出预检判定、成功遵循、偏离、重试去重、统计结果和旧收据拒绝结果。该测试证明的是记忆证据与行动结果之间的系统契约；它不把一次确定性工具调用等同于所有模型或所有 Agent 的长期泛化效果。
 
+### 5.6 价值感知记忆预算回归
+
+`tests/test_memory_budget.py` 验证长期存储预算的完整生命周期：候选同时输出价值、风险、估算字节数和单位字节价值；明确偏好保持在长期层；普通记忆按单位成本的净价值进入可逆降级计划；执行前必须确认；确认后追加 session 版本；计划所依赖的版本或正文大小发生变化时，旧计划返回 `stale_memory_budget_plan`。API 契约和独立证据脚本使用同一 service 实现，避免测试只验证展示层排序。
+
+```bash
+python -m pytest -q tests/test_memory_budget.py
+python scripts/collect_memory_budget_evidence.py --output output/memory_budget_evidence.json
+memctl budget-plan --target-bytes 1048576 > budget-plan.json
+memctl budget --plan-file budget-plan.json --target-session-id budget-review
+memctl budget --plan-file budget-plan.json --target-session-id budget-review --yes
+```
+
+预算中的字节数是可重复的持久化规模估算，用于候选比较、目标规划和提交前一致性校验；它不冒充底层文件系统精确计费。计划不会自动处理显式偏好、高敏感内容或治理状态异常记录，目标不可达时会如实返回 `target_reached: false`，而不是为了达到数字越过保护边界。
+
 ## 6. 记忆价值实验
 
 记忆价值实验分为两种口径。

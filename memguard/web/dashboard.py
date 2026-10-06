@@ -346,6 +346,15 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                 "limit": _safe_int(params.get("limit", ["200"])[0], 200),
             })
             return
+        if parsed.path == "/api/memory-budget":
+            params = parse_qs(parsed.query)
+            self._send_api({
+                "command": "budget_plan",
+                "target_bytes": _safe_int(params.get("target_bytes", ["1048576"])[0], 1048576),
+                "as_of": params.get("as_of", [""])[0],
+                "limit": _safe_int(params.get("limit", ["1000"])[0], 1000),
+            })
+            return
         if parsed.path == "/api/verify-audit":
             self._send_api({"command": "verify_audit"})
             return
@@ -528,6 +537,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
             "/api/resolve-fact-conflict": "admin",
             "/api/governance-review": "admin",
             "/api/apply-decay": "admin",
+            "/api/apply-budget": "admin",
             "/api/acceptance-run": "admin",
             "/api/acceptance-report": "admin",
         }.get(parsed.path, "admin")
@@ -574,6 +584,15 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/apply-decay":
             self._send_api({
                 "command": "apply_decay",
+                "plan": payload.get("plan"),
+                "selected_memory_ids": payload.get("selected_memory_ids"),
+                "target_session_id": str(payload.get("target_session_id", "")),
+                "confirm": bool(payload.get("confirm", False)),
+            })
+            return
+        if parsed.path == "/api/apply-budget":
+            self._send_api({
+                "command": "apply_budget",
                 "plan": payload.get("plan"),
                 "selected_memory_ids": payload.get("selected_memory_ids"),
                 "target_session_id": str(payload.get("target_session_id", "")),
@@ -1828,6 +1847,17 @@ def _dashboard_html() -> str:
           <div class="status-row"><div class="health-title"><span id="retrievalDot" class="status-dot"></span><span>记忆检索</span></div><span class="muted">当前使用本机增强或稳定基础检索</span><span id="retrievalBadge" class="badge">待检查</span></div>
           <div class="status-row"><div class="health-title"><span id="sdkDot" class="status-dot"></span><span>本机智能检索</span></div><span class="muted">Kylin AI 能力不可用时自动降级</span><span id="sdkBadge" class="badge">待检查</span></div>
           <div class="status-row"><div class="health-title"><span id="osDot" class="status-dot"></span><span>系统资源</span></div><span class="muted">服务资源限制和运行环境状态</span><span id="osBadge" class="badge">待检查</span></div>
+        </div>
+        <div class="panel" style="margin-top:14px" data-min-role="admin">
+          <div class="health"><div class="item-title">价值感知记忆预算</div><span class="badge">可逆维护</span></div>
+          <p class="muted">按价值、治理风险和估算字节成本生成长期记忆降级预览。显式偏好和敏感内容始终受保护，确认后只追加 session 版本。</p>
+          <div class="search-toolbar">
+            <div><label for="budgetTargetBytes">长期层目标字节数</label><input id="budgetTargetBytes" type="number" min="128" value="1048576"></div>
+            <button class="primary" onclick="loadMemoryBudget(event)">生成预算预览</button>
+            <button id="applyBudgetButton" class="danger" onclick="applyMemoryBudget(event)" disabled>确认执行建议</button>
+          </div>
+          <div id="memoryBudgetSummary" class="list" style="margin-top:12px"><div class="muted">输入目标后生成预览。</div></div>
+          <details><summary>预算计划明细</summary><pre id="memoryBudgetOut" class="advanced-output"></pre></details>
         </div>
         <div id="refreshWarnings" class="list" style="display:none;margin-top:14px"></div>
         <div class="result-section" style="margin-top:14px">
@@ -3906,6 +3936,45 @@ def _dashboard_html() -> str:
     }
     async function memoryPolicy(event) {
       await withBusy(event, async () => { setRawOutput('diagnosticsOut', await getJson('/api/memory-policy')); return operationFeedback('记忆策略已加载。', 'ok'); });
+    }
+    let memoryBudgetPlan = null;
+    async function loadMemoryBudget(event) {
+      await withBusy(event, async () => {
+        const raw = document.getElementById('budgetTargetBytes').value;
+        const target = Math.max(128, Number.parseInt(raw || '0', 10) || 0);
+        const payload = await getJson('/api/memory-budget?target_bytes=' + encodeURIComponent(target));
+        memoryBudgetPlan = (payload.result || null);
+        setRawOutput('memoryBudgetOut', payload);
+        const summary = (memoryBudgetPlan || {}).summary || {};
+        const candidates = (memoryBudgetPlan || {}).candidates || [];
+        const selected = new Set((memoryBudgetPlan || {}).demotion_ids || []);
+        const box = document.getElementById('memoryBudgetSummary');
+        if (!payload.ok || !memoryBudgetPlan || memoryBudgetPlan.schema !== 'memguardos-memory-budget-plan-v1') {
+          box.innerHTML = '<div class="item"><div class="item-title">预算预览没有生成</div><div class="muted">' + esc(payload.error || '请检查目标字节数和管理员权限。') + '</div></div>';
+          document.getElementById('applyBudgetButton').disabled = true;
+          return operationFeedback('预算预览没有生成，请检查输入。', 'warn');
+        }
+        const head = '<div class="item"><div class="health"><div class="item-title">长期层预计占用 ' + esc(summary.current_bytes || 0) + ' bytes</div><span class="badge ' + (summary.target_reached ? 'ok' : 'warn') + '">' + (summary.target_reached ? '目标可达' : '保护边界下不可完全达到') + '</span></div><div class="muted">目标 ' + esc(summary.target_bytes || target) + ' bytes · 预计回收 ' + esc(summary.bytes_to_reclaim || 0) + ' bytes · 保护 ' + esc(summary.protected_count || 0) + ' 条 · 建议降级 ' + esc(summary.demotion_count || 0) + ' 条</div></div>';
+        const rows = candidates.slice(0, 12).map(item => '<div class="item"><div class="health"><div class="item-title">' + esc(shortMemoryId(item.memory_id)) + '</div><span class="badge ' + (item.recommended_action === 'retain_protected' ? 'ok' : 'warn') + '">' + esc(item.recommended_action === 'retain_protected' ? '受保护' : '可逆降级') + '</span></div><div class="muted">价值 ' + esc(item.value_score) + ' · 风险 ' + esc(item.risk_score) + ' · 估算 ' + esc(item.storage_bytes) + ' bytes · 单位价值 ' + esc(item.value_per_byte) + '</div></div>').join('');
+        box.innerHTML = head + (rows || '<div class="item"><div class="muted">当前没有长期记忆候选。</div></div>');
+        document.getElementById('applyBudgetButton').disabled = selected.size === 0;
+        return operationFeedback('预算预览已生成，请核对受保护项和降级候选。', 'ok');
+      });
+    }
+    async function applyMemoryBudget(event) {
+      if (!memoryBudgetPlan || !(memoryBudgetPlan.demotion_ids || []).length) return operationFeedback('当前没有可执行的预算建议。', 'warn');
+      if (!window.confirm('确认将建议候选降级到临时会话层？系统不会删除正文，但会追加新版本。')) return null;
+      await withBusy(event, async () => {
+        const payload = await postJson('/api/apply-budget', {
+          plan: memoryBudgetPlan,
+          selected_memory_ids: memoryBudgetPlan.demotion_ids,
+          target_session_id: 'web-budget-review',
+          confirm: true,
+        });
+        setRawOutput('memoryBudgetOut', payload);
+        document.getElementById('applyBudgetButton').disabled = true;
+        return operationFeedback(payload.ok && (payload.result || {}).applied ? '预算建议已执行，普通记忆已可逆降级。' : '预算建议未执行，请查看回执。', payload.ok && (payload.result || {}).applied ? 'ok' : 'warn');
+      });
     }
     async function diagnostics(event) {
       return withBusy(event, async () => {

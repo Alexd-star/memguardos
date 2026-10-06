@@ -118,6 +118,16 @@ memctl agent action-outcomes --memory-id mem_example
 
 行动账本只保存命令摘要哈希、记忆版本、退出码和作用域，不保存命令正文或工具输出；记忆被精准遗忘时，关联反馈也会同步清理。
 
+长期运行的本地 Agent 可以在维护时先预览长期记忆预算：
+
+```bash
+memctl budget-plan --target-bytes 1048576 > budget-plan.json
+memctl budget --plan-file budget-plan.json --target-session-id budget-review
+memctl budget --plan-file budget-plan.json --target-session-id budget-review --yes
+```
+
+预览会同时显示价值分、风险分、估算字节数和单位字节价值。明确偏好、高敏感内容和治理中的记忆会标记为受保护项；确认后普通候选只追加 session 版本，不会删除正文，计划版本变化时会自动拒绝执行。
+
 如需估算 LLM 输入成本，可附加 token 预算。该参数只在显式传入时裁剪上下文，不影响默认检索效果：
 
 ```bash

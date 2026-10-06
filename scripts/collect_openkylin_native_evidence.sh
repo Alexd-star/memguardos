@@ -123,6 +123,9 @@ python3 scripts/collect_context_compaction_evidence.py \
 python3 scripts/collect_action_feedback_evidence.py \
   --output "${OUT_DIR}/action_feedback_evidence.json" \
   >"${OUT_DIR}/action_feedback_evidence.stdout.txt" 2>&1
+python3 scripts/collect_memory_budget_evidence.py \
+  --output "${OUT_DIR}/memory_budget_evidence.json" \
+  >"${OUT_DIR}/memory_budget_evidence.stdout.txt" 2>&1
 
 TMP_SAMPLE_DIR="$(mktemp -d)"
 SAMPLE_A="${TMP_SAMPLE_DIR}/peony_preference.md"

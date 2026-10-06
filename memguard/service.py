@@ -76,6 +76,7 @@ from memguard.lifecycle import (
     support_views,
 )
 from memguard.models import AuditInfo, MemoryRecord, MemorySource, VersionInfo, make_memory, new_id, stable_hash, utc_now
+from memguard.memory_budget import estimate_memory_bytes, recommend_budget_action, score_memory_budget
 from memguard.natural_language import explicitly_requests_no_store, infer_retention_tier, looks_like_question
 from memguard.os_guard.events import parse_os_event
 from memguard.os_guard.cgroup import cgroup_status
@@ -3713,6 +3714,278 @@ class MemGuardService(ProcedureServiceMixin):
         }
         self._audit(
             "decay_apply",
+            None,
+            {
+                "plan_id": plan.get("plan_id", ""),
+                "demoted_ids": [item["memory_id"] for item in demoted],
+                "failure_count": len(failures),
+                "target_session_id": target_session,
+            },
+        )
+        return result
+
+    def build_memory_budget_plan(
+        self,
+        target_bytes: int,
+        *,
+        as_of: str = "",
+        limit: int = 1000,
+    ) -> Dict[str, object]:
+        """Build a value/risk/byte-aware, reversible curation plan.
+
+        The target applies to active long-term memory only.  Protected records
+        remain in that tier; recommended records are demoted to session tier
+        and can later be promoted again.  No content is deleted by this plan.
+        """
+
+        try:
+            target = int(target_bytes)
+        except (TypeError, ValueError):
+            return {"ok": False, "reason": "target_bytes_must_be_integer", "candidates": []}
+        if target < 128:
+            return {"ok": False, "reason": "target_bytes_too_small", "candidates": []}
+        effective_as_of = self._normalize_decay_time(as_of)
+        rows = self.meta.list_memories(include_deleted=False, tier="long_term")
+        candidates = []
+        expected_versions: Dict[str, str] = {}
+        expected_storage: Dict[str, int] = {}
+        for row in rows[: max(1, min(int(limit), 2000))]:
+            memory_id = str(row.get("memory_id") or "")
+            if not memory_id:
+                continue
+            record = self.store.get_latest(memory_id)
+            if record is None or record.deleted:
+                continue
+            enriched = dict(row)
+            enriched.update(
+                {
+                    "content": record.content,
+                    "summary": record.summary,
+                    "confidence": record.confidence,
+                    "importance": record.importance,
+                    "sensitivity_level": record.sensitivity.level,
+                    "trust_score": record.trust_score,
+                    "governance_state": record.governance_state,
+                    "preference_explicit": record.preference_explicit,
+                    "subtype": record.subtype,
+                    "type": record.type,
+                }
+            )
+            enriched["action_outcome_stats"] = self.meta.action_outcome_stats(memory_id)
+            score = score_memory_budget(enriched, as_of=effective_as_of)
+            score["tier"] = "long_term"
+            score["type"] = record.type
+            score["subtype"] = record.subtype
+            score["recommended_action"] = recommend_budget_action(score)
+            score["reason"] = (
+                "受保护记忆不参与自动降级"
+                if score["recommended_action"] == "retain_protected"
+                else "按单位存储成本的净价值排序，优先可逆降级低价值记录"
+            )
+            candidates.append(score)
+            expected_versions[memory_id] = str(row.get("version_id") or record.version.version_id)
+            expected_storage[memory_id] = int(score["storage_bytes"])
+
+        current_bytes = sum(int(item["storage_bytes"]) for item in candidates)
+        reclaim_needed = max(0, current_bytes - target)
+        demotion_ids: List[str] = []
+        projected_bytes = current_bytes
+        if reclaim_needed:
+            ordered = sorted(
+                (item for item in candidates if item["recommended_action"] == "demote_to_session"),
+                key=lambda item: (float(item["value_per_byte"]), float(item["net_value"]), str(item["memory_id"])),
+            )
+            for item in ordered:
+                if projected_bytes <= target:
+                    break
+                demotion_ids.append(str(item["memory_id"]))
+                projected_bytes -= int(item["storage_bytes"])
+        material = {
+            "namespace": self.namespace,
+            "as_of": effective_as_of,
+            "target_bytes": target,
+            "expected_versions": expected_versions,
+            "expected_storage": expected_storage,
+            "demotion_ids": demotion_ids,
+        }
+        plan = {
+            "schema": "memguardos-memory-budget-plan-v1",
+            "plan_id": stable_hash(json.dumps(material, ensure_ascii=False, sort_keys=True, separators=(",", ":"))),
+            "namespace": self.namespace,
+            "as_of": effective_as_of,
+            "target_bytes": target,
+            "expected_versions": expected_versions,
+            "expected_storage": expected_storage,
+            "demotion_ids": demotion_ids,
+            "candidates": candidates,
+            "summary": {
+                "candidate_count": len(candidates),
+                "current_bytes": current_bytes,
+                "target_bytes": target,
+                "bytes_to_reclaim": reclaim_needed,
+                "projected_bytes": projected_bytes,
+                "protected_count": sum(item["recommended_action"] == "retain_protected" for item in candidates),
+                "demotion_count": len(demotion_ids),
+                "target_reached": projected_bytes <= target,
+            },
+        }
+        self._audit(
+            "memory_budget_plan",
+            None,
+            {
+                "plan_id": plan["plan_id"],
+                "target_bytes": target,
+                "current_bytes": current_bytes,
+                "demotion_ids": demotion_ids,
+            },
+        )
+        return {"ok": True, **plan}
+
+    def apply_memory_budget_plan(
+        self,
+        plan: Dict[str, object],
+        *,
+        selected_memory_ids: Optional[List[str]] = None,
+        target_session_id: str = "",
+        confirm: bool = False,
+    ) -> Dict[str, object]:
+        """Apply selected budget actions after integrity and policy rechecks."""
+
+        if not isinstance(plan, dict) or plan.get("schema") != "memguardos-memory-budget-plan-v1":
+            return {"applied": False, "reason": "invalid_memory_budget_plan"}
+        if str(plan.get("namespace") or self.namespace) != self.namespace:
+            return {"applied": False, "reason": "namespace_mismatch"}
+        expected_versions = plan.get("expected_versions")
+        expected_storage = plan.get("expected_storage")
+        demotion_raw = plan.get("demotion_ids")
+        candidates_raw = plan.get("candidates")
+        if (
+            not isinstance(expected_versions, dict)
+            or not isinstance(expected_storage, dict)
+            or not isinstance(demotion_raw, list)
+            or not isinstance(candidates_raw, list)
+            or any(not isinstance(item, dict) for item in candidates_raw)
+        ):
+            return {"applied": False, "reason": "invalid_memory_budget_plan"}
+        expected_versions = {str(key): str(value) for key, value in expected_versions.items()}
+        expected_storage = {str(key): int(value) for key, value in expected_storage.items()}
+        demotion_ids = [str(memory_id).strip() for memory_id in demotion_raw if str(memory_id).strip()]
+        material = {
+            "namespace": self.namespace,
+            "as_of": str(plan.get("as_of") or ""),
+            "target_bytes": int(plan.get("target_bytes", 0)),
+            "expected_versions": expected_versions,
+            "expected_storage": expected_storage,
+            "demotion_ids": demotion_ids,
+        }
+        expected_plan_id = stable_hash(json.dumps(material, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
+        if str(plan.get("plan_id") or "") != expected_plan_id:
+            return {"applied": False, "reason": "plan_integrity_failed"}
+        candidate_by_id = {
+            str(item.get("memory_id") or ""): item for item in candidates_raw if str(item.get("memory_id") or "")
+        }
+        if set(demotion_ids) != {
+            memory_id for memory_id, item in candidate_by_id.items()
+            if item.get("recommended_action") == "demote_to_session"
+            and float(item.get("storage_bytes") or 0) > 0
+            and memory_id in set(demotion_ids)
+        } and any(item.get("recommended_action") == "demote_to_session" for item in candidate_by_id.values()):
+            # The plan may intentionally leave some low-value records above the
+            # target when no protected-safe action can satisfy the budget.
+            planned_demotions = {
+                memory_id for memory_id, item in candidate_by_id.items()
+                if memory_id in set(demotion_ids) and item.get("recommended_action") == "demote_to_session"
+            }
+            if planned_demotions != set(demotion_ids):
+                return {"applied": False, "reason": "plan_integrity_failed"}
+        if selected_memory_ids is not None and not isinstance(selected_memory_ids, list):
+            return {"applied": False, "reason": "selection_must_be_list"}
+        selected = [
+            str(memory_id).strip()
+            for memory_id in (selected_memory_ids if selected_memory_ids is not None else demotion_ids)
+            if str(memory_id).strip()
+        ]
+        if len(selected) != len(set(selected)) or any(memory_id not in set(demotion_ids) for memory_id in selected):
+            return {"applied": False, "reason": "selection_outside_plan", "selected_memory_ids": selected}
+        target_session = str(target_session_id or "").strip()
+        if selected and not target_session:
+            return {"applied": False, "reason": "target_session_required", "selected_memory_ids": selected}
+
+        current_long_term = {
+            str(row.get("memory_id")): row
+            for row in self.meta.list_memories(include_deleted=False, tier="long_term")
+        }
+        current_versions = {
+            memory_id: str(current_long_term[memory_id].get("version_id") or "")
+            for memory_id in expected_versions if memory_id in current_long_term
+        }
+        current_storage: Dict[str, int] = {}
+        for memory_id in expected_versions:
+            record = self.store.get_latest(memory_id)
+            if record is not None and not record.deleted:
+                current_storage[memory_id] = estimate_memory_bytes({
+                    **current_long_term.get(memory_id, {}),
+                    "content": record.content,
+                    "summary": record.summary,
+                    "type": record.type,
+                    "subtype": record.subtype,
+                    "tier": record.tier,
+                })
+        if current_versions != expected_versions or current_storage != expected_storage:
+            return {"applied": False, "reason": "stale_memory_budget_plan", "expected_versions": expected_versions, "current_versions": current_versions}
+        for memory_id in selected:
+            record = self.store.get_latest(memory_id)
+            if record is None:
+                return {"applied": False, "reason": "stale_memory_budget_plan", "memory_id": memory_id}
+            row = {
+                **current_long_term[memory_id],
+                "content": record.content,
+                "summary": record.summary,
+                "confidence": record.confidence,
+                "importance": record.importance,
+                "sensitivity_level": record.sensitivity.level,
+                "trust_score": record.trust_score,
+                "governance_state": record.governance_state,
+                "preference_explicit": record.preference_explicit,
+                "subtype": record.subtype,
+                "type": record.type,
+                "action_outcome_stats": self.meta.action_outcome_stats(memory_id),
+            }
+            score = score_memory_budget(row, as_of=str(plan.get("as_of") or ""))
+            if recommend_budget_action(score) != "demote_to_session":
+                return {"applied": False, "reason": "memory_budget_policy_changed", "memory_id": memory_id}
+        if not confirm:
+            return {
+                "applied": False,
+                "reason": "confirmation_required",
+                "plan_id": plan.get("plan_id", ""),
+                "selected_memory_ids": selected,
+                "target_session_id": target_session,
+            }
+        demoted = []
+        failures = []
+        for memory_id in selected:
+            result = self.promote_memory(memory_id, "session", session_id=target_session)
+            if result.get("promoted"):
+                demoted.append({
+                    "memory_id": memory_id,
+                    "version_id": result["record"].version.version_id,
+                    "tier": result["record"].tier,
+                    "session_id": target_session,
+                    "storage_bytes": expected_storage.get(memory_id, 0),
+                })
+            else:
+                failures.append({"memory_id": memory_id, "reason": result.get("reason", "demotion_failed")})
+        result = {
+            "applied": (bool(demoted) and not failures) or not selected,
+            "plan_id": plan.get("plan_id", ""),
+            "target_session_id": target_session,
+            "demoted": demoted,
+            "failures": failures,
+            "bytes_reclaimed": sum(int(item.get("storage_bytes") or 0) for item in demoted),
+        }
+        self._audit(
+            "memory_budget_apply",
             None,
             {
                 "plan_id": plan.get("plan_id", ""),

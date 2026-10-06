@@ -31,6 +31,8 @@ CLI 是最常用入口，适合人工演示、脚本复验和调试。
 | `memctl consolidate` | 按审核计划晋级长期记忆 | 计划 JSON、可选记忆编号、确认标记 | 实际晋级、失败项和仍保留的会话记忆 |
 | `memctl decay-plan` | 生成长期记忆健康度与衰减计划 | 观察时间、年龄门槛、健康度门槛 | 强化保留、保护复核和可逆降级候选 |
 | `memctl decay` | 按审核计划把冷记忆可逆降级到会话层 | 计划 JSON、目标会话、可选记忆编号、确认标记 | 降级结果、版本编号和旧计划拒绝原因 |
+| `memctl budget-plan` | 按价值、风险和字节成本生成长期记忆预算计划 | 目标字节数、时间、数量上限 | 价值分、风险分、保护项和可逆降级候选 |
+| `memctl budget` | 按预算计划把选定普通记忆可逆降级到会话层 | 计划 JSON、目标会话、可选记忆编号、确认标记 | 回收估算、版本编号和旧计划拒绝原因 |
 | `doctor` | 系统诊断 | 可选 namespace | 环境和能力报告 |
 | `web` | 启动本地控制台 | host、port | Web 服务 |
 
@@ -138,6 +140,24 @@ CLI 对应入口为 `memctl agent record-outcome --preflight-file preflight.json
 ```
 
 降级前必须提供目标会话编号，因为 session 记忆需要明确的可见范围。服务重新核对计划编号、版本和当前健康度；版本不一致返回 `stale_decay_plan`，策略变化返回 `decay_policy_changed`。降级会产生新的 session 版本，之后可以再次经过巩固计划回到长期层。
+
+### 价值感知记忆预算
+
+`budget_plan` 面向长期运行的本地 Agent 维护任务。它扫描当前有效的长期记忆，按重要性、置信度、来源信任、最近使用、检索命中、行动结果、治理风险和估算字节成本计算 `value_per_byte`，并生成可预览的 `memguardos-memory-budget-plan-v1`。显式偏好、高敏感内容和治理状态异常的记录标记为 `retain_protected`；普通记录才可能进入 `demote_to_session`。
+
+```json
+{"command":"budget_plan","target_bytes":1048576,"as_of":"2026-01-31T00:00:00+00:00","limit":1000}
+```
+
+返回结果中的 `summary` 包含 `current_bytes`、`target_bytes`、`bytes_to_reclaim`、`projected_bytes`、`protected_count`、`demotion_count` 和 `target_reached`；每个候选还包含价值分、风险分、估算占用和单位字节价值。这里的字节数是稳定的治理估算，用于排序和 CAS 复核，不替代文件系统计费。
+
+确认后通过 `apply_budget` 执行，服务会再次检查计划哈希、全部候选的版本和估算大小，并重新判断所选记忆是否仍受保护。版本变化返回 `stale_memory_budget_plan`，策略变化返回 `memory_budget_policy_changed`；成功操作只追加 session 版本，不删除正文。
+
+```json
+{"command":"apply_budget","plan":{"schema":"memguardos-memory-budget-plan-v1","plan_id":"plan_example"},"selected_memory_ids":["mem_example"],"target_session_id":"budget-review","confirm":true}
+```
+
+CLI 对应入口为 `memctl budget-plan --target-bytes 1048576` 和 `memctl budget --plan-file budget-plan.json --target-session-id budget-review --yes`。预算计划与衰减、巩固共用版本链和审计链，用户仍可通过巩固计划将仍有价值的 session 记忆重新提升。
 
 ### Agent 适配器与通用事件
 

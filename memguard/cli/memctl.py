@@ -120,6 +120,22 @@ def build_parser() -> argparse.ArgumentParser:
     decay.add_argument("--select", action="append", default=[], help="Memory id to demote; repeat to select multiple")
     decay.add_argument("--yes", action="store_true")
 
+    budget_plan = sub.add_parser(
+        "budget-plan",
+        help="Plan reversible long-term curation by memory value, risk, and estimated bytes",
+    )
+    budget_plan.add_argument("--target-bytes", type=int, required=True)
+    budget_plan.add_argument("--as-of", default="", help="UTC ISO time used for reproducible scoring")
+    budget_plan.add_argument("--limit", type=int, default=1000)
+    budget = sub.add_parser(
+        "budget",
+        help="Apply a reviewed memory-budget plan by demoting selected records to session tier",
+    )
+    budget.add_argument("--plan-file", required=True)
+    budget.add_argument("--target-session-id", default="")
+    budget.add_argument("--select", action="append", default=[], help="Memory id to demote; repeat to select multiple")
+    budget.add_argument("--yes", action="store_true")
+
     evict = sub.add_parser("evict-tier", help="Evict working/session tier memories")
     evict.add_argument("tier", choices=["working", "session"])
     evict.add_argument("--yes", action="store_true")
@@ -850,6 +866,29 @@ def main(argv: list[str] | None = None) -> int:
             if not isinstance(plan, dict):
                 raise ValueError("plan file must contain a decay plan object")
             result = service.apply_decay_plan(
+                plan,
+                selected_memory_ids=args.select or None,
+                target_session_id=args.target_session_id,
+                confirm=args.yes,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+            return 0 if result.get("applied") or not args.yes else 2
+
+        if args.command == "budget-plan":
+            result = service.build_memory_budget_plan(
+                args.target_bytes,
+                as_of=args.as_of,
+                limit=args.limit,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result.get("ok") else 2
+
+        if args.command == "budget":
+            plan_payload = json.loads(Path(args.plan_file).read_text(encoding="utf-8"))
+            plan = plan_payload.get("result", plan_payload) if isinstance(plan_payload, dict) else None
+            if not isinstance(plan, dict):
+                raise ValueError("plan file must contain a memory budget plan object")
+            result = service.apply_memory_budget_plan(
                 plan,
                 selected_memory_ids=args.select or None,
                 target_session_id=args.target_session_id,

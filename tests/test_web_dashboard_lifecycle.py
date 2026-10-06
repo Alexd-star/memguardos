@@ -41,6 +41,20 @@ def test_dashboard_overview_is_task_first_instead_of_health_card_wall():
     assert "overview-primary-actions" in page
 
 
+def test_dashboard_exposes_value_aware_memory_budget_maintenance():
+    page = dashboard_module._dashboard_html()
+
+    diagnostics = re.search(r'<section id="diagnostics"[^>]*>(?P<section>[\s\S]*?)</section>', page)
+    assert diagnostics is not None
+    section = diagnostics.group("section")
+    assert "价值感知记忆预算" in section
+    assert "budgetTargetBytes" in section
+    assert "loadMemoryBudget" in section
+    assert "applyMemoryBudget" in section
+    assert "/api/memory-budget?target_bytes=" in page
+    assert "/api/apply-budget" in page
+
+
 def test_dashboard_separates_daily_actions_and_humanizes_agent_records():
     page = dashboard_module._dashboard_html()
 

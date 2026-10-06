@@ -91,6 +91,8 @@ memctl agent ingest-adapted-session \
 
 长期运行的 Agent 还可以在空闲维护阶段调用 `decay-plan`，将实际检索强化、最近使用时间、重要性和置信度纳入记忆健康度评估。冷记忆只会生成可解释的降级候选，确认后追加 session 版本；它不会在 Agent 正常推理路径中直接删除内容。下一次检索或用户重新确认后，记忆仍可通过巩固计划重新进入长期层。
 
+当设备存储或上下文预算需要明确控制时，再调用 `budget-plan --target-bytes <目标>`。该计划把记忆价值、治理风险、真实行动结果和估算字节成本放到同一张决策表中，优先识别单位成本价值较低的普通长期记忆；显式偏好、高敏感内容和治理中的记录保持保护。适配器应把计划展示给用户或维护任务审核，随后调用 `budget` 执行选定项。执行仍追加 session 版本并保留原始证据，版本或正文大小发生变化时要求重新生成计划。
+
 若 Agent 使用自己的 SDK，则直接实现 `convert(raw_event) -> AgentInteractionEvent` 并注册到 `AgentAdapterRegistry`，再调用 `MemGuardService.ingest_interaction`。上下文仍通过 `build_agent_context` 按规划、工具选择和回答生成阶段请求；工具执行前调用 `preflight_agent_action`，根据 `allow`、`redirect`、`confirm` 或 `deny` 决定继续、改写、请求确认或停止。遗忘仍调用统一的 `forget` 或 `forget_agent_interactions` 接口；不建议在适配器中自行拼接长期记忆或直接操作 SQLite。
 
 工具执行完成后，适配器应把同一份预检结果和外部运行状态提交给 `record_agent_action_outcome`。接口会重新核对上下文收据与记忆版本，区分实际遵循、成功偏离、失败、拦截和未知结果；成功遵循才进入行动强化统计，重复回写由幂等键去重。适配器只需保留预检对象和本地工具结果，不需要把命令正文写入 MemGuardOS。记忆更新或遗忘后，旧预检不能继续回写，行动账本随受管记忆同步清理。
