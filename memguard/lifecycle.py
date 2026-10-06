@@ -70,8 +70,8 @@ def _lifecycle_state(row: Mapping[str, Any]) -> str:
     governance = str(row.get("governance_state") or "active")
     if governance == "quarantined":
         return "quarantined"
-    if governance == "rejected":
-        return "rejected"
+    if governance != "active":
+        return governance
     if row.get("valid_to") or row.get("superseded_by"):
         return "superseded"
     return "active"

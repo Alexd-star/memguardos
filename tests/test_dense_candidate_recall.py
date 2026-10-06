@@ -1,6 +1,10 @@
 from pathlib import Path
-from time import sleep
+from time import perf_counter, sleep
 
+import pytest
+
+from memguard import service as service_module
+from memguard.retrieval import hybrid
 from memguard.retrieval.vector_cache import vector_content_hash
 from memguard.service import MemGuardService
 
@@ -206,10 +210,16 @@ def test_dense_timeout_does_not_retry_provider_during_fallback(tmp_path, monkeyp
         record = service.ingest_text("本地备份保留七天", source_kind="manual")["record"]
         ready_vector(service, record.memory_id, [1.0, 0.0])
         service.retriever.kylin_rerank_budget_ms = 1
+        now = [100.0]
+        # Fix preparation time, not the budget or expected result. Advancing
+        # both stages together makes a 10ms overrun deterministic under load.
+        monkeypatch.setattr(service_module, "monotonic", lambda: now[0])
+        monkeypatch.setattr(hybrid, "monotonic", lambda: now[0])
 
         class SlowProvider(FixedProvider):
             def vector(self, text, timeout_seconds=None):
                 sleep(0.01)
+                now[0] += 0.01
                 return super().vector(text, timeout_seconds)
 
         provider = SlowProvider([1.0, 0.0])
@@ -219,6 +229,85 @@ def test_dense_timeout_does_not_retry_provider_during_fallback(tmp_path, monkeyp
         assert provider.calls == 1
     finally:
         service.close()
+
+
+def test_semantic_deadline_stages_use_the_same_high_resolution_clock():
+    assert service_module.monotonic is perf_counter
+    assert hybrid.monotonic is perf_counter
+
+
+@pytest.mark.parametrize("failure", ["late_vector", "unavailable", "exception"])
+def test_dense_failure_keeps_grounded_hash_fallback_without_provider_retry(tmp_path, monkeypatch, failure):
+    service = make_service(tmp_path, monkeypatch)
+    try:
+        semantic = service.ingest_text("本地备份保留七天", source_kind="manual")["record"]
+        lexical = service.ingest_text("backup retention policy keeps files for seven days", source_kind="manual")["record"]
+        ready_vector(service, semantic.memory_id, [1.0, 0.0])
+        monkeypatch.setattr(service, "_search_candidates",
+                            lambda *args, **kwargs: [service.meta.get_memory(lexical.memory_id)])
+        now = [100.0]
+        monkeypatch.setattr(service_module, "monotonic", lambda: now[0])
+        monkeypatch.setattr(hybrid, "monotonic", lambda: now[0])
+        service.retriever.kylin_rerank_budget_ms = 1 if failure == "late_vector" else 160
+
+        class FailingProvider(FixedProvider):
+            def vector(self, text, timeout_seconds=None):
+                self.calls += 1
+                if failure == "late_vector":
+                    now[0] += 0.01
+                    return self.result
+                if failure == "exception":
+                    raise TimeoutError("query vector unavailable")
+                return None
+
+        provider = FailingProvider([1.0, 0.0])
+        service.retriever.kylin_provider = provider
+        hits = service.search("backup retention policy", limit=3, audit=False)
+        assert [hit["memory_id"] for hit in hits] == [lexical.memory_id]
+        assert provider.calls == 1
+        assert hits[0]["vector_backend"] == "hash"
+        assert "dense" not in hits[0]["retrieval_explanation"]["fusion_sources"]
+        assert "kylin" not in hits[0]["retrieval_explanation"]["fusion_sources"]
+        assert hits[0]["retrieval_explanation"]["dense_candidate_status"] == (
+            "latency_budget_exceeded" if failure == "late_vector" else "query_vector_unavailable"
+        )
+    finally:
+        service.close()
+
+
+def test_rank_expired_shared_deadline_does_not_reset_budget_or_call_provider(monkeypatch):
+    now = [100.0]
+    monkeypatch.setattr(hybrid, "monotonic", lambda: now[0])
+    retriever = hybrid.HybridRetriever("kylin")
+    retriever.kylin_rerank_budget_ms = 160
+    provider = FixedProvider([1.0, 0.0])
+    retriever.kylin_provider = provider
+    records = [{"memory_id": "grounded", "type": "knowledge", "summary": "backup retention policy",
+                "content": "backup retention policy keeps files for seven days"}]
+    fallback = retriever.rank("backup retention policy", records, allow_kylin_rerank=False)
+    shared_deadline = now[0] + 0.001
+    now[0] += 0.01
+    ranked = retriever.rank("backup retention policy", records, deadline=shared_deadline,
+                            persisted_vectors={"grounded": [1.0, 0.0]})
+    assert ranked == fallback and ranked
+    assert provider.calls == 0
+    assert retriever.last_backend_used == "hash"
+
+
+def test_provider_discards_late_vector_without_caching_when_coarse_clock_does_not_tick(monkeypatch):
+    now = [100.0]
+    monkeypatch.setattr(hybrid, "monotonic", lambda: now[0])
+    provider = hybrid.KylinEmbeddingProvider()
+
+    def late_embedding(text, timeout_seconds, include_vector=True):
+        assert 0 < timeout_seconds <= 0.0011
+        now[0] += 0.01
+        return {"ok": True, "vector": [1.0, 0.0]}
+
+    monkeypatch.setattr(provider.sdk, "embed_in_subprocess", late_embedding)
+    assert provider.vector("query", timeout_seconds=0.001) is None
+    assert not provider.cache
+    assert provider.status()["failures"] == 1
 
 
 def test_dense_uses_cosine_not_raw_dot_product(tmp_path, monkeypatch):

@@ -8,6 +8,7 @@ from memguard.models import MemoryRecord, new_id, stable_hash, utc_now
 from memguard.extraction.fact_slot import parse_fact_slot
 from memguard.forgetting.plan import ErasurePlan
 from memguard.store.permissions import ensure_private_directory, ensure_private_file
+from memguard.store.dependencies import DependencyStoreMixin
 from memguard.retrieval.vector_cache import (
     PersistedVector,
     decode_vector,
@@ -88,7 +89,7 @@ class FactConflictChanged(ValueError):
         self.reason = reason
 
 
-class SQLiteMetaStore:
+class SQLiteMetaStore(DependencyStoreMixin):
     def __init__(self, path: Path, expected_namespace: Optional[str] = None):
         self.path = Path(path)
         self.permission_corrections = []
@@ -227,6 +228,23 @@ class SQLiteMetaStore:
         self._ensure_column("pending_memory_write", "previous_record_json", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("pending_memory_write", "source_link_json", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("pending_memory_write", "fact_conflict_id", "TEXT NOT NULL DEFAULT ''")
+        self.conn.execute("""CREATE TABLE IF NOT EXISTS pending_segment_cleanup (
+            memory_id TEXT NOT NULL, version_id TEXT NOT NULL,
+            previous_version_id TEXT NOT NULL, created_at TEXT NOT NULL,
+            PRIMARY KEY(memory_id, version_id)
+        )""")
+        # Cancellation may follow a durable append and a rolled-back metadata
+        # commit. Keep its physical cleanup durable without retaining plaintext.
+        self.conn.execute("""CREATE TRIGGER IF NOT EXISTS queue_cancelled_derived_segment
+            AFTER DELETE ON pending_memory_write
+            WHEN json_array_length(OLD.record_json, '$.dependencies') > 0
+                AND NOT EXISTS (SELECT 1 FROM memory
+                    WHERE memory_id = OLD.memory_id AND version_id = OLD.version_id)
+            BEGIN
+                INSERT OR IGNORE INTO pending_segment_cleanup
+                    (memory_id, version_id, previous_version_id, created_at)
+                VALUES (OLD.memory_id, OLD.version_id, OLD.expected_version_id, OLD.created_at);
+            END""")
         self._ensure_column("memory", "subtype", "TEXT NOT NULL DEFAULT 'general'")
         self._ensure_column("memory", "tier", "TEXT NOT NULL DEFAULT 'long_term'")
         self._ensure_column("memory", "sensitivity_redacted", "INTEGER NOT NULL DEFAULT 0")
@@ -520,6 +538,7 @@ class SQLiteMetaStore:
             """
         )
         self._repair_preference_observation_owners_once()
+        self._init_dependency_schema()
         self.conn.commit()
 
     def _repair_preference_observation_owners_once(self) -> None:
@@ -606,7 +625,16 @@ class SQLiteMetaStore:
             self.conn.rollback()
             raise
 
+    def _check_segment_cleanup_no_commit(self, record: MemoryRecord) -> None:
+        if self.conn.execute(
+            "SELECT 1 FROM pending_segment_cleanup WHERE memory_id = ? AND version_id = ?",
+            (record.memory_id, record.version.version_id),
+        ).fetchone() is not None:
+            raise ValueError("cancelled segment version requires cleanup")
+
     def _upsert_memory_no_commit(self, record: MemoryRecord) -> None:
+        self._check_segment_cleanup_no_commit(record)
+        self._validate_dependencies_no_commit(record)
         cursor = self.conn.execute(
             """
             INSERT INTO memory (
@@ -688,6 +716,7 @@ class SQLiteMetaStore:
         )
         if cursor.rowcount != 1:
             raise ValueError("forgotten memory id cannot be reactivated")
+        self._register_dependencies_no_commit(record)
         if self._fts_enabled:
             self.conn.execute("DELETE FROM memory_fts WHERE memory_id = ?", (record.memory_id,))
             if not record.deleted and record.governance_state == "active":
@@ -763,6 +792,7 @@ class SQLiteMetaStore:
     ) -> None:
         with self.conn:
             self.conn.execute("BEGIN IMMEDIATE")
+            self._check_segment_cleanup_no_commit(record)
             existing = self.conn.execute(
                 "SELECT 1 FROM memory WHERE memory_id = ?", (record.memory_id,)
             ).fetchone()
@@ -773,6 +803,7 @@ class SQLiteMetaStore:
             ).fetchone() is not None:
                 raise ValueError("memory id already has a pending write")
             source_link_json = self._staged_source_link_json(source_link)
+            self._validate_dependencies_no_commit(record)
             self.conn.execute(
                 """
                 INSERT INTO pending_memory_write(
@@ -803,6 +834,7 @@ class SQLiteMetaStore:
             raise ValueError("invalid staged memory version transition")
         with self.conn:
             self.conn.execute("BEGIN IMMEDIATE")
+            self._check_segment_cleanup_no_commit(record)
             conflict_source_json = ""
             if fact_conflict_id:
                 conflict_source_json = self._validate_fact_conflict_write_no_commit(
@@ -823,6 +855,7 @@ class SQLiteMetaStore:
                 if source_link is not None and source_link_json != conflict_source_json:
                     raise FactConflictChanged("candidate_version_changed")
                 source_link_json = conflict_source_json
+            self._validate_dependencies_no_commit(record)
             self.conn.execute(
                 """
                 INSERT INTO pending_memory_write(
@@ -873,6 +906,36 @@ class SQLiteMetaStore:
                FROM pending_memory_write ORDER BY created_at, version_id"""
         )]
 
+    def pending_segment_cleanups(self) -> List[Dict[str, Any]]:
+        return [dict(row) for row in self.conn.execute(
+            "SELECT * FROM pending_segment_cleanup ORDER BY created_at, memory_id, version_id"
+        )]
+
+    def recover_pending_segment_cleanups(
+        self, cleanup_versions: Callable[[List[Dict[str, Any]]], None],
+    ) -> int:
+        with self.conn:
+            self.conn.execute("BEGIN IMMEDIATE")
+            pending = [dict(row) for row in self.conn.execute(
+                """SELECT c.*, m.version_id AS committed_version_id,
+                    m.deleted AS committed_deleted FROM pending_segment_cleanup c
+                    LEFT JOIN memory m ON m.memory_id = c.memory_id
+                    ORDER BY c.created_at, c.memory_id, c.version_id"""
+            )]
+            if any(row["version_id"] == row["committed_version_id"] for row in pending):
+                raise ValueError("cancelled segment version is committed")
+            if pending:
+                cleanup_versions(pending)
+        if pending:
+            self.secure_cleanup()
+            with self.conn:
+                self.conn.execute("BEGIN IMMEDIATE")
+                self.conn.executemany(
+                    "DELETE FROM pending_segment_cleanup WHERE memory_id = ? AND version_id = ?",
+                    [(row["memory_id"], row["version_id"]) for row in pending],
+                )
+        return len(pending)
+
     def commit_staged_new_memory_write(
         self, version_id: str, append_record: Callable[[MemoryRecord], MemoryRecord],
     ) -> MemoryRecord:
@@ -884,6 +947,7 @@ class SQLiteMetaStore:
             if row is None:
                 raise ValueError("staged memory write not found")
             record = MemoryRecord.from_json(str(row["record_json"]))
+            self._check_segment_cleanup_no_commit(record)
             if record.memory_id != row["memory_id"] or record.version.version_id != version_id:
                 raise ValueError("staged memory write identity mismatch")
             if row["expected_version_id"] or row["previous_record_json"]:
@@ -910,6 +974,7 @@ class SQLiteMetaStore:
                     )
                     self.conn.commit()
                     raise FactSlotConflict(ids)
+            self._validate_staged_dependencies_no_commit(record)
             append_record(record)
             self._upsert_memory_with_embedding_job_no_commit(
                 record, str(row["backend"]), str(row["model_revision"]),
@@ -947,6 +1012,7 @@ class SQLiteMetaStore:
                 raise ValueError("staged write is not a version update")
             previous = MemoryRecord.from_json(str(row["previous_record_json"]))
             record = MemoryRecord.from_json(str(row["record_json"]))
+            self._check_segment_cleanup_no_commit(record)
             if (
                 previous.memory_id != row["memory_id"]
                 or record.memory_id != previous.memory_id
@@ -985,6 +1051,7 @@ class SQLiteMetaStore:
                     raise
             if current is None or current["deleted"] or current["version_id"] != row["expected_version_id"]:
                 raise ValueError("stale memory version")
+            self._validate_staged_dependencies_no_commit(record)
             append_version(previous, record)
             self._upsert_memory_with_embedding_job_no_commit(
                 record, str(row["backend"]), str(row["model_revision"]),
@@ -1199,6 +1266,8 @@ class SQLiteMetaStore:
         target_links = []
         with self.conn:
             self.conn.execute("BEGIN IMMEDIATE")
+            self._check_erasure_dependency_closure_no_commit(items)
+            self._cancel_revoked_derived_writes_no_commit(items)
             pending_sources = self.conn.execute(
                 "SELECT source_link_json FROM pending_memory_write WHERE source_link_json <> ''"
             ).fetchall()
@@ -1268,6 +1337,7 @@ class SQLiteMetaStore:
                         tuple(promotion),
                     ).rowcount
             if memory_ids:
+                self._erase_dependency_metadata_no_commit(memory_ids)
                 placeholders = ",".join("?" for _ in memory_ids)
                 self.conn.execute(
                     """UPDATE memory_event_links

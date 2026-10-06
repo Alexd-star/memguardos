@@ -1,4 +1,4 @@
-from time import monotonic, sleep
+from time import perf_counter as monotonic, sleep
 
 from memguard.service import MemGuardService
 

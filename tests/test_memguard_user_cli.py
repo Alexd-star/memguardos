@@ -1,3 +1,5 @@
+import json
+
 from memguard.cli import memguard
 
 
@@ -12,6 +14,41 @@ def test_user_cli_parser_exposes_product_level_shortcuts():
     choices = set(actions["command"].choices)
 
     assert {"status", "memory", "search", "context", "forget", "evidence", "demo", "shell"} <= choices
+
+
+def test_cli_context_reuses_preferences_through_actual_agent_stage(tmp_path, capsys):
+    common = ["--store", str(tmp_path / "m.segment"), "--db", str(tmp_path / "m.sqlite3"),
+              "--workspace", str(tmp_path)]
+    assert memguard.main([*common, "remember", "搜索代码优先使用 rg，并且回答先给可复制命令再解释。", "--session-id", "first"]) == 0
+    capsys.readouterr()
+    assert memguard.main([*common, "context", "查找代码定义", "--session-id", "next", "--json"]) == 0
+    tools = json.loads(capsys.readouterr().out)
+    assert tools["stage"] == "tool_selection"
+    assert {row["preference_topic"] for row in tools["memories"]} == {"code_search_tool"}
+    assert "rg" in tools["context"]
+    assert memguard.main([*common, "context", "解释代码位置", "--stage", "response_generation", "--session-id", "next", "--json"]) == 0
+    response = json.loads(capsys.readouterr().out)
+    assert "response_order" in {row.get("preference_topic") for row in response["memories"]}
+    assert "code_search_tool" not in {row.get("preference_topic") for row in response["memories"]}
+    assert memguard.main([*common, "context", "查找代码定义", "--session-id", "next"]) == 0
+    out = capsys.readouterr().out
+    assert "工具偏好" in out and "rg" in out and "当前来源版本" in out
+
+
+def test_cli_context_cannot_broaden_project_or_session_preferences(tmp_path, capsys):
+    store, db = tmp_path / "m.segment", tmp_path / "m.sqlite3"
+    a, b = tmp_path / "a", tmp_path / "b"
+    a.mkdir()
+    b.mkdir()
+    service = memguard.MemGuardService(store, db)
+    try:
+        service.ingest_natural_memory("本项目搜索代码优先使用 rg。", session_id="first", project_root=str(a))
+        service.ingest_natural_memory("本次会话回答先给命令再解释。", session_id="first", project_root=str(a))
+    finally:
+        service.close()
+    common = ["--store", str(store), "--db", str(db), "--workspace", str(b)]
+    assert memguard.main([*common, "context", "查找代码定义", "--session-id", "next", "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["memories"] == []
 
 
 def test_user_cli_demo_prints_memory_effect_summary(tmp_path, capsys):

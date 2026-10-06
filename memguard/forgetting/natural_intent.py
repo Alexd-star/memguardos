@@ -7,6 +7,14 @@ import re
 
 
 FORGET_VERBS = ("忘记", "忘掉", "遗忘", "删除", "清除")
+ENGLISH_FORGET_PREFIX = re.compile(r"^(?:please\s+)?(?:forget|delete|remove|erase|clear)\b\s*", re.IGNORECASE)
+
+
+def _has_forget_verb(text: str) -> bool:
+    if any(verb in text for verb in FORGET_VERBS):
+        return True
+    match = ENGLISH_FORGET_PREFIX.match(text)
+    return bool(match) and not re.match(r"(?:not|nothing|never|none|no)\b", text[match.end():], re.IGNORECASE)
 
 MEMORY_TYPE_PATTERNS = [
     ("all", ("所有记忆", "全部记忆", "全部", "所有")),
@@ -65,18 +73,20 @@ class ErasureIntentCompiler:
     def compile(self, request: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         context = dict(context or {})
         text = " ".join(str(request or "").strip().split())
+        target_text, _ = _split_exception_clause(text)
+        target_text, _ = _split_retention_clause(target_text)
         current_time = self._now()
-        has_forget_verb = any(verb in text for verb in FORGET_VERBS)
-        memory_types = self._memory_types(text)
-        sensitive_labels = self._sensitive_labels(text)
-        time_range = self._time_range(text, current_time)
-        scope = self._scope(text, context)
-        agent_name = self._agent_name(text, context)
-        topic = self._topic(text, memory_types)
-        target_phrase = self._target_phrase(text, topic)
-        preference_topic = self._preference_topic(text, topic)
-        normalized_preference_topic = self._normalized_preference_topic(text, preference_topic)
-        explicit_all_memory_request = _explicit_all_memory_request(text)
+        has_forget_verb = _has_forget_verb(target_text)
+        memory_types = self._memory_types(target_text)
+        sensitive_labels = self._sensitive_labels(target_text)
+        time_range = self._time_range(target_text, current_time)
+        scope = self._scope(target_text, context)
+        agent_name = self._agent_name(target_text, context)
+        topic = self._topic(target_text, memory_types)
+        target_phrase = self._target_phrase(target_text, topic)
+        preference_topic = self._preference_topic(target_text, topic)
+        normalized_preference_topic = self._normalized_preference_topic(target_text, preference_topic)
+        explicit_all_memory_request = _explicit_all_memory_request(target_text)
         if explicit_all_memory_request:
             # “所有记忆”是用户明确授权的跨类型范围，不能再被工具词
             # 自动收窄成只删除偏好。
@@ -91,7 +101,7 @@ class ErasureIntentCompiler:
             # 对所有包含 grep 文本的知识与工具执行记录做全文匹配。
             memory_types = ["preference"]
         topic_aliases = self._topic_aliases(text, topic, normalized_preference_topic or preference_topic)
-        project_hint = self._project_hint(text, context, topic)
+        project_hint = self._project_hint(target_text, context, topic)
         unresolved_slots = []
         if not has_forget_verb:
             unresolved_slots.append("forget_verb")
@@ -278,6 +288,7 @@ class ErasureIntentCompiler:
         target, _ = _split_retention_clause(target)
         target = target.strip(" ，。,；;")
         target = re.sub(r"^(?:请\s*)?(?:帮我\s*)?(?:把\s*)?(?:忘记|忘掉|遗忘|删除|清除)\s*", "", target)
+        target = ENGLISH_FORGET_PREFIX.sub("", target, count=1)
         if "关于" in target:
             target = target.split("关于", 1)[1].strip()
         target = re.sub(
@@ -322,7 +333,7 @@ class ErasureIntentCompiler:
                 "优先",
             )
         )
-        explicit_forgetting = any(verb in target_text for verb in FORGET_VERBS)
+        explicit_forgetting = _has_forget_verb(target_text)
         if tool_mentioned and (
             any(marker in target_text for marker in ("偏好", "习惯"))
             or code_search_context
@@ -523,7 +534,7 @@ def _split_exception_clause(text: str) -> tuple[str, str]:
     """
 
     match = re.search(
-        r"(?:除了|除去|除)\s*(?P<exception>[^，,；;]{1,40}?)\s*(?:以外|之外|外)\s*[，,；;]?\s*(?P<target>.*)",
+        r"^\s*(?:请\s*)?(?:除了|除去|除)\s*(?P<exception>[^，,；;]{1,40}?)\s*(?:以外|之外|外)\s*[，,；;]?\s*(?P<target>.*)",
         text,
     )
     if not match:

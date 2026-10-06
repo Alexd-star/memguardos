@@ -210,12 +210,15 @@ def test_existing_database_adds_retention_session_column(tmp_path):
     original = SQLiteMetaStore(path)
     original.close()
     with sqlite3.connect(path) as connection:
+        # Recreate the legacy schema before derivation triggers existed.
+        connection.execute("DROP TRIGGER invalidate_derived_memory")
         connection.execute("DROP INDEX idx_memory_retention_session")
         connection.execute("ALTER TABLE memory DROP COLUMN retention_session_id")
     upgraded = SQLiteMetaStore(path)
     try:
         columns = {row["name"] for row in upgraded.conn.execute("PRAGMA table_info(memory)")}
         assert "retention_session_id" in columns
+        assert upgraded.conn.execute("SELECT 1 FROM sqlite_master WHERE type='trigger' AND name='invalidate_derived_memory'").fetchone()
     finally:
         upgraded.close()
 

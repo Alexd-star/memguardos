@@ -150,6 +150,46 @@ python -m memguard.cli.memctl generate-answer "openKylin 服务内存限制" \
 
 ## 本地 Agent API
 
+### 已验证的流程经验
+
+`memguard context "任务描述"` 使用 Agent 的实际范围选择与阶段策略，默认展示工具选择阶段的上下文。查看规划或回答阶段时分别添加 `--stage planning`、`--stage response_generation`；使用 `--agent-name`、`--task-type`、`--workspace` 和 `--session-id` 对应真实任务的适用条件。该命令只预览上下文，不执行任务，也不表示模型已经遵循记忆。
+
+需要复用一组操作步骤时，可把目标、参数、步骤、风险约束和完成条件放入流程规范。系统先检查本地实际结果，再保存带来源版本的经验；下次任务可以换文件参数取回步骤，完成后再次复核结果。流程学习与复核不会执行步骤，也不调用外部模型。当前完成条件支持路径存在、UTF-8 文件包含或不包含指定内容；文件读取限制为 1 MiB，检查路径必须位于明确选择的工作区内。
+
+项目提供的 [`release_review_procedure.json`](../data/demo/release_review_procedure.json) 是发布说明复核的规范示例。先在专用记忆空间写入来源要求，记下输出的记忆编号，并选择实际处理发布说明的工作区。以下 `SOURCE_ID`、`PROCEDURE_ID` 应替换为对应命令的真实输出，工作区路径需改成已有目录的绝对路径。
+
+```bash
+memguard --namespace review-practice remember "项目发布说明在提交前需要复核，并保留检查结果。"
+SOURCE_ID=实际来源记忆编号
+WORKSPACE=/home/你的用户名/实际项目目录
+SPEC=/绝对路径/memguardos/data/demo/release_review_procedure.json
+memguard --namespace review-practice --workspace "$WORKSPACE" learn-procedure "$SPEC" \
+  --source "$SOURCE_ID" --session-id review-first --argument file=release-a.md
+```
+
+如果 `release-a.md` 尚不存在、没有复核标记或还有 `TODO`，学习结果应为未通过，不形成可复用流程。完成真实复核并在文件中记录 `REVIEWED` 后，再运行学习命令。这里的标记表示维护者已经完成检查；应保留未处理事项，不通过删除标记伪造复核完成。若希望检查服务状态、测试结果或其他任务结果，需由适配器提供相应安全检查能力，不能把此文件示例解释为任意任务都已验证。
+
+```bash
+PROCEDURE_ID=实际流程记忆编号
+memguard --namespace review-practice --workspace "$WORKSPACE" procedures "复核项目发布说明" \
+  --session-id review-next --argument file=release-b.md
+memguard --namespace review-practice --workspace "$WORKSPACE" verify-procedure "$PROCEDURE_ID" \
+  --session-id review-next --use-id review-b-first --argument file=release-b.md
+```
+
+查询会展示新的参数、步骤、约束、完成条件和历史实测反馈，尚未完成本次工作时复核仍应失败。完成工作后使用新的 `--use-id` 再复核；相同会话和使用编号的重复反馈不重复计数，未知结果不计为成功。不提供必须参数时，查询明确列出待补参数。
+
+```bash
+memguard --namespace review-practice dependencies "$SOURCE_ID"
+memguard --namespace review-practice forget "忘记关于项目发布说明的记忆"
+```
+
+来源更新后，依赖旧来源版本的流程立即停止进入新任务上下文。撤回来源时，预览也列出其硬派生流程，需一并选择和确认；相似主题但没有派生关系的独立记忆保留。Web 记忆详情展示流程步骤、检查条件、来源版本、反馈次数和派生影响，从详情发起遗忘也会确认派生数量。通用文本编辑和回滚不能绕过流程验证，修改后的流程应重新学习。
+
+流程来源必须处于可信、有效状态，且属于当前记忆空间及兼容项目。限定某个 Agent、任务类型或独立会话的偏好不能直接提炼成通用流程；系统会拒绝这类不兼容来源。工作区使用已存在目录的绝对路径，不能使用系统目录、凭据目录或符号链接。openKylin 的 `/tmp` 可能指向 `/var/tmp`，临时工作区可通过 `realpath` 获取实际路径；选择其中的独立项目子目录，不把共享临时目录本身作为工作区。
+
+开发者可以通过同一 API 调用 `learn_procedure`、`recall_procedures`、`verify_procedure` 和 `dependency_impact`。前三者要求明确的 `workspace`，复核还要求 `session_id`；学习要求 `spec` 与 `source_memory_ids`，参数通过 `arguments` 字符串映射传递。`dependency_impact` 接收 `memory_ids`，返回派生清单与版本快照。检查失败返回 `ok: false`，CLI 退出码为 2；查询成功不代表步骤已经执行。
+
 systemd 服务启动后，会在 openKylin 上创建本地 Unix socket：
 
 ```bash

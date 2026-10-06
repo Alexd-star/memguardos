@@ -1,7 +1,11 @@
 from typing import Dict, Iterable, List, Optional, Set
 import re
 
-from memguard.forgetting.natural_intent import ErasureIntentCompiler
+from memguard.forgetting.natural_intent import (
+    ErasureIntentCompiler,
+    _split_exception_clause,
+    _split_retention_clause,
+)
 from memguard.retrieval.hybrid import HybridRetriever, tokenize
 
 
@@ -97,10 +101,11 @@ class ForgetPlanner:
         aliases = [str(alias).lower() for alias in intent.get("topic_aliases") or [] if str(alias).strip()]
         preference_topic = str(intent.get("normalized_preference_topic") or intent.get("preference_topic") or "")
         target_phrase = str(intent.get("target_phrase") or "")
+        target_request = _target_request_text(str(intent.get("source_text") or request))
         search_basis = " ".join(
             part
             for part in [
-                _target_request_text(request),
+                target_request,
                 target_phrase,
                 str(intent.get("topic") or ""),
                 " ".join(aliases),
@@ -111,6 +116,15 @@ class ForgetPlanner:
         )
         keywords = self.keywords(search_basis or request)
         distinctive_keywords = [keyword for keyword in keywords if keyword not in GENERIC_MATCH_TERMS]
+        authorization_text = (target_phrase or str(intent.get("topic") or "") or target_request).casefold()
+        # Retrieval expansions can rank a preview, but cannot authorize deletion.
+        authorization_keywords = list(dict.fromkeys(
+            keyword for keyword in tokenize(authorization_text)
+            if _exact_phrase_in_text(keyword, authorization_text)
+            and keyword not in GENERIC_MATCH_TERMS
+            and keyword not in ANCHOR_STOPWORDS
+            and len(keyword) >= 2
+        ))
         corpus = list(records)
         # A destructive "all" request must inspect the entire scoped corpus.
         # The UI may page the preview, but ranking must never silently cap it.
@@ -129,23 +143,16 @@ class ForgetPlanner:
                     # user's Chinese label does not occur in the stored text.
                     ranked.append((1.0, record))
                     ranked_ids.add(memory_id)
-        if not ranked:
-            return []
         # 锚点判别度按全语料的文档频次计算；只统计已排序的 top-N 会因查询相关而有偏。
-        anchor_df, corpus_size = _anchor_document_frequency(distinctive_keywords, corpus)
+        anchor_df, corpus_size = _anchor_document_frequency(authorization_keywords, corpus)
         results = []
         for score, record in ranked:
             if score < 0.18:
                 continue
             if not _record_type_matches(intent, record):
                 continue
-            text = "%s %s %s %s" % (
-                record.get("memory_id", ""),
-                record.get("type", ""),
-                record.get("summary", ""),
-                record.get("content", ""),
-            )
-            if not _required_qualifiers_match(request, text):
+            text = " ".join(str(record.get(key) or "") for key in ("summary", "content", "preference_value"))
+            if not _required_qualifiers_match(target_request, text):
                 continue
             if not _sensitive_labels_match(intent, text):
                 continue
@@ -159,7 +166,7 @@ class ForgetPlanner:
             matched_aliases: List[str] = []
             if aliases:
                 matched_aliases = [
-                    alias for alias in aliases if alias and alias in text.lower()
+                    alias for alias in aliases if _exact_phrase_in_text(alias, text)
                 ]
                 matched_distinctive.extend(
                     alias
@@ -179,8 +186,9 @@ class ForgetPlanner:
             if distinctive_keywords and not matched_distinctive:
                 continue
             strong_matches = [keyword for keyword in matched_distinctive if keyword not in WEAK_MATCH_TERMS and len(keyword) >= 2]
-            if not _anchor_policy_passes(
-                distinctive_keywords, matched_distinctive, strong_matches, aliases, anchor_df, corpus_size
+            matched_authorization = [keyword for keyword in authorization_keywords if _exact_phrase_in_text(keyword, text)]
+            if not preference_topic_match and not _anchor_policy_passes(
+                authorization_keywords, matched_authorization + matched_aliases, strong_matches, aliases, anchor_df, corpus_size
             ):
                 continue
             if _violates_retention_constraints(intent, record, text):
@@ -200,26 +208,33 @@ class ForgetPlanner:
                     "preference_value": record.get("preference_value", ""),
                     "exact_topic_match": bool(
                         intent.get("topic")
-                        and str(intent["topic"]).casefold() in text.casefold()
+                        and _exact_topic_matches(str(intent["topic"]), record)
                     ),
                 }
             )
-        exhaustive_topic = bool(
-            set(intent.get("memory_types") or []) == {"all"}
-            and intent.get("topic")
-            and re.search(r"所有|全部", request)
+        exact_topic_selection = bool(
+            intent.get("topic")
+            and str(intent["topic"]).casefold() not in WEAK_MATCH_TERMS
+            and (
+                "关于" in target_request
+                or (
+                    set(intent.get("memory_types") or []) == {"all"}
+                    and re.search(r"所有|全部", target_request)
+                )
+            )
         )
-        if exhaustive_topic:
+        if exact_topic_selection:
+            # Ranking is useful for preview order, not an authorization test.
+            # Inspect exact topic peers in the caller's already scoped corpus.
             seen = {str(item["memory_id"]) for item in results}
-            exact_topic = str(intent["topic"]).casefold()
             for record in corpus:
                 memory_id = str(record.get("memory_id") or "")
                 if not memory_id or memory_id in seen or not _record_type_matches(intent, record):
                     continue
-                text = " ".join(str(record.get(key) or "") for key in ("summary", "content"))
-                if exact_topic not in text.casefold():
+                text = " ".join(str(record.get(key) or "") for key in ("summary", "content", "preference_value"))
+                if not _exact_topic_matches(str(intent["topic"]), record):
                     continue
-                if not _required_qualifiers_match(request, text):
+                if not _required_qualifiers_match(target_request, text):
                     continue
                 if not _sensitive_labels_match(intent, text):
                     continue
@@ -249,23 +264,36 @@ class ForgetPlanner:
         return [
             item for item in results
             if float(item["score"]) >= score_floor
-            or (exhaustive_topic and item.get("exact_topic_match"))
+            or (exact_topic_selection and item.get("exact_topic_match"))
         ]
+
+
+def _exact_phrase_in_text(phrase: str, text: str) -> bool:
+    phrase = " ".join(phrase.casefold().split())
+    text = " ".join(text.casefold().split())
+    if not phrase:
+        return False
+    pattern = re.escape(phrase)
+    if re.match(r"[a-z0-9_\-]", phrase):
+        pattern = r"(?<![a-z0-9_\-])" + pattern
+    if re.search(r"[a-z0-9_\-]$", phrase):
+        pattern += r"(?![a-z0-9_\-])"
+    return re.search(pattern, text) is not None
+
+
+def _exact_topic_matches(topic: str, record: Dict[str, str]) -> bool:
+    # IDs and provenance are not evidence that a memory contains the target.
+    return any(
+        _exact_phrase_in_text(topic, str(record.get(key) or ""))
+        for key in ("summary", "content", "preference_value")
+    )
 
 
 def _target_request_text(request: str) -> str:
     """Remove protected clauses while retaining useful target context."""
 
-    text = re.sub(
-        r"^\s*除了\s*.+?\s*(?:以外|之外)\s*[，,；;]?\s*",
-        "",
-        str(request or ""),
-    )
-    text = re.split(
-        r"(?:[，,；;]|\s+(?:但是|但))\s*(?:但是|但)?\s*保留",
-        text,
-        maxsplit=1,
-    )[0]
+    text, _ = _split_exception_clause(str(request or ""))
+    text, _ = _split_retention_clause(text)
     return text.strip()
 
 
@@ -344,6 +372,14 @@ def _sensitive_labels_match(intent: Dict[str, object], text: str) -> bool:
 def _alias_fallback_passes(intent: Dict[str, object], target_phrase: str, text: str) -> bool:
     if intent.get("sensitive_labels") and _sensitive_labels_match(intent, text):
         return True
+    if (
+        not intent.get("normalized_preference_topic")
+        and not intent.get("preference_topic")
+        and len(target_phrase.split()) > 1
+        and re.fullmatch(r"[A-Za-z0-9_\-]+(?:\s+[A-Za-z0-9_\-]+)+", target_phrase)
+    ):
+        # A command's options/subcommand are part of its identity, not aliases.
+        return _exact_phrase_in_text(target_phrase, text)
     requested_terms = {
         term.lower()
         for term in re.findall(r"[A-Za-z][A-Za-z0-9_\-]{2,}", target_phrase)
@@ -351,7 +387,7 @@ def _alias_fallback_passes(intent: Dict[str, object], target_phrase: str, text: 
     }
     if not requested_terms:
         return False
-    matched_terms = {term for term in requested_terms if term in text.lower()}
+    matched_terms = {term for term in requested_terms if _exact_phrase_in_text(term, text)}
     required = max(1, int(len(requested_terms) * 0.6 + 0.999))
     return len(matched_terms) >= required
 
@@ -359,7 +395,7 @@ def _alias_fallback_passes(intent: Dict[str, object], target_phrase: str, text: 
 def _preference_topic_matches(preference_topic: str, text: str) -> bool:
     lowered = text.lower()
     mapping = {
-        "high_risk_confirmation": ["高风险命令", "危险操作", "二次确认", "安全策略"],
+        "high_risk_confirmation": ["高风险命令", "高风险操作", "危险操作", "二次确认", "操作确认", "安全确认"],
         "code_search_tool": ["代码搜索", "查代码", " rg", "grep", "ripgrep"],
         "response_order": ["先给命令", "先给结论", "回答顺序", "输出顺序", "回复顺序"],
         "response_language": ["中文回答", "英文回答", "用中文", "使用中文", "使用英文", "回答语言", "回复语言"],
@@ -367,7 +403,7 @@ def _preference_topic_matches(preference_topic: str, text: str) -> bool:
         "test_runner_command": ["pytest", "测试命令", "单元测试", "测试工具"],
         "service_log_tool": ["journalctl", "服务日志", "日志工具", "日志命令"],
     }
-    return any(marker.lower() in lowered for marker in mapping.get(preference_topic, []))
+    return any(_exact_phrase_in_text(marker, lowered) for marker in mapping.get(preference_topic, []))
 
 
 def _violates_retention_constraints(intent: Dict[str, object], record: Dict[str, str], text: str) -> bool:
@@ -426,7 +462,7 @@ def _anchor_document_frequency(
             ("%s %s %s" % (
                 record.get("summary", ""),
                 record.get("content", ""),
-                record.get("preference_topic", ""),
+                record.get("preference_value", ""),
             )).lower()
         )
     frequency = {}
@@ -434,7 +470,7 @@ def _anchor_document_frequency(
         lowered = str(keyword or "").lower()
         if not lowered:
             continue
-        frequency[lowered] = sum(1 for text in texts if lowered in text)
+        frequency[lowered] = sum(1 for text in texts if _exact_phrase_in_text(lowered, text))
     return frequency, len(texts)
 
 
@@ -475,13 +511,16 @@ def _anchor_policy_passes(
     if not covered:
         return False
 
-    # 判别度阈值：出现在超过一半候选里的词太普通，不能独自代表遗忘目标。
-    common_ceiling = max(1, corpus_size // 2)
-    discriminative = {
-        anchor for anchor in anchors if anchor_df.get(anchor, corpus_size) <= common_ceiling
-    }
-    if discriminative and not (covered & discriminative):
-        return False
+    # Require a rarest observed request anchor, not any vaguely uncommon
+    # fragment. Zero-frequency wording cannot establish a deletion boundary.
+    observed = {anchor for anchor in anchors if anchor_df.get(anchor, 0) > 0}
+    if observed:
+        rarest_frequency = min(anchor_df[anchor] for anchor in observed)
+        required = {anchor for anchor in observed if anchor_df[anchor] == rarest_frequency}
+        literal_latin = {anchor for anchor in anchors if re.fullmatch(r"[a-z0-9_\-]+", anchor)}
+        complete_latin_target = len(literal_latin) >= 2 and literal_latin <= covered
+        if not (required & covered) and not complete_latin_target:
+            return False
     return bool(strong_matches) or bool(covered - WEAK_MATCH_TERMS)
 
 
@@ -494,7 +533,7 @@ def _anchor_is_covered(anchor: str, matched: Set[str], alias_pool: Set[str]) -> 
 
     if anchor in matched:
         return True
-    if any(keyword and (anchor in keyword or keyword in anchor) for keyword in matched):
+    if any(keyword and anchor in keyword for keyword in matched):
         return True
     if anchor in alias_pool and matched & alias_pool:
         return True

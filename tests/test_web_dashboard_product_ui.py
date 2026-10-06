@@ -565,3 +565,14 @@ def test_overview_status_renderer_only_targets_current_dom_ids():
     assert "document.getElementById('namespaceCount').textContent" not in page
     assert "document.getElementById('dataLocation').textContent" not in page
     assert "loadOverviewEvidence(null)" in page
+
+
+def test_detail_erasure_discards_stale_content_and_checks_product_verification():
+    page = _dashboard_html()
+    action = page[page.index("async function forgetMemoryFromDetail") : page.index("async function agentForget")]
+    assert "payload.ok === true && result.ok === true" in action
+    assert "forgottenIds.includes(id)" in action
+    assert "memoryDetailPreview = null;" in action
+    assert "删除前的内容不再展示" in action
+    assert "await loadMemoryDetail(null);" in action
+    assert "return feedback;" in action

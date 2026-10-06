@@ -4,11 +4,13 @@ import hmac
 import hashlib
 import json
 import os
+import re
 import socket
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from memguard.json_support import jsonable
+from memguard.procedural import ProcedureSpec, _workspace
 from memguard.service import MemGuardService
 
 
@@ -41,6 +43,8 @@ def handle_request(service: MemGuardService, request: Dict[str, object], auth_to
 
 def _handle_authorized_request(service: MemGuardService, request: Dict[str, object]) -> Dict[str, object]:
     command = str(request.get("command", ""))
+    if command in {"learn_procedure", "recall_procedures", "verify_procedure", "dependency_impact"}:
+        return _procedure_request(service, request, command)
     if command == "search":
         query = _string_param(request, "query", "", max_chars=2048)
         limit = _int_param(request, "limit", 5, minimum=1, maximum=50)
@@ -427,6 +431,95 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
             },
         }
     return {"ok": False, "error": "unknown_command", "command": command}
+
+
+def _procedure_string(request, name, *, maximum=256, required=False):
+    value = request.get(name, "")
+    if not isinstance(value, str) or len(value) > maximum or "\x00" in value:
+        raise ValueError("%s must be a string of at most %s characters without NUL" % (name, maximum))
+    if required and not value.strip():
+        raise ValueError("%s is required" % name)
+    return value
+
+
+def _procedure_arguments(request):
+    arguments = request.get("arguments", {})
+    if not isinstance(arguments, dict) or len(arguments) > 32:
+        raise ValueError("arguments must be a dictionary of at most 32 strings")
+    for name, value in arguments.items():
+        if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,63}", name):
+            raise ValueError("argument names must be bounded ASCII identifiers")
+        if not isinstance(value, str) or len(value) > 4096 or "\x00" in value:
+            raise ValueError("argument values must be strings of at most 4096 characters without NUL")
+    return dict(arguments)
+
+
+def _procedure_ids(request, name, *, maximum=32):
+    values = request.get(name)
+    if not isinstance(values, list) or not 1 <= len(values) <= maximum:
+        raise ValueError("%s must be an array of 1..%s memory IDs" % (name, maximum))
+    for value in values:
+        if not isinstance(value, str) or not value.strip() or len(value) > 128 or "\x00" in value:
+            raise ValueError("%s must contain nonempty strings of at most 128 characters without NUL" % name)
+    return list(values)
+
+
+def _procedure_response(command, result):
+    value = _jsonable(result)
+    if command == "recall_procedures":
+        if not isinstance(value, list):
+            raise RuntimeError("procedure recall must return a list")
+        return {"ok": True, "result": value}
+    if not isinstance(value, dict):
+        raise RuntimeError("procedure service must return a dictionary")
+    ok = value.get("ok", True) is True and not value.get("blocked")
+    if command == "learn_procedure":
+        ok = ok and value.get("stored") is True
+    if command == "verify_procedure":
+        verification = value.get("verification") or {}
+        status = verification.get("overall") if isinstance(verification, dict) else None
+        status = status or value.get("overall") or value.get("status")
+        ok = ok and status == "pass"
+        checks = verification.get("checks", []) if isinstance(verification, dict) else []
+        checks = checks or value.get("checks") or []
+        if checks:
+            ok = ok and all(isinstance(check, dict) and check.get("status") == "pass" for check in checks)
+        if value.get("verified") is False:
+            ok = False
+    return {"ok": ok, "result": value}
+
+
+def _procedure_request(service, request, command):
+    if command == "dependency_impact":
+        result = service.dependency_impact(_procedure_ids(request, "memory_ids", maximum=100))
+        return _procedure_response(command, result)
+    workspace = _procedure_string(request, "workspace", maximum=2048, required=True)
+    _workspace(workspace)
+    session_id = _procedure_string(request, "session_id", required=command == "verify_procedure")
+    arguments = _procedure_arguments(request)
+    if command == "learn_procedure":
+        procedure = ProcedureSpec.from_dict(request.get("spec"))
+        procedure.render(arguments)
+        result = service.learn_procedure(
+            procedure.to_dict(), workspace=workspace,
+            source_memory_ids=_procedure_ids(request, "source_memory_ids"),
+            session_id=session_id, arguments=arguments,
+        )
+    elif command == "recall_procedures":
+        limit = request.get("limit", 5)
+        if type(limit) is not int or not 1 <= limit <= 50:
+            raise ValueError("limit must be an integer between 1 and 50")
+        result = service.recall_procedures(
+            _procedure_string(request, "task", maximum=4096, required=True),
+            workspace=workspace, arguments=arguments, limit=limit, session_id=session_id,
+        )
+    else:
+        result = service.verify_procedure(
+            _procedure_string(request, "memory_id", maximum=128, required=True),
+            workspace=workspace, session_id=session_id, arguments=arguments,
+            use_id=_procedure_string(request, "use_id"),
+        )
+    return _procedure_response(command, result)
 
 
 def _project_scope_param(request: Dict[str, object]) -> Dict[str, str]:

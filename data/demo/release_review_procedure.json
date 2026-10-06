@@ -1,0 +1,18 @@
+{
+  "goal": "复核项目发布说明并保留检查结果",
+  "steps": [
+    "在 $file 中整理版本与变更说明。",
+    "逐项核对说明，完成后在 $file 中记录 REVIEWED。"
+  ],
+  "failure_guards": [
+    "未完成复核时不可宣称发布成功。",
+    "保留尚未解决的事项，不用删除 TODO 的方式伪造复核结果。"
+  ],
+  "parameters": {"file": null},
+  "postconditions": [
+    {"type": "path_exists", "path": "$file"},
+    {"type": "file_contains", "path": "$file", "value": "REVIEWED"},
+    {"type": "file_not_contains", "path": "$file", "value": "TODO"}
+  ],
+  "environment": {}
+}

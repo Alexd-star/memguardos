@@ -10,6 +10,7 @@
 | Kylin SDK | `diagnose_kylin_embedding.sh`、`warmup_kylin_sdk.sh`、`run_kylin_embedding_probe.sh` | 检查文本向量 SDK、执行预热并采集真实推理结果 |
 | Agent 接入与演示 | `run_openhands_memguard_demo.py`、`run_openhands_behavior_suite.py`、`memguard-agent-showcase.sh` | 运行真实 OpenHands 任务、配对场景和现场演示流程 |
 | 功能与性能评测 | `run_evidencebench_v2.py`、`evaluate_memory_value.py`、`evaluate_retrieval_v2.py` | 复验抽取、检索、遗忘、记忆价值和性能指标 |
+| 流程经验与来源撤回验证 | `verify_procedure_showcase.py` | 临时工作区中复验实际完成检查、参数迁移、派生失效、选择性撤回和反馈去重；不调用模型 |
 | 安全与系统机制 | `install_auditd_rules.sh`、`generate_bpf_lsm_policy.py`、`run_bpf_lsm_enforcer.sh`、`run_resource_control.py` | 配置审计、生成路径策略、验证 BPF LSM 与资源控制 |
 | 快速质量检查 | `check_competition_ready.py`、`check_metric_consistency.py`、`check_docs_links.py` | 检查发布门禁、指标一致性和文档链接 |
 | 实机证据采集 | `collect_openkylin_evidence.sh`、`collect_openkylin_native_evidence.sh`、`write_evidence_manifest.py` | 采集系统、服务、原生组件和结果清单 |

@@ -7,13 +7,13 @@ from importlib.resources import files
 from pathlib import Path
 from queue import Empty, SimpleQueue
 from threading import Lock
+from time import perf_counter as monotonic
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 import hashlib
 import json
 import math
 import os
 import re
-import time
 
 from memguard.retrieval.kylin_sdk import KylinEmbeddingBackend
 
@@ -173,7 +173,7 @@ class KylinEmbeddingProvider:
         max_failures: int = 1,
         cooldown_seconds: float = 60.0,
         max_cache_entries: int = 1024,
-        clock=time.monotonic,
+        clock=monotonic,
     ):
         self.timeout_seconds = max(0.0, float(timeout_seconds))
         self.max_failures = max(1, max_failures)
@@ -198,19 +198,19 @@ class KylinEmbeddingProvider:
         *,
         deadline: Optional[float] = None,
     ) -> Optional[List[float]]:
-        """Use one monotonic deadline for lock waits, singleflight and inference."""
-        started = time.monotonic()
+        """Use one absolute perf_counter deadline for waits and inference."""
+        started = monotonic()
         timeout = self.timeout_seconds
         if timeout_seconds is not None:
             timeout = min(timeout, max(0.0, float(timeout_seconds)))
         deadline = min(started + timeout, deadline) if deadline is not None else started + timeout
         key = hashlib.sha256(("kylin-sdk-v1\0" + text).encode("utf-8")).hexdigest()
-        remaining = deadline - time.monotonic()
+        remaining = deadline - monotonic()
         if remaining <= 0 or not self._lock.acquire(timeout=remaining):
             return None
         try:
             self._drain_completions(deadline)
-            if time.monotonic() >= deadline:
+            if monotonic() >= deadline:
                 return None
             now = float(self.clock())
             if self.disabled_reason and now < self.disabled_until:
@@ -231,8 +231,8 @@ class KylinEmbeddingProvider:
 
         if not owner:
             try:
-                vector = flight.result(timeout=max(0.0, deadline - time.monotonic()))
-                return vector if time.monotonic() < deadline else None
+                vector = flight.result(timeout=max(0.0, deadline - monotonic()))
+                return vector if monotonic() < deadline else None
             except FutureTimeoutError:
                 # A waiter's deadline must not cancel the owner or trip cooldown.
                 return None
@@ -240,7 +240,7 @@ class KylinEmbeddingProvider:
         vector = None
         error = ""
         try:
-            remaining = deadline - time.monotonic()
+            remaining = deadline - monotonic()
             if remaining > 0:
                 result = self.sdk.embed_in_subprocess(text, remaining, include_vector=True)
                 if result.get("ok") and isinstance(result.get("vector"), list) and result["vector"]:
@@ -250,22 +250,22 @@ class KylinEmbeddingProvider:
         except Exception as exc:
             error = str(exc) or "kylin embedding unavailable"
         finally:
-            if time.monotonic() >= deadline:
+            if monotonic() >= deadline:
                 vector = None
                 error = error or "Kylin embedding exceeded deadline"
             # Publish metadata before waking waiters; never wait for a bookkeeping lock.
             self._completions.put((key, flight, vector, error, float(self.clock())))
             flight.set_result(vector)
-            if time.monotonic() < deadline and self._lock.acquire(blocking=False):
+            if monotonic() < deadline and self._lock.acquire(blocking=False):
                 try:
                     self._drain_completions(deadline)
                 finally:
                     self._lock.release()
-        return vector if time.monotonic() < deadline else None
+        return vector if monotonic() < deadline else None
 
     def _drain_completions(self, deadline: Optional[float] = None) -> None:
         """Apply each completion once under _lock, using its original timestamp."""
-        while deadline is None or time.monotonic() < deadline:
+        while deadline is None or monotonic() < deadline:
             try:
                 key, flight, vector, error, completed_at = self._completions.get_nowait()
             except Empty:
@@ -526,8 +526,12 @@ class HybridRetriever:
         *,
         deadline: Optional[float] = None,
     ) -> List[Tuple[float, Dict[str, str]]]:
-        """Rank with an optional absolute time.monotonic() deadline for Kylin."""
-        started = time.monotonic()
+        """Rank with an optional absolute perf_counter deadline for Kylin.
+
+        The caller, query provider and reranker must use the same clock. On
+        Windows/Python 3.11, time.monotonic has ticks longer than small budgets.
+        """
+        started = monotonic()
         local_deadline = started + max(0.0, self.kylin_rerank_budget_ms) / 1000.0
         deadline = min(local_deadline, deadline) if deadline is not None else local_deadline
         records = list(records)
@@ -564,7 +568,7 @@ class HybridRetriever:
         if self.kylin_provider is None or not semantic_pool or not allow_kylin_rerank:
             return self._tag_backend(scored[:limit], "hash")
 
-        query_timeout = deadline - time.monotonic()
+        query_timeout = deadline - monotonic()
         if query_timeout <= 0:
             return self._tag_backend(scored[:limit], "hash")
         if kylin_query_vector is None:
@@ -574,7 +578,7 @@ class HybridRetriever:
                 return self._tag_backend(scored[:limit], "hash")
         if kylin_query_vector is None:
             return self._tag_backend(scored[:limit], "hash")
-        if time.monotonic() >= deadline:
+        if monotonic() >= deadline:
             return self._tag_backend(scored[:limit], "hash")
 
         vectors = persisted_vectors or {}
@@ -584,7 +588,7 @@ class HybridRetriever:
         reranked = []
         hit_count = 0
         for base_score, record in rerank_pool:
-            if time.monotonic() >= deadline:
+            if monotonic() >= deadline:
                 return self._tag_backend(scored[:limit], "hash")
             item = dict(record)
             memory_id = str(item.get("memory_id") or "")
@@ -597,7 +601,7 @@ class HybridRetriever:
                 )
             except Exception:
                 return self._tag_backend(scored[:limit], "hash")
-            if time.monotonic() >= deadline:
+            if monotonic() >= deadline:
                 return self._tag_backend(scored[:limit], "hash")
             if kylin_score is not None:
                 item["_kylin_score"] = round(kylin_score, 6)
@@ -611,7 +615,7 @@ class HybridRetriever:
         reranked.sort(
             key=lambda pair: (-pair[0], str(pair[1].get("memory_id") or ""))
         )
-        if time.monotonic() >= deadline:
+        if monotonic() >= deadline:
             return self._tag_backend(scored[:limit], "hash")
         self.persisted_vector_hits += hit_count
         self.persisted_vector_misses += len(reranked) - hit_count

@@ -72,6 +72,7 @@ class MemoryRecord:
     language: str = "mixed"
     entities: List[str] = field(default_factory=list)
     relations: List[Dict[str, Any]] = field(default_factory=list)
+    dependencies: List[Dict[str, str]] = field(default_factory=list)
     sensitivity: Sensitivity = field(default_factory=Sensitivity)
     version: VersionInfo = field(default_factory=VersionInfo)
     audit: AuditInfo = field(default_factory=AuditInfo)
@@ -93,6 +94,8 @@ class MemoryRecord:
 
     def finalize_hash(self) -> "MemoryRecord":
         payload = self.content + self.summary + self.memory_id + self.version.version_id + self.temporal.valid_from
+        if self.dependencies:
+            payload += json.dumps(self.dependencies, ensure_ascii=False, sort_keys=True)
         self.audit.hash = stable_hash(payload)
         return self
 
@@ -129,6 +132,7 @@ class MemoryRecord:
             language=data.get("language", "mixed"),
             entities=list(data.get("entities", [])),
             relations=list(data.get("relations", [])),
+            dependencies=list(data.get("dependencies", [])),
             sensitivity=sensitivity,
             version=version,
             audit=audit,
@@ -176,6 +180,7 @@ def make_memory(
     trust_score: float = 1.0,
     governance_state: str = "active",
     governance_reason: str = "",
+    dependencies: Optional[List[Dict[str, str]]] = None,
 ) -> MemoryRecord:
     clean_summary = summary or content[:160]
     record = MemoryRecord(
@@ -202,5 +207,6 @@ def make_memory(
         trust_score=trust_score,
         governance_state=governance_state,
         governance_reason=governance_reason,
+        dependencies=list(dependencies or []),
     )
     return record.finalize_hash()

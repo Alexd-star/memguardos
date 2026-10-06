@@ -7,6 +7,7 @@ import re
 import sys
 from pathlib import Path
 
+from memguard.api.server import handle_request
 from memguard.feedback import memory_summary_for_user
 from memguard.natural_language import interpret_user_input, looks_like_forget_request
 from memguard.service import MemGuardService
@@ -51,6 +52,22 @@ def build_parser() -> argparse.ArgumentParser:
     context.add_argument("task")
     context.add_argument("--limit", type=int, default=5, help="纳入上下文的记忆条数")
     context.add_argument("--token-budget", type=int, default=1200, help="上下文长度上限")
+    context.add_argument("--stage", choices=["planning", "tool_selection", "response_generation"], default="tool_selection", help="预览实际 Agent 阶段；默认工具选择")
+    context.add_argument("--agent-name", default="openhands", help="应用偏好的 Agent 名称")
+    context.add_argument("--task-type", default="", help="任务类型；用于限定任务偏好")
+    learn = sub.add_parser("learn-procedure", help="从本地检查依据形成可复用流程")
+    learn.add_argument("spec_json_file", help="流程规范 JSON 文件")
+    learn.add_argument("--source", action="append", default=[], required=True, help="来源记忆编号；可重复")
+    procedures = sub.add_parser("procedures", help="按任务查找可复用流程")
+    procedures.add_argument("task")
+    procedures.add_argument("--limit", type=int, default=5, help="返回流程条数")
+    verify = sub.add_parser("verify-procedure", help="只读检查流程后置条件并记录反馈")
+    verify.add_argument("memory_id")
+    verify.add_argument("--use-id", default="", help="本次使用编号；重复反馈使用同一编号")
+    dependencies = sub.add_parser("dependencies", help="预览来源变化影响的派生记忆")
+    dependencies.add_argument("memory_id")
+    for procedure_parser in (learn, procedures, verify):
+        procedure_parser.add_argument("--argument", action="append", default=[], help="参数 NAME=VALUE；可重复")
     sub.add_parser("preferences", help="查看当前生效偏好")
     sub.add_parser("conflicts", help="查看待核对的知识事实冲突")
     resolve_conflict = sub.add_parser("resolve-conflict", help="处理一条知识事实冲突")
@@ -77,7 +94,7 @@ def build_parser() -> argparse.ArgumentParser:
     compare_live.add_argument("task")
     shell = sub.add_parser("shell", help="进入交互式记忆工作台")
     shell.add_argument("--prompt", default="memguard> ")
-    for name in ("remember", "search", "context", "end-session", "shell"):
+    for name in ("remember", "search", "context", "end-session", "shell", "learn-procedure", "procedures", "verify-procedure"):
         sub.choices[name].add_argument("--session-id", default=argparse.SUPPRESS, help="本次会话编号")
     for command_parser in sub.choices.values():
         command_parser.add_argument("--json", dest="command_json", action="store_true", help=argparse.SUPPRESS)
@@ -88,6 +105,8 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     service = _open_service(args)
     try:
+        if args.command in {"learn-procedure", "procedures", "verify-procedure", "dependencies"}:
+            return _run_procedure_command(service, args)
         if _json_requested(args):
             return _run_json(service, args)
         if args.command == "status":
@@ -99,7 +118,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "search":
             return _search(service, args.query, limit=args.limit, session_id=args.session_id)
         if args.command == "context":
-            return _context(service, args.task, limit=args.limit, token_budget=args.token_budget, session_id=args.session_id)
+            return _context(service, args.task, limit=args.limit, token_budget=args.token_budget, session_id=args.session_id,
+                            stage=args.stage, agent_name=args.agent_name, task_type=args.task_type, project_root=args.workspace)
         if args.command == "end-session":
             return _end_session(service, args.session_id, confirm=args.yes)
         if args.command == "preferences":
@@ -150,6 +170,166 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         service.close()
     return 1
+
+
+def _run_procedure_command(service: MemGuardService, args: argparse.Namespace) -> int:
+    commands = {
+        "learn-procedure": "learn_procedure", "procedures": "recall_procedures",
+        "verify-procedure": "verify_procedure", "dependencies": "dependency_impact",
+    }
+    try:
+        request = {"command": commands[args.command]}
+        if args.command == "dependencies":
+            request["memory_ids"] = [args.memory_id]
+        else:
+            arguments = {}
+            for argument in args.argument:
+                name, separator, value = argument.partition("=")
+                if not separator or name in arguments:
+                    raise ValueError("--argument 需要 NAME=VALUE，且参数名不能重复")
+                arguments[name] = value
+            request.update(workspace=args.workspace, session_id=args.session_id, arguments=arguments)
+            if args.command == "learn-procedure":
+                with Path(args.spec_json_file).open("rb") as stream:
+                    payload = stream.read(1024 * 1024 + 1)
+                if len(payload) > 1024 * 1024:
+                    raise ValueError("流程规范文件不得超过 1 MiB")
+                request.update(spec=json.loads(payload.decode("utf-8-sig")), source_memory_ids=args.source)
+            elif args.command == "procedures":
+                request.update(task=args.task, limit=args.limit)
+            else:
+                if not args.session_id.strip():
+                    raise ValueError("verify-procedure 需要 --session-id 明确会话编号，以便复核反馈")
+                request.update(memory_id=args.memory_id, use_id=args.use_id)
+        response = handle_request(service, request)
+    except (OSError, UnicodeError, ValueError, RecursionError) as exc:
+        response = {"ok": False, "error": "invalid_request", "detail": str(exc)}
+    if _json_requested(args):
+        print(json.dumps(response, ensure_ascii=False, indent=2, default=_json_default))
+    else:
+        _print_procedure_response(args.command, response, workspace=args.workspace, session_id=args.session_id)
+    return 0 if response.get("ok") is True else 2
+
+
+def _procedure_status(value: object) -> str:
+    return {"pass": "通过", "fail": "失败", "unknown": "未知（未证明通过）"}.get(str(value), "未验证")
+
+
+def _procedure_reason(value: object) -> str:
+    reason = str(value or "")
+    label = {
+        "matched": "内容检查符合条件", "not_matched": "内容检查不符合条件",
+        "exists": "路径存在", "missing_path": "路径不存在", "unavailable": "无法读取检查依据",
+        "not_utf8_text": "文件不是 UTF-8 文本", "unsafe_path": "检查路径不安全",
+        "file_too_large": "文件超过检查大小限制", "file_changed_during_read": "检查期间文件发生变化",
+        "source_unavailable": "来源不可用或不符合当前作用范围",
+        "source_changed": "来源已变化，需要重新验证", "source_snapshot_changed": "来源版本变化，未保存流程",
+        "sensitive_high": "检测到高敏感内容，已阻止处理",
+        "environment_not_applicable": "环境条件不适用或未能确认",
+        "procedure_or_source_unavailable": "流程或来源不可用",
+        "procedure_or_source_changed": "检查期间流程或来源已变化",
+        "feedback_snapshot_changed": "反馈版本或使用编号不再有效，未新增反馈",
+    }.get(reason)
+    return "%s（%s）" % (label, reason) if label else reason
+
+
+def _print_procedure_checks(verification: dict) -> None:
+    print("实际检查：%s" % _procedure_status(verification.get("overall")))
+    for check in verification.get("checks") or []:
+        print("  [%s] %s · %s；依据：%s" % (
+            _procedure_status(check.get("status")), check.get("type") or check.get("key") or "检查",
+            check.get("path") or "环境", _procedure_reason(check.get("reason")) or "未提供检查原因",
+        ))
+        if "actual" in check or "expected" in check:
+            print("    期望：%s；实际：%s" % (check.get("expected", "未提供"), check.get("actual", "未知")))
+
+
+def _print_procedure_item(item: dict) -> None:
+    spec = item.get("spec") or item.get("procedure") or {}
+    record = item.get("record") or {}
+    if not spec and isinstance(record, dict) and record.get("content"):
+        try:
+            spec = json.loads(record["content"])
+        except (TypeError, ValueError):
+            spec = {}
+    rendered = item.get("rendered") or spec
+    print("流程：%s" % (rendered.get("goal") or item.get("goal") or item.get("goal_template") or item.get("summary") or "未提供目标"))
+    print("流程状态：%s" % {
+        "ready": "可供复用（尚未执行或复核本次任务）", "requires_arguments": "需补充参数",
+        "invalid_arguments": "参数不适用", "learned": "已学习并验证", "blocked": "已阻止",
+        "not_verified": "未验证通过", "pass": "通过", "fail": "失败", "unknown": "未知（未证明通过）",
+    }.get(str(item.get("status")), "未验证"))
+    print("记忆编号：%s" % (item.get("memory_id") or "未保存"))
+    verification = item.get("verification") or item
+    steps = item.get("rendered_steps") or verification.get("rendered_steps") or item.get("steps") or rendered.get("steps") or []
+    print("步骤（仅建议，未自动执行）：")
+    for index, step in enumerate(steps, 1):
+        print("  %s. %s" % (index, step))
+    print("风险约束：")
+    guards = item.get("failure_guards") or rendered.get("failure_guards") or []
+    for guard in guards:
+        print("  - %s" % guard)
+    if not guards:
+        print("  未提供额外约束；不代表无风险。")
+    sources = item.get("source_memory_ids") or [dep.get("memory_id") for dep in item.get("dependencies") or []]
+    if sources:
+        print("来源记忆：%s" % "、".join(str(source) for source in sources))
+    else:
+        print("来源记忆：服务未返回来源清单；以上述本地检查依据为准。")
+    for dependency in item.get("dependencies") or []:
+        print("  %s · 来源版本 %s · %s" % (dependency.get("memory_id"), dependency.get("version_id"), dependency.get("relation")))
+    _print_procedure_checks(verification)
+    for condition in item.get("postconditions") or rendered.get("postconditions") or []:
+        print("后置条件：%s · %s%s" % (condition.get("type"), condition.get("path"), " · " + str(condition["value"]) if "value" in condition else ""))
+    if item.get("required_arguments"):
+        print("待补参数：%s" % "、".join(item["required_arguments"]))
+    environment = item.get("environment_check") or item.get("environment")
+    if environment:
+        print("环境条件：")
+        _print_procedure_checks(environment)
+    stats = item.get("stats") or item.get("feedback_stats")
+    if stats:
+        print("历史反馈：通过 %s；失败 %s；未知 %s；成功率 %s" % (
+            stats.get("pass", 0), stats.get("fail", 0), stats.get("unknown", 0),
+            stats.get("success_rate") if stats.get("success_rate") is not None else "尚无已测量反馈",
+        ))
+
+
+def _print_procedure_response(command: str, response: dict, *, workspace: str, session_id: str) -> None:
+    _section({"learn-procedure": "流程学习", "procedures": "可复用流程", "verify-procedure": "流程复核", "dependencies": "派生影响预览"}[command])
+    print("状态：%s" % ("已完成" if response.get("ok") else "未完成"))
+    raw_result = response.get("result")
+    result = raw_result if isinstance(raw_result, dict) else {}
+    if command != "dependencies":
+        print("工作区：%s" % workspace)
+        print("会话：%s" % (result.get("session_id") or session_id or "未指定"))
+        print("检查来源：当前本地工作区的只读后置条件检查；不执行步骤或外部调用。")
+    if command == "procedures":
+        items = raw_result if isinstance(raw_result, list) else []
+        for item in items:
+            _print_procedure_item(item)
+        if not items:
+            print("未找到符合当前任务和约束的流程。")
+    elif command == "dependencies":
+        items = result.get("derived_memories") or result.get("descendants") or result.get("affected_memories") or []
+        print("根来源记忆：%s" % "、".join(str(memory_id) for memory_id in result.get("root_memory_ids") or []))
+        print("影响数量：%s" % (result.get("affected_count", len(items))))
+        for item in items:
+            print("  %s · %s · %s" % (item.get("memory_id"), item.get("summary") or "派生记忆", item.get("governance_state") or "待核对"))
+        print("本次仅预览，不撤回、不删除记忆。")
+    else:
+        _print_procedure_item(result)
+        if command == "verify-procedure":
+            print("使用编号：%s" % (result.get("use_id") or "未提供"))
+    feedback = result.get("feedback") or {}
+    if "recorded" in result:
+        feedback = {"recorded": result["recorded"], "status": result.get("feedback_status") or result.get("status")}
+    if isinstance(feedback, dict) and "recorded" in feedback:
+        print("反馈：%s；检查状态：%s" % ("已记录" if feedback["recorded"] else "未新增（可能已记录）", _procedure_status(feedback.get("status"))))
+    else:
+        print("反馈：%s" % (_procedure_reason(result.get("reason")) or ("请求已完成，检查状态以上述实际结果为准。" if response.get("ok") else "请求未完成，没有证明流程成功。")))
+    if response.get("error"):
+        print("错误：%s；%s" % (response["error"], response.get("detail") or "请检查输入和服务状态"))
 
 
 def _open_service(args: argparse.Namespace) -> MemGuardService:
@@ -345,15 +525,29 @@ def _print_retrieval_timings(explanation: object) -> None:
         print("检索耗时：合计 %s ms（%s）" % (total, "，".join(parts) if parts else "未分段"))
 
 
-def _context(service: MemGuardService, task: str, limit: int = 5, token_budget: int = 1200, session_id: str = "") -> int:
-    context = service.build_context(task, limit=max(1, limit), token_budget=max(64, token_budget), session_id=session_id)
+def _context_payload(service: MemGuardService, task: str, limit: int, token_budget: int, session_id: str,
+                     stage: str, agent_name: str, task_type: str, project_root: str) -> dict:
+    return service.build_agent_context(task=task, limit=max(1, limit), token_budget=max(64, token_budget),
+        session_id=session_id, stage=stage, agent_name=agent_name, task_type=task_type,
+        project_root=str(Path(project_root).expanduser().resolve()) if project_root else "")
+
+
+def _context(service: MemGuardService, task: str, limit: int = 5, token_budget: int = 1200, session_id: str = "",
+             stage: str = "tool_selection", agent_name: str = "openhands", task_type: str = "", project_root: str = "") -> int:
+    context = _context_payload(service, task, limit, token_budget, session_id, stage, agent_name, task_type, project_root)
     _section("记忆注入")
     memories = context.get("memories", [])
     print("任务：%s" % task)
+    print("阶段：%s；Agent：%s" % ({"planning": "任务规划", "tool_selection": "工具选择", "response_generation": "回答生成"}[stage], agent_name))
     print("可用记忆：%d 条" % len(memories))
     for index, memory in enumerate(memories[: max(1, limit)], 1):
-        print("%d. %s" % (index, memory.get("summary") or memory.get("memory_id")))
-    print("说明：这里只展示 Agent 生成前会被纳入的受控上下文，不包含敏感原文。")
+        if memory.get("preference_topic"):
+            label, value = _preference_display(memory["preference_topic"], memory.get("preference_value", ""))
+            print("%d. [%s] %s" % (index, label, value))
+            print("   记忆编号：%s · 当前来源版本：%s" % (memory.get("memory_id"), memory.get("version_id")))
+        else:
+            print("%d. %s" % (index, memory.get("summary") or memory.get("memory_id")))
+    print("说明：采用与 Agent 相同的阶段、范围和安全检查；这是生成前的上下文预览，不代表模型已执行任务。")
     return 0
 
 
@@ -389,6 +583,16 @@ def _forget(service: MemGuardService, request: str, confirm: bool = False, compa
 
 def _print_confirmed_forget(result: dict) -> int:
     _section("精准遗忘")
+    if result.get("reason") == "stale_preview":
+        print("[未执行] 影响范围预览已失效，本次未删除记忆。")
+        if result.get("derivation_impact"):
+            print("来源的派生记忆必须一并确认；请重看影响范围。")
+        else:
+            print("记忆版本已变化；请重看影响范围并重新选择确认。")
+        stale_ids = result.get("stale_memory_ids") or []
+        if stale_ids:
+            print("需重新核对的记忆编号：%s" % "、".join(str(memory_id) for memory_id in stale_ids))
+        return 2
     forgotten = list(
         result.get("forgotten") or result.get("forgotten_memory_ids") or []
     )
@@ -708,7 +912,8 @@ def _run_json(service: MemGuardService, args: argparse.Namespace) -> int:
     elif args.command == "search":
         value = service.search(args.query, limit=max(1, args.limit), session_id=args.session_id)
     elif args.command == "context":
-        value = service.build_context(args.task, limit=max(1, args.limit), token_budget=max(64, args.token_budget), session_id=args.session_id)
+        value = _context_payload(service, args.task, args.limit, args.token_budget, args.session_id,
+                                 args.stage, args.agent_name, args.task_type, args.workspace)
     elif args.command == "end-session":
         value = service.evict_session(args.session_id, confirm=args.yes)
     elif args.command == "preferences":
@@ -924,7 +1129,7 @@ def _dispatch_shell_line(service: MemGuardService, line: str, state: dict) -> in
         print("已识别为 Agent 任务。")
         return _run_agent_task(service, payload, state)
     if line.startswith("/"):
-        return _run_shell_line(service, line, session_id=state["session_id"])
+        return _run_shell_line(service, line, session_id=state["session_id"], project_root=state["workspace"])
     print("本次输入尚未执行：请确认它是 Agent 任务还是要保存的记忆。")
     print("- 运行任务：输入 `/run %s`" % line)
     print("- 保存记忆：输入 `记住：%s`" % line)
@@ -1059,7 +1264,7 @@ def _print_forget_pending_help(pending: dict) -> None:
         print("输入 yes 或 确认执行；输入 no 或 取消停止。")
 
 
-def _run_shell_line(service: MemGuardService, line: str, session_id: str = "") -> int:
+def _run_shell_line(service: MemGuardService, line: str, session_id: str = "", project_root: str = "") -> int:
     if line == "/status":
         return _status(service)
     if line == "/memory":
@@ -1071,7 +1276,7 @@ def _run_shell_line(service: MemGuardService, line: str, session_id: str = "") -
     if line.startswith("/search "):
         return _search(service, line[len("/search "):].strip(), session_id=session_id)
     if line.startswith("/context "):
-        return _context(service, line[len("/context "):].strip(), session_id=session_id)
+        return _context(service, line[len("/context "):].strip(), session_id=session_id, project_root=project_root)
     if line.startswith("/forget "):
         request = line[len("/forget "):].strip()
         confirm = False

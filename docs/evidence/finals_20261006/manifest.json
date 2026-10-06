@@ -1,0 +1,43 @@
+{
+  "generated_at": "2026-10-06T00:51:21.840007+00:00",
+  "root": "docs/evidence/finals_20261006",
+  "file_count": 7,
+  "total_bytes": 11933,
+  "files": [
+    {
+      "path": "cli_interfaces.txt",
+      "bytes": 180,
+      "sha256": "e9d3cc0c8f2bbc4fd2c980848ef1b1017691e98facd1dab73439a937495d3380"
+    },
+    {
+      "path": "daily_scenarios_installed.json",
+      "bytes": 2827,
+      "sha256": "94cfd6f1c6097c10742f5bf0f44096028a3c64888be6bac43e87af1f68d5179c"
+    },
+    {
+      "path": "forgetting_v2.json",
+      "bytes": 455,
+      "sha256": "31aac402fdef86f326728ed4bdc0d22852f9311fa16c562aadda7d1511e050b3"
+    },
+    {
+      "path": "procedures_installed.json",
+      "bytes": 3377,
+      "sha256": "ce0d43343db4ed560a1986d3622e88c780ac45d772b1dad590b40285d72b7620"
+    },
+    {
+      "path": "pytest_openkylin.txt",
+      "bytes": 2044,
+      "sha256": "d91d37f6823beac799a457d4b109bc0c734978132ebffd8dd77cd3e50227ea69"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2784,
+      "sha256": "884967eb9394ff05010c9a44ccf12a5829a9b44eb3f4147f5165e10d64d64eb5"
+    },
+    {
+      "path": "web_ui.json",
+      "bytes": 266,
+      "sha256": "72407145096f10e8ecaaa271eebbe0d8ea86a9447e59e94dae4526f5ce941e91"
+    }
+  ]
+}

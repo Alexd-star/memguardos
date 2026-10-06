@@ -118,7 +118,7 @@ def test_provider_expired_absolute_deadline_also_blocks_cache(monkeypatch):
     )
     provider = KylinEmbeddingProvider()
     assert provider.vector("query") == [1.0, 0.0]
-    assert provider.vector("query", deadline=time.monotonic() - 1.0) is None
+    assert provider.vector("query", deadline=time.perf_counter() - 1.0) is None
     assert provider.failures == 0
 
 
@@ -184,9 +184,9 @@ def test_singleflight_waiter_deadline_does_not_cancel_owner(monkeypatch):
         owner = executor.submit(provider.vector, "same query", 1.0)
         try:
             assert entered.wait(1.0)
-            started = time.monotonic()
+            started = time.perf_counter()
             assert provider.vector("same query", deadline=started + 0.060) is None
-            elapsed = time.monotonic() - started
+            elapsed = time.perf_counter() - started
             assert 0.04 <= elapsed < 0.25, elapsed
             assert provider.failures == 0
             assert provider.disabled_reason == ""
@@ -309,7 +309,7 @@ def test_real_timeouts_defer_bookkeeping_without_losing_cooldown(monkeypatch, dr
 
     now[0] = 106.0
     # vector must drain failures before checking the circuit or reusing a done flight.
-    assert provider.vector("same query", deadline=time.monotonic() + 0.1) is None
+    assert provider.vector("same query", deadline=time.perf_counter() + 0.1) is None
     assert len(timeouts) == 2
     status = provider.status()
     assert status["failures"] == 2
@@ -440,7 +440,7 @@ def test_rank_zero_or_expired_budget_never_calls_provider(expired):
     retriever = HybridRetriever("kylin")
     retriever.kylin_rerank_budget_ms = 160.0 if expired else 0.0
     fallback = retriever.rank("systemd MemoryMax", records(), allow_kylin_rerank=False)
-    deadline = time.monotonic() - 1.0 if expired else None
+    deadline = time.perf_counter() - 1.0 if expired else None
     assert retriever.rank("systemd MemoryMax", records(), deadline=deadline) == fallback
 
 
@@ -458,14 +458,14 @@ def test_rank_rerank_deadline_discards_partial_results(monkeypatch):
         return original_score(query, record, query_vector, candidate_vector)
 
     monkeypatch.setattr(retriever, "_score_with_vectors", score)
-    started = time.monotonic()
+    started = time.perf_counter()
     result = retriever.rank(
         "systemd MemoryMax", records(), kylin_query_vector=[1.0, 0.0],
         persisted_vectors={"m0": [1.0, 0.0], "m1": [1.0, 0.0]}, deadline=started + 0.025,
     )
     assert result == fallback
     assert dense_calls == ["m0"]
-    assert time.monotonic() - started < 0.20
+    assert time.perf_counter() - started < 0.20
     assert retriever.persisted_vector_hits == 0
     assert retriever.last_backend_used == "hash"
 
@@ -474,7 +474,7 @@ def test_rank_reuses_supplied_query_vector_and_persisted_vectors():
     retriever = HybridRetriever("kylin")
     result = retriever.rank(
         "systemd MemoryMax", records(), kylin_query_vector=[1.0, 0.0],
-        persisted_vectors={"m0": [1.0, 0.0], "m1": [1.0, 0.0]}, deadline=time.monotonic() + 0.1,
+        persisted_vectors={"m0": [1.0, 0.0], "m1": [1.0, 0.0]}, deadline=time.perf_counter() + 0.1,
     )
     assert len(result) == 2
     assert all(item["_vector_backend"] == "kylin_sdk_persisted" for _, item in result)

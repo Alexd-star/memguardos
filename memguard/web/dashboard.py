@@ -581,6 +581,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                     "memory_ids": payload.get("memory_ids") if isinstance(payload.get("memory_ids"), list) else [],
                     "reason": str(payload.get("reason", "user forget")),
                     "compact": bool(payload.get("compact", True)),
+                    "expected_versions": payload.get("expected_versions"),
                 }
             )
             return
@@ -1928,6 +1929,7 @@ def _dashboard_html() -> str:
     }
     let activeTab = 'overview';
     let memoryDetailReturnTab = 'memory';
+    let memoryDetailPreview = null;
     document.querySelectorAll('nav button').forEach(btn => btn.addEventListener('click', () => {
       openTab(btn.dataset.tab, {force:btn.dataset.tab === activeTab});
     }));
@@ -2267,6 +2269,7 @@ def _dashboard_html() -> str:
         user_cli:'终端自然语言输入',
         dashboard:'本地控制台',
         tool_result:'工具执行结果',
+        verified_procedure:'已验证的流程经验',
         user_behavior:'用户与 Agent 交互',
         agent_interaction:'用户与 Agent 交互',
         agent:'Agent 自动形成',
@@ -2805,7 +2808,7 @@ def _dashboard_html() -> str:
         '<div class="item"><div class="item-title">候选 #' + (idx + 1) + ' · ' + esc(memoryTypeLabel(item.type || 'memory')) + '</div>'
         + '<div class="memory-id" title="' + esc(item.memory_id || '') + '">记忆编号 ' + esc(shortMemoryId(item.memory_id || '')) + '</div>'
         + '<div class="muted">' + esc(item.summary || item.memory_id) + '</div>'
-        + '<div class="muted">匹配依据：' + esc((item.matched_keywords || []).join(', ') || '语义和作用域匹配') + '</div>'
+        + '<div class="muted">匹配依据：' + esc(item.derived ? '依赖被撤回的来源；需一并确认' : ((item.matched_keywords || []).join(', ') || '语义和作用域匹配')) + '</div>'
         + '<div class="mini-actions">'
         + (!confirmed ? '<span class="secondary"><input type="checkbox" aria-label="选择候选记忆 ' + (idx + 1) + '" data-forget-memory-id="' + esc(item.memory_id || '') + '" onchange="toggleForgetCandidate(this)"' + (candidates.length === 1 ? ' checked' : '') + '> 选择此记忆</span>' : '')
         + '<button class="secondary" data-action="open-memory-detail" data-memory-id="' + esc(item.memory_id || '') + '">查看记忆</button></div></div>'
@@ -3418,10 +3421,35 @@ def _dashboard_html() -> str:
     function returnFromMemoryDetail() {
       return openTab(memoryDetailReturnTab || 'memory', {force:true});
     }
+    function renderDerivationPanel(result) {
+      const deps = result.dependencies || [];
+      const impact = (result.derivation_impact || {}).derived_memories || [];
+      const memory = result.memory || {};
+      let body = '';
+      if (memory.source_kind === 'verified_procedure') {
+        let spec;
+        try { spec = JSON.parse(memory.content || '{}'); } catch (_err) { spec = {}; }
+        const stats = result.procedure_feedback || {};
+        body += '<div class="section-block-header"><strong>已验证流程经验</strong><span class="badge">' + esc(memory.governance_state === 'source_invalidated' ? '来源已变化 · 已停用' : '形成时检查通过') + '</span></div>'
+          + '<div class="section-block-body"><div class="item-title">' + esc(spec.goal || memory.summary || '') + '</div>'
+          + '<ol>' + (spec.steps || []).map(step => '<li>' + esc(step) + '</li>').join('') + '</ol>'
+          + '<div class="muted">参数：' + esc(Object.entries(spec.parameters || {}).map(([name,value]) => name + ' = ' + (value === null ? '本次任务需提供' : value)).join('；') || '无需额外参数') + '</div>'
+          + '<div class="muted">约束：' + esc((spec.failure_guards || []).join('；') || '未声明额外约束') + '</div>'
+          + '<div class="linear-list">' + (spec.postconditions || []).map(check => '<div class="list-row"><span>' + esc(({path_exists:'文件存在', file_contains:'文件包含', file_not_contains:'文件不包含'})[check.type] || check.type) + ' · ' + esc(check.path || '') + '</span><span>' + esc(check.value || '') + '</span></div>').join('') + '</div>'
+          + '<div class="muted">后续实测：通过 ' + esc(stats.pass || 0) + ' 次 · 未通过 ' + esc(stats.fail || 0) + ' 次 · 未确认 ' + esc(stats.unknown || 0) + ' 次</div></div>';
+      }
+      if (deps.length || impact.length) {
+        body += '<div class="section-block-header"><strong>来源与派生影响</strong><span class="badge">版本绑定</span></div><div class="section-block-body">'
+          + deps.map(dep => '<div class="list-row"><span>来源 ' + esc(dep.parent_memory_id) + '</span><span class="muted">版本 ' + esc(dep.parent_version_id) + '</span></div>').join('')
+          + impact.map(item => '<div class="list-row"><span>' + esc(item.summary || item.memory_id) + '</span><span class="badge warn">撤回来源时同步清理</span></div>').join('') + '</div>';
+      }
+      return body ? '<div class="section-block" style="margin-top:14px">' + body + '</div>' : '';
+    }
     function renderLifecyclePanel(lifecycle) {
       const value = lifecycle || {};
       if (!value.found) return '';
       const atom = value.atom || {};
+      const stateText = {active:'可使用', source_invalidated:'来源已变化 · 已停用', quarantined:'待核对', rejected:'已拒绝', forgotten:'已遗忘', superseded:'旧版本'};
       const counts = value.counts || {};
       const episodes = value.episodes || [];
       const supports = value.supports || [];
@@ -3433,7 +3461,7 @@ def _dashboard_html() -> str:
         ? operations.slice(-5).reverse().map(item => '<div class="list-row"><div><div class="item-title">' + esc(item.label || item.operation) + '</div><div class="muted">' + esc(item.created_at || '') + '</div></div><span class="badge ' + (item.status === 'blocked' ? 'bad' : (item.status === 'review_required' ? 'warn' : 'ok')) + '">' + esc(item.status || 'completed') + '</span></div>').join('')
         : '<div class="muted">暂无受管操作记录。</div>';
       return '<div class="section-block" style="margin-top:14px"><div class="section-block-header"><strong>生命周期证据</strong><span class="badge">原子 · 情节 · 证据 · 操作</span></div><div class="section-block-body">'
-        + '<div class="grid two"><div class="item"><div class="item-title">当前原子</div><div class="muted">' + esc(atom.kind || '') + ' · ' + esc(atom.lifecycle_state || '') + ' · ' + esc(atom.tier || '') + '</div><div class="muted">版本 ' + esc(atom.version_id || '') + ' · 来源 ' + esc(atom.source_kind || '未知') + '</div></div><div class="item"><div class="item-title">受管影响面</div><div class="muted">' + esc((value.forgetting_boundary || {}).managed_surfaces ? (value.forgetting_boundary || {}).managed_surfaces.length : 0) + ' 个受管派生面</div><div class="muted">' + esc((value.forgetting_boundary || {}).state || '') + '</div></div></div>'
+        + '<div class="grid two"><div class="item"><div class="item-title">当前原子</div><div class="muted">' + esc(memoryTypeLabel(atom.kind || 'memory')) + ' · ' + esc(stateText[atom.lifecycle_state] || atom.lifecycle_state || '') + ' · ' + esc(tierLabel(atom.tier || '')) + '</div><div class="muted">版本 ' + esc(atom.version_id || '') + ' · 来源 ' + esc(sourceLabel(atom.source_kind || '')) + '</div></div><div class="item"><div class="item-title">受管影响面</div><div class="muted">' + esc((value.forgetting_boundary || {}).managed_surfaces ? (value.forgetting_boundary || {}).managed_surfaces.length : 0) + ' 个受管派生面</div><div class="muted">' + esc((value.forgetting_boundary || {}).state || '') + '</div></div></div>'
         + '<div class="item" style="margin-top:10px"><div class="health"><div class="item-title">形成与使用</div><span class="badge">' + esc(counts.episodes || 0) + ' 情节 · ' + esc(counts.supports || 0) + ' 支持 · ' + esc(counts.context_uses || 0) + ' 次使用</span></div><div class="linear-list" style="margin-top:8px">' + episodeText + '</div></div>'
         + '<details style="margin-top:10px"><summary>查看受管操作链</summary><div class="linear-list" style="margin-top:8px">' + operationText + '</div></details>'
         + '<div class="muted" style="margin-top:10px">来源支持片段：' + esc(supports.length) + ' 条；遗忘只处理受管数据，外部 Agent 日志和备份需在对应系统中单独清理。</div>'
@@ -3449,6 +3477,7 @@ def _dashboard_html() -> str:
       }
       return withBusy(event, async () => {
         const box = document.getElementById('memoryDetailCards');
+        memoryDetailPreview = null;
         box.innerHTML = '<div class="skeleton" aria-label="正在读取记忆详情"></div>';
         let payload;
         try {
@@ -3469,9 +3498,12 @@ def _dashboard_html() -> str:
         }
         const result = payload.result || {};
         const memory = result.memory || {};
+        if (memory.project_root && !memory.preference_topic) memory.preference_scope = 'project';
+        memoryDetailPreview = result.found ? result : null;
         const detailHtml = result.found
           ? '<div class="item"><div class="health"><div><div class="item-title">' + esc(memorySummaryLabel(memory)) + '</div><div class="memory-id">完整编号 ' + esc(memory.memory_id || id) + '</div></div><button class="secondary" onclick="copyMemoryId(\\'' + esc(memory.memory_id || id) + '\\')">复制编号</button></div><div class="muted">' + esc(memoryTypeLabel(memory.type || 'memory')) + ' · ' + esc(memorySubtypeLabel(memory.subtype || memory.type)) + ' · ' + esc(tierLabel(memory.tier || '')) + '</div><div class="muted">适用范围：' + esc(scopeLabel(memory.preference_scope || memory.scope || '')) + ' · 来源：' + esc(sourceLabel(memory.source_kind || (memory.source || {}).kind || '')) + '</div></div><div class="grid two"><div class="panel"><div class="item-title">来源与版本</div><div class="muted">来源事件 ' + esc((result.source_events || []).length) + ' 条 · 版本 ' + esc((result.versions || []).length) + ' 个</div><div class="muted">最近使用阶段：' + esc(stageLabel((result.agent_usage || {}).last_stage || '')) + '</div></div><div class="panel"><div class="item-title">关联信息</div><div class="muted">实体 ' + esc(((result.graph || {}).entities || []).length) + ' 个 · 关系 ' + esc(((result.graph || {}).relations || []).length) + ' 条</div></div></div>'
             + renderLifecyclePanel(result.lifecycle)
+            + renderDerivationPanel(result)
           : '<div class="item"><div class="item-title">没有找到这条记忆</div><div class="muted">请从记忆中心重新选择。</div></div>';
         document.getElementById('memoryDetailCards').innerHTML = detailHtml;
         setRawOutput('memoryDetailOut', payload);
@@ -3480,12 +3512,34 @@ def _dashboard_html() -> str:
     }
     async function forgetMemoryFromDetail(event) {
       const id = document.getElementById('memoryDetailId').value.trim();
-      if (!id || !window.confirm('确认遗忘这条记忆？系统会先执行受管记录验证，并保留外部日志边界说明。')) return;
+      if (!id || !memoryDetailPreview || (memoryDetailPreview.memory || {}).memory_id !== id) {
+        return operationFeedback('请先加载最新的记忆详情再确认遗忘。', 'warn');
+      }
+      const derived = (memoryDetailPreview.derivation_impact || {}).derived_memories || [];
+      const versions = Object.assign({}, (memoryDetailPreview.derivation_impact || {}).expected_versions || {});
+      versions[id] = (memoryDetailPreview.memory || {}).version_id;
+      if (!window.confirm('确认遗忘这条记忆及其 ' + derived.length + ' 条派生记忆？系统将复核受管数据，其他独立记忆继续保留。')) return;
       return withMutation(event, '遗忘记忆', async () => {
-        const payload = await postJson('/api/forget-memory', {memory_ids:[id], reason:'用户从记忆详情发起遗忘', compact:true});
+        const payload = await postJson('/api/forget-memory', {memory_ids:[id], reason:'用户从记忆详情发起遗忘', compact:true, expected_versions:versions});
         setRawOutput('memoryDetailOut', payload);
-        setOperationStatus(payload.ok ? '这条记忆的遗忘验证已完成。' : '遗忘未完全完成，请查看验证报告。', payload.ok ? 'ok' : 'bad');
+        const result = payload.result || {};
+        const forgottenIds = result.forgotten_memory_ids || [];
+        const verified = payload.ok === true && result.ok === true;
+        if (forgottenIds.includes(id)) {
+          memoryDetailPreview = null;
+          document.getElementById('memoryDetailCards').innerHTML = '<div class="empty-state"><strong>'
+            + (verified ? '遗忘已完成' : '记忆已移除，复检仍需处理') + '</strong><span>已移除 '
+            + esc(forgottenIds.length) + ' 条记录，其中包含 ' + esc((result.derived_memory_ids || []).length)
+            + ' 条派生记忆。删除前的内容不再展示，其他独立记忆继续保留。</span><div class="mini-actions">'
+            + '<button class="secondary" data-action="return-memory-detail">返回原列表</button></div></div>';
+        } else if (result.reason === 'stale_preview') {
+          await loadMemoryDetail(null);
+        }
         await loadFeedbackHome(null);
+        const feedback = operationFeedback(verified ? '这条记忆的遗忘验证已完成。'
+          : (result.reason === 'stale_preview' ? '记忆或派生范围已变化，请核对更新后的详情再确认。' : '遗忘未完全完成，请查看验证报告。'), verified ? 'ok' : 'warn');
+        setOperationStatus(feedback.operationFeedback.message, feedback.operationFeedback.state);
+        return feedback;
       });
     }
     async function agentForget(event, confirmForget) {

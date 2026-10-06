@@ -2,7 +2,7 @@ from pathlib import Path
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
-from time import monotonic, perf_counter
+from time import perf_counter, perf_counter as monotonic
 from typing import Dict, List, Optional, Tuple, Union
 import json
 import math
@@ -72,6 +72,8 @@ from memguard.natural_language import explicitly_requests_no_store, infer_retent
 from memguard.os_guard.events import parse_os_event
 from memguard.os_guard.cgroup import cgroup_status
 from memguard.os_guard.journald import JournaldLogger
+from memguard.procedure_service import ProcedureServiceMixin
+from memguard.store.dependencies import DependencyChanged
 from memguard.retrieval.conflict import ConflictResolver, preference_topic as inferred_preference_topic
 from memguard.retrieval.fusion import QueryIntent, classify_query_intent, rrf_fuse
 from memguard.retrieval.hybrid import HybridRetriever, cosine, expand_query_aliases, normalize_vector, tokenize_literal
@@ -98,7 +100,7 @@ def _optional_scope_kwargs(session_id: str = "", project_root: Optional[str] = N
     return kwargs
 
 
-class MemGuardService:
+class MemGuardService(ProcedureServiceMixin):
     EMBEDDING_BACKEND = "kylin_sdk"
     HIT_FLUSH_THRESHOLD = 512
     EMBEDDING_MODEL_REVISION = "kylin-sdk-v1"
@@ -153,6 +155,7 @@ class MemGuardService:
     def _recover_pending_erasures(self) -> Dict[str, object]:
         """Finish SQLite-committed erasures before exposing service operations."""
 
+        self._recover_pending_segment_cleanups()
         pending = self.meta.pending_erasures()
         if not pending:
             return {"recovered": 0, "storage_cleanup": None}
@@ -176,14 +179,80 @@ class MemGuardService:
         self._invalidate_search_cache()
         return {"recovered": len(pending), "storage_cleanup": cleanup}
 
+    def _recover_pending_segment_cleanups(self) -> int:
+        def cleanup_versions(pending: List[Dict[str, object]]) -> None:
+            targets = {(row["memory_id"], row["version_id"]) for row in pending}
+            predecessors = {
+                (row["memory_id"], row["previous_version_id"], row["version_id"]): row
+                for row in pending if row["previous_version_id"]
+            }
+            # Match the commit lock order: SQLite writer, then segment lock.
+            # Rewrite all retained versions, never compact committed history.
+            with self.store._locked():
+                retained = []
+                changed = False
+                for record in self.store._scan_unlocked():
+                    if (record.memory_id, record.version.version_id) in targets:
+                        changed = True
+                        continue
+                    cancellation = predecessors.get((
+                        record.memory_id, record.version.version_id,
+                        record.temporal.superseded_by,
+                    ))
+                    if cancellation is not None:
+                        changed = True
+                        if (cancellation["committed_version_id"] == record.version.version_id
+                                and not cancellation["committed_deleted"]):
+                            record.temporal.valid_to = None
+                            record.temporal.superseded_by = None
+                            if retained and retained[-1].to_json() == record.to_json():
+                                continue
+                        else:
+                            continue
+                    retained.append(record)
+                if changed:
+                    self.store._replace_atomic_unlocked(retained)
+
+        recovered = self.meta.recover_pending_segment_cleanups(cleanup_versions)
+        if recovered:
+            self._invalidate_search_cache()
+        return recovered
+
     def _begin_memory_erasure(
         self, record: MemoryRecord, *, compact: bool,
     ) -> Dict[str, int]:
-        return self.meta.begin_memory_erasure(
-            record.memory_id, new_id("ver"), compact=compact,
-            plaintext=record.content,
-            expected_version_id=record.version.version_id,
-        )
+        records = [record]
+        self._expand_erasure_records(records)
+        return self._begin_memory_erasures(records, compact=compact)
+
+    def dependency_impact(self, memory_ids: List[str]) -> Dict[str, object]:
+        roots = list(dict.fromkeys(str(value) for value in memory_ids))
+        descendants = self.meta.dependency_descendants(roots)
+        derived = [row for row in descendants if row["memory_id"] not in roots]
+        return {
+            "root_memory_ids": roots,
+            "derived_memories": [{
+                "memory_id": row["memory_id"], "version_id": row["version_id"],
+                "summary": row["summary"], "type": row["type"],
+                "governance_state": row["governance_state"],
+                "reason": "derived_from_revoked_source",
+            } for row in derived],
+            "expected_versions": {row["memory_id"]: row["version_id"] for row in derived},
+            "relation": "derived_from",
+        }
+
+    def _expand_erasure_records(self, records: List[MemoryRecord]) -> None:
+        seen = {record.memory_id for record in records}
+        rows = self.meta.dependency_descendants(list(seen))
+        latest = self.store.get_latest_many([row["memory_id"] for row in rows])
+        for row in rows:
+            if row["memory_id"] in seen:
+                continue
+            record = latest.get(row["memory_id"])
+            if record is None or record.version.version_id != row["version_id"]:
+                raise DependencyChanged("derived segment differs from committed version")
+            records.append(record)
+            seen.add(record.memory_id)
 
     def _begin_memory_erasures(
         self, records: List[MemoryRecord], *, compact: bool,
@@ -200,6 +269,7 @@ class MemGuardService:
         ])
 
     def _recover_pending_memory_writes(self) -> int:
+        self._recover_pending_segment_cleanups()
         pending = self.meta.pending_memory_writes()
         for item in pending:
             try:
@@ -215,6 +285,8 @@ class MemGuardService:
                 continue
             except FactSlotConflict:
                 continue
+            except DependencyChanged:
+                continue
             except ValueError:
                 current = self.meta.get_memory(str(item["memory_id"]))
                 if current is None or current["version_id"] != item["version_id"]:
@@ -224,6 +296,7 @@ class MemGuardService:
                     for row in self.meta.pending_memory_writes()
                 ):
                     raise
+        self._recover_pending_segment_cleanups()
         return len(pending)
 
     def _append_staged_record_once(self, record: MemoryRecord) -> MemoryRecord:
@@ -1689,7 +1762,11 @@ class MemGuardService:
                 "last_stage": "tool_selection" if any(item.get("event_type") == "tool_call" for item in observed_events) else "暂无证据",
             },
             "lifecycle": self.lifecycle_snapshot(str(memory_id), include_events=not light),
+            "dependencies": self.meta.memory_dependencies(str(memory_id)),
+            "derivation_impact": self.dependency_impact([str(memory_id)]),
         }
+        if memory.get("type") == "procedure":
+            detail["procedure_feedback"] = self.meta.procedure_stats(str(memory_id))
         if memory.get("preference_topic") and not light:
             detail["preference_proof"] = self.preference_effect_proof(
                 str(memory_id), task=task, agent_name=agent_name, session_id=session_id
@@ -1838,13 +1915,19 @@ class MemGuardService:
                     "来源事件受管载荷与来源片段",
                     "Agent 上下文授权快照",
                     "审计链中的不含正文操作记录",
+                    "版本绑定的派生依赖关系",
+                    "流程完成检查反馈",
                 ],
                 "external_surfaces": [
                     "OpenHands 原始日志",
                     "模型服务商日志",
                     "shell history、备份和虚拟机快照",
                 ],
-                "state": "已遗忘" if deleted else "仍受管并可按当前授权使用",
+                "state": "已遗忘" if deleted else (
+                    "来源已变化，已停止进入 Agent 上下文"
+                    if row.get("governance_state") == "source_invalidated"
+                    else "仍受管并可按当前授权使用"
+                ),
             },
         }
         self._audit(
@@ -2769,6 +2852,8 @@ class MemGuardService:
         previous = self.store.get_latest(memory_id)
         if previous is None:
             return {"updated": False, "reason": "memory_not_found", "memory_id": memory_id}
+        if previous.source.kind == "verified_procedure" or previous.dependencies:
+            return {"updated": False, "reason": "procedure_requires_revalidation", "memory_id": memory_id}
         if expected_version_id and (
             str(row.get("version_id") or "") != expected_version_id
             or previous.version.version_id != expected_version_id
@@ -3071,6 +3156,7 @@ class MemGuardService:
             if record is None:
                 continue
             selected_records.append(record)
+        self._expand_erasure_records(selected_records)
         self._begin_memory_erasures(selected_records, compact=False)
         evicted = [record.memory_id for record in selected_records]
         if evicted:
@@ -3359,6 +3445,8 @@ class MemGuardService:
         row = self.meta.get_memory(memory_id)
         if row is None or row.get("deleted"):
             return {"rolled_back": False, "reason": "memory_not_found", "memory_id": memory_id}
+        if row.get("source_kind") == "verified_procedure" or self.meta.memory_dependencies(memory_id):
+            return {"rolled_back": False, "reason": "procedure_requires_revalidation", "memory_id": memory_id}
         if row["version_id"] == version_id:
             return {"rolled_back": False, "reason": "already_current", "memory_id": memory_id}
         versions = self.store.get_versions(memory_id)
@@ -4001,6 +4089,13 @@ class MemGuardService:
                 )
             )
             remaining = effective_max_chars - used
+            if source_kind == "verified_procedure":
+                line, reason = self.procedure_context_line(str(hit["memory_id"]), project_scope)
+                if not line or len(line) > remaining or (token_budget and self.estimate_tokens("\n\n".join([*lines, line])) > token_budget):
+                    selection_trace.append({"memory_id": hit["memory_id"], "rank": idx,
+                                            "included": False, "reason": reason or "procedure_budget_exhausted"})
+                    truncated = truncated or bool(line)
+                    continue
             if remaining <= 0:
                 truncated = True
                 selection_trace.append(
@@ -4225,7 +4320,14 @@ class MemGuardService:
             )
             remaining_chars = max_chars - used_chars
             remaining_tokens = token_budget - used_tokens
-            line = self._fit_context_line(line, remaining_chars, remaining_tokens)
+            if candidate.get("source_kind") == "verified_procedure":
+                line, reason = self.procedure_context_line(memory_id, project_root)
+                if not line or len(line) > remaining_chars or self.estimate_tokens(line) > remaining_tokens:
+                    filtered.append({"memory_id": memory_id, "type": "procedure",
+                                     "subtype": "workflow", "reason": reason or "context_budget_exhausted"})
+                    continue
+            else:
+                line = self._fit_context_line(line, remaining_chars, remaining_tokens)
             if not line:
                 filtered.append(
                     {
@@ -4587,6 +4689,9 @@ class MemGuardService:
         candidates = [] if (plan.unresolved_scope or plan.unresolved_slots) else self.forget_planner.candidates(
             plan.source_text, records, intent=plan.as_intent()
         )
+        derivation_impact = self.dependency_impact([str(item["memory_id"]) for item in candidates])
+        for item in derivation_impact["derived_memories"]:
+            candidates.append({**item, "score": 1.0, "derived": True})
         external_residue = self._managed_forget_residue(confirm=confirm)
         if not confirm:
             self._audit(
@@ -4599,6 +4704,7 @@ class MemGuardService:
                 "request": plan.source_text,
                 "erasure_plan": plan.as_dict(),
                 "candidates": candidates,
+                "derivation_impact": derivation_impact,
                 "time_window": time_window,
                 "external_residue": external_residue,
             }
@@ -4620,7 +4726,11 @@ class MemGuardService:
                 continue
             probes[memory_id] = record.content
             selected_records[memory_id] = record
-        effects = self._begin_memory_erasures(list(selected_records.values()), compact=compact)
+        erasure_records = list(selected_records.values())
+        self._expand_erasure_records(erasure_records)
+        selected_records = {record.memory_id: record for record in erasure_records}
+        probes = {record.memory_id: record.content for record in erasure_records}
+        effects = self._begin_memory_erasures(erasure_records, compact=compact)
         forgotten = list(selected_records)
         deleted_preference_observations = effects["deleted_observations"]
         scrubbed_event_count = effects["scrubbed_events"]
@@ -4651,6 +4761,7 @@ class MemGuardService:
             "request": plan.source_text,
             "erasure_plan": plan.as_dict(),
             "forgotten": forgotten,
+            "derivation_impact": derivation_impact,
             "deleted_preference_observation_count": deleted_preference_observations,
             "scrubbed_event_count": scrubbed_event_count,
             "time_window": time_window,
@@ -4769,6 +4880,15 @@ class MemGuardService:
             probe_texts[memory_id] = str(getattr(record, "content", "") or getattr(record, "summary", "") or "")
             selected_records.append(record)
 
+        self._expand_erasure_records(selected_records)
+        if expected_versions is not None:
+            stale_ids = [record.memory_id for record in selected_records
+                         if expected_versions.get(record.memory_id) != record.version.version_id]
+            if stale_ids:
+                return {"ok": False, "confirmed": False, "reason": "stale_preview",
+                        "requested_memory_ids": unique_ids, "stale_memory_ids": stale_ids,
+                        "forgotten_memory_ids": [], "derivation_impact": self.dependency_impact(unique_ids)}
+        probe_texts = {record.memory_id: record.content for record in selected_records}
         effects = self._begin_memory_erasures(selected_records, compact=compact)
         forgotten = [record.memory_id for record in selected_records]
         deleted_preference_observations = effects["deleted_observations"]
@@ -4791,6 +4911,7 @@ class MemGuardService:
             "reason": reason,
             "requested_memory_ids": unique_ids,
             "forgotten_memory_ids": forgotten,
+            "derived_memory_ids": [value for value in forgotten if value not in unique_ids],
             "missing_memory_ids": missing,
             "already_deleted_memory_ids": already_deleted,
             "summary": {
@@ -4831,6 +4952,8 @@ class MemGuardService:
                 "memguardos_graph_index",
                 "memguardos_mmap_segment_after_compact",
                 "memguardos_search_cache",
+                "memguardos_derivation_registry",
+                "memguardos_procedure_feedback",
             ],
             "not_covered": [
                 "external_agent_logs",
@@ -4925,6 +5048,8 @@ class MemGuardService:
                 continue
             probes.append(record.content)
             selected_records.append(record)
+        self._expand_erasure_records(selected_records)
+        probes = [record.content for record in selected_records]
         effects = self._begin_memory_erasures(selected_records, compact=compact)
         forgotten_memory_ids = [record.memory_id for record in selected_records]
         deleted_memory_observations = effects["deleted_observations"]
@@ -5099,6 +5224,8 @@ class MemGuardService:
         graph_hit = False
         fact_hit = False
         fact_conflict_hit = False
+        dependency_hit = False
+        procedure_feedback_hit = False
         cache_hit = False
         errors: List[str] = []
         try:
@@ -5136,6 +5263,16 @@ class MemGuardService:
                     break
         except Exception as exc:
             errors.append("fact_conflict: %s" % type(exc).__name__)
+        try:
+            dependency_hit = self.meta.conn.execute(
+                "SELECT 1 FROM memory_dependency WHERE child_memory_id = ? OR parent_memory_id = ? LIMIT 1",
+                (target, target),
+            ).fetchone() is not None
+            procedure_feedback_hit = self.meta.conn.execute(
+                "SELECT 1 FROM procedure_feedback WHERE memory_id = ? LIMIT 1", (target,),
+            ).fetchone() is not None
+        except Exception as exc:
+            errors.append("derived_memory_metadata: %s" % type(exc).__name__)
         for cached in self._search_cache.values():
             if any(str(item.get("memory_id") or "") == target for item in cached):
                 cache_hit = True
@@ -5146,10 +5283,12 @@ class MemGuardService:
             "graph_relations_recallable": graph_hit,
             "fact_slot_recallable": fact_hit,
             "fact_conflict_recallable": fact_conflict_hit,
+            "dependency_registry_recallable": dependency_hit,
+            "procedure_feedback_recallable": procedure_feedback_hit,
             "search_cache_recallable": cache_hit,
             "verified": not errors,
             "verification_errors": errors,
-            "any_surface_recallable": bool(fts_hit or graph_hit or fact_hit or fact_conflict_hit or cache_hit),
+            "any_surface_recallable": bool(fts_hit or graph_hit or fact_hit or fact_conflict_hit or cache_hit or dependency_hit or procedure_feedback_hit),
         }
 
     def _buffer_memory_hits(self, memory_ids: List[str]) -> None:
