@@ -19,7 +19,10 @@ if str(ROOT) not in sys.path:
 
 from memguard.cli.memguard import _demo_result  # noqa: E402
 from memguard.integrations.openhands_adapter import detect_openhands_runtime  # noqa: E402
-from memguard.integrations.openhands_runner import verify_openhands_hook_contract  # noqa: E402
+from memguard.integrations.openhands_runner import (  # noqa: E402
+    OpenHandsMemoryRunner,
+    verify_openhands_hook_contract,
+)
 from memguard.service import MemGuardService  # noqa: E402
 
 
@@ -67,43 +70,37 @@ def main(argv: list[str] | None = None) -> int:
         finally:
             service.close()
 
-        hook_stages = {
-            "planning": {"context": "", "memories": []},
-            "tool_selection": {
-                "context": "",
-                "memories": [
-                    {
-                        "memory_id": "preflight-tool-preference",
-                        "preference_topic": "code_search_tool",
-                        "preference_value": "grep",
-                    }
-                ],
-            },
-            "response_generation": {
-                "context": "",
-                "memories": [
-                    {
-                        "memory_id": "preflight-response-preference",
-                        "preference_topic": "response_order",
-                        "preference_value": "command_then_explanation",
-                    }
-                ],
-            },
-        }
-        hook_context = root / "openhands-hook-contract.json"
-        hook_context.write_text(
-            json.dumps(
-                {
-                    "schema_version": "1.0",
-                    "additional_context": "MemGuardOS Hook 运行契约预检。",
-                    "allowed_tools": [],
-                    "stages": hook_stages,
-                },
-                ensure_ascii=False,
-            ),
-            encoding="utf-8",
+        # Build the probe payload through the same runner used by OpenHands.
+        # The hook now requires a versioned memory snapshot, so a hand-written
+        # stages-only fixture would validate an obsolete contract.
+        hook_service = MemGuardService(
+            store_path=root / "hook.memory.segment",
+            db_path=root / "hook.memory.sqlite3",
+            namespace="video-preflight-hook",
         )
-        hook_health = verify_openhands_hook_contract(hook_context, hook_stages)
+        try:
+            hook_service.ingest_natural_memory(
+                "以后搜索项目代码优先使用 grep，并且回答时先给可复制命令，再解释结果。",
+                session_id="video-preflight-seed",
+                project_root=str(workspace),
+            )
+            runner = OpenHandsMemoryRunner(
+                hook_service,
+                session_id="video-preflight-hook",
+                workspace=workspace,
+                state_dir=root / "openhands-hook-state",
+                project_root=str(workspace),
+                task_type="code_assistance",
+                tool_profile="terminal",
+            )
+            hook_payload = runner.prepare_context("查找项目代码中的函数定义")
+            hook_context = Path(str(hook_payload["context_file"]))
+            hook_health = verify_openhands_hook_contract(
+                hook_context,
+                hook_payload["stages"],
+            )
+        finally:
+            hook_service.close()
         add(
             "OpenHands Hook 运行契约",
             bool(hook_health.get("ok")),
