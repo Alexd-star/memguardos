@@ -1,9 +1,12 @@
 {
-  "generated_at": "2026-10-06T18:52:01.153946+00:00",
-  "root": "docs/evidence/openkylin",
-  "file_count": 33,
-  "total_bytes": 161588,
+  "schema_version": "1.0",
+  "file_count": 34,
   "files": [
+    {
+      "path": "action_feedback_evidence_20261007.json",
+      "bytes": 1274,
+      "sha256": "f718c2e2bb6ce7b2a79f9f25be579629ce463898159f4f97521e9d1a23ef7002"
+    },
     {
       "path": "agent_filesystem_scope.json",
       "bytes": 1006,
