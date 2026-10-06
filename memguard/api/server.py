@@ -216,6 +216,29 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         return {"ok": True, "result": _jsonable(service.promote_memory(
             memory_id, tier, session_id=_string_param(request, "session_id", "", max_chars=256),
         ))}
+    if command == "consolidation_plan":
+        session_id = _string_param(request, "session_id", "", max_chars=256)
+        project_root = _string_param(request, "project_root", "", max_chars=2048)
+        limit = _int_param(request, "limit", 100, minimum=1, maximum=500)
+        return {"ok": True, "result": _jsonable(service.build_consolidation_plan(
+            session_id, project_root=project_root, limit=limit,
+        ))}
+    if command == "apply_consolidation":
+        plan = request.get("plan")
+        if not isinstance(plan, dict):
+            raise ValueError("plan must be an object")
+        selected = request.get("selected_memory_ids")
+        if selected is not None and (
+            not isinstance(selected, list)
+            or len(selected) > 500
+            or any(not isinstance(item, str) for item in selected)
+        ):
+            raise ValueError("selected_memory_ids must be a bounded string array")
+        return {"ok": True, "result": _jsonable(service.apply_consolidation_plan(
+            plan,
+            selected_memory_ids=selected,
+            confirm=bool(request.get("confirm", False)),
+        ))}
     if command == "evict_tier":
         tier = _string_param(request, "tier", "", max_chars=32)
         confirm = bool(request.get("confirm", False))

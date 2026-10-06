@@ -119,6 +119,28 @@ python -m memguard.eval.action_contract \
 
 当前固定协议包含 8 条用例，四类决策均有覆盖，报告中的准确率为 1.0000。该结果证明的是行动契约对固定安全边界和偏好场景的确定性一致性；真实 Agent 是否采纳建议，还需结合 OpenHands Hook 的工具事件和任务完成结果进行验证。
 
+### 5.2 会话记忆巩固回归
+
+`tests/test_consolidation.py` 验证短期经验进入长期记忆前的审核边界：明确偏好可以生成 `promote` 候选，证据不足的知识保持在会话层，计划必须经过确认，用户只选择的编号才会晋级；候选版本变化后旧计划会被拒绝。测试同时通过 service、Unix socket API 和 CLI 的同一份计划契约，确保三类入口不会产生不同的治理语义。
+
+`scripts/collect_consolidation_evidence.py` 使用隔离的临时存储生成可归档证据，不读取或修改操作者的正式记忆空间。openKylin 原生采集脚本会自动运行它，输出包含系统平台、Git 修订、候选分类、确认前后结果和旧计划 CAS 拒绝结果的 `consolidation_evidence.json`；该文件可与桌面入口、Agent 和系统服务证据放在同一份真机证据包中。
+
+```bash
+python -m pytest -q tests/test_consolidation.py
+python -m memguard.cli.memctl --help | findstr consolidation
+python scripts/collect_consolidation_evidence.py --output output/consolidation_evidence.json
+```
+
+真实使用时可以先保存计划，再人工审核：
+
+```bash
+memctl consolidation-plan --session-id session-001 --project-root "$PWD" > consolidation-plan.json
+memctl consolidate --plan-file consolidation-plan.json
+memctl consolidate --plan-file consolidation-plan.json --select mem_example --yes
+```
+
+计划只提升有证据支持且未命中敏感治理边界的记忆；它不会把“生成了计划”当作“已经写入长期记忆”，也不会把固定回归结果替代真实 Agent 的长期效果评估。
+
 ## 6. 记忆价值实验
 
 记忆价值实验分为两种口径。

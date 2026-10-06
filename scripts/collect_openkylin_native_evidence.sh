@@ -111,6 +111,9 @@ run_required_capture kylin_warmup.txt bash scripts/warmup_kylin_sdk.sh
 run_required_capture openkylin_status.txt python3 -m memguard.cli.memctl openkylin-status
 run_required_capture openkylin_status_probe_sdk.txt python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
 run_required_capture user_cli.txt python3 -m memguard.cli.memguard demo --task "查找精准遗忘的实现位置"
+python3 scripts/collect_consolidation_evidence.py \
+  --output "${OUT_DIR}/consolidation_evidence.json" \
+  >"${OUT_DIR}/consolidation_evidence.stdout.txt" 2>&1
 
 TMP_SAMPLE_DIR="$(mktemp -d)"
 SAMPLE_A="${TMP_SAMPLE_DIR}/peony_preference.md"

@@ -164,6 +164,7 @@ MemGuardOS 将“记住、用好、忘干净”串成一个可验证的本地闭
 | 分阶段上下文与行动契约 | 规划、工具选择、回答生成使用不同检索目标与 token 预算；工具执行前复核记忆版本、作用域和参数 | Agent 只获得当前阶段需要的记忆，并在真正调用工具前得到可解释的允许、改用、确认或拒绝结果 |
 | 混合检索 | SQLite FTS、稳定向量、实体关系图谱、持久化缓存与可选 Kylin SDK 重排 | 中文、英文、跨语言和工具语义均可检索，并按相关度排序 |
 | 版本与冲突治理 | 版本链、时间有效性、来源证据、置信度和冲突策略 | 新偏好覆盖旧偏好，同时保留可审计的变更历史 |
+| 会话记忆巩固 | 依据显式偏好、验证流程、重复命中、可信度和敏感等级生成版本化审核计划 | 短期经验经过选择和 CAS 校验后再进入长期层，证据不足的内容不会自动扩散 |
 | 精准遗忘 | 自然语言解析、结构化 `ErasurePlan`、dry-run、确认、墓碑、索引清理与压缩 | 删除前看影响，删除后验证目标不再召回且无明文残留 |
 | 敏感内容保护 | 凭据阻断、PII 脱敏、自定义规则、来源隔离与审计 | 高风险内容不会进入长期记忆，用户能看到阻断原因 |
 | openKylin 原生集成 | UKUI 设置插件、Peony 右键、托盘通知、systemd、cgroup、auditd、Polkit、BPF LSM | 普通用户和管理员都能从系统原生入口完成操作 |
@@ -357,6 +358,7 @@ flowchart TB
     subgraph S4["Agent 使用与系统治理"]
         C["规划 / 工具 / 回答上下文"]
         G2["执行前行动契约<br/>allow · redirect · confirm · deny"]
+        L["会话记忆巩固<br/>证据晋级 · 版本计划"]
         F["精准遗忘预览与执行"]
         Z["审计链、systemd、cgroup、BPF LSM"]
         UI["UKUI / Peony / 托盘 / Web / CLI"]
@@ -376,7 +378,7 @@ flowchart TB
     D --> H
     G --> H
     R --> H
-    H --> C --> G2 --> A
+    H --> C --> L --> G2 --> A
     UI --> F
     F --> M
     F --> D
@@ -407,6 +409,7 @@ flowchart TB
 5. **遗忘是结构化计划。** 自然语言先解析成主题、类型、时间、来源和 namespace 过滤条件，生成可预览的 `ErasurePlan`，确认后清理所有受管检索表面并执行残留验证。
 6. **把操作系统能力纳入记忆治理。** systemd 管理服务，cgroup 限制资源，auditd 和哈希链记录审计，Polkit 管理高权限动作，BPF LSM 提供敏感路径强制策略。
 7. **让记忆参与行动决策。** Agent 收到上下文后，工具真正执行前还要经过当前版本、项目范围和参数的行动预检；偏好冲突可以改道，高风险操作必须确认，已知破坏性命令直接阻断。
+8. **让短期经验经过证据审核再沉淀。** 会话记忆先生成带版本快照的巩固计划，明确偏好、验证流程和重复命中的知识才进入长期层；证据不足的内容继续保留在会话层，工作记忆进入清理复核队列，避免一次性输出污染长期状态。
 
 详细模块边界、数据结构与时序见 [系统架构](docs/architecture.md) 和 [开发者指南](docs/developer-guide.md)。
 
@@ -446,6 +449,7 @@ flowchart TB
 | Agent 交互专项 | 200 条，其中 60 条匿名化真实风格、140 条合成边界样例 | 跨会话偏好遵循率 1.0000，敏感泄漏率 0，P95 113.966 ms | [Agent 证据](docs/evidence/agent/) |
 | 真实 OpenHands | 基础 12 次、扩展 8 次、留出 8 次 | 28 次运行均保留上下文、工具事件与结果记录 | [真实 Agent 说明](docs/testing.md#6-记忆价值实验) |
 | 行动契约回归 | 8 个 allow、redirect、confirm、deny 及无关工具场景 | 判定准确率 1.0000，四类决策均有覆盖 | `data/benchmarks/action_contract.jsonl` |
+| 会话记忆巩固回归 | 隔离会话中的偏好、知识和工作记忆 | 证据分类、确认晋级、短期保留和旧计划 CAS 拒绝均通过 | `scripts/collect_consolidation_evidence.py` |
 | openKylin 10k 负载 | 10,000 条记忆、150 次查询 | P95 10.105 ms，P99 75.255 ms，RSS 低于 256 MB 目标 | [性能证据](docs/evidence/performance_latest/) |
 | 检索 v2 三轮 | openKylin、1,000 条、120 次查询、6 worker | 三轮 Recall@5 均为 1.0000；质量路径和并发路径 P99 均低于 500 ms | [三轮门禁摘要](docs/evidence/openkylin/retrieval_v2.txt) |
 | 持续集成与发布门禁 | Python 3.10、3.11、3.12 | 编译、静态检查、完整测试、隔离安装、文档链接、安全扫描、Web 烟测、评测与提交包复验全部通过 | [CI 配置](.github/workflows/ci.yml)与[证据索引](docs/evidence/README.md) |

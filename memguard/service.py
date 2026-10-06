@@ -3205,6 +3205,289 @@ class MemGuardService(ProcedureServiceMixin):
         )
         return {"promoted": True, "record": promoted}
 
+    def build_consolidation_plan(
+        self,
+        session_id: str,
+        *,
+        project_root: str = "",
+        limit: int = 100,
+    ) -> Dict[str, object]:
+        """Build a versioned, reviewable plan for session-memory consolidation.
+
+        Session memories are evidence, not automatically trusted long-term
+        knowledge.  The plan separates promotable explicit preferences,
+        verified procedures, and reinforced knowledge from items that should
+        remain temporary or be reviewed for eviction.
+        """
+
+        clean_session = str(session_id or "").strip()
+        if not clean_session:
+            return {"ok": False, "reason": "session_required", "candidates": []}
+        scope = str(Path(project_root).expanduser().resolve()) if project_root else ""
+        rows = self.meta.list_session_memories(clean_session)
+        candidates = []
+        expected_versions: Dict[str, str] = {}
+        for row in rows[: max(1, min(int(limit), 500))]:
+            memory_id = str(row.get("memory_id") or "")
+            if not memory_id:
+                continue
+            row_project = str(row.get("project_root") or "")
+            if scope and row_project not in {"", scope}:
+                continue
+            version_id = str(row.get("version_id") or "")
+            expected_versions[memory_id] = version_id
+            source_record = self.store.get_latest(memory_id)
+            candidate_row = dict(row)
+            if source_record is not None:
+                candidate_row.update(
+                    {
+                        "confidence": source_record.confidence,
+                        "importance": source_record.importance,
+                        "sensitivity_level": source_record.sensitivity.level,
+                        "trust_level": source_record.trust_level,
+                        "governance_state": source_record.governance_state,
+                        "deleted": source_record.deleted,
+                    }
+                )
+            candidate = self._consolidation_candidate(candidate_row)
+            candidates.append(candidate)
+
+        material = {
+            "namespace": self.namespace,
+            "session_id": clean_session,
+            "project_root": scope,
+            "expected_versions": expected_versions,
+            "recommended_ids": [
+                item["memory_id"]
+                for item in candidates
+                if item.get("recommended_action") == "promote"
+            ],
+        }
+        plan = {
+            "schema": "memguardos-consolidation-plan-v1",
+            "plan_id": stable_hash(json.dumps(material, ensure_ascii=False, sort_keys=True, separators=(",", ":"))),
+            "namespace": self.namespace,
+            "session_id": clean_session,
+            "project_root": scope,
+            "expected_versions": expected_versions,
+            "recommended_ids": material["recommended_ids"],
+            "candidates": candidates,
+            "summary": {
+                "candidate_count": len(candidates),
+                "promote_count": sum(item.get("recommended_action") == "promote" for item in candidates),
+                "retain_count": sum(item.get("recommended_action") == "retain_session" for item in candidates),
+                "eviction_review_count": sum(item.get("recommended_action") == "evict_review" for item in candidates),
+            },
+        }
+        self._audit(
+            "consolidation_plan",
+            None,
+            {
+                "plan_id": plan["plan_id"],
+                "session_id": clean_session,
+                "project_root": scope,
+                "candidate_count": len(candidates),
+                "recommended_ids": plan["recommended_ids"],
+            },
+        )
+        return {"ok": True, **plan}
+
+    def apply_consolidation_plan(
+        self,
+        plan: Dict[str, object],
+        *,
+        selected_memory_ids: Optional[List[str]] = None,
+        confirm: bool = False,
+    ) -> Dict[str, object]:
+        """Apply only reviewed promotions from a previously generated plan."""
+
+        if not isinstance(plan, dict) or plan.get("schema") != "memguardos-consolidation-plan-v1":
+            return {"applied": False, "reason": "invalid_consolidation_plan"}
+        session_id = str(plan.get("session_id") or "").strip()
+        if not session_id:
+            return {"applied": False, "reason": "session_required"}
+        expected_versions_raw = plan.get("expected_versions")
+        recommended_raw = plan.get("recommended_ids")
+        candidates_raw = plan.get("candidates")
+        if (
+            not isinstance(expected_versions_raw, dict)
+            or not isinstance(recommended_raw, list)
+            or not isinstance(candidates_raw, list)
+            or any(not isinstance(item, dict) for item in candidates_raw)
+        ):
+            return {"applied": False, "reason": "invalid_consolidation_plan"}
+        expected_versions = {str(key): str(value) for key, value in expected_versions_raw.items()}
+        recommended_ids = [str(memory_id).strip() for memory_id in recommended_raw if str(memory_id).strip()]
+        material = {
+            "namespace": str(plan.get("namespace") or self.namespace),
+            "session_id": session_id,
+            "project_root": str(plan.get("project_root") or ""),
+            "expected_versions": expected_versions,
+            "recommended_ids": recommended_ids,
+        }
+        expected_plan_id = stable_hash(json.dumps(material, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
+        if str(plan.get("plan_id") or "") != expected_plan_id:
+            return {"applied": False, "reason": "plan_integrity_failed"}
+        candidate_by_id = {
+            str(item.get("memory_id") or ""): item
+            for item in candidates_raw
+            if str(item.get("memory_id") or "")
+        }
+        if set(recommended_ids) != {
+            memory_id
+            for memory_id, item in candidate_by_id.items()
+            if item.get("recommended_action") == "promote"
+        }:
+            return {"applied": False, "reason": "plan_integrity_failed"}
+        allowed = {
+            memory_id
+            for memory_id, item in candidate_by_id.items()
+            if item.get("recommended_action") == "promote"
+        }
+        if selected_memory_ids is not None and not isinstance(selected_memory_ids, list):
+            return {"applied": False, "reason": "selection_must_be_list"}
+        selected = [
+            str(memory_id).strip()
+            for memory_id in (selected_memory_ids if selected_memory_ids is not None else plan.get("recommended_ids") or [])
+            if str(memory_id).strip()
+        ]
+        if len(selected) != len(set(selected)) or any(memory_id not in allowed for memory_id in selected):
+            return {"applied": False, "reason": "selection_outside_plan", "selected_memory_ids": selected}
+        expected = {memory_id: expected_versions[memory_id] for memory_id in selected if memory_id in expected_versions}
+        current_rows = {
+            str(row.get("memory_id")): row
+            for row in self.meta.list_session_memories(session_id)
+            if str(row.get("memory_id") or "") in set(selected)
+        }
+        current = {memory_id: str(row.get("version_id") or "") for memory_id, row in current_rows.items()}
+        if expected != current:
+            return {
+                "applied": False,
+                "reason": "stale_consolidation_plan",
+                "expected_versions": expected,
+                "current_versions": current,
+            }
+        for memory_id in selected:
+            current_record = self.store.get_latest(memory_id)
+            if current_record is None:
+                return {"applied": False, "reason": "stale_consolidation_plan", "memory_id": memory_id}
+            recalculated = self._consolidation_candidate({
+                **current_rows[memory_id],
+                "confidence": current_record.confidence,
+                "importance": current_record.importance,
+                "sensitivity_level": current_record.sensitivity.level,
+                "trust_level": current_record.trust_level,
+                "governance_state": current_record.governance_state,
+                "deleted": current_record.deleted,
+            })
+            if recalculated.get("recommended_action") != "promote" or str(recalculated.get("version_id")) != expected[memory_id]:
+                return {
+                    "applied": False,
+                    "reason": "consolidation_policy_changed",
+                    "memory_id": memory_id,
+                }
+        if not confirm:
+            return {
+                "applied": False,
+                "reason": "confirmation_required",
+                "session_id": session_id,
+                "selected_memory_ids": selected,
+                "expected_versions": expected,
+            }
+        promoted = []
+        failures = []
+        for memory_id in selected:
+            result = self.promote_memory(memory_id, "long_term", session_id=session_id)
+            if result.get("promoted"):
+                promoted.append({
+                    "memory_id": memory_id,
+                    "version_id": result["record"].version.version_id,
+                })
+            else:
+                failures.append({"memory_id": memory_id, "reason": result.get("reason", "promotion_failed")})
+        applied = (bool(promoted) and not failures) or not selected
+        promoted_ids = {item["memory_id"] for item in promoted}
+        all_session_ids = {
+            str(row.get("memory_id") or "")
+            for row in self.meta.list_session_memories(session_id)
+            if str(row.get("memory_id") or "")
+        }
+        result = {
+            "applied": applied,
+            "session_id": session_id,
+            "plan_id": plan.get("plan_id", ""),
+            "promoted": promoted,
+            "failures": failures,
+            "preserved_session_memory_count": len(all_session_ids - promoted_ids),
+        }
+        self._audit(
+            "consolidation_apply",
+            None,
+            {
+                "session_id": session_id,
+                "plan_id": plan.get("plan_id", ""),
+                "promoted_ids": [item["memory_id"] for item in promoted],
+                "failure_count": len(failures),
+            },
+        )
+        return result
+
+    @staticmethod
+    def _consolidation_candidate(row: Dict[str, object]) -> Dict[str, object]:
+        memory_id = str(row.get("memory_id") or "")
+        memory_type = str(row.get("type") or "")
+        subtype = str(row.get("subtype") or "")
+        source_kind = str(row.get("source_kind") or "")
+        tier = str(row.get("tier") or "session")
+        explicit = bool(row.get("preference_explicit"))
+        trust = str(row.get("trust_level") or "trusted")
+        sensitivity = str(row.get("sensitivity_level") or "none")
+        governance_state = str(row.get("governance_state") or "active")
+        deleted = bool(row.get("deleted", False))
+        hit_count = int(row.get("hit_count") or 0)
+        importance = float(row.get("importance") or 0.0)
+        confidence = float(row.get("confidence") or 0.0)
+        verified_procedure = source_kind == "verified_procedure" or subtype == "procedural_trace"
+        reinforced_knowledge = memory_type == "knowledge" and hit_count > 0 and confidence >= 0.7
+        explicit_preference = memory_type in {"preference", "sensitive_policy"} and explicit
+        eligible = (
+            tier in {"working", "session"}
+            and trust in {"trusted", "verified", "reviewed"}
+            and sensitivity != "high"
+            and governance_state == "active"
+            and not deleted
+            and (explicit_preference or verified_procedure or reinforced_knowledge)
+            and tier == "session"
+        )
+        if eligible:
+            reason = (
+                "explicit preference evidence"
+                if explicit_preference
+                else "verified procedural evidence"
+                if verified_procedure
+                else "reinforced knowledge with retrieval evidence"
+            )
+            action = "promote"
+        elif tier == "working":
+            reason = "working memory remains task-local until explicit review"
+            action = "evict_review"
+        else:
+            reason = "insufficient independent evidence for long-term promotion"
+            action = "retain_session"
+        return {
+            "memory_id": memory_id,
+            "version_id": str(row.get("version_id") or ""),
+            "tier": tier,
+            "type": memory_type,
+            "subtype": subtype,
+            "source_kind": source_kind,
+            "hit_count": hit_count,
+            "importance": round(importance, 4),
+            "confidence": round(confidence, 4),
+            "recommended_action": action,
+            "reason": reason,
+        }
+
     def evict_tier(self, tier: str, confirm: bool = False) -> Dict[str, object]:
         if tier not in {"working", "session"}:
             return {"evicted": False, "reason": "only working/session tiers can be evicted by policy", "tier": tier}

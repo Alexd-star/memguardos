@@ -27,12 +27,14 @@ CLI 是最常用入口，适合人工演示、脚本复验和调试。
 | `memctl agent adapters` | 查看 Agent 适配能力 | 无 | 已注册适配器、事件类型、上下文阶段和检查点能力 |
 | `memctl agent ingest-adapted-session` | 接入通用 Agent JSONL 会话 | JSONL 文件、适配器与会话范围 | 规范化事件、提取结果、去重和审计摘要 |
 | `memctl agent preflight-action` | 在 Agent 工具执行前检查记忆约束 | 任务、工具名称、工具参数和作用域 | `allow`、`redirect`、`confirm` 或 `deny`，以及版本化记忆证据 |
+| `memctl consolidation-plan` | 生成会话记忆巩固计划 | 会话编号、项目范围、数量上限 | 晋级、保留或清理复核候选，以及版本快照 |
+| `memctl consolidate` | 按审核计划晋级长期记忆 | 计划 JSON、可选记忆编号、确认标记 | 实际晋级、失败项和仍保留的会话记忆 |
 | `doctor` | 系统诊断 | 可选 namespace | 环境和能力报告 |
 | `web` | 启动本地控制台 | host、port | Web 服务 |
 
 ## 2. Unix socket API
 
-Unix socket API 位于 `memguard/api/server.py`，用于本地 Agent 直接调用。请求是 JSON 对象，统一使用 `command` 字段表示动作名称，并携带对应参数。响应也是 JSON 对象，包含 `ok`、`result` 或 `error`。API 支持 `health`、`ingest`、`search`、`batch_search`、`build_context`、`preflight_agent_action`、`forget`、`audit` 等命令。
+Unix socket API 位于 `memguard/api/server.py`，用于本地 Agent 直接调用。请求是 JSON 对象，统一使用 `command` 字段表示动作名称，并携带对应参数。响应也是 JSON 对象，包含 `ok`、`result` 或 `error`。API 支持 `health`、`ingest`、`search`、`batch_search`、`build_context`、`preflight_agent_action`、`consolidation_plan`、`apply_consolidation`、`forget`、`audit` 等命令。
 
 根据当前代码推断，API 重点服务本机可信 Agent，不是公网服务。它支持请求大小限制和可选 token 校验。若要对外暴露，应增加更完整的鉴权、限流、TLS 和审计策略。
 
@@ -72,6 +74,17 @@ Unix socket API 位于 `memguard/api/server.py`，用于本地 Agent 直接调�
 ```
 
 返回结果包含 `decision`、`policy_category`、`reason`、`evidence` 和 `context_receipt`。`evidence` 只记录记忆编号与版本编号，不把完整记忆正文复制到行动审计中；上下文发生更新或遗忘后，旧收据会被拒绝。
+
+### 会话记忆巩固
+
+巩固接口把会话层内容整理成可审核的长期记忆晋级计划。计划保存 `schema`、`plan_id`、会话范围、项目范围、候选版本映射和候选动作；调用方可以先展示候选，再只提交明确选择的记忆编号。`confirm` 未开启时只返回待确认结果，不改变记忆状态。
+
+```json
+{"command":"consolidation_plan","session_id":"session-001","project_root":"/home/luo/project-alpha","limit":100}
+{"command":"apply_consolidation","plan":{"schema":"memguardos-consolidation-plan-v1","plan_id":"plan_example","session_id":"session-001","expected_versions":{"mem_example":"ver_1"},"recommended_ids":["mem_example"],"candidates":[{"memory_id":"mem_example","recommended_action":"promote"}]},"selected_memory_ids":["mem_example"],"confirm":true}
+```
+
+候选动作包括 `promote`、`retain_session` 和 `evict_review`。服务只允许执行计划中明确标记为 `promote` 的候选；如果版本映射已变化，返回 `stale_consolidation_plan`，调用方应重新生成计划，不能用旧页面覆盖最新记忆。
 
 ### Agent 适配器与通用事件
 

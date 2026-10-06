@@ -88,6 +88,21 @@ def build_parser() -> argparse.ArgumentParser:
     promote.add_argument("memory_id")
     promote.add_argument("tier", choices=["working", "session", "long_term"])
 
+    consolidation_plan = sub.add_parser(
+        "consolidation-plan",
+        help="Review which session memories have enough evidence for long-term promotion",
+    )
+    consolidation_plan.add_argument("--session-id", required=True)
+    consolidation_plan.add_argument("--project-root", default="")
+    consolidation_plan.add_argument("--limit", type=int, default=100)
+    consolidate = sub.add_parser(
+        "consolidate",
+        help="Apply a reviewed session-memory consolidation plan",
+    )
+    consolidate.add_argument("--plan-file", required=True)
+    consolidate.add_argument("--select", action="append", default=[], help="Memory id to promote; repeat to select multiple")
+    consolidate.add_argument("--yes", action="store_true")
+
     evict = sub.add_parser("evict-tier", help="Evict working/session tier memories")
     evict.add_argument("tier", choices=["working", "session"])
     evict.add_argument("--yes", action="store_true")
@@ -726,6 +741,28 @@ def main(argv: list[str] | None = None) -> int:
                 printable["record"] = {"memory_id": record.memory_id, "version_id": record.version.version_id, "subtype": record.subtype, "tier": record.tier}
             print(json.dumps(printable, ensure_ascii=False, indent=2))
             return 0
+
+        if args.command == "consolidation-plan":
+            result = service.build_consolidation_plan(
+                args.session_id,
+                project_root=args.project_root,
+                limit=args.limit,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result.get("ok") else 2
+
+        if args.command == "consolidate":
+            plan_payload = json.loads(Path(args.plan_file).read_text(encoding="utf-8"))
+            plan = plan_payload.get("result", plan_payload) if isinstance(plan_payload, dict) else None
+            if not isinstance(plan, dict):
+                raise ValueError("plan file must contain a consolidation plan object")
+            result = service.apply_consolidation_plan(
+                plan,
+                selected_memory_ids=args.select or None,
+                confirm=args.yes,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+            return 0 if result.get("applied") or not args.yes else 2
 
         if args.command == "evict-tier":
             print(json.dumps(service.evict_tier(args.tier, confirm=args.yes), ensure_ascii=False, indent=2))
