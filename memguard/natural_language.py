@@ -43,7 +43,7 @@ def interpret_user_input(text: str) -> NaturalActionDecision:
         "你记得什么",
         "有哪些记忆",
         "显示最近记忆",
-    }:
+    } or re.fullmatch(r"(?:查看|显示|列出|列举|看看)(?:我的|当前)?(?:全部)?记忆(?:列表|内容)?", compact):
         return NaturalActionDecision("memory_list", reason="explicit_memory_list_request")
     if compact in {
         "查看偏好",
@@ -51,7 +51,7 @@ def interpret_user_input(text: str) -> NaturalActionDecision:
         "我的偏好有哪些",
         "你记住了哪些偏好",
         "显示当前偏好",
-    }:
+    } or re.fullmatch(r"(?:查看|显示|列出|列举|看看)(?:我的|当前)?(?:全部)?偏好(?:设置|列表|内容)?", compact):
         return NaturalActionDecision("preference_list", reason="explicit_preference_list_request")
     if compact in {
         "查看事实冲突",
@@ -60,13 +60,15 @@ def interpret_user_input(text: str) -> NaturalActionDecision:
         "有哪些事实冲突",
         "有哪些待核对内容",
         "显示待核对内容",
-    }:
+    } or re.fullmatch(r"(?:查看|显示|列出|列举|看看)(?:当前)?(?:事实冲突|冲突事实|待核对事实|事实核对)(?:列表|内容)?", compact):
         return NaturalActionDecision("fact_conflict_list", reason="explicit_fact_conflict_request")
-    if compact in {"查看状态", "系统状态", "记忆状态", "服务正常吗"}:
+    if compact in {"查看状态", "系统状态", "记忆状态", "服务正常吗"} or re.fullmatch(
+        r"(?:查看|显示|检查)(?:当前)?(?:系统|记忆|服务)?(?:运行|健康)?状态", compact
+    ):
         return NaturalActionDecision("status", reason="explicit_status_request")
     imperative = _strip_polite_prefixes(clean)
     search_match = re.match(
-        r"^(?:搜索|查找|检索|查)(?:一下)?(?:关于)?(.+?)(?:的)?记忆$",
+        r"^(?:搜索|查找|检索|查询|查)(?:一下)?(?:关于)?(.+?)(?:的)?记忆$",
         imperative,
     )
     if search_match:
@@ -85,7 +87,27 @@ def interpret_user_input(text: str) -> NaturalActionDecision:
             search_prefix.group(1).strip(),
             reason="explicit_memory_search_request",
         )
-    for prefix in ("运行任务：", "执行任务：", "让 Agent：", "让Agent："):
+    search_description = re.match(
+        r"^(?:搜索|查找|检索|查询|查)(?:一下)?(?:关于)?(.+?)(?:相关)?(?:信息|内容)$",
+        imperative,
+    )
+    if search_description:
+        return NaturalActionDecision(
+            "search",
+            search_description.group(1).strip(" ：:"),
+            reason="explicit_memory_search_request",
+        )
+    run_match = re.match(
+        r"^(?:运行|执行)(?:一下|一个)?(?:任务)?[：:\s]+(.+)$",
+        imperative,
+    )
+    if run_match and run_match.group(1).strip():
+        return NaturalActionDecision(
+            "run",
+            run_match.group(1).strip(),
+            reason="explicit_agent_task_request",
+        )
+    for prefix in ("让 Agent：", "让Agent：", "让智能体：", "让智能体:"):
         if imperative.startswith(prefix) and imperative[len(prefix):].strip():
             return NaturalActionDecision(
                 "run",
