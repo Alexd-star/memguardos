@@ -1,6 +1,8 @@
 {
-  "schema_version": "1.0",
-  "file_count": 32,
+  "generated_at": "2026-10-06T18:52:01.153946+00:00",
+  "root": "docs/evidence/openkylin",
+  "file_count": 33,
+  "total_bytes": 161588,
   "files": [
     {
       "path": "agent_filesystem_scope.json",
@@ -11,6 +13,11 @@
       "path": "consolidation_evidence_20261007.json",
       "bytes": 2361,
       "sha256": "dbd03aaa8dc211921903fbe0f14a4c31a004ebbdfd8634d379ce301e59f02a82"
+    },
+    {
+      "path": "context_compaction_evidence_20261007.json",
+      "bytes": 2463,
+      "sha256": "aa5000ab4492c755a3d185490e4904864686cae908c6f76bc40d7c3a613ffeec"
     },
     {
       "path": "dashboard_ui_tests.txt",
