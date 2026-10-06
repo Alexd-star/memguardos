@@ -94,6 +94,30 @@ python -m memguard.cli.memctl build-context "openKylin 服务内存限制" --top
 
 上下文包会包含 `explainability` 字段，用于查看来源分布、类型分布、层级分布、敏感等级分布和候选选择轨迹。排查“为什么这条记忆进入了生成上下文”时，优先查看 `selection_trace`。
 
+真实 Agent 适配器可以在工具执行前检查行动契约，并在工具完成后回写结果：
+
+```bash
+memctl agent preflight-action \
+  --task "搜索项目代码" \
+  --tool-name terminal \
+  --tool-input '{"command":"grep -n build_agent_context ."}' \
+  --agent-name local-agent --session-id session-001 --project-root "$PWD" \
+  > preflight.json
+
+memctl agent record-outcome \
+  --preflight-file preflight.json \
+  --tool-input '{"command":"rg -n build_agent_context ."}' \
+  --exit-code 0 --idempotency-key tool-call-001
+```
+
+返回结果会明确显示 `success`、`deviation`、`failure`、`blocked` 或 `unknown`。查询某条记忆的实际行动证据：
+
+```bash
+memctl agent action-outcomes --memory-id mem_example
+```
+
+行动账本只保存命令摘要哈希、记忆版本、退出码和作用域，不保存命令正文或工具输出；记忆被精准遗忘时，关联反馈也会同步清理。
+
 如需估算 LLM 输入成本，可附加 token 预算。该参数只在显式传入时裁剪上下文，不影响默认检索效果：
 
 ```bash
@@ -215,6 +239,9 @@ PY
 - `search`
 - `batch_search`
 - `build_context`
+- `preflight_agent_action`
+- `record_agent_action_outcome`
+- `action_outcome_stats`
 - `hierarchical_graph_search`
 - `forget`
 - `audit`

@@ -31,6 +31,7 @@ MemGuardOS 对应第三届中国研究生操作系统开源创新大赛“面向
 | OS 机制 | mmap 追加式段、namespace、systemd/cgroup、journald、auditd 和可选 BPF LSM | 服务受资源约束，敏感访问和遗忘动作可审计 | `memguard/store/`、`memguard/os_guard/`、`native/bpf_lsm/` |
 | openKylin 适配 | UKUI 设置插件、Peony 右键、托盘通知、Kylin SDK 状态、Polkit 白名单操作和五个 Debian 包 | 用户从系统设置、托盘或文件管理器进入，不必记长命令 | `native/ukui/`、`packaging/`、openKylin 精选证据 |
 | 真实 Agent 集成 | OpenHands 第一方适配器加标准事件、Python API、JSONL 和 Unix socket 通用协议 | 可用自然语言发起真实 Agent 任务，并在新会话观察记忆复用 | `openhands_runner.py`、`memguard shell --runtime real` |
+| 行动结果闭环 | 工具执行前版本化预检，执行后按因果证据记录成功、偏离、失败、拦截或未知结果；重复回写幂等，遗忘同步清理 | 能区分“系统提供过建议”和“Agent 实际遵循并成功执行”，真实行动效果可追溯 | `action_feedback.py`、`record_agent_action_outcome`、`docs/evidence/openkylin/action_feedback_evidence_20261007.json` |
 | 性能优化 | 候选预算、线程内服务复用、缓存、持久化候选向量和 SDK 延迟预算 | 10k 记忆下仍保持交互级检索延迟 | `hybrid.py`、`kylin_sdk.py`、performance evidence |
 | 可验证交付 | 单元/集成/真实 Agent/openKylin/安全/归档六层门禁 | 发布包可安装、可复现、可检查 SHA-256 | `tests/`、`scripts/check_competition_ready.py` |
 
@@ -51,6 +52,10 @@ MemGuardOS 对应第三届中国研究生操作系统开源创新大赛“面向
 ### 3.4 精准遗忘
 
 用户提出“忘掉项目 Alpha 的搜索工具偏好”后，系统先展示候选记忆编号和影响范围。确认后只删除目标偏好，并验证 FTS、图谱、缓存和压缩后的段文件均不能继续返回它；回答格式等无关偏好保持生效。
+
+### 3.5 验证记忆是否真正改善行动
+
+工具选择前，适配器调用行动预检；工具执行完成后，再提交实际工具和退出状态。若用户偏好要求使用 `rg`，预检会把 `grep` 改道为 `rg`，随后成功执行会形成一条成功遵循证据；若命令仍使用 `grep`，系统记录为偏离，即使命令本身返回 0，也不会把它当作偏好强化。重复提交同一工具调用不会重复计数，记忆更新或遗忘后，旧收据不能继续回写。
 
 ## 4. 指标与评分点
 

@@ -5,6 +5,7 @@
 | 目录 | 内容 | 能证明什么 |
 |---|---|---|
 | `openkylin/` | 系统版本、服务、cgroup、Kylin SDK、桌面插件、五包生命周期和测试摘要 | 指定源修订在 openKylin 上的原生安装与运行状态 |
+| `openkylin/action_feedback_evidence_20261007.json` | 行动预检、实际遵循、偏离、幂等重试和旧收据拒绝 | 证明记忆影响 Agent 行动后的结果可被区分、回写和治理 |
 | `performance_latest/` | 10k 负载、并发、消融和检索 v2 原始 JSON/报告 | 指定协议下的召回和延迟，不代表所有硬件 |
 | `agent/` | 200 条交互专项、确定性记忆价值实验和真实 OpenHands 汇总 | 事件链、跨会话复用、真实运行与留出场景结果 |
 | `portability/` | Ubuntu CI 与 Debian 容器摘要 | 非 openKylin Linux 环境的基本可移植性 |

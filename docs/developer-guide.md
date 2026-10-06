@@ -250,6 +250,7 @@ Agent 交互遗忘还支持按 `agent_id`、`session_id`、`turn_id`、主题和
 - `ingest` 中的 `extraction` 字段：记录抽取方法、类型、子类型、信号、置信度以及可选语义增强器是否参与。
 - `agent_event_ingest`：记录 Agent、会话、轮次、事件类型和幂等键。
 - `agent_context_build`：记录规划、工具选择和结果生成三个阶段的候选、选择及过滤原因。
+- `agent_action_outcome`：记录实际工具结果与因果记忆证据；成功遵循、偏离、失败、拦截和未知状态分开统计，命令正文仅保留摘要哈希。
 - `agent_interaction_forget`：记录交互遗忘范围、候选、确认状态、外部持久化风险和三阶段验证结果。
 
 审计行包含：
@@ -264,6 +265,8 @@ Agent 交互遗忘还支持按 `agent_id`、`session_id`、`turn_id`、主题和
 `verify-audit` 会重新计算哈希链并验证完整性。
 
 并发写入时，SQLite 元数据库使用 `busy_timeout`、WAL 兼容设置和 `BEGIN IMMEDIATE` 将“读取前序哈希 -> 写入审计事件”放入同一写锁临界区，避免多连接并发审计产生哈希链分叉。该能力由单元测试 `test_concurrent_audit_writes_preserve_hash_chain` 和精选 openKylin 审计证据验证。
+
+行动反馈账本使用独立表和幂等键，避免把执行结果混入记忆正文或重复写入统计。服务回写前会同时核对上下文收据和证据记忆的当前版本；行动契约携带的完整上下文只用于解释，只有触发本次策略的偏好或安全记忆才会获得行动结果。普通 `allow` 不会把所有上下文候选误判为强化证据。精准遗忘在同一 SQLite 事务中删除关联账本行，随后沿既有段文件、索引、缓存和审计验证链完成清理。
 
 ## 10. OS 集成
 
@@ -283,7 +286,7 @@ Agent 交互遗忘还支持按 `agent_id`、`session_id`、`turn_id`、主题和
 | UKUI 桌面插件 | `native/ukui/peony-memguard/`、`native/ukui/ukcc-memguard/`、`scripts/build_ukui_plugins.sh`、`scripts/install_ukui_plugins.sh`、`scripts/verify_ukui_plugins.sh`；Peony 右键菜单和 UKUI 控制中心入口已完成可见验证 |
 | 记忆策略报告 | `memctl memory-policy` |
 | Agent 批量检索 | `memctl batch-search`、Unix socket 命令 `batch_search` |
-| 本地 Agent API | Unix socket 命令 `health`、`ingest`、`search`、`batch_search`、`build_context`、`namespace_status`、`memory_policy` |
+| 本地 Agent API | Unix socket 命令 `health`、`ingest`、`search`、`batch_search`、`build_context`、`preflight_agent_action`、`record_agent_action_outcome`、`action_outcome_stats`、`namespace_status`、`memory_policy` |
 | 本地 Web 控制台 | `memctl web`、`memguard/web/dashboard.py`，默认绑定 `127.0.0.1` |
 | OpenHands runner | `scripts/run_openhands_memguard_demo.py`、`memguard/integrations/openhands_runner.py` |
 | Agent systemd bridge | `scripts/memguard_agent_bridge.py`、`scripts/memguard-agent@.service` |
