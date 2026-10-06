@@ -9,7 +9,7 @@
 让 Agent 从用户纠正、工具调用和执行结果中持续学习，同时让每一条记忆可查看、可追溯、可控制、可遗忘。
 
 <p>
-  <img src="https://img.shields.io/badge/version-1.0.1-0F6CBD" alt="Version 1.0.1"> <img src="https://img.shields.io/badge/openKylin-2.0%20SP2-1683C4" alt="openKylin 2.0 SP2"> <img src="https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB" alt="Python 3.10, 3.11, 3.12"> <img src="https://img.shields.io/badge/openKylin%20tests-705%20passed-138A72" alt="705 openKylin tests passed"> <img src="https://img.shields.io/badge/License-MIT-4B5563" alt="MIT License">
+  <img src="https://img.shields.io/badge/version-1.0.1-0F6CBD" alt="Version 1.0.1"> <img src="https://img.shields.io/badge/openKylin-2.0%20SP2-1683C4" alt="openKylin 2.0 SP2"> <img src="https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB" alt="Python 3.10, 3.11, 3.12"> <img src="https://img.shields.io/badge/openKylin%20tests-1751%20passed%2C%203%20skipped-138A72" alt="1751 openKylin tests passed, 3 skipped"> <img src="https://img.shields.io/badge/License-MIT-4B5563" alt="MIT License">
 </p>
 <p>
   <img src="https://img.shields.io/badge/build-verified-138A72" alt="Build verified"> <img src="https://img.shields.io/badge/release-v1.0.1-6C5CE7" alt="Release v1.0.1"> <img src="https://img.shields.io/badge/Debian%20packages-5-DB4B4B" alt="Five Debian packages"> <img src="https://img.shields.io/badge/GPU-not%20required-546E7A" alt="No GPU required">
@@ -439,7 +439,7 @@ flowchart TB
 
 | 验证层 | 数据与环境 | 代表性结果 | 证据入口 |
 |---|---|---|---|
-| openKylin 回归测试 | openKylin 2.0 SP2 实机 | `705 passed, 1 skipped` | [实机 pytest 摘要](docs/evidence/openkylin/pytest_openkylin.txt) |
+| openKylin 回归测试 | openKylin 2.0 SP2 实机 | `1751 passed, 3 skipped` | [最终实机 pytest 摘要](docs/evidence/finals_20261006/pytest_openkylin.txt) |
 | 通用功能 | 217 条可复现种子与用例 | Recall@5、跨语言 Recall@5、敏感阻断 F1 与遗忘候选召回率为 1.0000；遗忘候选精确率为 0.9425 | [测试与评测](docs/testing.md) |
 | Agent 交互专项 | 200 条，其中 60 条匿名化真实风格、140 条合成边界样例 | 跨会话偏好遵循率 1.0000，敏感泄漏率 0，P95 113.966 ms | [Agent 证据](docs/evidence/agent/) |
 | 真实 OpenHands | 基础 12 次、扩展 8 次、留出 8 次 | 28 次运行均保留上下文、工具事件与结果记录 | [真实 Agent 说明](docs/testing.md#6-记忆价值实验) |
