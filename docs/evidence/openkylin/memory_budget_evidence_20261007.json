@@ -1,0 +1,61 @@
+{
+  "schema": "memguardos-memory-budget-evidence-v1",
+  "revision": "dbb033cd32e3965e7a5b054b213577521ba3f629",
+  "platform": "Linux-6.6.0-25-generic-x86_64-with-glibc2.38",
+  "python": "3.12.2",
+  "plan": {
+    "plan_id": "5f6830757665abe99fc1ff54c62cbfbd4c6f78b3770949749c45e111f5474bc9",
+    "summary": {
+      "candidate_count": 3,
+      "current_bytes": 1527,
+      "target_bytes": 475,
+      "bytes_to_reclaim": 1052,
+      "projected_bytes": 475,
+      "protected_count": 1,
+      "demotion_count": 2,
+      "target_reached": true
+    },
+    "selected_memory_ids": [
+      "mem_c2902791363d475b"
+    ],
+    "protected_memory_id": "mem_dc56fb8045714fac",
+    "candidate_value_scores": [
+      {
+        "memory_id": "mem_e51af2452b004334",
+        "value_score": 0.5878,
+        "risk_score": 0.0,
+        "value_per_byte": 0.0010331,
+        "recommended_action": "demote_to_session"
+      },
+      {
+        "memory_id": "mem_dc56fb8045714fac",
+        "value_score": 0.534,
+        "risk_score": 0.0,
+        "value_per_byte": 0.00112426,
+        "recommended_action": "retain_protected"
+      },
+      {
+        "memory_id": "mem_c2902791363d475b",
+        "value_score": 0.4005,
+        "risk_score": 0.0,
+        "value_per_byte": 0.00082924,
+        "recommended_action": "demote_to_session"
+      }
+    ]
+  },
+  "apply": {
+    "preview_reason": "confirmation_required",
+    "applied": true,
+    "bytes_reclaimed": 483,
+    "protected_tier": "long_term",
+    "demoted_tier": "session"
+  },
+  "checks": {
+    "plan_has_value_risk_byte_scores": true,
+    "protected_preference_retained": true,
+    "preview_requires_confirmation": true,
+    "approved_action_is_reversible_demotion": true,
+    "budget_plan_reaches_target": true
+  },
+  "passed": true
+}
