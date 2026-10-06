@@ -13,9 +13,11 @@ import sys
 from pathlib import Path
 
 from memguard.config import list_namespaces
+from memguard.governance.state import governance_state_catalog
 from memguard.desktop.peony_scan import scan_peony_file
 from memguard.desktop.scan_manifest import apply_scan_manifest, create_scan_manifest, forget_imported_memories
 from memguard.ingestion.tool_result import ToolResult
+from memguard.integrations.adapter_registry import builtin_agent_adapter_registry
 from memguard.integrations.replay import load_event_file, load_event_jsonl
 from memguard.llm.adapter import LLMAdapterError, generate_answer
 from memguard.llm.prompt import render_generation_prompt
@@ -111,6 +113,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     governance = sub.add_parser("governance", help="List and review quarantined memory sources")
     governance_sub = governance.add_subparsers(dest="governance_command", required=True)
+    governance_sub.add_parser("states", help="Show the governed memory lifecycle and legal transitions")
     governance_list = governance_sub.add_parser("list", help="List quarantined memories")
     governance_list.add_argument("--limit", type=int, default=100)
     governance_review = governance_sub.add_parser("review", help="Approve or reject one quarantined memory")
@@ -320,6 +323,18 @@ def build_parser() -> argparse.ArgumentParser:
     agent_ingest.add_argument("--file", required=True)
     agent_session = agent_sub.add_parser("ingest-session", help="Ingest one Agent event JSONL session")
     agent_session.add_argument("--file", required=True)
+    agent_adapted = agent_sub.add_parser(
+        "ingest-adapted-session",
+        help="Ingest provider-neutral Agent event JSONL through an adapter",
+    )
+    agent_adapted.add_argument("--file", required=True)
+    agent_adapted.add_argument("--adapter", default="generic-json", help="Adapter name; use agent adapters to list available adapters")
+    agent_adapted.add_argument("--agent-name", default="generic-agent")
+    agent_adapted.add_argument("--agent-version", default="unknown")
+    agent_adapted.add_argument("--session-id", default="")
+    agent_adapted.add_argument("--project-root", default="")
+    agent_adapted.add_argument("--task-type", default="")
+    agent_sub.add_parser("adapters", help="List Agent adapters and their capabilities")
     agent_replay = agent_sub.add_parser("replay", help="Replay one Agent event JSONL session idempotently")
     agent_replay.add_argument("--file", required=True)
     agent_context = agent_sub.add_parser("context", help="Build stage-specific memory context for an Agent")
@@ -448,8 +463,24 @@ def main(argv: list[str] | None = None) -> int:
                 return 0 if result.get("ok") else 2
 
         if args.command == "agent":
+            if args.agent_command == "adapters":
+                print(json.dumps({"adapters": builtin_agent_adapter_registry().describe()}, ensure_ascii=False, indent=2))
+                return 0
             if args.agent_command == "ingest-event":
                 print(json.dumps(service.ingest_interaction(load_event_file(Path(args.file))), ensure_ascii=False, indent=2))
+                return 0
+            if args.agent_command == "ingest-adapted-session":
+                raw_events = _read_agent_jsonl(Path(args.file))
+                result = service.ingest_agent_events(
+                    raw_events,
+                    adapter=args.adapter,
+                    agent_name=args.agent_name,
+                    agent_version=args.agent_version,
+                    session_id=args.session_id,
+                    project_root=args.project_root,
+                    task_type=args.task_type,
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
                 return 0
             if args.agent_command in {"ingest-session", "replay"}:
                 result = service.ingest_interactions(load_event_jsonl(Path(args.file)))
@@ -689,6 +720,9 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if result.get("found") else 2
 
         if args.command == "governance":
+            if args.governance_command == "states":
+                print(json.dumps(governance_state_catalog(), ensure_ascii=False, indent=2))
+                return 0
             if args.governance_command == "list":
                 print(json.dumps(service.list_quarantined_memories(limit=args.limit), ensure_ascii=False, indent=2))
                 return 0
@@ -1051,6 +1085,24 @@ def _read_batch_queries(args: argparse.Namespace) -> list[str]:
             raise SystemExit("batch-search --json requires a JSON array")
         return [str(item) for item in payload]
     return [str(item) for item in args.queries]
+
+
+def _read_agent_jsonl(path: Path, limit: int = 500) -> list[dict[str, object]]:
+    events: list[dict[str, object]] = []
+    for line_number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        line = raw.strip()
+        if not line:
+            continue
+        if len(events) >= limit:
+            raise SystemExit("Agent JSONL must contain at most %s events" % limit)
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise SystemExit("invalid Agent JSON on line %s: %s" % (line_number, exc)) from exc
+        if not isinstance(payload, dict):
+            raise SystemExit("Agent JSON on line %s must be an object" % line_number)
+        events.append(payload)
+    return events
 
 
 def _read_auditd_lines(path: str, limit: int) -> list[str]:

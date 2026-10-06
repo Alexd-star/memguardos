@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from memguard.models import MemoryRecord, new_id, stable_hash, utc_now
 from memguard.extraction.fact_slot import parse_fact_slot
 from memguard.forgetting.plan import ErasurePlan
+from memguard.governance.state import validate_governance_state, validate_governance_transition
 from memguard.store.permissions import ensure_private_directory, ensure_private_file
 from memguard.store.dependencies import DependencyStoreMixin
 from memguard.retrieval.vector_cache import (
@@ -632,8 +633,42 @@ class SQLiteMetaStore(DependencyStoreMixin):
         ).fetchone() is not None:
             raise ValueError("cancelled segment version requires cleanup")
 
+    def _validate_versioned_governance_write_no_commit(self, record: MemoryRecord) -> None:
+        """Validate the state carried by a new committed version.
+
+        Most version writes keep the current governance state.  The one
+        deliberate reactivation is quarantine review: it creates a new
+        ``governance_approve`` version whose parent is the quarantined
+        version.  This keeps approval explicit while still allowing the
+        approved version to become the current row.
+        """
+
+        incoming = validate_governance_state(record.governance_state)
+        current_row = self.conn.execute(
+            "SELECT version_id, deleted, governance_state FROM memory WHERE memory_id = ?",
+            (record.memory_id,),
+        ).fetchone()
+        if current_row is None:
+            return
+        current = validate_governance_state(current_row["governance_state"])
+        if current_row["deleted"] and not record.deleted:
+            raise ValueError("forgotten memory id cannot be reactivated")
+        if current == incoming:
+            return
+        approved_review = (
+            current == "quarantined"
+            and incoming == "active"
+            and record.version.op == "governance_approve"
+            and record.version.parent_version_id == current_row["version_id"]
+            and not record.deleted
+        )
+        if approved_review:
+            return
+        validate_governance_transition(current, incoming)
+
     def _upsert_memory_no_commit(self, record: MemoryRecord) -> None:
         self._check_segment_cleanup_no_commit(record)
+        self._validate_versioned_governance_write_no_commit(record)
         self._validate_dependencies_no_commit(record)
         cursor = self.conn.execute(
             """
@@ -1204,24 +1239,39 @@ class SQLiteMetaStore(DependencyStoreMixin):
     def _mark_deleted_no_commit(
         self, memory_id: str, superseded_by: Optional[str],
         expected_version_id: Optional[str] = None,
+        governance_state: str = "forgotten",
     ) -> int:
+        target_state = validate_governance_state(governance_state)
+        row = self.conn.execute(
+            "SELECT governance_state, deleted FROM memory WHERE memory_id = ?",
+            (memory_id,),
+        ).fetchone()
+        if row is None:
+            return 0
+        current_state = validate_governance_state(row["governance_state"])
+        if not row["deleted"]:
+            validate_governance_transition(current_state, target_state)
+        elif target_state != current_state:
+            raise ValueError("deleted memory cannot change governance state")
+        tombstone_label = "REJECTED" if target_state == "rejected" else "FORGOTTEN"
         now = utc_now()
         cursor = self.conn.execute(
             """
             UPDATE memory
             SET deleted = 1,
-                content = '', summary = 'FORGOTTEN', source_kind = 'forgotten', source_uri = '',
+                content = '', summary = ?, source_kind = ?, source_uri = '',
                 sensitivity_level = 'none', sensitivity_labels = '[]', sensitivity_redacted = 0,
                 preference_topic = '', preference_value = '', preference_scope = 'global',
                 preference_explicit = 0, agent_name = '', preference_session_id = '',
                 retention_session_id = '',
-                project_root = '', task_type = '', governance_state = 'forgotten',
+                project_root = '', task_type = ?, governance_state = ?,
                 governance_reason = '',
                 valid_to = ?, superseded_by = ?, updated_at = ?
             WHERE memory_id = ?
               AND (? = 0 OR (deleted = 0 AND version_id = ?))
             """,
-            (now, superseded_by, now, memory_id, int(bool(expected_version_id)), expected_version_id),
+            (tombstone_label, target_state, "", target_state, now, superseded_by, now, memory_id,
+             int(bool(expected_version_id)), expected_version_id),
         )
         if cursor.rowcount == 0:
             return 0
@@ -1240,6 +1290,7 @@ class SQLiteMetaStore(DependencyStoreMixin):
     def begin_memory_erasure(
         self, memory_id: str, tombstone_version_id: str, *, compact: bool,
         plaintext: str = "", expected_version_id: str,
+        governance_state: str = "forgotten",
     ) -> Dict[str, int]:
         """Hide a memory and its linked evidence in one durable SQLite commit."""
 
@@ -1249,6 +1300,7 @@ class SQLiteMetaStore(DependencyStoreMixin):
             "compact": compact,
             "plaintext": plaintext,
             "expected_version_id": expected_version_id,
+            "governance_state": governance_state,
         }])
 
     def begin_memory_erasures(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
@@ -1306,6 +1358,7 @@ class SQLiteMetaStore(DependencyStoreMixin):
                 changed = self._mark_deleted_no_commit(
                     memory_id, tombstone_version_id,
                     expected_version_id=str(item["expected_version_id"]),
+                    governance_state=str(item.get("governance_state") or "forgotten"),
                 )
                 if changed != 1:
                     raise ValueError("stale memory version: %s" % memory_id)
@@ -2737,13 +2790,65 @@ class SQLiteMetaStore(DependencyStoreMixin):
         trust_level: str,
         trust_score: float,
         reason: str,
-    ) -> None:
-        self.conn.execute(
-            "UPDATE memory SET governance_state = ?, trust_level = ?, trust_score = ?, "
-            "governance_reason = ?, updated_at = ? WHERE memory_id = ?",
-            (state, trust_level, float(trust_score), reason, utc_now(), memory_id),
-        )
-        self.conn.commit()
+    ):
+        """Apply one validated governance transition atomically.
+
+        State changes are deliberately narrower than ordinary version writes.
+        A forgotten row cannot be revived, and a superseded or invalidated
+        row cannot become active through a direct metadata update.  New
+        content must go through the normal versioned write path instead.
+        """
+
+        clean_memory_id = str(memory_id or "").strip()
+        if not clean_memory_id:
+            raise ValueError("memory_id is required")
+        clean_trust_level = str(trust_level or "").strip()
+        if not clean_trust_level:
+            raise ValueError("trust_level is required")
+        try:
+            score = float(trust_score)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("trust_score must be a number") from exc
+        if score != score or score in {float("inf"), float("-inf")} or not 0.0 <= score <= 1.0:
+            raise ValueError("trust_score must be between 0 and 1")
+        target = validate_governance_state(state)
+        owns_transaction = not self.conn.in_transaction
+        if owns_transaction:
+            self.conn.execute("BEGIN IMMEDIATE")
+        try:
+            row = self.conn.execute(
+                "SELECT governance_state, deleted FROM memory WHERE memory_id = ?",
+                (clean_memory_id,),
+            ).fetchone()
+            if row is None:
+                raise ValueError("memory not found: %s" % clean_memory_id)
+            current = validate_governance_state(row["governance_state"])
+            transition = validate_governance_transition(current, target)
+            if row["deleted"] and target != current:
+                raise ValueError("deleted memory cannot change governance state")
+            cursor = self.conn.execute(
+                "UPDATE memory SET governance_state = ?, trust_level = ?, trust_score = ?, "
+                "governance_reason = ?, updated_at = ? "
+                "WHERE memory_id = ? AND governance_state = ?",
+                (
+                    target,
+                    clean_trust_level,
+                    score,
+                    str(reason or "").strip(),
+                    utc_now(),
+                    clean_memory_id,
+                    current,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise ValueError("governance state changed concurrently")
+            if owns_transaction:
+                self.conn.commit()
+            return transition
+        except Exception:
+            if owns_transaction:
+                self.conn.rollback()
+            raise
 
     def insert_agent_event(self, event: Any) -> Dict[str, Any]:
         cursor = self.conn.execute(

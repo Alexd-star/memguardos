@@ -40,6 +40,7 @@ from memguard.ingestion.quality import assess_text_quality
 from memguard.ingestion.tool_preference import DOMAIN_LABELS, ToolPreferenceMiner, verified_tool_outcomes
 from memguard.ingestion.tool_result import ToolResult
 from memguard.integrations.events import AgentInteractionEvent
+from memguard.integrations.adapter_registry import builtin_agent_adapter_registry
 from memguard.integrations.evidence_spans import exact_source_span, preference_source_span
 from memguard.integrations.adherence import (
     final_visible_output,
@@ -220,10 +221,14 @@ class MemGuardService(ProcedureServiceMixin):
 
     def _begin_memory_erasure(
         self, record: MemoryRecord, *, compact: bool,
+        governance_state: str = "forgotten",
     ) -> Dict[str, int]:
         records = [record]
         self._expand_erasure_records(records)
-        return self._begin_memory_erasures(records, compact=compact)
+        return self._begin_memory_erasures(
+            records, compact=compact,
+            governance_state={record.memory_id: governance_state},
+        )
 
     def dependency_impact(self, memory_ids: List[str]) -> Dict[str, object]:
         roots = list(dict.fromkeys(str(value) for value in memory_ids))
@@ -256,6 +261,7 @@ class MemGuardService(ProcedureServiceMixin):
 
     def _begin_memory_erasures(
         self, records: List[MemoryRecord], *, compact: bool,
+        governance_state: object = "forgotten",
     ) -> Dict[str, int]:
         return self.meta.begin_memory_erasures([
             {
@@ -264,6 +270,11 @@ class MemGuardService(ProcedureServiceMixin):
                 "compact": compact,
                 "plaintext": record.content,
                 "expected_version_id": record.version.version_id,
+                "governance_state": (
+                    governance_state.get(record.memory_id, "forgotten")
+                    if isinstance(governance_state, dict)
+                    else governance_state
+                ),
             }
             for record in records
         ])
@@ -1343,6 +1354,56 @@ class MemGuardService(ProcedureServiceMixin):
             ),
             "results": results,
         }
+
+    def ingest_agent_events(
+        self,
+        events: List[Dict[str, object]],
+        *,
+        adapter: str = "generic-json",
+        agent_name: str = "generic-agent",
+        agent_version: str = "unknown",
+        session_id: str = "",
+        project_root: str = "",
+        task_type: str = "",
+    ) -> Dict[str, object]:
+        """Convert provider-neutral Agent events and ingest them as one batch.
+
+        Conversion happens for the whole batch before any event is persisted;
+        a malformed line therefore cannot leave a half-ingested session. The
+        resulting canonical events use ``ingest_interactions`` and its existing
+        idempotence, redaction, extraction, and audit behavior.
+        """
+
+        if len(events) > 500:
+            raise ValueError("agent events must contain at most 500 items")
+        if any(not isinstance(event, dict) for event in events):
+            raise ValueError("every agent event must be a JSON object")
+        adapter_name = str(adapter or "generic-json").strip().lower()
+        registry = builtin_agent_adapter_registry()
+        capabilities = next(
+            (item for item in registry.describe() if item.get("name") == adapter_name),
+            None,
+        )
+        if capabilities is None:
+            raise ValueError("unknown Agent adapter: %s" % adapter_name)
+        if adapter_name != "generic-json":
+            raise ValueError(
+                "adapter %s converts provider SDK objects before ingest_interaction; "
+                "JSON/JSONL input uses generic-json" % adapter_name
+            )
+        converter = registry.create(
+            adapter_name,
+            agent_name=agent_name,
+            agent_version=agent_version,
+            session_id=session_id,
+            project_root=project_root,
+            task_type=task_type,
+        )
+        converted = converter.convert_many(events)
+        result = self.ingest_interactions(converted)
+        result["adapter"] = adapter_name
+        result["adapter_capabilities"] = capabilities
+        return result
 
     def interaction_status(self) -> Dict[str, object]:
         aggregates = []
@@ -3032,9 +3093,10 @@ class MemGuardService(ProcedureServiceMixin):
             previous.governance_reason = reason
             previous.trust_level = "rejected"
             previous.trust_score = 0.0
-            self._begin_memory_erasure(previous, compact=True)
+            self._begin_memory_erasure(
+                previous, compact=True, governance_state="rejected",
+            )
             self._recover_pending_erasures()
-            self.meta.set_governance_state(memory_id, "rejected", "rejected", 0.0, reason)
             self._audit(
                 "governance_reject",
                 memory_id,

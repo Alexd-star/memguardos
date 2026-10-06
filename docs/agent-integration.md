@@ -51,6 +51,43 @@ memguard-agent-showcase "$HOME/要操作的项目"
 | `bridge.py` | 接收 systemd 队列任务并在受限进程中运行 OpenHands |
 | `replay.py` | 重放标准事件，便于离线回归和故障复现 |
 
+### 2.1 接入其他 Agent：通用 JSON/JSONL 适配器
+
+OpenHands 是当前完成真实端到端验证的第一方适配器，但记忆内核不把事件格式绑定到某一家 Agent。没有专用 SDK 的本地 Agent 可以输出提供方无关的 JSON/JSONL，再由 `generic-json` 适配器统一映射。适配器只负责识别事件类型、角色、会话、轮次和工具字段；敏感检测、偏好提取、作用域隔离、版本管理和精准遗忘仍由 MemGuardOS 服务完成。
+
+先查看能力目录：
+
+```bash
+memctl agent adapters
+```
+
+通用 JSONL 每行一个对象，最小示例为：
+
+```json
+{"type":"message","role":"user","content":"以后搜索代码优先使用 rg"}
+{"type":"action","id":"call-1","tool":"terminal","arguments":{"command":"rg build_agent_context"}}
+{"type":"observation","id":"result-1","tool":"terminal","output":"memguard/service.py:4201","exit_code":0}
+```
+
+接入时显式指定 Agent、版本、会话和项目范围：
+
+```bash
+memctl agent ingest-adapted-session \
+  --file agent-events.jsonl \
+  --adapter generic-json \
+  --agent-name local-agent \
+  --agent-version 0.4 \
+  --session-id session-001 \
+  --project-root "$PWD" \
+  --task-type code_search
+```
+
+系统会先完整转换整份 JSONL，再一次性进入统一事件写入流程；事件类型不支持、缺少会话编号或工具参数不是对象时，整批失败并不留下部分会话。重复事件依据事件内容哈希幂等处理。工具参数中的密码、Token 和授权头仍会在持久化前递归脱敏，工具输出中的“以后”“优先”等文字也不会被当作用户意愿。适配器不能绕过这些治理边界。
+
+事件写入后的记忆还要经过统一治理状态机。安全且可解释的内容进入 `active`，可疑外部材料进入 `quarantined`；旧偏好、撤回来源和用户遗忘分别进入 `superseded`、`source_invalidated` 和 `forgotten`。适配器只负责把外部事件翻译成规范事件，不直接修改治理状态，也不能绕过敏感阻断、版本校验或遗忘验证。需要查看状态语义时，可使用 `memctl governance states`。
+
+若 Agent 使用自己的 SDK，则直接实现 `convert(raw_event) -> AgentInteractionEvent` 并注册到 `AgentAdapterRegistry`，再调用 `MemGuardService.ingest_interaction`。上下文仍通过 `build_agent_context` 按规划、工具选择和回答生成阶段请求，遗忘仍调用统一的 `forget` 或 `forget_agent_interactions` 接口；不建议在适配器中自行拼接长期记忆或直接操作 SQLite。
+
 ## 3. 安装可选 Agent 环境
 
 核心 MemGuardOS 不依赖 OpenHands。只有需要运行真实 Agent 闭环时才安装可选环境。产品安装用户执行：

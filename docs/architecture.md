@@ -25,12 +25,15 @@ MemGuardOS 不是通用 RAG demo，而是把智能体记忆当作 OS 管理资�
 
 ```mermaid
 flowchart LR
-    A["用户-Agent 消息 / 反馈 / 工具事件 / 补充 OS 数据"] --> B["统一事件接入层"]
+    A["用户-Agent 消息 / 反馈 / 工具事件 / 补充 OS 数据"] --> A0["Agent 适配器注册表\nOpenHands · 通用 JSON/JSONL"]
+    A0 --> B["统一事件接入层"]
     B --> C["敏感检测"]
     C -->|高风险| D["阻断并审计"]
     C -->|安全或可脱敏| E["记忆提取"]
     E --> F["记忆卡片"]
-    F --> S["namespace 隔离存储根"]
+    F --> G["治理状态机\ntrust · scope · validity"]
+    G -->|active| S["namespace 隔离存储根"]
+    G -->|quarantined| Q0["隔离队列\n人工复核"]
     S --> G["mmap 追加式段文件"]
     S --> H["SQLite 元数据 + FTS"]
     F --> I["图谱索引"]
@@ -58,6 +61,7 @@ flowchart LR
 | 记忆卡片 | 统一记忆 schema | `memguard/models.py` |
 | 混合抽取器 | 偏好/知识/安全策略抽取和可解释信号 | `memguard/extraction/semantic.py` |
 | 敏感检测器 | PII/凭据/自定义模式/OS 路径检测 | `memguard/sensitivity` |
+| 治理状态机 | 约束隔离、替代、来源失效、拒绝和遗忘的合法流转 | `memguard/governance/state.py`、SQLite 写边界 |
 | 追加式存储 | 版本段文件、mmap 读、compact 清除 | `memguard/store/mmap_store.py` |
 | SQLite 元数据 | 元数据、FTS、审计、图谱表 | `memguard/store/sqlite_meta.py` |
 | 混合检索器 | 词法 + 轻量向量式 + 图谱扩展 | `memguard/retrieval/hybrid.py` |
@@ -65,12 +69,12 @@ flowchart LR
 | 遗忘规划器 | 自然语言候选选择 | `memguard/forgetting/planner.py` |
 | OS Guard | namespace、cgroup、journald、auditd、OS 事件 | `memguard/config.py`、`memguard/os_guard` |
 | 评测模块 | 指标、延迟负载、报告 | `memguard/eval/run_eval.py` |
-| Agent 适配层 | OpenHands 事件规范化、上下文注入、习惯聚合与真实 runner | `memguard/integrations/` |
+| Agent 适配层 | 能力注册、通用 JSON/JSONL 事件映射、OpenHands 事件规范化、上下文注入、习惯聚合与真实 runner | `memguard/integrations/adapter_registry.py`、`memguard/integrations/` |
 | Agent bridge | systemd 受限队列任务执行 | `scripts/memguard_agent_bridge.py`、`memguard-agent@.service` |
 
 ## 4. 记忆生命周期
 
-1. **接入**：OpenHands 用户消息、Agent 消息、反馈、工具调用和工具结果自动进入统一事件链；文本、文件、配置、shell 与 OS 事件作为补充来源。
+1. **接入**：各类 Agent 先由注册表中的适配器映射为统一事件；OpenHands 用户消息、Agent 消息、反馈、工具调用和工具结果自动进入事件链，其他 Agent 可以通过通用 JSON/JSONL 契约接入；文本、文件、配置、shell 与 OS 事件作为补充来源。
 2. **抽取**：内容被分为偏好、知识或敏感策略，并记录抽取方法、信号和置信度。
 3. **敏感检测**：检查敏感模式和 OS 来源路径。
 4. **存储**：安全记忆写入当前 namespace 下的追加式段文件和 SQLite 元数据。
@@ -83,9 +87,25 @@ flowchart LR
 
 对外的生命周期视图将一条记忆组织为四部分：记忆原子描述当前内容、类型、范围和版本；情节视图按 Agent、会话、项目与任务归集形成过程；支持证据标明来源事件及原文跨度；操作记录连接写入、更新、使用与遗忘的审计信息。四部分来自现有权威记录和证据关系，统一用于 CLI、API 与 Web 详情展示。查看时可通过 `memctl lifecycle <记忆编号>` 追溯具体记录，通过 `memctl lifecycle --overview` 查看当前记忆空间的覆盖情况。
 
+### 4.1 可扩展 Agent 接入边界
+
+Agent 接入层采用“适配器负责翻译，服务负责治理”的边界。`AgentAdapterRegistry` 只登记适配器名称、版本、可产生的事件类型、支持的上下文阶段和检查点能力；它不执行外部代码，也不授予调用方绕过敏感检测、项目范围或遗忘验证的权限。当前注册两类入口：OpenHands SDK 适配器负责将 SDK 对象转换为事件，通用 `generic-json` 适配器负责将不同 Agent 输出的 JSON/JSONL 事件映射为同一协议。
+
+通用事件至少包含 Agent 名称与版本、会话编号、轮次编号、序号、事件类型和角色；消息、工具调用、工具结果、反馈、任务完成、策略判定和错误都使用明确类型表达。适配器只接受有限的类型别名，无法识别的事件直接拒绝，不把未知内容默认为用户消息；整批 JSONL 在转换完成后才提交，因此一条格式错误的记录不会留下半个会话。规范化后仍由服务统一完成递归参数脱敏、敏感阻断、偏好提取、幂等去重、审计和遗忘关联。
+
+接入方可先查询 `agent_adapters` 能力目录，再使用 `ingest_agent_events` 或 `memctl agent ingest-adapted-session` 写入事件。上下文请求继续沿用规划、工具选择和回答生成三个阶段，适配器不直接拼接 Prompt。这样，新增 Agent 的工作量集中在事件映射和检查点回调，长期记忆、跨会话复用和精准遗忘仍共享同一套可验证内核。
+
 SQLite 中已提交的版本决定当前可见状态。段文件中提前追加但尚未提交的版本不会进入生命周期历史，历史沿父版本链展开并去重。遗忘后，来源摘要和支持证据进行脱敏；验证同时检查正文、事件载荷、索引、图关系、缓存和事实核对队列，客户端根据实际验证状态显示完成或待检查。
 
 事实更新按主体、属性、项目与保存范围查找当前记录。用户明确纠正时生成新版本；新旧事实相冲突且缺少明确替换意图时进入事实核对队列，保存候选编号、版本快照及来源跨度。用户可以保留原值，或接受新值并生成版本。创建核对记录和提交更新时均在写事务内检查候选；接受新值时，记忆版本、来源关系、核对状态与提交审计共同提交，发生中断后沿暂存写入恢复。候选发生变化或另一项决定已经生效时，取消过期写入并要求重新核对。遗忘目标记忆会清理核对队列中引用的正文、主体、项目、来源和候选信息；遗忘来源事件也会关闭相应核对记录，防止被撤回的内容再次生效。
+
+### 4.2 治理状态机：让“可用”成为受约束的状态
+
+记忆是否能够进入检索和 Agent 上下文，不由某个调用方单独修改一个字符串决定，而由治理状态、可信度、时间有效性和作用域共同决定。当前状态机把记忆分为 `active`、`quarantined`、`superseded`、`source_invalidated`、`rejected` 和 `forgotten` 六类：新内容通过检测后进入 `active`，可疑来源进入隔离；偏好更新会使旧版本变为 `superseded`，来源变化会递归使派生经验变为 `source_invalidated`，人工复核拒绝进入 `rejected`，用户遗忘最终写入不可恢复的 `forgotten` 墓碑。
+
+状态转换由 `memguard/governance/state.py` 统一声明并在 SQLite 写边界校验。普通元数据更新不允许把失效、替代或已遗忘的记录直接恢复为可用状态；隔离内容只有在带有父版本校验的 `governance_approve` 新版本提交时才能重新进入检索。这样，审批不是覆盖原记录，而是留下“原候选、审批人、理由、父版本和新版本”的完整链路。`source_invalidated` 和 `superseded` 也不会通过一次字段修改重新激活，必须重新验证或产生新的记忆版本。
+
+这一层把抽取、敏感治理、事实冲突、派生依赖和精准遗忘连接成同一条生命周期约束。API 可通过 `governance_states` 查询状态目录，CLI 可运行 `memctl governance states` 查看合法流转；检索始终只选择当前有效的 `active` 记录，遗忘流程则通过专用墓碑路径处理正文、索引、图谱、缓存、事件证据和事实核对队列。状态机本身不替代审计，而是为审计记录提供稳定的事件语义，使控制台能够解释“为什么这条记忆现在不可用”。
 
 检索接口共享项目和会话条件。指定项目时可使用该项目与全局记忆，会话记忆还需匹配所属会话；这些条件先于候选数量限制执行，覆盖词法检索、向量候选、图检索、关联查询和批量上下文构建。管理查询可以省略项目字段查看跨项目内容，Agent 接入应传入当前项目目录。参数约定和示例见[接口文档](api.md)。
 

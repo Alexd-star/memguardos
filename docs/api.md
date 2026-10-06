@@ -23,6 +23,9 @@ CLI 是最常用入口，适合人工演示、脚本复验和调试。
 | `fact-conflicts` | 查看待核对事实 | 可选状态与数量 | 事实属性、候选和版本快照 |
 | `memguard resolve-conflict` | 处理一条事实核对 | 核对编号、决定、候选版本 | 核对结果或未执行原因 |
 | `lifecycle` | 查看记忆形成与使用过程 | 记忆编号或 `--overview` | 记忆、来源、情节与操作视图 |
+| `memctl governance states` | 查看治理状态机 | 无 | 状态、终态和合法流转 |
+| `memctl agent adapters` | 查看 Agent 适配能力 | 无 | 已注册适配器、事件类型、上下文阶段和检查点能力 |
+| `memctl agent ingest-adapted-session` | 接入通用 Agent JSONL 会话 | JSONL 文件、适配器与会话范围 | 规范化事件、提取结果、去重和审计摘要 |
 | `doctor` | 系统诊断 | 可选 namespace | 环境和能力报告 |
 | `web` | 启动本地控制台 | host、port | Web 服务 |
 
@@ -32,6 +35,16 @@ Unix socket API 位于 `memguard/api/server.py`，用于本地 Agent 直接调�
 
 根据当前代码推断，API 重点服务本机可信 Agent，不是公网服务。它支持请求大小限制和可选 token 校验。若要对外暴露，应增加更完整的鉴权、限流、TLS 和审计策略。
 
+### 治理状态机
+
+`governance_states` 返回记忆生命周期的稳定状态目录和允许的流转。状态流转由服务和元数据写边界共同校验，调用方不能通过普通更新把 `forgotten`、`superseded` 或 `source_invalidated` 直接恢复为 `active`。隔离内容的批准会以父版本受校验的新版本提交，并保留审批理由和审计关系。
+
+```json
+{"command":"governance_states"}
+```
+
+该目录用于控制台、CLI 和外部 Agent 展示一致的状态含义；具体遗忘仍应调用 `forget` 或 `forget_memory_ids`，不能把状态字段更新当作删除接口。
+
 典型请求示例如下：
 
 ```json
@@ -39,6 +52,33 @@ Unix socket API 位于 `memguard/api/server.py`，用于本地 Agent 直接调�
 ```
 
 启用令牌后，调用方应在请求 JSON 中写入 `token` 字段；Web 控制台则使用 `Authorization: Bearer <token>` 请求头。未携带正确令牌时，接口返回 `{"ok": false, "error": "unauthorized"}`，不会继续执行诊断、抽取解释、写入、检索或导出操作。
+
+### Agent 适配器与通用事件
+
+`agent_adapters` 返回当前进程支持的适配器目录。OpenHands 适配器接收其 SDK 事件对象；`generic-json` 适配器接收提供方无关的 JSON 对象，适合没有 MemGuardOS 专用 SDK 的本地 Agent。通用事件可以使用 `message`、`action`、`observation`、`feedback`、`complete` 和 `error` 等有限别名，服务会将它们映射为统一的 `AgentInteractionEvent`。
+
+```json
+{"command":"agent_adapters"}
+```
+
+```json
+{
+  "command": "ingest_agent_events",
+  "adapter": "generic-json",
+  "agent_name": "local-agent",
+  "agent_version": "0.4",
+  "session_id": "session-001",
+  "project_root": "/home/luo/project-alpha",
+  "task_type": "code_search",
+  "events": [
+    {"type":"message", "role":"user", "content":"以后搜索代码优先使用 rg"},
+    {"type":"action", "id":"call-1", "tool":"terminal", "arguments":{"command":"rg build_context"}},
+    {"type":"observation", "id":"result-1", "tool":"terminal", "output":"memguard/service.py:4201", "exit_code":0}
+  ]
+}
+```
+
+批量事件会先完成格式转换，再进入统一写入流程；不支持的事件类型、缺少会话编号或参数不是对象时，整批请求失败，不产生部分记忆。适配器的映射结果仍需经过本地敏感检测和递归参数脱敏，工具输出也不会因为包含“以后”“优先”或工具名称就直接升级为用户偏好。SDK 适配器本身不负责保存或删除记忆，所有 Agent 共享同一套作用域、版本、上下文快照和精准遗忘规则。
 
 ### 项目与会话范围
 

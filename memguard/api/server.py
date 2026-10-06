@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from memguard.json_support import jsonable
+from memguard.governance.state import governance_state_catalog
+from memguard.integrations.adapter_registry import builtin_agent_adapter_registry
 from memguard.procedural import ProcedureSpec, _workspace
 from memguard.service import MemGuardService
 
@@ -181,6 +183,8 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
     if command == "governance_list":
         limit = _int_param(request, "limit", 100, minimum=1, maximum=1000)
         return {"ok": True, "result": _jsonable(service.list_quarantined_memories(limit=limit))}
+    if command == "governance_states":
+        return {"ok": True, "result": governance_state_catalog()}
     if command == "governance_review":
         memory_id = _string_param(request, "memory_id", "", max_chars=128)
         decision = _string_param(request, "decision", "", max_chars=16)
@@ -287,6 +291,26 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         if any(not isinstance(event, dict) for event in events):
             raise ValueError("every event must be an object")
         return {"ok": True, "result": _jsonable(service.ingest_interactions(events))}
+    if command == "agent_adapters":
+        return {"ok": True, "result": {"adapters": builtin_agent_adapter_registry().describe()}}
+    if command == "ingest_agent_events":
+        events = request.get("events")
+        if not isinstance(events, list):
+            raise ValueError("events must be an array")
+        if len(events) > 500:
+            raise ValueError("events must contain at most 500 items")
+        if any(not isinstance(event, dict) for event in events):
+            raise ValueError("every event must be an object")
+        result = service.ingest_agent_events(
+            events,
+            adapter=_string_param(request, "adapter", "generic-json", max_chars=64),
+            agent_name=_string_param(request, "agent_name", "generic-agent", max_chars=128),
+            agent_version=_string_param(request, "agent_version", "unknown", max_chars=128),
+            session_id=_string_param(request, "session_id", "", max_chars=256),
+            project_root=_string_param(request, "project_root", "", max_chars=2048),
+            task_type=_string_param(request, "task_type", "", max_chars=128),
+        )
+        return {"ok": True, "result": _jsonable(result)}
     if command == "interaction_status":
         return {"ok": True, "result": _jsonable(service.interaction_status())}
     if command == "forget_agent_interactions":
