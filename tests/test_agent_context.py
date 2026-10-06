@@ -159,6 +159,42 @@ def test_agent_context_explains_sources_and_filter_reasons(tmp_path):
         assert result["explainability"]["filtered"]
         assert all(item["reason"] for item in result["explainability"]["filtered"])
         assert result["budget"]["estimated_context_tokens"] <= 500
+        receipt = result["context_receipt"]
+        assert receipt["schema"] == "memguardos-context-receipt-v1"
+        assert len(receipt["fingerprint"]) == 64
+        assert receipt["memory_versions"]
+        assert receipt["scope"]["stage"] == "tool_selection"
+    finally:
+        service.close()
+
+
+def test_agent_context_receipt_changes_when_selected_memory_version_changes(tmp_path):
+    service = seeded_service(tmp_path)
+    try:
+        first = service.build_agent_context(
+            "搜索代码",
+            stage="tool_selection",
+            agent_name="openhands",
+            session_id="session-a",
+            project_root="/work/demo",
+            task_type="code_search",
+        )
+        memory_id = first["memories"][0]["memory_id"]
+        current = service.meta.get_memory(memory_id)
+        assert current is not None
+        service.update_memory(memory_id, "以后搜索代码优先使用 rg，并先检查工作区。")
+
+        second = service.build_agent_context(
+            "搜索代码",
+            stage="tool_selection",
+            agent_name="openhands",
+            session_id="session-a",
+            project_root="/work/demo",
+            task_type="code_search",
+        )
+
+        assert first["context_receipt"]["fingerprint"] != second["context_receipt"]["fingerprint"]
+        assert first["context_receipt"]["memory_versions"][memory_id] != second["context_receipt"]["memory_versions"][memory_id]
     finally:
         service.close()
 

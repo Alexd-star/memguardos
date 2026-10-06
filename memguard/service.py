@@ -4425,6 +4425,43 @@ class MemGuardService(ProcedureServiceMixin):
             )
 
         context = "\n\n".join(context_lines)
+        selected_versions = {
+            str(item["memory_id"]): str(item.get("version_id") or "")
+            for item in memories
+            if item.get("memory_id")
+        }
+        receipt_material = {
+            "agent_name": agent_name,
+            "project_root": project_scope,
+            "session_id": session_id,
+            "stage": clean_stage,
+            "task_digest": stable_hash(clean_task),
+            "task_type": task_type,
+            "memory_versions": selected_versions,
+            "filtered": [
+                {
+                    "memory_id": str(item.get("memory_id") or ""),
+                    "reason": str(item.get("reason") or ""),
+                }
+                for item in filtered
+            ],
+            "budget": {"limit": limit, "max_chars": max_chars, "token_budget": token_budget},
+        }
+        context_receipt = {
+            "schema": "memguardos-context-receipt-v1",
+            "fingerprint": stable_hash(json.dumps(receipt_material, ensure_ascii=False, sort_keys=True, separators=(",", ":"))),
+            "task_digest": receipt_material["task_digest"],
+            "memory_versions": selected_versions,
+            "selected_count": len(memories),
+            "filtered_count": len(filtered),
+            "scope": {
+                "agent_name": agent_name,
+                "session_id": session_id,
+                "project_root": project_scope,
+                "stage": clean_stage,
+                "task_type": task_type,
+            },
+        }
         result = {
             "task": clean_task,
             "stage": clean_stage,
@@ -4436,6 +4473,7 @@ class MemGuardService(ProcedureServiceMixin):
             "memory_count": len(memories),
             "context": context,
             "memories": memories,
+            "context_receipt": context_receipt,
             "explainability": {
                 "selected": [
                     {
