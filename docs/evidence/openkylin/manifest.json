@@ -1,11 +1,16 @@
 {
   "schema_version": "1.0",
-  "file_count": 35,
+  "file_count": 36,
   "files": [
     {
       "path": "action_feedback_evidence_20261007.json",
       "bytes": 1274,
       "sha256": "08a367000b2676313e591d1ef686aa639f57b3fc9015eac301cec0ef802eb370"
+    },
+    {
+      "path": "action_impact_evidence_20261007.json",
+      "bytes": 1123,
+      "sha256": "4f8e0a2684a6498c2a7a6b27a03728c8925f049f718008a987fd41d536e707fc"
     },
     {
       "path": "agent_filesystem_scope.json",

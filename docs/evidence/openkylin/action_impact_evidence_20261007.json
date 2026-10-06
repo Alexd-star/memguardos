@@ -1,0 +1,38 @@
+{
+  "schema": "memguardos-action-impact-evidence-v1",
+  "revision": "dde1f01",
+  "platform": "Linux-6.6.0-25-generic-x86_64-with-glibc2.38",
+  "python": "3.12.2",
+  "report_schema": "memguardos-agent-action-impact-report-v1",
+  "summary": {
+    "memory_count": 2,
+    "outcome_count": 15,
+    "executed_count": 15,
+    "success_count": 10,
+    "failure_count": 5,
+    "deviation_count": 0,
+    "blocked_count": 0,
+    "unknown_count": 0,
+    "success_rate": 0.6667,
+    "wilson_success_lower_bound": 0.4171,
+    "quality_gate": "observe"
+  },
+  "preferred_memory": {
+    "memory_id": "mem_9aeec90943484256",
+    "executed_count": 10,
+    "success_rate": 1.0,
+    "wilson_success_lower_bound": 0.7225,
+    "observed_success_lift": 1.0,
+    "recommendation": "retain_reinforced"
+  },
+  "checks": {
+    "report_is_versioned": true,
+    "executed_denominator_is_explicit": true,
+    "small_sample_gate_is_conservative": true,
+    "positive_observational_lift_is_visible": true,
+    "successful_memory_passes_quality_gate": true,
+    "no_command_plaintext": true,
+    "report_does_not_auto_mutate": true
+  },
+  "passed": true
+}
