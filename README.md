@@ -449,7 +449,7 @@ flowchart TB
 | Agent 交互专项 | 200 条，其中 60 条匿名化真实风格、140 条合成边界样例 | 跨会话偏好遵循率 1.0000，敏感泄漏率 0，P95 113.966 ms | [Agent 证据](docs/evidence/agent/) |
 | 真实 OpenHands | 基础 12 次、扩展 8 次、留出 8 次 | 28 次运行均保留上下文、工具事件与结果记录 | [真实 Agent 说明](docs/testing.md#6-记忆价值实验) |
 | 行动契约回归 | 8 个 allow、redirect、confirm、deny 及无关工具场景 | 判定准确率 1.0000，四类决策均有覆盖 | `data/benchmarks/action_contract.jsonl` |
-| 会话记忆巩固回归 | 隔离会话中的偏好、知识和工作记忆 | 证据分类、确认晋级、短期保留和旧计划 CAS 拒绝均通过 | `scripts/collect_consolidation_evidence.py` |
+| 会话记忆巩固回归 | openKylin 隔离会话中的偏好、知识和工作记忆 | 证据分类、确认晋级、短期保留和旧计划 CAS 拒绝均通过 | [真机证据](docs/evidence/openkylin/consolidation_evidence_20261007.json) |
 | openKylin 10k 负载 | 10,000 条记忆、150 次查询 | P95 10.105 ms，P99 75.255 ms，RSS 低于 256 MB 目标 | [性能证据](docs/evidence/performance_latest/) |
 | 检索 v2 三轮 | openKylin、1,000 条、120 次查询、6 worker | 三轮 Recall@5 均为 1.0000；质量路径和并发路径 P99 均低于 500 ms | [三轮门禁摘要](docs/evidence/openkylin/retrieval_v2.txt) |
 | 持续集成与发布门禁 | Python 3.10、3.11、3.12 | 编译、静态检查、完整测试、隔离安装、文档链接、安全扫描、Web 烟测、评测与提交包复验全部通过 | [CI 配置](.github/workflows/ci.yml)与[证据索引](docs/evidence/README.md) |

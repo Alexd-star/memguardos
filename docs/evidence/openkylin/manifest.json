@@ -1,11 +1,16 @@
 {
   "schema_version": "1.0",
-  "file_count": 30,
+  "file_count": 31,
   "files": [
     {
       "path": "agent_filesystem_scope.json",
       "bytes": 1006,
       "sha256": "d64af410b63e8e00028f5fe32b530b337f2684332b045108c06fb4bf09868a8a"
+    },
+    {
+      "path": "consolidation_evidence_20261007.json",
+      "bytes": 2361,
+      "sha256": "f295bbe218a00d4f2ba01f7650a089c635708bba43d4cfd54556a18893469e3b"
     },
     {
       "path": "dashboard_ui_tests.txt",
