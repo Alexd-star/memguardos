@@ -347,6 +347,8 @@ def build_parser() -> argparse.ArgumentParser:
     agent_context.add_argument("--limit", type=int, default=8)
     agent_context.add_argument("--max-chars", type=int, default=4000)
     agent_context.add_argument("--token-budget", type=int, default=800)
+    agent_verify_context = agent_sub.add_parser("verify-context", help="Verify a previously built Agent context receipt")
+    agent_verify_context.add_argument("--file", required=True, help="JSON file containing context_receipt")
     agent_sub.add_parser("status", help="Show Agent event and preference aggregation status")
     agent_evidence = agent_sub.add_parser("evidence", help="Show interaction evidence for one memory")
     agent_evidence.add_argument("memory_id")
@@ -500,6 +502,12 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 print(json.dumps(result, ensure_ascii=False, indent=2))
                 return 0
+            if args.agent_command == "verify-context":
+                payload = json.loads(Path(args.file).read_text(encoding="utf-8"))
+                receipt = payload.get("context_receipt", payload) if isinstance(payload, dict) else None
+                result = service.verify_agent_context_receipt(receipt)
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0 if result.get("ok") and result.get("valid") else 2
             if args.agent_command == "status":
                 print(json.dumps(service.interaction_status(), ensure_ascii=False, indent=2))
                 return 0

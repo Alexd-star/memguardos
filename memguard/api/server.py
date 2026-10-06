@@ -368,6 +368,11 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                 )
             ),
         }
+    if command == "verify_context_receipt":
+        receipt = request.get("receipt")
+        if not isinstance(receipt, dict):
+            raise ValueError("receipt must be an object")
+        return {"ok": True, "result": _jsonable(service.verify_agent_context_receipt(receipt))}
     if command == "preference_evidence":
         memory_id = _string_param(request, "memory_id", "", max_chars=128)
         result = _jsonable(service.preference_evidence(memory_id))

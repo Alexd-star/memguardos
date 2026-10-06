@@ -199,6 +199,35 @@ def test_agent_context_receipt_changes_when_selected_memory_version_changes(tmp_
         service.close()
 
 
+def test_agent_context_receipt_verification_blocks_stale_memory(tmp_path):
+    service = seeded_service(tmp_path)
+    try:
+        first = service.build_agent_context(
+            "搜索代码",
+            stage="tool_selection",
+            agent_name="openhands",
+            session_id="session-a",
+            project_root="/work/demo",
+            task_type="code_search",
+        )
+        receipt = first["context_receipt"]
+        current = service.verify_agent_context_receipt(receipt)
+        assert current["ok"] is True
+        assert current["valid"] is True
+
+        memory_id = next(iter(receipt["memory_versions"]))
+        service.forget_memory_ids([memory_id], reason="receipt-test", compact=True)
+        stale = service.verify_agent_context_receipt(receipt)
+
+        assert stale["ok"] is True
+        assert stale["valid"] is False
+        assert stale["reason"] == "context_receipt_stale"
+        assert stale["stale_memory_ids"] == [memory_id]
+        assert "重新构建" in stale["next_action"]
+    finally:
+        service.close()
+
+
 def test_agent_context_uses_one_candidate_search(tmp_path, monkeypatch):
     service = seeded_service(tmp_path)
     try:
@@ -270,6 +299,12 @@ def test_agent_api_ingests_events_and_builds_context(tmp_path):
         assert context["ok"] is True
         assert context["result"]["stage"] == "tool_selection"
         assert context["result"]["memories"][0]["preference_value"] == "rg"
+        receipt_check = handle_request(
+            service,
+            {"command": "verify_context_receipt", "receipt": context["result"]["context_receipt"]},
+        )
+        assert receipt_check["ok"] is True
+        assert receipt_check["result"]["valid"] is True
     finally:
         service.close()
 

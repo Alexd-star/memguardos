@@ -4513,6 +4513,59 @@ class MemGuardService(ProcedureServiceMixin):
         )
         return result
 
+    def verify_agent_context_receipt(self, receipt: Dict[str, object]) -> Dict[str, object]:
+        """Check that a previously built Agent context still references live versions.
+
+        The receipt is intentionally a version witness, not an authorization
+        token.  A caller must still rebuild context after any mismatch.
+        """
+
+        if not isinstance(receipt, dict) or receipt.get("schema") != "memguardos-context-receipt-v1":
+            return {"ok": False, "valid": False, "reason": "invalid_context_receipt"}
+        versions = receipt.get("memory_versions")
+        if not isinstance(versions, dict):
+            return {"ok": False, "valid": False, "reason": "invalid_memory_versions"}
+        stale_memory_ids = []
+        missing_memory_ids = []
+        current_versions = {}
+        for raw_memory_id, raw_version_id in versions.items():
+            memory_id = str(raw_memory_id or "")
+            version_id = str(raw_version_id or "")
+            if not memory_id or not version_id:
+                return {"ok": False, "valid": False, "reason": "invalid_memory_version_entry"}
+            row = self.meta.get_memory(memory_id)
+            if row is None:
+                missing_memory_ids.append(memory_id)
+                continue
+            current_version = str(row.get("version_id") or "")
+            current_versions[memory_id] = current_version
+            if bool(row.get("deleted")) or str(row.get("governance_state") or "active") != "active":
+                stale_memory_ids.append(memory_id)
+            elif current_version != version_id:
+                stale_memory_ids.append(memory_id)
+        valid = not stale_memory_ids and not missing_memory_ids
+        result = {
+            "ok": True,
+            "valid": valid,
+            "reason": "current" if valid else "context_receipt_stale",
+            "fingerprint": str(receipt.get("fingerprint") or ""),
+            "stale_memory_ids": stale_memory_ids,
+            "missing_memory_ids": missing_memory_ids,
+            "current_versions": current_versions,
+            "next_action": "可以继续使用该上下文" if valid else "请重新构建 Agent 上下文后再执行任务",
+        }
+        self._audit(
+            "agent_context_receipt_verify",
+            None,
+            {
+                "fingerprint": result["fingerprint"],
+                "valid": valid,
+                "stale_count": len(stale_memory_ids),
+                "missing_count": len(missing_memory_ids),
+            },
+        )
+        return result
+
     def _fit_context_line(self, line: str, remaining_chars: int, remaining_tokens: int) -> str:
         if remaining_chars <= 0 or remaining_tokens <= 0:
             return ""
