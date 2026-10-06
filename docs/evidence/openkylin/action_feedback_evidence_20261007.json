@@ -1,6 +1,6 @@
 {
   "schema": "memguardos-action-feedback-evidence-v1",
-  "revision": "c37270345457e28ef1eb08953d0611cf2e2d3225",
+  "revision": "5b36d2516f6170c06e5a0c2ce19434a9a0e164c4",
   "platform": "Linux-6.6.0-25-generic-x86_64-with-glibc2.38",
   "python": "3.12.2",
   "preflight": {
@@ -28,10 +28,10 @@
       "deviation_count": 1,
       "blocked_count": 0,
       "unknown_count": 0,
-      "last_success_at": "2026-10-06T19:15:32.794125+00:00",
-      "last_observed_at": "2026-10-06T19:15:32.835224+00:00",
+      "last_success_at": "2026-10-06T19:19:17.010324+00:00",
+      "last_observed_at": "2026-10-06T19:19:17.052197+00:00",
       "adherence_rate": 0.5,
-      "memory_id": "mem_81b2a1602ea14288"
+      "memory_id": "mem_6a6eadc988c04f04"
     },
     "stale_receipt": {
       "ok": false,
