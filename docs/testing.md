@@ -141,6 +141,17 @@ memctl consolidate --plan-file consolidation-plan.json --select mem_example --ye
 
 计划只提升有证据支持且未命中敏感治理边界的记忆；它不会把“生成了计划”当作“已经写入长期记忆”，也不会把固定回归结果替代真实 Agent 的长期效果评估。
 
+### 5.3 强化与可逆衰减回归
+
+`tests/test_decay_policy.py` 验证长期记忆健康度策略：长期未使用且低分的知识进入 `demote_to_session`，明确偏好和有检索命中的记忆继续保留；降级前需要确认，降级后产生新的 session 版本，旧计划和版本变化会被拒绝。`scripts/collect_decay_evidence.py` 使用隔离存储生成结构化环境、计划、动作和 CAS 结果，openKylin 采集脚本会将其写入 `decay_evidence.json`。
+
+```bash
+python -m pytest -q tests/test_decay_policy.py
+python scripts/collect_decay_evidence.py --output output/decay_evidence.json
+memctl decay-plan --max-age-days 30 --score-threshold 0.35 > decay-plan.json
+memctl decay --plan-file decay-plan.json --target-session-id maintenance-review
+```
+
 ## 6. 记忆价值实验
 
 记忆价值实验分为两种口径。

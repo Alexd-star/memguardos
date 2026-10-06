@@ -239,6 +239,30 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
             selected_memory_ids=selected,
             confirm=bool(request.get("confirm", False)),
         ))}
+    if command == "decay_plan":
+        return {"ok": True, "result": _jsonable(service.build_decay_plan(
+            as_of=_string_param(request, "as_of", "", max_chars=64),
+            max_age_days=_int_param(request, "max_age_days", 30, minimum=1, maximum=3650),
+            score_threshold=float(request.get("score_threshold", 0.35)),
+            limit=_int_param(request, "limit", 200, minimum=1, maximum=1000),
+        ))}
+    if command == "apply_decay":
+        plan = request.get("plan")
+        if not isinstance(plan, dict):
+            raise ValueError("plan must be an object")
+        selected = request.get("selected_memory_ids")
+        if selected is not None and (
+            not isinstance(selected, list)
+            or len(selected) > 1000
+            or any(not isinstance(item, str) for item in selected)
+        ):
+            raise ValueError("selected_memory_ids must be a bounded string array")
+        return {"ok": True, "result": _jsonable(service.apply_decay_plan(
+            plan,
+            selected_memory_ids=selected,
+            target_session_id=_string_param(request, "target_session_id", "", max_chars=256),
+            confirm=bool(request.get("confirm", False)),
+        ))}
     if command == "evict_tier":
         tier = _string_param(request, "tier", "", max_chars=32)
         confirm = bool(request.get("confirm", False))

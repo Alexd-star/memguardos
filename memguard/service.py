@@ -3488,6 +3488,302 @@ class MemGuardService(ProcedureServiceMixin):
             "reason": reason,
         }
 
+    def build_decay_plan(
+        self,
+        *,
+        as_of: str = "",
+        max_age_days: int = 30,
+        score_threshold: float = 0.35,
+        limit: int = 200,
+    ) -> Dict[str, object]:
+        """Build a reversible, evidence-based decay and demotion plan.
+
+        Decay is deliberately a reviewable plan rather than an automatic
+        delete.  Explicit preferences, reinforced memories and sensitive
+        records stay protected; only cold long-term memories become eligible
+        for demotion to the session tier.
+        """
+
+        if max_age_days < 1:
+            return {"ok": False, "reason": "max_age_days_must_be_positive", "candidates": []}
+        threshold = max(0.0, min(float(score_threshold), 1.0))
+        effective_as_of = self._normalize_decay_time(as_of)
+        rows = self.meta.list_memories(include_deleted=False, tier="long_term")
+        candidates = []
+        expected_versions: Dict[str, str] = {}
+        for row in rows[: max(1, min(int(limit), 1000))]:
+            memory_id = str(row.get("memory_id") or "")
+            if not memory_id:
+                continue
+            source_record = self.store.get_latest(memory_id)
+            candidate_row = dict(row)
+            if source_record is not None:
+                candidate_row.update(
+                    {
+                        "confidence": source_record.confidence,
+                        "importance": source_record.importance,
+                        "sensitivity_level": source_record.sensitivity.level,
+                        "trust_level": source_record.trust_level,
+                        "governance_state": source_record.governance_state,
+                        "deleted": source_record.deleted,
+                        "preference_explicit": source_record.preference_explicit,
+                    }
+                )
+            expected_versions[memory_id] = str(row.get("version_id") or "")
+            candidates.append(
+                self._decay_candidate(
+                    candidate_row,
+                    as_of=effective_as_of,
+                    max_age_days=max_age_days,
+                    score_threshold=threshold,
+                )
+            )
+
+        material = {
+            "namespace": self.namespace,
+            "as_of": effective_as_of,
+            "max_age_days": int(max_age_days),
+            "score_threshold": threshold,
+            "expected_versions": expected_versions,
+            "demotion_ids": [
+                item["memory_id"]
+                for item in candidates
+                if item.get("recommended_action") == "demote_to_session"
+            ],
+        }
+        plan = {
+            "schema": "memguardos-decay-plan-v1",
+            "plan_id": stable_hash(json.dumps(material, ensure_ascii=False, sort_keys=True, separators=(",", ":"))),
+            "namespace": self.namespace,
+            "as_of": effective_as_of,
+            "max_age_days": int(max_age_days),
+            "score_threshold": threshold,
+            "expected_versions": expected_versions,
+            "demotion_ids": material["demotion_ids"],
+            "candidates": candidates,
+            "summary": {
+                "candidate_count": len(candidates),
+                "demote_count": sum(item.get("recommended_action") == "demote_to_session" for item in candidates),
+                "retain_count": sum(item.get("recommended_action") != "demote_to_session" for item in candidates),
+            },
+        }
+        self._audit(
+            "decay_plan",
+            None,
+            {
+                "plan_id": plan["plan_id"],
+                "candidate_count": len(candidates),
+                "demotion_ids": plan["demotion_ids"],
+                "as_of": effective_as_of,
+            },
+        )
+        return {"ok": True, **plan}
+
+    def apply_decay_plan(
+        self,
+        plan: Dict[str, object],
+        *,
+        selected_memory_ids: Optional[List[str]] = None,
+        target_session_id: str = "",
+        confirm: bool = False,
+    ) -> Dict[str, object]:
+        """Demote selected cold memories after integrity and policy rechecks."""
+
+        if not isinstance(plan, dict) or plan.get("schema") != "memguardos-decay-plan-v1":
+            return {"applied": False, "reason": "invalid_decay_plan"}
+        if str(plan.get("namespace") or self.namespace) != self.namespace:
+            return {"applied": False, "reason": "namespace_mismatch"}
+        expected_raw = plan.get("expected_versions")
+        demotion_raw = plan.get("demotion_ids")
+        candidates_raw = plan.get("candidates")
+        if (
+            not isinstance(expected_raw, dict)
+            or not isinstance(demotion_raw, list)
+            or not isinstance(candidates_raw, list)
+            or any(not isinstance(item, dict) for item in candidates_raw)
+        ):
+            return {"applied": False, "reason": "invalid_decay_plan"}
+        expected_versions = {str(key): str(value) for key, value in expected_raw.items()}
+        demotion_ids = [str(memory_id).strip() for memory_id in demotion_raw if str(memory_id).strip()]
+        material = {
+            "namespace": self.namespace,
+            "as_of": str(plan.get("as_of") or ""),
+            "max_age_days": int(plan.get("max_age_days", 30)),
+            "score_threshold": float(plan.get("score_threshold", 0.35)),
+            "expected_versions": expected_versions,
+            "demotion_ids": demotion_ids,
+        }
+        expected_plan_id = stable_hash(json.dumps(material, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
+        if str(plan.get("plan_id") or "") != expected_plan_id:
+            return {"applied": False, "reason": "plan_integrity_failed"}
+        candidate_by_id = {
+            str(item.get("memory_id") or ""): item
+            for item in candidates_raw
+            if str(item.get("memory_id") or "")
+        }
+        if set(demotion_ids) != {
+            memory_id
+            for memory_id, item in candidate_by_id.items()
+            if item.get("recommended_action") == "demote_to_session"
+        }:
+            return {"applied": False, "reason": "plan_integrity_failed"}
+        if selected_memory_ids is not None and not isinstance(selected_memory_ids, list):
+            return {"applied": False, "reason": "selection_must_be_list"}
+        selected = [
+            str(memory_id).strip()
+            for memory_id in (selected_memory_ids if selected_memory_ids is not None else demotion_ids)
+            if str(memory_id).strip()
+        ]
+        if len(selected) != len(set(selected)) or any(memory_id not in set(demotion_ids) for memory_id in selected):
+            return {"applied": False, "reason": "selection_outside_plan", "selected_memory_ids": selected}
+        target_session = str(target_session_id or "").strip()
+        if selected and not target_session:
+            return {"applied": False, "reason": "target_session_required", "selected_memory_ids": selected}
+        current_rows = {
+            str(row.get("memory_id")): row
+            for row in self.meta.list_memories(include_deleted=False, tier="long_term")
+            if str(row.get("memory_id") or "") in set(selected)
+        }
+        expected = {memory_id: expected_versions[memory_id] for memory_id in selected if memory_id in expected_versions}
+        current = {memory_id: str(row.get("version_id") or "") for memory_id, row in current_rows.items()}
+        if expected != current:
+            return {
+                "applied": False,
+                "reason": "stale_decay_plan",
+                "expected_versions": expected,
+                "current_versions": current,
+            }
+        for memory_id in selected:
+            current_record = self.store.get_latest(memory_id)
+            if current_record is None:
+                return {"applied": False, "reason": "stale_decay_plan", "memory_id": memory_id}
+            recalculated = self._decay_candidate(
+                {
+                    **current_rows[memory_id],
+                    "confidence": current_record.confidence,
+                    "importance": current_record.importance,
+                    "sensitivity_level": current_record.sensitivity.level,
+                    "trust_level": current_record.trust_level,
+                    "governance_state": current_record.governance_state,
+                    "deleted": current_record.deleted,
+                    "preference_explicit": current_record.preference_explicit,
+                },
+                as_of=str(plan.get("as_of") or ""),
+                max_age_days=int(plan.get("max_age_days", 30)),
+                score_threshold=float(plan.get("score_threshold", 0.35)),
+            )
+            if recalculated.get("recommended_action") != "demote_to_session":
+                return {"applied": False, "reason": "decay_policy_changed", "memory_id": memory_id}
+        if not confirm:
+            return {
+                "applied": False,
+                "reason": "confirmation_required",
+                "plan_id": plan.get("plan_id", ""),
+                "selected_memory_ids": selected,
+                "target_session_id": target_session,
+                "expected_versions": expected,
+            }
+        demoted = []
+        failures = []
+        for memory_id in selected:
+            result = self.promote_memory(memory_id, "session", session_id=target_session)
+            if result.get("promoted"):
+                demoted.append({
+                    "memory_id": memory_id,
+                    "version_id": result["record"].version.version_id,
+                    "tier": result["record"].tier,
+                    "session_id": target_session,
+                })
+            else:
+                failures.append({"memory_id": memory_id, "reason": result.get("reason", "demotion_failed")})
+        result = {
+            "applied": (bool(demoted) and not failures) or not selected,
+            "plan_id": plan.get("plan_id", ""),
+            "target_session_id": target_session,
+            "demoted": demoted,
+            "failures": failures,
+        }
+        self._audit(
+            "decay_apply",
+            None,
+            {
+                "plan_id": plan.get("plan_id", ""),
+                "demoted_ids": [item["memory_id"] for item in demoted],
+                "failure_count": len(failures),
+                "target_session_id": target_session,
+            },
+        )
+        return result
+
+    @staticmethod
+    def _normalize_decay_time(value: str) -> str:
+        raw = str(value or "").strip()
+        if not raw:
+            return utc_now()
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc).isoformat()
+
+    @classmethod
+    def _decay_candidate(
+        cls,
+        row: Dict[str, object],
+        *,
+        as_of: str,
+        max_age_days: int,
+        score_threshold: float,
+    ) -> Dict[str, object]:
+        as_of_dt = datetime.fromisoformat(str(as_of).replace("Z", "+00:00"))
+        updated_at = str(row.get("updated_at") or "")
+        last_hit_at = str(row.get("last_hit_at") or "")
+        last_activity = last_hit_at or updated_at
+        try:
+            activity_dt = datetime.fromisoformat(last_activity.replace("Z", "+00:00"))
+            if activity_dt.tzinfo is None:
+                activity_dt = activity_dt.replace(tzinfo=timezone.utc)
+            age_days = max(0.0, (as_of_dt - activity_dt.astimezone(timezone.utc)).total_seconds() / 86400.0)
+        except ValueError:
+            age_days = float(max_age_days)
+        hit_count = max(0, int(row.get("hit_count") or 0))
+        confidence = max(0.0, min(float(row.get("confidence") or 0.0), 1.0))
+        importance = max(0.0, min(float(row.get("importance") or 0.0), 1.0))
+        frequency = min(1.0, math.log1p(hit_count) / math.log1p(10))
+        recency = math.exp(-age_days / 30.0)
+        score = round(0.35 * frequency + 0.25 * recency + 0.25 * importance + 0.15 * confidence, 4)
+        sensitivity = str(row.get("sensitivity_level") or "none")
+        explicit = bool(row.get("preference_explicit")) and str(row.get("type") or "") in {
+            "preference", "sensitive_policy"
+        }
+        governance_state = str(row.get("governance_state") or "active")
+        if sensitivity == "high":
+            action, reason = "retain_sensitive_review", "高敏感记忆不因低频访问自动降级"
+        elif explicit:
+            action, reason = "retain_explicit_preference", "用户明确要求保留的偏好不参与被动衰减"
+        elif governance_state != "active" or bool(row.get("deleted")):
+            action, reason = "retain_governance_review", "治理状态需要专门处理，衰减计划不越权"
+        elif age_days >= max_age_days and hit_count == 0 and score < score_threshold:
+            action, reason = "demote_to_session", "长期未使用且未达到重要性与置信度保留门槛"
+        elif hit_count > 0 or score >= score_threshold:
+            action, reason = "retain_reinforced", "存在检索强化证据或综合健康度达到保留门槛"
+        else:
+            action, reason = "retain_review", "暂不满足可逆降级条件，继续观察"
+        return {
+            "memory_id": str(row.get("memory_id") or ""),
+            "version_id": str(row.get("version_id") or ""),
+            "tier": str(row.get("tier") or "long_term"),
+            "type": str(row.get("type") or ""),
+            "sensitivity_level": sensitivity,
+            "hit_count": hit_count,
+            "last_activity_at": last_activity,
+            "age_days": round(age_days, 3),
+            "confidence": round(confidence, 4),
+            "importance": round(importance, 4),
+            "decay_score": score,
+            "recommended_action": action,
+            "reason": reason,
+        }
+
     def evict_tier(self, tier: str, confirm: bool = False) -> Dict[str, object]:
         if tier not in {"working", "session"}:
             return {"evicted": False, "reason": "only working/session tiers can be evicted by policy", "tier": tier}

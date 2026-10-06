@@ -88,6 +88,8 @@ memctl agent ingest-adapted-session \
 
 会话结束后，接入方可以调用 `memctl consolidation-plan` 或 API 的 `consolidation_plan`，让系统根据显式偏好、已验证流程和重复检索证据筛选长期记忆候选。计划携带会话范围、项目范围和候选版本快照，适配器或用户审核后再调用 `consolidate`/`apply_consolidation`。版本发生变化时计划自动失效，未达到证据门槛的内容保持在会话层，不会因为一次 Agent 输出就永久扩散到后续项目。
 
+长期运行的 Agent 还可以在空闲维护阶段调用 `decay-plan`，将实际检索强化、最近使用时间、重要性和置信度纳入记忆健康度评估。冷记忆只会生成可解释的降级候选，确认后追加 session 版本；它不会在 Agent 正常推理路径中直接删除内容。下一次检索或用户重新确认后，记忆仍可通过巩固计划重新进入长期层。
+
 若 Agent 使用自己的 SDK，则直接实现 `convert(raw_event) -> AgentInteractionEvent` 并注册到 `AgentAdapterRegistry`，再调用 `MemGuardService.ingest_interaction`。上下文仍通过 `build_agent_context` 按规划、工具选择和回答生成阶段请求；工具执行前调用 `preflight_agent_action`，根据 `allow`、`redirect`、`confirm` 或 `deny` 决定继续、改写、请求确认或停止。遗忘仍调用统一的 `forget` 或 `forget_agent_interactions` 接口；不建议在适配器中自行拼接长期记忆或直接操作 SQLite。
 
 ## 3. 安装可选 Agent 环境

@@ -114,6 +114,9 @@ run_required_capture user_cli.txt python3 -m memguard.cli.memguard demo --task "
 python3 scripts/collect_consolidation_evidence.py \
   --output "${OUT_DIR}/consolidation_evidence.json" \
   >"${OUT_DIR}/consolidation_evidence.stdout.txt" 2>&1
+python3 scripts/collect_decay_evidence.py \
+  --output "${OUT_DIR}/decay_evidence.json" \
+  >"${OUT_DIR}/decay_evidence.stdout.txt" 2>&1
 
 TMP_SAMPLE_DIR="$(mktemp -d)"
 SAMPLE_A="${TMP_SAMPLE_DIR}/peony_preference.md"

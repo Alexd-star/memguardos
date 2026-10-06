@@ -29,6 +29,8 @@ CLI 是最常用入口，适合人工演示、脚本复验和调试。
 | `memctl agent preflight-action` | 在 Agent 工具执行前检查记忆约束 | 任务、工具名称、工具参数和作用域 | `allow`、`redirect`、`confirm` 或 `deny`，以及版本化记忆证据 |
 | `memctl consolidation-plan` | 生成会话记忆巩固计划 | 会话编号、项目范围、数量上限 | 晋级、保留或清理复核候选，以及版本快照 |
 | `memctl consolidate` | 按审核计划晋级长期记忆 | 计划 JSON、可选记忆编号、确认标记 | 实际晋级、失败项和仍保留的会话记忆 |
+| `memctl decay-plan` | 生成长期记忆健康度与衰减计划 | 观察时间、年龄门槛、健康度门槛 | 强化保留、保护复核和可逆降级候选 |
+| `memctl decay` | 按审核计划把冷记忆可逆降级到会话层 | 计划 JSON、目标会话、可选记忆编号、确认标记 | 降级结果、版本编号和旧计划拒绝原因 |
 | `doctor` | 系统诊断 | 可选 namespace | 环境和能力报告 |
 | `web` | 启动本地控制台 | host、port | Web 服务 |
 
@@ -85,6 +87,17 @@ Unix socket API 位于 `memguard/api/server.py`，用于本地 Agent 直接调�
 ```
 
 候选动作包括 `promote`、`retain_session` 和 `evict_review`。服务只允许执行计划中明确标记为 `promote` 的候选；如果版本映射已变化，返回 `stale_consolidation_plan`，调用方应重新生成计划，不能用旧页面覆盖最新记忆。
+
+### 强化与可逆衰减
+
+`decay_plan` 只评估当前有效的长期记忆。系统根据 `hit_count`、`last_hit_at`、`updated_at`、`importance` 和 `confidence` 计算 `decay_score`，并返回 `retain_reinforced`、`retain_explicit_preference`、`retain_sensitive_review` 或 `demote_to_session` 等动作。它不会直接删除记忆。
+
+```json
+{"command":"decay_plan","as_of":"2026-01-31T00:00:00+00:00","max_age_days":30,"score_threshold":0.35,"limit":200}
+{"command":"apply_decay","plan":{"schema":"memguardos-decay-plan-v1","plan_id":"plan_example","namespace":"default","as_of":"2026-01-31T00:00:00+00:00","max_age_days":30,"score_threshold":0.35,"expected_versions":{"mem_example":"ver_1"},"demotion_ids":["mem_example"],"candidates":[{"memory_id":"mem_example","recommended_action":"demote_to_session"}]},"selected_memory_ids":["mem_example"],"target_session_id":"maintenance-2026-01","confirm":true}
+```
+
+降级前必须提供目标会话编号，因为 session 记忆需要明确的可见范围。服务重新核对计划编号、版本和当前健康度；版本不一致返回 `stale_decay_plan`，策略变化返回 `decay_policy_changed`。降级会产生新的 session 版本，之后可以再次经过巩固计划回到长期层。
 
 ### Agent 适配器与通用事件
 

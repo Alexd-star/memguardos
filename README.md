@@ -164,7 +164,7 @@ MemGuardOS 将“记住、用好、忘干净”串成一个可验证的本地闭
 | 分阶段上下文与行动契约 | 规划、工具选择、回答生成使用不同检索目标与 token 预算；工具执行前复核记忆版本、作用域和参数 | Agent 只获得当前阶段需要的记忆，并在真正调用工具前得到可解释的允许、改用、确认或拒绝结果 |
 | 混合检索 | SQLite FTS、稳定向量、实体关系图谱、持久化缓存与可选 Kylin SDK 重排 | 中文、英文、跨语言和工具语义均可检索，并按相关度排序 |
 | 版本与冲突治理 | 版本链、时间有效性、来源证据、置信度和冲突策略 | 新偏好覆盖旧偏好，同时保留可审计的变更历史 |
-| 会话记忆巩固 | 依据显式偏好、验证流程、重复命中、可信度和敏感等级生成版本化审核计划 | 短期经验经过选择和 CAS 校验后再进入长期层，证据不足的内容不会自动扩散 |
+| 会话巩固与可逆衰减 | 依据显式偏好、验证流程、重复命中、最近使用、可信度和敏感等级生成版本化计划 | 短期经验经过审核后进入长期层，冷记忆可降回会话层，证据不足或敏感内容不会自动扩散 |
 | 精准遗忘 | 自然语言解析、结构化 `ErasurePlan`、dry-run、确认、墓碑、索引清理与压缩 | 删除前看影响，删除后验证目标不再召回且无明文残留 |
 | 敏感内容保护 | 凭据阻断、PII 脱敏、自定义规则、来源隔离与审计 | 高风险内容不会进入长期记忆，用户能看到阻断原因 |
 | openKylin 原生集成 | UKUI 设置插件、Peony 右键、托盘通知、systemd、cgroup、auditd、Polkit、BPF LSM | 普通用户和管理员都能从系统原生入口完成操作 |
@@ -359,6 +359,7 @@ flowchart TB
         C["规划 / 工具 / 回答上下文"]
         G2["执行前行动契约<br/>allow · redirect · confirm · deny"]
         L["会话记忆巩固<br/>证据晋级 · 版本计划"]
+        D2["强化与健康度衰减<br/>命中 · 新鲜度 · 可逆降级"]
         F["精准遗忘预览与执行"]
         Z["审计链、systemd、cgroup、BPF LSM"]
         UI["UKUI / Peony / 托盘 / Web / CLI"]
@@ -378,7 +379,7 @@ flowchart TB
     D --> H
     G --> H
     R --> H
-    H --> C --> L --> G2 --> A
+    H --> C --> L --> D2 --> G2 --> A
     UI --> F
     F --> M
     F --> D
@@ -449,7 +450,7 @@ flowchart TB
 | Agent 交互专项 | 200 条，其中 60 条匿名化真实风格、140 条合成边界样例 | 跨会话偏好遵循率 1.0000，敏感泄漏率 0，P95 113.966 ms | [Agent 证据](docs/evidence/agent/) |
 | 真实 OpenHands | 基础 12 次、扩展 8 次、留出 8 次 | 28 次运行均保留上下文、工具事件与结果记录 | [真实 Agent 说明](docs/testing.md#6-记忆价值实验) |
 | 行动契约回归 | 8 个 allow、redirect、confirm、deny 及无关工具场景 | 判定准确率 1.0000，四类决策均有覆盖 | `data/benchmarks/action_contract.jsonl` |
-| 会话记忆巩固回归 | openKylin 隔离会话中的偏好、知识和工作记忆 | 证据分类、确认晋级、短期保留和旧计划 CAS 拒绝均通过 | [真机证据](docs/evidence/openkylin/consolidation_evidence_20261007.json) |
+| 会话巩固与衰减回归 | openKylin 隔离会话中的偏好、知识和长期记忆 | 证据分类、确认晋级、健康度衰减、可逆降级和旧计划 CAS 拒绝均通过 | [巩固证据](docs/evidence/openkylin/consolidation_evidence_20261007.json)、[衰减证据](docs/evidence/openkylin/decay_evidence_20261007.json) |
 | openKylin 10k 负载 | 10,000 条记忆、150 次查询 | P95 10.105 ms，P99 75.255 ms，RSS 低于 256 MB 目标 | [性能证据](docs/evidence/performance_latest/) |
 | 检索 v2 三轮 | openKylin、1,000 条、120 次查询、6 worker | 三轮 Recall@5 均为 1.0000；质量路径和并发路径 P99 均低于 500 ms | [三轮门禁摘要](docs/evidence/openkylin/retrieval_v2.txt) |
 | 持续集成与发布门禁 | Python 3.10、3.11、3.12 | 编译、静态检查、完整测试、隔离安装、文档链接、安全扫描、Web 烟测、评测与提交包复验全部通过 | [CI 配置](.github/workflows/ci.yml)与[证据索引](docs/evidence/README.md) |

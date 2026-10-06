@@ -103,6 +103,23 @@ def build_parser() -> argparse.ArgumentParser:
     consolidate.add_argument("--select", action="append", default=[], help="Memory id to promote; repeat to select multiple")
     consolidate.add_argument("--yes", action="store_true")
 
+    decay_plan = sub.add_parser(
+        "decay-plan",
+        help="Review cold long-term memories using recency, reinforcement, importance, and confidence",
+    )
+    decay_plan.add_argument("--as-of", default="", help="UTC ISO time used for reproducible scoring")
+    decay_plan.add_argument("--max-age-days", type=int, default=30)
+    decay_plan.add_argument("--score-threshold", type=float, default=0.35)
+    decay_plan.add_argument("--limit", type=int, default=200)
+    decay = sub.add_parser(
+        "decay",
+        help="Apply a reviewed reversible demotion plan",
+    )
+    decay.add_argument("--plan-file", required=True)
+    decay.add_argument("--target-session-id", default="")
+    decay.add_argument("--select", action="append", default=[], help="Memory id to demote; repeat to select multiple")
+    decay.add_argument("--yes", action="store_true")
+
     evict = sub.add_parser("evict-tier", help="Evict working/session tier memories")
     evict.add_argument("tier", choices=["working", "session"])
     evict.add_argument("--yes", action="store_true")
@@ -759,6 +776,30 @@ def main(argv: list[str] | None = None) -> int:
             result = service.apply_consolidation_plan(
                 plan,
                 selected_memory_ids=args.select or None,
+                confirm=args.yes,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+            return 0 if result.get("applied") or not args.yes else 2
+
+        if args.command == "decay-plan":
+            result = service.build_decay_plan(
+                as_of=args.as_of,
+                max_age_days=args.max_age_days,
+                score_threshold=args.score_threshold,
+                limit=args.limit,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result.get("ok") else 2
+
+        if args.command == "decay":
+            plan_payload = json.loads(Path(args.plan_file).read_text(encoding="utf-8"))
+            plan = plan_payload.get("result", plan_payload) if isinstance(plan_payload, dict) else None
+            if not isinstance(plan, dict):
+                raise ValueError("plan file must contain a decay plan object")
+            result = service.apply_decay_plan(
+                plan,
+                selected_memory_ids=args.select or None,
+                target_session_id=args.target_session_id,
                 confirm=args.yes,
             )
             print(json.dumps(result, ensure_ascii=False, indent=2, default=str))

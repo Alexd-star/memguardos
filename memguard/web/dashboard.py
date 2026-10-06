@@ -336,6 +336,16 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/memory-policy":
             self._send_api({"command": "memory_policy"})
             return
+        if parsed.path == "/api/memory-decay":
+            params = parse_qs(parsed.query)
+            self._send_api({
+                "command": "decay_plan",
+                "as_of": params.get("as_of", [""])[0],
+                "max_age_days": _safe_int(params.get("max_age_days", ["30"])[0], 30),
+                "score_threshold": params.get("score_threshold", ["0.35"])[0],
+                "limit": _safe_int(params.get("limit", ["200"])[0], 200),
+            })
+            return
         if parsed.path == "/api/verify-audit":
             self._send_api({"command": "verify_audit"})
             return
@@ -517,6 +527,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
             "/api/agent-forget": "operator",
             "/api/resolve-fact-conflict": "admin",
             "/api/governance-review": "admin",
+            "/api/apply-decay": "admin",
             "/api/acceptance-run": "admin",
             "/api/acceptance-report": "admin",
         }.get(parsed.path, "admin")
@@ -558,6 +569,15 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                 "command": "evict_session", "session_id": str(payload.get("session_id", "")),
                 "confirm": bool(payload.get("confirm", False)),
                 "expected_versions": payload.get("expected_versions"),
+            })
+            return
+        if parsed.path == "/api/apply-decay":
+            self._send_api({
+                "command": "apply_decay",
+                "plan": payload.get("plan"),
+                "selected_memory_ids": payload.get("selected_memory_ids"),
+                "target_session_id": str(payload.get("target_session_id", "")),
+                "confirm": bool(payload.get("confirm", False)),
             })
             return
         if parsed.path in {"/api/agent-run", "/api/journey"}:
