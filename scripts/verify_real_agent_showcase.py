@@ -60,6 +60,9 @@ SPEC = {
     "environment": {"platform_system": platform.system()},
 }
 MODULE_NAMES = (
+    "memguard.feedback",
+    "memguard.extraction.semantic",
+    "memguard.integrations.adherence",
     "memguard.service",
     "memguard.procedural",
     "memguard.procedure_service",

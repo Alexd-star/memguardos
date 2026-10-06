@@ -19,6 +19,7 @@
     "LICENSE",
     "pyproject.toml",
     "memguard/service.py",
+    "memguard/feedback.py",
     "memguard/procedural.py",
     "memguard/procedure_service.py",
     "memguard/lifecycle.py",

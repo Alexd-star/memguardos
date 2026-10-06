@@ -55,6 +55,11 @@ class _ForgetService:
         }
 
 
+def test_disabled_model_error_is_clear_without_blame_on_memory():
+    result = _friendly_agent_error(RuntimeError('model_not_found: model disabled by platform'))
+    assert '已停用' in result and '/model' in result and '记忆数据不受影响' in result
+
+
 def test_one_shot_agent_demo_accepts_documented_iteration_limit(tmp_path):
     args = build_agent_demo_parser().parse_args(
         [
