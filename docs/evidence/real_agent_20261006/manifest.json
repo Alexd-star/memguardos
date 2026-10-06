@@ -1,0 +1,183 @@
+{
+  "generated_at": "2026-10-06T06:43:31.975285+00:00",
+  "root": "docs/evidence/real_agent_20261006",
+  "file_count": 35,
+  "total_bytes": 1820347,
+  "files": [
+    {
+      "path": "github_ci_85feb1d.json",
+      "bytes": 9949,
+      "sha256": "6623b8560f938f442cdfee04c38d4809d36841739a5ae72c0508219da0b076e0"
+    },
+    {
+      "path": "native_cli_agent.txt",
+      "bytes": 3451,
+      "sha256": "097a716b7233fd6b4ba5b3c4cd5f6a8e27d870e7a1b4b9bb9ec56e609f60ec5f"
+    },
+    {
+      "path": "native_cli_forget.txt",
+      "bytes": 1721,
+      "sha256": "2073d7b57d331c59d75aa3dbf2c35f471f7876d0f55c3d63d00350ac6632a333"
+    },
+    {
+      "path": "native_cli_preferences.txt",
+      "bytes": 1561,
+      "sha256": "e265e6c0e9a85d43ca782f853edc1888cf1711024f04bf8151217819416e6dc2"
+    },
+    {
+      "path": "normal_mode_v9_20261006.json",
+      "bytes": 1492,
+      "sha256": "69c25757f6f3bfaed877f21c8778d3ad130f88d271a1c51b395a760d98ae517a"
+    },
+    {
+      "path": "package_payload_normal_v9.json",
+      "bytes": 1530,
+      "sha256": "2b52d57c6c1ed6815a0282d1321ff947e08f6cddd358753ae07bfe0fe555ad46"
+    },
+    {
+      "path": "README.md",
+      "bytes": 5503,
+      "sha256": "388b6a16bec2c1afdc11c24f80aadfa07989b88d35bc6a6ef1175cf1bbc1817e"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt1/cases/A01/memory_off/result.json",
+      "bytes": 17227,
+      "sha256": "67f585b1dbfe559dccb833ef2202e2787f5d9fecfdfa996b681a6e97a2c7f515"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt1/cases/A01/memory_on/result.json",
+      "bytes": 30645,
+      "sha256": "780e40f35684f6a6bbcbfaf4a2294aeed79143a7930d29972db28918aaf8d27d"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt1/cases/A02/result.json",
+      "bytes": 28666,
+      "sha256": "5d503370b7e54185d905b5366bbff25a7112f26b1f9ac30e12657cd838cee89f"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt1/cases/A03/result.json",
+      "bytes": 66688,
+      "sha256": "3bc0ac35133dfae5471d7603e9916eb1080c91f5918e02d25e2d149cce87d89d"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt1/cases/A04/result.json",
+      "bytes": 43287,
+      "sha256": "999aa0809eb59969b898a4a3f50318c2e2609abe5c3cca9fe53131c09a433c82"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt1/cases/A05/result.json",
+      "bytes": 35773,
+      "sha256": "52216a22b30d1f5137be8a44664582e63ca51ee3529b906d4c7361f81672c65c"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt1/cases/A06/result.json",
+      "bytes": 66645,
+      "sha256": "94ea77c6ca272346115c9876449380361462e2cdd41bf3298622316e52126f7a"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt1/summary.json",
+      "bytes": 7785,
+      "sha256": "91393f577a96a72d7f2a3aefdbd498c4bec598fc8dc43cc044e3cb52c50581d3"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt2/cases/A01/memory_off/result.json",
+      "bytes": 48256,
+      "sha256": "91854182d9c837c2d1e72598bf30479c56e245fe8c942703dc93af6b207ac79b"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt2/cases/A01/memory_on/result.json",
+      "bytes": 86482,
+      "sha256": "cf61bb575c50598911c8c644e9462abcb431913a58062cd0859724bbfdbe846d"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt2/cases/A02/result.json",
+      "bytes": 72395,
+      "sha256": "de01a928cd0b27d92d4f6ee5a3cd019f9f0f5ea38a9302f0bc7d79338783eb9b"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt2/cases/A03/result.json",
+      "bytes": 122816,
+      "sha256": "8d98b79d14c7f0b29fcddfa2e3154bba3760c0479743262c4a479aca6501db5d"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt2/cases/A04/result.json",
+      "bytes": 42659,
+      "sha256": "298e525622832be0a6c7c99ad210cf787a931de5ff3e7deb941dbdf222530004"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt2/cases/A05/result.json",
+      "bytes": 120961,
+      "sha256": "e0e5322ecbb6d2b04f17350accaf49cbb2e4f838e6e78b1b4a9ffd2dac688333"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt2/cases/A06/result.json",
+      "bytes": 195447,
+      "sha256": "8cf0ed3f3c643220934c43023edefc4e8ba2aea9543dffe8a8fcd8cc43fdf912"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt2/summary.json",
+      "bytes": 7785,
+      "sha256": "e4ddf1d6545c179558d8ebc73b7be15f645ce15fbdeba65a09c44bcae317e773"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt3/cases/A01/memory_off/result.json",
+      "bytes": 3790,
+      "sha256": "d5d1a8f2773ebe69d88f423a415109ac85e6ece285d852215deeb19005b4585c"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt3/cases/A01/memory_on/result.json",
+      "bytes": 73009,
+      "sha256": "444196f37fe50719feee0543451b583365fb6dab4c40d47d1c48193be99868be"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt4/cases/A01/memory_off/result.json",
+      "bytes": 60248,
+      "sha256": "fdf429728d6b58b104956f3908b550c187b6d011b7c222b63087d8e4afcc65ba"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt4/cases/A01/memory_on/result.json",
+      "bytes": 70612,
+      "sha256": "88c5d2f98420be7055d9517525852c46f390f6b6d40358217885d983e681c003"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt4/cases/A02/result.json",
+      "bytes": 64515,
+      "sha256": "c9605a6d19244c9dc501a59f5084846f51da174076d063b3b1e38986e8c0b183"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt4/cases/A03/result.json",
+      "bytes": 116803,
+      "sha256": "f627067efcbbf7ef65c1ac030e622da80cdfb6bde73ca9fe0f5aaca82ea5248b"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt4/cases/A04/result.json",
+      "bytes": 43263,
+      "sha256": "43a4b77b0bda458073f158b7e87fac0c6081b7a8497cdea1871c0349c2d081c7"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt4/cases/A05/result.json",
+      "bytes": 133014,
+      "sha256": "3ad5bb388841455a24d1ef853289ff6bdfc6474fe591dd527ec87bca30ccc9d1"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt4/cases/A06/result.json",
+      "bytes": 224159,
+      "sha256": "3af7d83f61abd7f31b326bd2797cf2160c2d6828cad3a1e5e7fb836902bbe4ee"
+    },
+    {
+      "path": "real-agent-showcase-20261006-attempt4/summary.json",
+      "bytes": 8359,
+      "sha256": "f1b0c779ec365fefad04b933fc585c6f0ea9acdc0ba3c29d65c26412ad416929"
+    },
+    {
+      "path": "real-agent-v9-regressions.log",
+      "bytes": 261,
+      "sha256": "0cd24f86972cac8ddc15415e227234b052e3a12ef76b16a91d1bbe7d693bbd4a"
+    },
+    {
+      "path": "recovery_and_model_20261006.json",
+      "bytes": 3590,
+      "sha256": "c9248aac980638e54798cf007cd141c0a4a5e3b582ae87f0fab359e34bcb0e62"
+    }
+  ]
+}

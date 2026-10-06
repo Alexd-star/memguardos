@@ -129,6 +129,7 @@ def test_full_driver_uses_product_contracts_and_separates_fake_factory(tmp_path)
         (output / "cases/A01/memory_off/result.json").read_text(encoding="utf-8")
     )
     assert off["run"]["memory_enabled"] is False
+    assert off["arm_source"] == "in_process_test_factory" and off["external_llm_used"] is False
     assert off["events"]
     assert not any(stage["memories"] for stage in off["context"]["stages"].values())
     assert (

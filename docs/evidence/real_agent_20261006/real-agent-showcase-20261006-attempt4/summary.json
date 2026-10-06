@@ -1,0 +1,259 @@
+{
+  "agent_sessions": 7,
+  "external_llm_used": true,
+  "generated_at": "2026-10-06T06:20:05.387178+00:00",
+  "llm_request_limit_note": "Seven runner.run sessions; SDK iterations/repair may use multiple requests.",
+  "management_checks": {
+    "model_calls": 0,
+    "origin": "client_product_api",
+    "password_refused": true,
+    "password_result": {
+      "audit_event_id": "audit-30",
+      "candidate_memory_ids": [],
+      "conflict": null,
+      "conflict_id": "",
+      "duplicate": false,
+      "feedback": {
+        "audit_event_ids": [
+          "audit-30"
+        ],
+        "blocked_items": [
+          {
+            "labels": [
+              "password_secret"
+            ],
+            "reason": "sensitive_content_blocked",
+            "summary_for_user": "发现高风险敏感内容，未保存到长期记忆，也未进入检索上下文。"
+          }
+        ],
+        "effective_scopes": [],
+        "namespace": "real-showcase",
+        "new_memories": [],
+        "observed_preferences": [],
+        "schema": "memguardos-memory-change-summary-v1",
+        "session_id": "local_socket",
+        "skipped_items": [],
+        "source": "api",
+        "suggested_next_actions": [
+          "view_audit"
+        ],
+        "updated_memories": []
+      },
+      "memory_id": "",
+      "partial_conflict": false,
+      "reason": "sensitive_block",
+      "sensitive_notice": {
+        "action": "blocked",
+        "audit_event_id": "audit-30",
+        "detected_labels": [
+          "password_secret"
+        ],
+        "entered_rag": false,
+        "next_actions": [
+          "view_audit",
+          "dismiss"
+        ],
+        "risk_level": "high",
+        "schema": "memguardos-sensitive-block-notice-v1",
+        "source": "api",
+        "stored": false,
+        "user_summary": "已保护敏感内容：本次内容没有进入长期记忆或检索上下文。"
+      },
+      "sensitivity": {
+        "decision_reason": {
+          "allowlist_hit": [],
+          "final_action": "block",
+          "matched_pattern": [
+            "password_secret"
+          ],
+          "source_uri_sensitive": false
+        },
+        "labels": [
+          "password_secret"
+        ],
+        "level": "high",
+        "redacted": false
+      },
+      "stored": false
+    },
+    "session_isolated": true,
+    "session_result": {
+      "audit_event_id": "audit-33",
+      "candidate_memory_ids": [],
+      "conflict": null,
+      "conflict_id": "",
+      "extraction": {
+        "confidence": 0.825,
+        "enhancer_error": "",
+        "enhancer_used": false,
+        "memory_type": "knowledge",
+        "method": "deterministic_semantic_rules",
+        "signals": [
+          "source_api"
+        ],
+        "subtype": "fact",
+        "summary": "知识记忆：临时项目代号是蓝河,该信息只保留到本次会话结束。"
+      },
+      "feedback": {
+        "audit_event_ids": [
+          "audit-33"
+        ],
+        "blocked_items": [],
+        "effective_scopes": [
+          "相关检索任务"
+        ],
+        "namespace": "real-showcase",
+        "new_memories": [
+          {
+            "actions": [
+              "view",
+              "test_effect",
+              "forget"
+            ],
+            "application_status": "retrieval_only",
+            "category": "knowledge_memory",
+            "category_label": "知识记忆",
+            "change_kind": "saved",
+            "confidence": 0.825,
+            "evidence_label": "内容通过质量与安全检查",
+            "memory_id": "mem_0a005d83254043e7",
+            "preference_topic": "",
+            "preference_value": "",
+            "scope": "real-showcase",
+            "status_label": "已保存，可检索",
+            "subtype": "fact",
+            "summary_for_user": "知识记忆：临时项目代号是蓝河,该信息只保留到本次会话结束。",
+            "tier": "session",
+            "type": "knowledge",
+            "where_it_will_apply": [
+              "相关检索任务"
+            ],
+            "why_extracted": "内容通过质量和敏感性检查，并被抽取为可检索的记忆。"
+          }
+        ],
+        "observed_preferences": [],
+        "schema": "memguardos-memory-change-summary-v1",
+        "session_id": "local_socket",
+        "skipped_items": [],
+        "source": "api",
+        "suggested_next_actions": [
+          "view",
+          "test_effect",
+          "forget"
+        ],
+        "updated_memories": []
+      },
+      "memory_id": "mem_0a005d83254043e7",
+      "memory_ids": [
+        "mem_0a005d83254043e7"
+      ],
+      "namespace": "real-showcase",
+      "partial_conflict": false,
+      "scope": "real-showcase",
+      "stored": true,
+      "subtype": "fact",
+      "tier": "session",
+      "type": "knowledge",
+      "updated": false
+    }
+  },
+  "max_agent_sessions": 7,
+  "mode": "real_openhands_agent",
+  "modules": {
+    "memguard.api.server": {
+      "path": "/var/opt/memguardos/memguard/api/server.py",
+      "sha256": "d6e83be13a7f404e044720cf538bcf1a8e611f3268e1fb0ae612481e31ca4395"
+    },
+    "memguard.eval.real_agent_behavior": {
+      "path": "/var/opt/memguardos/memguard/eval/real_agent_behavior.py",
+      "sha256": "d3a8cb81918b5fd5b33740db110beca3508016ab7308171af68ba207b568b533"
+    },
+    "memguard.extraction.semantic": {
+      "path": "/var/opt/memguardos/memguard/extraction/semantic.py",
+      "sha256": "cf13a9ea179d008ba6fd0c0fea2ce9c11bf866a98a358fb1998d4413d25243b9"
+    },
+    "memguard.feedback": {
+      "path": "/var/opt/memguardos/memguard/feedback.py",
+      "sha256": "dd86e93ad3d1f1cb9dbf11af77064b94538d2ed9d4216bc11650615b2e1b09f0"
+    },
+    "memguard.integrations.adherence": {
+      "path": "/var/opt/memguardos/memguard/integrations/adherence.py",
+      "sha256": "758c433b6bb97b770503e33d11dfc6863bf4193e5c3b9642a4c9f69162bee6dc"
+    },
+    "memguard.integrations.openhands_adapter": {
+      "path": "/var/opt/memguardos/memguard/integrations/openhands_adapter.py",
+      "sha256": "e827da45a96f5aff106718fcdc3c54fdbd4c580d4bb9106a29e53bc71405c223"
+    },
+    "memguard.integrations.openhands_memory_hook": {
+      "path": "/var/opt/memguardos/memguard/integrations/openhands_memory_hook.py",
+      "sha256": "074a19f57775b638a7525681018c3041e1bcbed9b604a30f732d65045c40a566"
+    },
+    "memguard.integrations.openhands_runner": {
+      "path": "/var/opt/memguardos/memguard/integrations/openhands_runner.py",
+      "sha256": "7035e384f0d191039a66af3d5d9231ae33394d050183b42210d1fece347b20ba"
+    },
+    "memguard.procedural": {
+      "path": "/var/opt/memguardos/memguard/procedural.py",
+      "sha256": "928a343bc65aa7c434e8f9a5a08ce68cf0d78a8cf0491104f0885cc27136cc3a"
+    },
+    "memguard.procedure_service": {
+      "path": "/var/opt/memguardos/memguard/procedure_service.py",
+      "sha256": "d90a7df77015efb13a961f4620dff1bb71fcda255ea10724b08e19cbf90f1628"
+    },
+    "memguard.service": {
+      "path": "/var/opt/memguardos/memguard/service.py",
+      "sha256": "9abfcd1f5b85327e52afccf56ba5c4c4573f66b5da5f32364a869242480998ca"
+    },
+    "showcase_driver": {
+      "path": "/home/luo/memguardos/scripts/verify_real_agent_showcase.py",
+      "sha256": "a165ba625110abd7370300a54cfdbabc705bed56e9fd524e866ab6958297ef70"
+    }
+  },
+  "passed": true,
+  "results": [
+    {
+      "case_id": "A01",
+      "memory_mode": "on",
+      "result_path": "cases/A01/memory_on/result.json",
+      "status": "pass"
+    },
+    {
+      "case_id": "A01",
+      "memory_mode": "off",
+      "result_path": "cases/A01/memory_off/result.json",
+      "status": "pass"
+    },
+    {
+      "case_id": "A02",
+      "memory_mode": "on",
+      "result_path": "cases/A02/result.json",
+      "status": "pass"
+    },
+    {
+      "case_id": "A03",
+      "memory_mode": "on",
+      "result_path": "cases/A03/result.json",
+      "status": "pass"
+    },
+    {
+      "case_id": "A04",
+      "memory_mode": "on",
+      "result_path": "cases/A04/result.json",
+      "status": "pass"
+    },
+    {
+      "case_id": "A05",
+      "memory_mode": "on",
+      "result_path": "cases/A05/result.json",
+      "status": "pass"
+    },
+    {
+      "case_id": "A06",
+      "memory_mode": "on",
+      "result_path": "cases/A06/result.json",
+      "status": "pass"
+    }
+  ],
+  "schema": "memguardos-real-agent-showcase-v1",
+  "started_at": "2026-10-06T06:15:03.809299+00:00"
+}

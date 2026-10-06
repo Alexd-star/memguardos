@@ -1,0 +1,38 @@
+{
+  "schema": "memguardos-normal-mode-persistence-v1",
+  "generated_at": "2026-10-06T05:51:54.772884+00:00",
+  "boot_mode": "('normal',)",
+  "package_versions": {
+    "memguardos": "1.0.1-9+finals20261006",
+    "memguardos-core": "1.0.1-9+finals20261006",
+    "memguardos-ukui": "1.0.1-9+finals20261006",
+    "memguardos-agent-bridge": "1.0.1-9+finals20261006",
+    "memguardos-doc": "1.0.1-9+finals20261006"
+  },
+  "service_status": {
+    "memguardd": "active",
+    "memguard-agent@luo": "active"
+  },
+  "module": "/var/opt/memguardos/memguard/service.py",
+  "source_match_normalized_newlines": {
+    "memguard/service.py": true,
+    "memguard/procedural.py": true,
+    "memguard/procedure_service.py": true,
+    "memguard/store/dependencies.py": true,
+    "memguard/store/sqlite_meta.py": true,
+    "memguard/retrieval/hybrid.py": true,
+    "memguard/forgetting/planner.py": true,
+    "memguard/forgetting/natural_intent.py": true,
+    "memguard/api/server.py": true,
+    "memguard/cli/memguard.py": true,
+    "memguard/web/dashboard.py": true,
+    "memguard/integrations/openhands_runner.py": true,
+    "memguard/integrations/openhands_adapter.py": true,
+    "memguard/integrations/adherence.py": true,
+    "memguard/extraction/semantic.py": true,
+    "memguard/feedback.py": true,
+    "memguard/integrations/openhands_memory_hook.py": true
+  },
+  "root_capacity": "文件系统        大小  已用  可用 已用% 挂载点\n/dev/sdb5        31G   20G  9.3G   68% /",
+  "passed": true
+}

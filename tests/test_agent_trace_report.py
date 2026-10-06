@@ -3,6 +3,7 @@ import hashlib
 from html import escape
 from html.parser import HTMLParser
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -50,6 +51,18 @@ def test_product_checks_and_real_file_changes_are_visible_and_escaped(tmp_path):
     assert "保留无关偏好 &lt;script&gt;" in html
     assert 'class="failure">未通过' in html
     assert "Version 1\nTODO" in html and "Version 1\nREVIEWED" in html
+
+
+def test_finish_is_not_misrepresented_as_a_missing_terminal_command(tmp_path):
+    html = _export(tmp_path, _result(events=[{"event_type":"tool_call", "tool_name":"finish",
+         "capture_origin":"sdk_callback", "tool_args":{"message":"已经完成"}}]))
+    assert "SDK 实际事件回调" in html
+    assert "Agent 最终答复" in html and "工具命令未记录" not in html
+
+
+def test_injected_test_runner_cannot_be_presented_as_a_real_model(tmp_path):
+    html = _export(tmp_path, _result(arm_source="in_process_test_factory",external_llm_used=False))
+    assert "测试替身记录，不是真实模型会话" in html
 
 
 class Tags(HTMLParser):
@@ -657,10 +670,11 @@ def test_cli_subprocess_works_without_optional_agent_dependencies(tmp_path):
         "--output",
         str(output),
     ]
-    completed = subprocess.run(command, capture_output=True, text=True, timeout=20)
+    env = {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+    completed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", env=env, timeout=20)
     assert completed.returncode == 0, completed.stderr
     assert "recorded exception" in output.read_text(encoding="utf-8")
-    repeated = subprocess.run(command, capture_output=True, text=True, timeout=20)
+    repeated = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", env=env, timeout=20)
     assert repeated.returncode == 2
     assert output.exists()
 

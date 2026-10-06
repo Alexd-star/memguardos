@@ -56,7 +56,7 @@ h4{font-size:14px;margin:0}p{margin:6px 0}a{color:#086c80}header,section,article
 .adapter{border-left:3px solid #b32e3a;background:#fff5f5;padding:8px 10px;margin:10px 0}
 .tag{font-size:12px;font-weight:600}.status{font-weight:700}.empty{color:#69747d;padding:6px 0}
 pre,.text{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;margin:6px 0}
-pre{font-family:Consolas,"Cascadia Mono",monospace;font-size:12px;line-height:1.55}
+pre{font-family:Consolas,"Cascadia Mono","Microsoft YaHei",sans-serif;font-size:12px;line-height:1.55}
 details{margin:8px 0}summary{cursor:pointer;color:#53606b}dl{margin:6px 0}
 dt{color:#69747d;font-size:12px}dd{margin:0 0 6px;overflow-wrap:anywhere}
 .source{border-top:1px solid #e5eaed;margin-top:14px;padding-top:8px}
@@ -527,7 +527,7 @@ def _event(
         "system": "系统／适配器",
     }.get(role, role)
     args = event.get("display_tool_args", event.get("tool_args")) or {}
-    origin = str(event.get("execution_origin") or args.get("execution_origin") or "")
+    origin = str(event.get("execution_origin") or args.get("execution_origin") or event.get("capture_origin") or "")
     intervention = event.get("capture_origin") == "adapter_generated" or any(
         marker in origin.lower() or marker in event_type.lower()
         for marker in ADAPTER_ORIGINS
@@ -550,7 +550,9 @@ def _event(
         '<div class="event-head"><h4>%s · %s</h4><span class="tag">%s</span></div>'
         % (
             escape(role_label),
-            escape(event_type),
+            escape({"user_message":"用户输入", "assistant_message":"模型答复", "tool_call":"工具调用",
+                    "tool_result":"工具返回", "policy_decision":"调用前检查", "task_error":"任务错误",
+                    "system_message":"系统反馈"}.get(event_type,event_type)),
             escape(phase_label),
         )
     )
@@ -562,11 +564,14 @@ def _event(
     elif role == "system":
         parts.append('<p class="muted">系统／适配器消息，不归为模型动作</p>')
     else:
-        parts.append('<p class="muted">执行来源：%s</p>' % escape(origin or "未标记"))
+        parts.append('<p class="muted">执行来源：%s</p>' % escape({"sdk_callback":"SDK 实际事件回调"}.get(origin,origin) or "未标记"))
     metadata = {
         key: event[key]
         for key in (
             "sequence",
+            "event_type",
+            "capture_origin",
+            "tool_call_id",
             "timestamp",
             "session_id",
             "tool_name",
@@ -586,12 +591,13 @@ def _event(
             if answer is not None:
                 parts.append('<p class="tag">Agent 最终答复（完成工具原文）</p>' + _block(answer))
         command = args.get("command", event.get("command"))
-        parts.append('<p class="tag">工具命令</p>')
-        parts.append(
-            _block(command)
-            if command is not None
-            else '<p class="empty">工具命令未记录</p>'
-        )
+        if command is not None or event.get("tool_name") in {None, "", "terminal"}:
+            parts.append('<p class="tag">工具命令</p>')
+            parts.append(
+                _block(command)
+                if command is not None
+                else '<p class="empty">工具命令未记录</p>'
+            )
         if args:
             parts.append(_details("工具参数（已脱敏）", args))
     if event_type == "tool_result":
@@ -687,6 +693,8 @@ def _arm(source: Source, redactor: Redactor) -> str:
         else "未记录／null"
     )
     parts.append('<p class="meta">实际 run.memory_enabled：%s</p>' % actual_flag)
+    if data.get("external_llm_used") is False or data.get("arm_source") == "in_process_test_factory":
+        parts.append('<p class="failure">测试替身记录，不是真实模型会话。</p>')
     if source.mode == "off" and memory_enabled is not False:
         message = (
             "仍启用；不具备完全关闭证明。"
