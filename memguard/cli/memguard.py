@@ -1610,6 +1610,8 @@ def _shell_guide(state: dict) -> None:
 def _friendly_agent_error(exc: Exception) -> str:
     message = " ".join(str(exc).split())
     lowered = message.lower()
+    if "model_not_found" in lowered or ("model" in lowered and "disabled" in lowered):
+        return "当前模型不存在、已停用或不可访问。请在 /model 中选择当前接口可用的模型；记忆数据不受影响。"
     if "workspace" in lowered:
         return "工作区不可用，请用 /workspace 设置一个存在且可访问的项目目录。"
     if any(marker in lowered for marker in ("timeout", "timed out")):

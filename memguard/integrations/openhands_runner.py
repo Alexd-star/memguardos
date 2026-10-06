@@ -39,6 +39,7 @@ from memguard.integrations.adherence import (
     terminal_commands,
 )
 from memguard.integrations.openhands_adapter import OpenHandsEventAdapter, event_display_fields
+from memguard.integrations.openhands_memory_hook import shell_command_executables
 from memguard.integrations.events import AgentInteractionEvent
 from memguard.models import new_id, utc_now
 
@@ -230,9 +231,14 @@ class OpenHandsMemoryRunner:
     def _ingest_event(self, event: AgentInteractionEvent, *, display_fields: Optional[Dict[str, Any]] = None) -> None:
         live_event = event.to_dict()
         live_event.update(display_fields or {})
+        tool_call_id = self.adapter.tool_call_id_for(event.event_id)
+        if tool_call_id:
+            live_event["tool_call_id"] = tool_call_id
         self._live_events.append(live_event)
         safe_event, sensitivity = self.service._sanitize_interaction_event(event, remember_allowed=True)
         captured = safe_event.to_dict()
+        if tool_call_id:
+            captured["tool_call_id"] = tool_call_id
         captured["capture_origin"] = "sdk_callback" if display_fields is not None else "adapter_generated"
         display_fields = dict(display_fields or {})
         display_sensitive = self.service.detector.classify(json.dumps(display_fields, ensure_ascii=False), event.source_uri)
@@ -246,7 +252,6 @@ class OpenHandsMemoryRunner:
             captured["tool_args"] = {}
         self._captured_events.append(captured)
         self._event_types[event.event_type] += 1
-        tool_call_id = self.adapter.tool_call_id_for(event.event_id)
         tool_key = tool_call_id or event.turn_id
         if event.event_type == "tool_call" and event.tool_name in {"", "terminal"}:
             command = str(event.tool_args.get("command") or "").strip()
@@ -573,7 +578,7 @@ class OpenHandsMemoryRunner:
         intent = None
         if preferred_tool:
             if any(
-                command_executable(command) == preferred_tool
+                preferred_tool in shell_command_executables(command)
                 for command in successful_terminal_commands(self._live_events)
             ):
                 result["reason"] = "successful preferred tool already available"
@@ -1049,14 +1054,12 @@ def _runtime_preference_effect_proofs(
     ):
         successful_commands = terminal_commands(events)
     terminal_command = successful_commands[0] if successful_commands else ""
-    final_response = ""
-    for event in events:
-        event_type = str(event.get("event_type") or "")
-        args = event.get("tool_args") if isinstance(event.get("tool_args"), dict) else {}
-        if event_type == "assistant_message":
-            final_response = str(event.get("content") or final_response)
-        if event_type == "tool_call" and str(event.get("tool_name") or "") == "finish":
-            final_response = str(args.get("message") or args.get("summary") or "")
+    final_response = final_visible_output(events)
+    if not final_response:
+        for event in events:
+            args = event.get("display_tool_args", event.get("tool_args")) or {}
+            if event.get("event_type") == "tool_call" and event.get("tool_name") == "finish":
+                final_response = str(args.get("message") or args.get("summary") or "")
 
     proofs = []
     seen = set()
@@ -1073,7 +1076,9 @@ def _runtime_preference_effect_proofs(
                 continue
             seen.add(key)
             if stage == "tool_selection":
-                actual = {"command": terminal_command} if terminal_command else {}
+                relevant = next((command for command in successful_commands
+                                 if str(memory.get("preference_value") or "") in shell_command_executables(command)), terminal_command)
+                actual = {"command": relevant} if relevant else {}
             else:
                 actual = {
                     "response": final_response,

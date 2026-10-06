@@ -134,7 +134,8 @@ class OpenHandsEventAdapter:
             raw_event,
             event_type="task_error",
             role="assistant",
-            content=str(getattr(raw_event, "error", "")),
+            content=str(getattr(raw_event, "error", "") or getattr(raw_event, "error_message", "")
+                        or getattr(raw_event, "message", "")),
             tool_name=str(getattr(raw_event, "tool_name", "")),
             exit_code=1,
             turn_id=self._turn_id(),

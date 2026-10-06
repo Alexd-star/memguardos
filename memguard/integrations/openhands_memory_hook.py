@@ -253,17 +253,42 @@ def violates_code_search_preference(command, preferred_tool):
     return False
 
 
-def _shell_command_executables(command):
-    normalized = " ".join(str(command or "").strip().split())
+def shell_command_executables(command, _depth=0):
+    """Inspect shell invocations without splitting quoted patterns or running them."""
+    normalized = str(command or "").strip()
     if not normalized:
         return []
+    if _depth > 8 or len(normalized) > 65536:
+        return []
+    lexer = shlex.shlex(normalized, posix=False, punctuation_chars=";&|()\n")
+    lexer.whitespace = " \t\r"
+    lexer.whitespace_split = True
+    segments, current = [], []
+    try:
+        for token in lexer:
+            if len(segments) + len(current) > 4096:
+                return []
+            if token and all(char in ";&|()\n" for char in token):
+                if current:
+                    segments.append(current)
+                    current = []
+            else:
+                # non-POSIX lexing retains quote boundaries, so a literal ';'
+                # remains an argument instead of becoming a command separator.
+                if token[:1] in {"'", '"'} and token[-1:] == token[:1]:
+                    values = shlex.split(token)
+                    token = values[0] if values else ""
+                current.append(token)
+    except ValueError:
+        return []
+    if current:
+        segments.append(current)
     executables = []
-    for segment in re.split(r"(?:&&|\|\||[;|])", normalized):
-        try:
-            tokens = shlex.split(segment.strip())
-        except ValueError:
-            tokens = segment.strip().split()
+    for tokens in segments:
         while tokens:
+            if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", tokens[0]):
+                tokens.pop(0)
+                continue
             name = Path(tokens[0]).name
             if name == "sudo":
                 tokens.pop(0)
@@ -300,7 +325,7 @@ def _shell_command_executables(command):
             )
             if command_flag >= 0 and command_flag + 1 < len(tokens):
                 executables.extend(
-                    _shell_command_executables(tokens[command_flag + 1])
+                    shell_command_executables(tokens[command_flag + 1], _depth + 1)
                 )
                 continue
         if executable == "git" and len(tokens) > 1 and tokens[1] == "grep":
@@ -315,6 +340,10 @@ def _shell_command_executables(command):
             if index + 1 < len(tokens):
                 executables.append(Path(tokens[index + 1]).name)
     return executables
+
+
+def _shell_command_executables(command):
+    return shell_command_executables(command)
 
 
 def violates_test_runner_preference(command, preferred_command):

@@ -23,7 +23,7 @@ if "--installed" not in sys.argv and str(ROOT) not in sys.path:
 from memguard.api.server import handle_request  # noqa: E402
 from memguard.eval.real_agent_behavior import evaluate_real_agent_run  # noqa: E402
 from memguard.integrations.adherence import (  # noqa: E402
-    command_executable,
+    shell_command_executables,
     detect_adherence_issues,
     final_visible_output,
     successful_terminal_commands,
@@ -259,7 +259,7 @@ class Showcase:
                 base_url=self.args.base_url,
                 api_key=self.secret,
                 context_token_budget_per_stage=2000,
-                max_iterations=6,
+                max_iterations=getattr(self.args, "max_iterations", 10),
                 tool_profile="terminal",
                 memory_enabled=enabled,
             )
@@ -345,7 +345,7 @@ class Showcase:
                 and not any(stage.get("memories") for stage in stages.values()),
             )
         if expected_tool and not any(
-            command_executable(command) == expected_tool for command in commands
+            expected_tool in shell_command_executables(command) for command in commands
         ):
             failures.append("no successful native preferred search tool")
         if self.current["task"] == SEARCH_TASK and not commands:
@@ -793,6 +793,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--installed", action="store_true")
+    parser.add_argument("--max-iterations", type=int, default=10)
     parser.add_argument("--model", default=os.environ.get("OPENHANDS_MODEL", ""))
     parser.add_argument(
         "--base-url",
@@ -805,6 +806,8 @@ def main(argv=None):
         default=os.environ.get("OPENHANDS_API_KEY_ENV", "OPENHANDS_API_KEY"),
     )
     args = parser.parse_args(argv)
+    if not 1 <= args.max_iterations <= 50:
+        parser.error("--max-iterations must be between 1 and 50")
     if args.output_dir.exists():
         parser.error("--output-dir must be a fresh, nonexistent directory")
     if not args.model.strip():

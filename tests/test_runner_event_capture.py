@@ -105,6 +105,16 @@ def test_adherence_uses_actual_sdk_display_text(runtime):
     assert final_visible_output(runner.recorded_events()) == answer
 
 
+def test_capture_keeps_sdk_error_reason(runtime):
+    _, runner = runtime
+    runner.on_event(
+        sdk_event(
+            "AgentErrorEvent", id="error", error_message="Maximum iterations reached"
+        )
+    )
+    assert "Maximum iterations" in runner.recorded_events()[0]["content"]
+
+
 def test_capture_omits_secrets_even_when_memory_is_disabled(runtime):
     _, runner = runtime
     runner.memory_enabled = False

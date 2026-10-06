@@ -19,12 +19,17 @@ from memguard.integrations.openhands_runner import (
     task_requires_terminal_evidence,
 )
 from memguard.service import MemGuardService
+from memguard.sensitivity.detector import SensitiveDetector
 from scripts.run_openhands_memguard_demo import build_parser as build_agent_demo_parser
 from scripts.verify_video_demo import _source_dirty, _source_revision
 
 
 class _NoMemoryService:
     namespace = "demo-test"
+    detector = SensitiveDetector()
+    _sanitize_interaction_event = MemGuardService._sanitize_interaction_event
+    _safe_provenance_uri = MemGuardService._safe_provenance_uri
+    _redact_tool_args = MemGuardService._redact_tool_args
 
     def build_agent_context(self, **kwargs):
         raise AssertionError("memory-off run must not build memory context")

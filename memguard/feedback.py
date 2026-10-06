@@ -12,6 +12,8 @@ import json
 import re
 from typing import Any, Iterable, Mapping
 
+from memguard.integrations.openhands_memory_hook import shell_command_executables
+
 
 @dataclass
 class MemoryChangeSummary:
@@ -305,7 +307,7 @@ def build_preference_effect_proof(
     value = normalized_preference["value"]
     if topic == "code_search_tool" and value:
         command = str(actual.get("command") or "")
-        if re.search(r"(?:^|\s|[|;&])%s(?:\s|$)" % re.escape(value), command):
+        if value in shell_command_executables(command):
             proof.compliance = "passed"
         else:
             proof.compliance = "failed"

@@ -8,6 +8,8 @@ import re
 import shlex
 import sys
 
+from memguard.integrations.openhands_memory_hook import shell_command_executables
+
 
 def detect_adherence_issues(
     stages: Dict[str, object],
@@ -20,9 +22,10 @@ def detect_adherence_issues(
     issues = []
     preferred_search = preferences.get("code_search_tool", "")
     observed_search_tools = [
-        command_executable(command)
+        tool
         for command in commands
-        if command_executable(command) in {"rg", "grep"}
+        for tool in shell_command_executables(command)
+        if tool in {"rg", "grep", "egrep", "fgrep", "git grep"}
     ]
     conflicting_search_tools = [
         tool for tool in observed_search_tools if tool != preferred_search
@@ -191,7 +194,7 @@ def successful_terminal_commands(
     events: list[Dict[str, object]],
 ) -> list[str]:
     commands = []
-    pending: Dict[str, list[str]] = {}
+    pending: Dict[str, list[tuple[str, str]]] = {}
     pending_policy: Dict[str, Dict[str, bool]] = {}
     for event in events:
         event_type = str(event.get("event_type") or "")
@@ -207,16 +210,18 @@ def successful_terminal_commands(
             if tool_name != "terminal":
                 pending_policy.pop(tool_name, None)
                 continue
-            command = " ".join(
-                str(dict(event.get("tool_args") or {}).get("command") or "").split()
-            )
+            command = str(dict(event.get("display_tool_args", event.get("tool_args")) or {}).get("command") or "").strip()
             policy = pending_policy.pop(tool_name, {})
             if command and not policy.get("denied"):
-                pending.setdefault(tool_name, []).append(command)
+                pending.setdefault(tool_name, []).append((str(event.get("tool_call_id") or ""), command))
         elif event_type == "tool_result":
             queue = pending.get(tool_name) or []
             if queue:
-                command = queue.pop(0)
+                call_id = str(event.get("tool_call_id") or "")
+                index = next((index for index, (key, _) in enumerate(queue) if key == call_id), -1) if call_id else 0
+                if index < 0:
+                    continue
+                _, command = queue.pop(index)
                 if int(event.get("exit_code") or 0) == 0:
                     commands.append(command)
     return commands
@@ -279,17 +284,18 @@ def response_starts_with_command_or_conclusion(
     fence = re.match(r"^(?:```|~~~)[A-Za-z0-9_+-]*[ \t]*\n", clean)
     if fence:
         clean = clean[fence.end():].lstrip()
-    if clean.startswith(("命令", "结论", "Command", "Conclusion", "$")):
+    if clean.startswith(("命令", "结论", "Command", "Conclusion", "$",
+                         "实际命令", "实际搜索命令", "可复制命令", "可执行命令", "搜索命令", "建议命令")):
         return True
     first_line = clean.splitlines()[0].strip() if clean else ""
     for command in commands:
-        executable = command_executable(command)
         if first_line.startswith(command):
             return True
-        if executable and first_line.startswith(
-            (executable + " ", "`" + executable + " ", "$ " + executable + " ")
-        ):
-            return True
+        for executable in shell_command_executables(command):
+            if executable and first_line.startswith(
+                (executable + " ", "`" + executable + " ", "$ " + executable + " ")
+            ):
+                return True
     return False
 
 
