@@ -82,6 +82,8 @@ MemGuardOS 是部署在本机的 OS Agent 记忆层。它接收用户与 Agent �
 
 仓库以可安装、可运行、可评测和可复现为整理原则，源代码、原生组件、安装资产、测试、正式文档与验证证据各自归入明确目录；发行版通过版本标签和 SHA-256 清单提供可追溯交付。
 
+根目录另外保留 `LICENSE`、`.gitignore`、`.gitattributes`、`.github/`、`.devcontainer/`、`Dockerfile` 和 `.dockerignore` 等工程配置，以便仓库平台识别许可证、自动执行 CI，并正确处理忽略规则、换行和容器构建。构建容器使用 `docker build -t memguardos .`，容器内部在 `/workspace/src` 运行源码及根目录测试。
+
 <a id="系统架构"></a>
 
 ## 🧭 系统架构总览
@@ -200,7 +202,7 @@ MemGuardOS 将“记住、用好、忘干净”串成一个可验证的本地闭
 Python 3.10 及以上环境可以直接从源码安装：
 
 ```bash
-git clone https://github.com/Alexd-star/memguardos.git
+git clone --branch master https://github.com/Alexd-star/memguardos.git
 cd memguardos/src
 python3 -m venv .venv
 source .venv/bin/activate
@@ -239,7 +241,7 @@ memguard audit
 需要复现当前 `main` 的最新代码时，建议在 openKylin 构建机准备 `qmake`、`pkg-config`、`libpeony-dev`、`libukcc-dev` 和 Qt5 开发包，然后直接从源码构建并安装五包：
 
 ```bash
-git clone https://github.com/Alexd-star/memguardos.git
+git clone --branch master https://github.com/Alexd-star/memguardos.git
 cd memguardos/src
 bash scripts/build_ukui_plugins.sh
 bash scripts/install_deb_package_set.sh
@@ -467,7 +469,7 @@ flowchart TB
 | 价值感知记忆预算 | openKylin 隔离空间中的价值、风险、字节成本和可逆降级计划 | 保护显式偏好，按单位存储成本排序普通记忆，确认后降级到 session 层并保留版本链 | [预算治理证据](tests/evidence/openkylin/memory_budget_evidence_20261007.json) |
 | openKylin 10k 负载 | 10,000 条记忆、150 次查询 | P95 10.105 ms，P99 75.255 ms，RSS 低于 256 MB 目标 | [性能证据](tests/evidence/performance_latest/) |
 | 检索 v2 三轮 | openKylin、1,000 条、120 次查询、6 worker | 三轮 Recall@5 均为 1.0000；质量路径和并发路径 P99 均低于 500 ms | [三轮门禁摘要](tests/evidence/openkylin/retrieval_v2.txt) |
-| 持续集成与发布门禁 | Python 3.10、3.11、3.12 | 编译、静态检查、完整测试、隔离安装、文档链接、安全扫描、Web 烟测、评测与提交包复验全部通过 | [CI 配置](src/.github/workflows/ci.yml)与[证据索引](tests/evidence/README.md) |
+| 持续集成与发布门禁 | Python 3.10、3.11、3.12 | 编译、静态检查、完整测试、隔离安装、文档链接、安全扫描、Web 烟测、评测与提交包复验全部通过 | [CI 配置](.github/workflows/ci.yml)与[证据索引](tests/evidence/README.md) |
 
 评测体系从检索到真实行为形成完整链路：Recall@5、跨语言召回和遗忘候选精度衡量记忆处理质量，工具调用、任务完成、偏好遵循与敏感泄漏率衡量 Agent 实际效果，P95/P99、资源占用和安装验证衡量端侧运行与系统交付质量。原始结果、执行命令、运行环境和对应 Git 修订均可复核。
 
@@ -529,6 +531,6 @@ MemGuardOS 对受管事件、元数据、FTS、图谱、向量缓存、结果缓
 
 ## 🤝 贡献与开源
 
-项目采用 [MIT License](src/LICENSE)。开发环境、代码边界、测试规范和扩展方式统一收录在[开发者指南](src/docs/developer-guide.md)中；新增功能应同时提供测试、用户可理解的错误反馈和必要文档。
+项目采用 [MIT License](LICENSE)。开发环境、代码边界、测试规范和扩展方式统一收录在[开发者指南](src/docs/developer-guide.md)中；新增功能应同时提供测试、用户可理解的错误反馈和必要文档。
 
 MemGuardOS 起源于第三届中国研究生操作系统开源创新大赛“面向 openKylin 的智能体记忆提取与精准遗忘机制”赛题，现按可独立安装、可接入和可审计的开源项目维护。赛题要求与实现映射见 [赛题符合性](src/docs/competition.md)。

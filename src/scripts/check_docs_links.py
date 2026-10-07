@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY_ROOT = ROOT.parent if ROOT.name == "src" else ROOT
 DOC_PATHS = [ROOT / "README.md", ROOT / "docs"]
 if ROOT != REPOSITORY_ROOT:
-    DOC_PATHS += [REPOSITORY_ROOT / "README.md", REPOSITORY_ROOT / "demo", REPOSITORY_ROOT / "tests" / "README.md"]
+    DOC_PATHS += [REPOSITORY_ROOT / "README.md", REPOSITORY_ROOT / "demo", REPOSITORY_ROOT / "tests" / "README.md", REPOSITORY_ROOT / ".github"]
 LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 IGNORE_PREFIXES = ("http://", "https://", "mailto:", "#")
 

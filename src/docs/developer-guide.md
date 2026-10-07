@@ -3,7 +3,7 @@
 ## 1. 目录结构
 
 ```text
-memguardos/
+memguardos/src/
   memguard/
     cli/               # memctl 命令行
     eval/              # 基准评测与报告生成
@@ -22,7 +22,7 @@ memguardos/
   data/benchmarks/
   docs/
   scripts/
-  tests/
+  ../tests/            # 根目录测试用例
 ```
 
 ## 2. 记忆卡片

@@ -28,7 +28,7 @@ dependencies = []
 [project.urls]
 Homepage = "https://github.com/Alexd-star/memguardos"
 Repository = "https://github.com/Alexd-star/memguardos"
-Documentation = "https://github.com/Alexd-star/memguardos/tree/main/docs"
+Documentation = "https://github.com/Alexd-star/memguardos/tree/master/src/docs"
 Issues = "https://github.com/Alexd-star/memguardos/issues"
 
 [project.scripts]

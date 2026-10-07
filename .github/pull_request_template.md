@@ -8,7 +8,9 @@
 
 ## 验证
 
-- [ ] `python -m ruff check memguard tests scripts`
+以下命令在 `src/` 中执行。
+
+- [ ] `python -m ruff check memguard ../tests scripts`
 - [ ] `python -m pytest -q`
 - [ ] `python scripts/check_docs_links.py`
 - [ ] 如影响 openKylin：已在 openKylin 复跑相关脚本

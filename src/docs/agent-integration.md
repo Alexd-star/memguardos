@@ -110,7 +110,7 @@ memguard-agent-setup
 该命令使用 Python 3.12 或更高版本，在 `~/.local/share/memguardos/agent-venv` 创建用户级运行环境，不修改系统 Python。源码开发者也可以显式传入项目目录，继续使用仓库内虚拟环境：
 
 ```bash
-cd ~/memguardos
+cd ~/memguardos/src
 bash scripts/install_agent_extras_openkylin.sh "$(pwd)"
 ```
 
@@ -165,7 +165,7 @@ export OPENHANDS_MODEL_CANONICAL_NAME=gpt-4o-mini
 
 ```powershell
 ssh -R 17897:127.0.0.1:7897 luo@<openKylin虚拟机IP> `
-  "cd ~/memguardos && HTTPS_PROXY=http://127.0.0.1:17897 HTTP_PROXY=http://127.0.0.1:17897 <运行命令>"
+  "cd ~/memguardos/src && HTTPS_PROXY=http://127.0.0.1:17897 HTTP_PROXY=http://127.0.0.1:17897 <运行命令>"
 ```
 
 远程模型 API 能显著提高演示流畅度，但它不是 MemGuardOS 的硬依赖。正式说明时应明确：远程模型验证的是“现有 OpenHands Agent + 远程模型 + MemGuardOS 适配器”的完整闭环；不是证明模型本身被本项目训练，也不是把 API 服务能力算作记忆系统能力。

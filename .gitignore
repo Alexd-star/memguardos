@@ -5,9 +5,12 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .venv/
+.venv-agent/
+.worktrees/
 build/
 dist/
 output/
+outputs/
 *.egg-info/
 *.pyc
 *.pyo

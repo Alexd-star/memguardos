@@ -3,7 +3,7 @@
 ## 1. 本地开发验证
 
 ```powershell
-cd <项目目录>\memguardos
+cd <项目目录>\memguardos\src
 python -m pytest -q
 python -m memguard.eval.run_eval --latency-size 1000 --latency-queries 120 --output output/eval_result.json --markdown output/eval_report.md
 python scripts/demo_smoke.py
@@ -15,7 +15,7 @@ python scripts/web_dashboard_smoke.py
 在 openKylin 虚拟机中进入项目目录：
 
 ```bash
-cd ~/memguardos
+cd ~/memguardos/src
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
@@ -311,7 +311,7 @@ MemGuardOS 提供 `.deb` 打包脚本，用于把项目从“源码目录运行�
 构建安装包：
 
 ```bash
-cd ~/memguardos
+cd ~/memguardos/src
 bash scripts/build_deb.sh
 ```
 

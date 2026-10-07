@@ -1,7 +1,7 @@
 """Build and verify the official finals repository layout."""
 
 from pathlib import Path
-from zipfile import ZipFile, ZIP_DEFLATED
+from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 import hashlib
 import json
 import subprocess
@@ -10,7 +10,7 @@ import subprocess
 SOURCE_ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY_ROOT = SOURCE_ROOT.parent
 REQUIRED = {
-    "README.md", "src/pyproject.toml", "src/memguard/service.py",
+    "README.md", "LICENSE", ".gitignore", ".gitattributes", ".github/workflows/ci.yml", "src/pyproject.toml", "src/memguard/service.py",
     "docs/项目说明书.pdf", "docs/项目创新说明.pdf",
     "docs/成员分工及主要贡献说明.pdf", "docs/人工智能及第三方工具使用说明.pdf",
     "presentation/决赛现场演示PPT.pptx", "presentation/决赛演示视频.mp4",
@@ -29,7 +29,7 @@ def inspect_final_archive(package: Path, manifest: Path | None) -> dict:
         packages = sorted(name for name in names if name.startswith("demo/packages/") and name.endswith(".deb"))
         video_size = archive.getinfo("presentation/决赛演示视频.mp4").file_size if "presentation/决赛演示视频.mp4" in names else 0
     missing = sorted(REQUIRED - names)
-    allowed = {"README.md", "src", "docs", "tests", "demo", "presentation", "作品原创承诺书.pdf"}
+    allowed = {"README.md", "LICENSE", ".gitignore", ".gitattributes", ".github", ".devcontainer", ".dockerignore", "Dockerfile", "src", "docs", "tests", "demo", "presentation", "作品原创承诺书.pdf"}
     unexpected = sorted(name for name in names if name.split("/")[0] not in allowed)
     forbidden = sorted(name for name in names if "__pycache__" in Path(name).parts or name.endswith((".pyc", ".sqlite3", ".segment")))
     manifest_ok = False
@@ -46,8 +46,13 @@ def inspect_final_archive(package: Path, manifest: Path | None) -> dict:
 
 
 def build_final_archive(output_dir: Path, timestamp: str, kind: str) -> None:
-    names = subprocess.check_output(["git", "ls-files", "-z"], cwd=REPOSITORY_ROOT).decode("utf-8").split("\0")
-    files = [REPOSITORY_ROOT / name for name in names if name and (REPOSITORY_ROOT / name).is_file()]
+    index = subprocess.check_output(["git", "ls-files", "--stage", "-z"], cwd=REPOSITORY_ROOT).decode("utf-8").split("\0")
+    modes = {}
+    for entry in index:
+        if entry:
+            metadata, name = entry.split("\t", 1)
+            modes[name] = int(metadata.split()[0], 8)
+    files = [REPOSITORY_ROOT / name for name in modes if (REPOSITORY_ROOT / name).is_file()]
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPOSITORY_ROOT, text=True).strip()
     output_dir.mkdir(parents=True, exist_ok=True)
     kinds = ["competition_submission", "full_repository"] if kind == "all" else ["competition_submission" if kind == "competition" else "full_repository"]
@@ -57,7 +62,11 @@ def build_final_archive(output_dir: Path, timestamp: str, kind: str) -> None:
         with ZipFile(archive_path, "w", ZIP_DEFLATED, compresslevel=6) as archive:
             for path in files:
                 relative = path.relative_to(REPOSITORY_ROOT).as_posix()
-                archive.write(path, relative)
+                info = ZipInfo.from_file(path, relative)
+                info.create_system = 3
+                info.compress_type = ZIP_DEFLATED
+                info.external_attr = modes[relative] << 16
+                archive.writestr(info, path.read_bytes())
                 entries.append({"path": relative, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "bytes": path.stat().st_size})
         manifest_path = archive_path.with_name(archive_path.stem + "_manifest.json")
         manifest_path.write_text(json.dumps({"layout": "official_finals", "source_revision": revision, "files": entries,

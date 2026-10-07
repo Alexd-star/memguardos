@@ -2,7 +2,7 @@
   "name": "MemGuardOS",
   "build": {
     "dockerfile": "../Dockerfile",
-    "context": "../.."
+    "context": ".."
   },
   "customizations": {
     "vscode": {

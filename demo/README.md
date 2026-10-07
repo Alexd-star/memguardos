@@ -7,14 +7,14 @@
 在 openKylin 2.0 SP2 x86_64 的仓库根目录执行：
 
 ```bash
-cd demo/packages
-sha256sum -c SHA256SUMS.txt
-sudo apt install ./memguardos-core_*.deb ./memguardos-ukui_*.deb ./memguardos-agent-bridge_*.deb ./memguardos-doc_*.deb ./memguardos_[0-9]*_all.deb
+bash demo/install.sh
 memguard status
 systemctl status memguardd --no-pager
 ```
 
 ## 核心流程复现
+
+安装脚本沿用源码中的五包安装与核验链路，先检查 SHA-256、包名、版本和架构，再核对已安装文件及服务状态。openKylin 的不可变系统处于普通模式时，会提示进入维护模式后重新执行。
 
 从根目录进入 `src`，安装项目后即可复现无需外部模型的核心闭环：
 

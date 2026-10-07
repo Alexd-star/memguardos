@@ -644,7 +644,7 @@ def test_submission_archive_smoke_command_names_are_stable():
 
 def test_python_distribution_smoke_is_required_for_release():
     source = (ROOT / "scripts/smoke_python_distribution.py").read_text(encoding="utf-8")
-    workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    workflow = (ROOT.parent / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert "memguard.resources" in source
     assert "openhands_memory_hook" in source
     assert "smoke_python_distribution.py" in workflow

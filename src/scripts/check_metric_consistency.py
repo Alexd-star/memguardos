@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = ROOT.parent if ROOT.name == "src" else ROOT
 
 # 文档中出现这些"权威指标"时，紧跟其后的反引号数字必须与结果 JSON 一致。
 TRACKED_METRICS = {
@@ -58,7 +59,7 @@ def main() -> int:
 
     problems = []
     for relative in CHECKED_DOCS:
-        path = ROOT / relative
+        path = (REPOSITORY_ROOT if relative == "README.md" else ROOT) / relative
         if not path.exists():
             continue
         text = path.read_text(encoding="utf-8")

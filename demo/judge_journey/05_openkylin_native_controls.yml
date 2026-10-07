@@ -1,18 +1,15 @@
-title: "openKylin 原生控制与交付证据"
-goal: "展示 UKUI 控制中心、Peony 右键、托盘、systemd/cgroup、Polkit 和分包安装证据。"
-commands:
-  - "bash scripts/verify_ukui_plugins.sh"
-  - "python scripts/check_competition_ready.py --output docs/competition_ready.json --markdown docs/竞赛就绪自检报告.md"
-expected_outputs:
-  - "Peony/UKUI/托盘资产存在且可校验"
-  - "memguardd.service 受 systemd/cgroup 管理"
-  - "五个 Debian 包生命周期证据存在"
-evidence_files:
-  - "docs/evidence/openkylin_native_latest/openkylin_status.txt"
-  - "docs/evidence/openkylin_native_latest/tray_assets.txt"
-  - "docs/evidence/openkylin_native_latest/debian_packages.txt"
-judge_talking_points:
-  - "MemGuardOS 是 openKylin-first 的 OS Agent 记忆安全底座，不只是 Web 插件。"
-  - "桌面增强项缺失时不会伪造结果，而是给出可复验 fallback。"
-fallback_if_environment_missing:
-  - "若不在 openKylin，脚本只检查文件资产和文档证据，并提示需要在 openKylin 上复验。"
+{
+  "title": "openKylin 五包与原生集成",
+  "goal": "核验提交的安装包哈希，并查看 openKylin 实机安装和桌面集成材料。",
+  "commands": [
+    [
+      "python",
+      "scripts/verify_final_submission.py"
+    ]
+  ],
+  "evidence_files": [
+    "demo/packages/memguardos_debian_packages.json",
+    "tests/evidence/real_agent_20261006/package_payload_normal_v9.json",
+    "tests/evidence/openkylin/desktop_plugins.txt"
+  ]
+}

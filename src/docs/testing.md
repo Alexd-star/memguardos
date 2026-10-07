@@ -21,7 +21,7 @@
 
 ```bash
 python -m compileall -q memguard scripts
-python -m ruff check memguard tests scripts
+python -m ruff check memguard ../tests scripts
 python -m pytest -q
 python scripts/check_docs_links.py
 python scripts/check_metric_consistency.py
@@ -126,7 +126,7 @@ python -m memguard.eval.action_contract \
 `scripts/collect_consolidation_evidence.py` 使用隔离的临时存储生成可归档证据，不读取或修改操作者的正式记忆空间。openKylin 原生采集脚本会自动运行它，输出包含系统平台、Git 修订、候选分类、确认前后结果和旧计划 CAS 拒绝结果的 `consolidation_evidence.json`；该文件可与桌面入口、Agent 和系统服务证据放在同一份真机证据包中。
 
 ```bash
-python -m pytest -q tests/test_consolidation.py
+python -m pytest -q ../tests/test_consolidation.py
 python -m memguard.cli.memctl --help | findstr consolidation
 python scripts/collect_consolidation_evidence.py --output output/consolidation_evidence.json
 ```
@@ -146,7 +146,7 @@ memctl consolidate --plan-file consolidation-plan.json --select mem_example --ye
 `tests/test_decay_policy.py` 验证长期记忆健康度策略：长期未使用且低分的知识进入 `demote_to_session`，明确偏好和有检索命中的记忆继续保留；降级前需要确认，降级后产生新的 session 版本，旧计划和版本变化会被拒绝。`scripts/collect_decay_evidence.py` 使用隔离存储生成结构化环境、计划、动作和 CAS 结果，openKylin 采集脚本会将其写入 `decay_evidence.json`。
 
 ```bash
-python -m pytest -q tests/test_decay_policy.py
+python -m pytest -q ../tests/test_decay_policy.py
 python scripts/collect_decay_evidence.py --output output/decay_evidence.json
 memctl decay-plan --max-age-days 30 --score-threshold 0.35 > decay-plan.json
 memctl decay --plan-file decay-plan.json --target-session-id maintenance-review
@@ -157,7 +157,7 @@ memctl decay --plan-file decay-plan.json --target-session-id maintenance-review
 `tests/test_context_compaction.py` 验证上下文表示层的三个边界：规划阶段的普通知识可以压缩为摘要，工具选择阶段的偏好保留可执行指令和来源，程序性流程在行动阶段保留完整步骤；上下文收据会记录表示映射、压缩原因和预计节省量。测试同时检查 `full` 策略仍可用于离线复核，且压缩不会改写记忆正文。
 
 ```bash
-python -m pytest -q tests/test_context_compaction.py
+python -m pytest -q ../tests/test_context_compaction.py
 python -m memguard.cli.memguard --workspace "$PWD" context \
   "查找项目构建流程" --stage planning --token-budget 500
 ```
@@ -169,7 +169,7 @@ openKylin 采集脚本会在隔离存储中运行 `scripts/collect_context_compa
 `tests/test_action_feedback.py` 将执行前行动契约与外部结果回写放在同一条测试链路中：代码搜索偏好先返回 `redirect`，实际改用 `rg` 后记录 `success`；实际仍使用 `grep` 时记录 `deviation`，不会伪装成成功强化；重复提交同一幂等键只保留一条；记忆版本变化后旧收据不能回写；精准遗忘会同步删除与该记忆关联的行动账本。`action_outcome_stats` 提供成功率和最近成功时间，衰减计划将真实成功证据作为保留信号，但显式偏好、敏感治理和版本状态仍优先。
 
 ```bash
-python -m pytest -q tests/test_action_feedback.py
+python -m pytest -q ../tests/test_action_feedback.py
 python scripts/collect_action_feedback_evidence.py --output output/action_feedback_evidence.json
 memctl agent record-outcome --preflight-file preflight.json \
   --tool-input '{"command":"rg -n target ."}' --exit-code 0
@@ -183,7 +183,7 @@ openKylin 采集脚本会在隔离存储中运行同一证据脚本，输出预�
 `tests/test_action_impact.py` 在同一 Agent、项目和任务类型下构造成功与失败的行动反馈，检查报告是否区分实际执行与拦截/未知状态，是否计算 Wilson 成功下界，是否给出同类观察性差值，以及小样本是否保持“继续观察”而不是直接判定稳定。报告不保存命令正文，也不会自行修改记忆层级。
 
 ```bash
-python -m pytest -q tests/test_action_impact.py
+python -m pytest -q ../tests/test_action_impact.py
 python scripts/collect_action_impact_evidence.py --output output/action_impact_evidence.json
 memctl agent action-impact --agent-name openhands --task-type code_search
 ```
@@ -195,7 +195,7 @@ openKylin 采集脚本使用同一 service、同一反馈表和同一门控逻�
 `tests/test_memory_budget.py` 验证长期存储预算的完整生命周期：候选同时输出价值、风险、估算字节数和单位字节价值；明确偏好保持在长期层；普通记忆按单位成本的净价值进入可逆降级计划；执行前必须确认；确认后追加 session 版本；计划所依赖的版本或正文大小发生变化时，旧计划返回 `stale_memory_budget_plan`。API 契约和独立证据脚本使用同一 service 实现，避免测试只验证展示层排序。
 
 ```bash
-python -m pytest -q tests/test_memory_budget.py
+python -m pytest -q ../tests/test_memory_budget.py
 python scripts/collect_memory_budget_evidence.py --output output/memory_budget_evidence.json
 memctl budget-plan --target-bytes 1048576 > budget-plan.json
 memctl budget --plan-file budget-plan.json --target-session-id budget-review
@@ -209,7 +209,7 @@ memctl budget --plan-file budget-plan.json --target-session-id budget-review --y
 `tests/test_memory_admission.py` 验证准入层的五个边界：人工明确偏好可以获得长期层建议，工具结果和行为轨迹在证据不足时保持会话层，高风险敏感内容直接阻断，预览接口不会创建记忆记录，开启 `enforce_admission` 后自动来源会实际写入会话层。测试同时调用 `agent_action_plan`，检查已有工具偏好能够转化为 `replace_then_execute` 闸门，并在计划中携带记忆版本和结果反馈要求。
 
 ```bash
-python -m pytest -q tests/test_memory_admission.py
+python -m pytest -q ../tests/test_memory_admission.py
 python scripts/collect_memory_admission_evidence.py --output output/memory_admission_evidence.json
 memctl admission-preview --text "工具结果：本次搜索使用 rg 成功" --source-kind tool_result
 memctl agent action-plan --task "查找 build_agent_context 的定义" --tool-name terminal --tool-input '{"command":"grep -n build_agent_context ."}'
