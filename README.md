@@ -475,7 +475,7 @@ flowchart TB
 
 ```bash
 python -m compileall -q memguard scripts
-python -m ruff check memguard tests scripts
+python -m ruff check memguard ../tests scripts
 python -m pytest -q
 python scripts/check_docs_links.py
 python scripts/check_metric_consistency.py
