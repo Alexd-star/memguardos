@@ -204,6 +204,19 @@ memctl budget --plan-file budget-plan.json --target-session-id budget-review --y
 
 预算中的字节数是可重复的持久化规模估算，用于候选比较、目标规划和提交前一致性校验；它不冒充底层文件系统精确计费。计划不会自动处理显式偏好、高敏感内容或治理状态异常记录，目标不可达时会如实返回 `target_reached: false`，而不是为了达到数字越过保护边界。
 
+### 5.8 记忆准入与动作计划回归
+
+`tests/test_memory_admission.py` 验证准入层的五个边界：人工明确偏好可以获得长期层建议，工具结果和行为轨迹在证据不足时保持会话层，高风险敏感内容直接阻断，预览接口不会创建记忆记录，开启 `enforce_admission` 后自动来源会实际写入会话层。测试同时调用 `agent_action_plan`，检查已有工具偏好能够转化为 `replace_then_execute` 闸门，并在计划中携带记忆版本和结果反馈要求。
+
+```bash
+python -m pytest -q tests/test_memory_admission.py
+python scripts/collect_memory_admission_evidence.py --output output/memory_admission_evidence.json
+memctl admission-preview --text "工具结果：本次搜索使用 rg 成功" --source-kind tool_result
+memctl agent action-plan --task "查找 build_agent_context 的定义" --tool-name terminal --tool-input '{"command":"grep -n build_agent_context ."}'
+```
+
+该专项证明的是写入和执行两端的确定性治理链路，不将“准入建议”冒充为模型自主学习，也不将动作计划的策略判定冒充为外部工具已经执行；真实 Agent 的最终效果仍由事件、工具结果和行动质量报告共同核验。
+
 ## 6. 记忆价值实验
 
 记忆价值实验分为两种口径。

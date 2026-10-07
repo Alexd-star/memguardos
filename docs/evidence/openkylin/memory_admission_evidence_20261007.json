@@ -1,0 +1,384 @@
+{
+  "schema": "memguardos-memory-admission-evidence-v1",
+  "platform": "Linux-6.6.0-25-generic-x86_64-with-glibc2.38",
+  "python": "3.12.2",
+  "cases": {
+    "explicit_user_preference": {
+      "schema": "memguardos-memory-admission-preview-v1",
+      "stored": false,
+      "persisted": false,
+      "source": {
+        "kind": "manual",
+        "uri_redacted": ""
+      },
+      "quality": {
+        "accepted": true,
+        "score": 1.0,
+        "issues": [],
+        "warnings": [],
+        "original_chars": 16,
+        "normalized_chars": 16,
+        "line_count": 1,
+        "source_kind": "manual"
+      },
+      "sensitivity": {
+        "level": "none",
+        "labels": [],
+        "redacted": false
+      },
+      "extraction": {
+        "memory_type": "preference",
+        "subtype": "tool_preference",
+        "confidence": 0.875,
+        "signals": [
+          "source_manual",
+          "preference_intent",
+          "tool_preference_intent"
+        ]
+      },
+      "governance": {
+        "trust_level": "trusted",
+        "trust_score": 0.95,
+        "governance_state": "active",
+        "reason": "direct user or verified local source",
+        "signals": []
+      },
+      "admission": {
+        "schema": "memguardos-memory-admission-v1",
+        "source_kind": "manual",
+        "requested_tier": "",
+        "inferred_tier": "long_term",
+        "memory_type": "preference",
+        "memory_subtype": "tool_preference",
+        "scope": {
+          "namespace": "admission-evidence",
+          "agent_name": "",
+          "session_id": "",
+          "project_root": "",
+          "task_type": ""
+        },
+        "signals": {
+          "explicit_request": true,
+          "automatic_source": false,
+          "verified_tool_evidence": false,
+          "quality_score": 1.0,
+          "extraction_confidence": 0.875,
+          "sensitivity_level": "none",
+          "governance_state": "active"
+        },
+        "factors": [
+          "用户明确输入或人工来源"
+        ],
+        "evidence_requirements": [],
+        "reversible": true,
+        "decision": "admit_long_term",
+        "recommended_tier": "long_term",
+        "review_required": false,
+        "reason": "用户明确表达了可复用意图，且未触发敏感或治理阻断。",
+        "next_action": "写入长期层，并保留来源、版本和后续遗忘路径。"
+      }
+    },
+    "automatic_tool_observation": {
+      "schema": "memguardos-memory-admission-preview-v1",
+      "stored": false,
+      "persisted": false,
+      "source": {
+        "kind": "tool_result",
+        "uri_redacted": ""
+      },
+      "quality": {
+        "accepted": true,
+        "score": 0.85,
+        "issues": [],
+        "warnings": [
+          "normalized_whitespace_or_control_chars",
+          "tool_result_missing_command_field"
+        ],
+        "original_chars": 25,
+        "normalized_chars": 25,
+        "line_count": 1,
+        "source_kind": "tool_result"
+      },
+      "sensitivity": {
+        "level": "none",
+        "labels": [],
+        "redacted": false
+      },
+      "extraction": {
+        "memory_type": "knowledge",
+        "subtype": "tool_trace",
+        "confidence": 0.8500000000000001,
+        "signals": [
+          "source_tool_result",
+          "tool_preference_intent"
+        ]
+      },
+      "governance": {
+        "trust_level": "controlled",
+        "trust_score": 0.7,
+        "governance_state": "active",
+        "reason": "structured local integration with provenance",
+        "signals": []
+      },
+      "admission": {
+        "schema": "memguardos-memory-admission-v1",
+        "source_kind": "tool_result",
+        "requested_tier": "",
+        "inferred_tier": "long_term",
+        "memory_type": "knowledge",
+        "memory_subtype": "tool_trace",
+        "scope": {
+          "namespace": "admission-evidence",
+          "agent_name": "",
+          "session_id": "evidence-session",
+          "project_root": "/var/tmp/memguardos-admission-_zqx72oh/project",
+          "task_type": ""
+        },
+        "signals": {
+          "explicit_request": false,
+          "automatic_source": true,
+          "verified_tool_evidence": false,
+          "quality_score": 0.85,
+          "extraction_confidence": 0.85,
+          "sensitivity_level": "none",
+          "governance_state": "active"
+        },
+        "factors": [
+          "自动观测来源",
+          "已绑定项目范围"
+        ],
+        "evidence_requirements": [
+          "至少 2 次独立观测",
+          "同一项目或任务范围内重复出现",
+          "至少 1 次成功使用反馈"
+        ],
+        "reversible": true,
+        "decision": "retain_session",
+        "recommended_tier": "session",
+        "review_required": false,
+        "reason": "自动观测尚未达到长期记忆的证据门槛。",
+        "next_action": "先保留在会话层，收集重复出现和动作结果后再进入巩固队列。"
+      }
+    },
+    "high_risk_sensitive": {
+      "schema": "memguardos-memory-admission-preview-v1",
+      "stored": false,
+      "persisted": false,
+      "source": {
+        "kind": "manual",
+        "uri_redacted": ""
+      },
+      "quality": {
+        "accepted": true,
+        "score": 1.0,
+        "issues": [],
+        "warnings": [],
+        "original_chars": 33,
+        "normalized_chars": 33,
+        "line_count": 1,
+        "source_kind": "manual"
+      },
+      "sensitivity": {
+        "level": "high",
+        "labels": [
+          "password_secret",
+          "token_assignment"
+        ],
+        "redacted": false
+      },
+      "extraction": {
+        "memory_type": "sensitive_policy",
+        "subtype": "security_policy",
+        "confidence": 0.875,
+        "signals": [
+          "source_manual",
+          "preference_intent",
+          "sensitive_secret_term"
+        ]
+      },
+      "governance": {
+        "trust_level": "trusted",
+        "trust_score": 0.95,
+        "governance_state": "active",
+        "reason": "direct user or verified local source",
+        "signals": []
+      },
+      "admission": {
+        "schema": "memguardos-memory-admission-v1",
+        "source_kind": "manual",
+        "requested_tier": "",
+        "inferred_tier": "long_term",
+        "memory_type": "sensitive_policy",
+        "memory_subtype": "security_policy",
+        "scope": {
+          "namespace": "admission-evidence",
+          "agent_name": "",
+          "session_id": "",
+          "project_root": "",
+          "task_type": ""
+        },
+        "signals": {
+          "explicit_request": true,
+          "automatic_source": false,
+          "verified_tool_evidence": false,
+          "quality_score": 1.0,
+          "extraction_confidence": 0.875,
+          "sensitivity_level": "high",
+          "governance_state": "active"
+        },
+        "factors": [
+          "用户明确输入或人工来源"
+        ],
+        "evidence_requirements": [],
+        "reversible": true,
+        "decision": "deny",
+        "recommended_tier": "none",
+        "review_required": false,
+        "reason": "高风险敏感内容不得进入记忆层。",
+        "next_action": "阻断写入；如确有业务需要，请在外部受控密钥或凭据系统中管理。"
+      }
+    },
+    "action_plan": {
+      "schema": "memguardos-agent-action-plan-v1",
+      "plan_id": "plan_6918c6890efe55958289c063",
+      "decision": "redirect",
+      "execution_gate": "replace_then_execute",
+      "task": "查找 build_agent_context 的定义",
+      "tool": {
+        "name": "terminal",
+        "input_digest": "6f28933d83179b33b4794723643f8c8cc3933c5c10fac498abaf161a98614d09"
+      },
+      "policy": {
+        "category": "preference_enforcement",
+        "reason": "拟执行的代码搜索工具与当前偏好不一致，建议改用 rg。",
+        "suggested_command": "rg -n build_agent_context .",
+        "confirmation_required": false
+      },
+      "evidence": [
+        {
+          "memory_id": "mem_933bf3a196f749d8",
+          "version_id": "ver_cf223fb25e46487a",
+          "topic": "code_search_tool"
+        }
+      ],
+      "context": {
+        "fingerprint": "2e273f23900b64644cf64e6d132ae8a832d00c03ed2fb0e8697adcc618214838",
+        "memory_count": 1
+      },
+      "feedback": {
+        "required": true,
+        "command": "record_agent_action_outcome",
+        "memory_evidence_count": 1
+      },
+      "next_step": "采用 suggested_command 或等价参数重新预检，确认通过后再执行。",
+      "privacy": "仅保存输入摘要、记忆版本和结构化策略；不保存命令正文或工具输出。",
+      "preflight": {
+        "decision": "redirect",
+        "policy_category": "preference_enforcement",
+        "reason": "拟执行的代码搜索工具与当前偏好不一致，建议改用 rg。",
+        "evidence": [
+          {
+            "memory_id": "mem_933bf3a196f749d8",
+            "version_id": "ver_cf223fb25e46487a",
+            "topic": "code_search_tool"
+          }
+        ],
+        "continue": false,
+        "preference_topic": "code_search_tool",
+        "expected_value": "rg",
+        "suggested_command": "rg -n build_agent_context .",
+        "task": "查找 build_agent_context 的定义",
+        "tool_name": "terminal",
+        "context_receipt": {
+          "schema": "memguardos-context-receipt-v1",
+          "fingerprint": "2e273f23900b64644cf64e6d132ae8a832d00c03ed2fb0e8697adcc618214838",
+          "task_digest": "508b3dfbc20ea76b1f28f946d62eb3cd9ba67ade45f2b9c999adad00e2b90359",
+          "memory_versions": {
+            "mem_933bf3a196f749d8": "ver_cf223fb25e46487a"
+          },
+          "selected_count": 1,
+          "filtered_count": 0,
+          "compaction": "adaptive",
+          "representations": {
+            "mem_933bf3a196f749d8": "evidence"
+          },
+          "scope": {
+            "agent_name": "evidence-agent",
+            "session_id": "evidence-action",
+            "project_root": "",
+            "stage": "tool_selection",
+            "task_type": ""
+          }
+        },
+        "context_memory_count": 1,
+        "scope": {
+          "agent_name": "evidence-agent",
+          "session_id": "evidence-action",
+          "project_root": "",
+          "task_type": ""
+        },
+        "outcome_feedback": {
+          "required_after_execution": true,
+          "command": "record_agent_action_outcome",
+          "memory_evidence_count": 1
+        }
+      }
+    },
+    "enforced_automatic_source": {
+      "recorded": true,
+      "tier": "session",
+      "admission": {
+        "schema": "memguardos-memory-admission-v1",
+        "source_kind": "tool_result",
+        "requested_tier": "",
+        "inferred_tier": "long_term",
+        "memory_type": "knowledge",
+        "memory_subtype": "tool_trace",
+        "scope": {
+          "namespace": "admission-evidence",
+          "agent_name": "",
+          "session_id": "enforced-evidence-session",
+          "project_root": "",
+          "task_type": ""
+        },
+        "signals": {
+          "explicit_request": false,
+          "automatic_source": true,
+          "verified_tool_evidence": false,
+          "quality_score": 0.85,
+          "extraction_confidence": 0.85,
+          "sensitivity_level": "none",
+          "governance_state": "active"
+        },
+        "factors": [
+          "自动观测来源"
+        ],
+        "evidence_requirements": [
+          "至少 2 次独立观测",
+          "同一项目或任务范围内重复出现",
+          "至少 1 次成功使用反馈"
+        ],
+        "reversible": true,
+        "decision": "retain_session",
+        "recommended_tier": "session",
+        "review_required": false,
+        "reason": "自动观测尚未达到长期记忆的证据门槛。",
+        "next_action": "已按准入策略保留在会话层，达到证据门槛后再提交巩固。",
+        "enforcement": "applied",
+        "enforced_tier": "session"
+      }
+    }
+  },
+  "checks": {
+    "explicit_admit_long_term": true,
+    "automatic_retain_session": true,
+    "sensitive_denied": true,
+    "preview_does_not_persist": true,
+    "action_plan_redirects_grep": true,
+    "action_plan_has_versioned_evidence": true,
+    "action_plan_requires_feedback": true,
+    "enforced_automatic_source_session": true,
+    "stored_count_after_enforced_ingest": true
+  },
+  "passed": true
+}

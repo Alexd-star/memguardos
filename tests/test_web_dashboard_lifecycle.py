@@ -67,6 +67,17 @@ def test_dashboard_exposes_agent_action_impact_quality_gate():
     assert "Wilson" not in section  # implementation detail stays in the JSON receipt
 
 
+def test_dashboard_exposes_admission_and_action_plan_workflows():
+    page = dashboard_module._dashboard_html()
+
+    assert "评估保存层级" in page
+    assert "admissionPreview" in page
+    assert "/api/admission-preview" in page
+    assert "记忆驱动动作计划" in page
+    assert "buildActionPlan" in page
+    assert "/api/agent-action-plan" in page
+
+
 def test_dashboard_separates_daily_actions_and_humanizes_agent_records():
     page = dashboard_module._dashboard_html()
 

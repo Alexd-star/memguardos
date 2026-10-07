@@ -13,6 +13,7 @@ CLI 是最常用入口，适合人工演示、脚本复验和调试。
 | `ingest-history` | 导入 shell history | history 文件 | 行为记忆写入结果 |
 | `ingest-tool-result` | 导入工具执行结果 | JSON 文件 | 程序性记忆和审计记录 |
 | `ingest-os-event` | 导入 OS 事件 | JSON/文本事件 | OS 事件记忆 |
+| `admission-preview` | 评估记忆准入 | 文本、来源、层级和作用域 | 不写入的长期/会话/工作层建议、证据门槛和阻断原因 |
 | `search` | 检索记忆 | 查询文本、top-k | 排序结果 |
 | `batch-search` | 批量检索 | 多个查询 | 每个查询的结果 |
 | `build-context` | 构建 RAG 上下文 | 查询、top-k、token 预算 | context package |
@@ -27,6 +28,7 @@ CLI 是最常用入口，适合人工演示、脚本复验和调试。
 | `memctl agent adapters` | 查看 Agent 适配能力 | 无 | 已注册适配器、事件类型、上下文阶段和检查点能力 |
 | `memctl agent ingest-adapted-session` | 接入通用 Agent JSONL 会话 | JSONL 文件、适配器与会话范围 | 规范化事件、提取结果、去重和审计摘要 |
 | `memctl agent preflight-action` | 在 Agent 工具执行前检查记忆约束 | 任务、工具名称、工具参数和作用域 | `allow`、`redirect`、`confirm` 或 `deny`，以及版本化记忆证据 |
+| `memctl agent action-plan` | 生成一次可执行的记忆驱动动作计划 | 任务、工具名称、工具参数和作用域 | 执行闸门、策略原因、版本证据和结果反馈要求 |
 | `memctl agent action-impact` | 汇总真实工具结果并评估记忆驱动动作质量 | 可选记忆、Agent、项目和任务类型 | 成功下界、遵循率、失败/偏离风险、同类观察性差值与质量门控 |
 | `memctl consolidation-plan` | 生成会话记忆巩固计划 | 会话编号、项目范围、数量上限 | 晋级、保留或清理复核候选，以及版本快照 |
 | `memctl consolidate` | 按审核计划晋级长期记忆 | 计划 JSON、可选记忆编号、确认标记 | 实际晋级、失败项和仍保留的会话记忆 |
@@ -39,7 +41,7 @@ CLI 是最常用入口，适合人工演示、脚本复验和调试。
 
 ## 2. Unix socket API
 
-Unix socket API 位于 `memguard/api/server.py`，用于本地 Agent 直接调用。请求是 JSON 对象，统一使用 `command` 字段表示动作名称，并携带对应参数。响应也是 JSON 对象，包含 `ok`、`result` 或 `error`。API 支持 `health`、`ingest`、`search`、`batch_search`、`build_context`、`preflight_agent_action`、`consolidation_plan`、`apply_consolidation`、`forget`、`audit` 等命令。
+Unix socket API 位于 `memguard/api/server.py`，用于本地 Agent 直接调用。请求是 JSON 对象，统一使用 `command` 字段表示动作名称，并携带对应参数。响应也是 JSON 对象，包含 `ok`、`result` 或 `error`。API 支持 `health`、`ingest`、`admission_preview`、`search`、`batch_search`、`build_context`、`preflight_agent_action`、`agent_action_plan`、`consolidation_plan`、`apply_consolidation`、`forget`、`audit` 等命令。
 
 根据当前代码推断，API 重点服务本机可信 Agent，不是公网服务。它支持请求大小限制和可选 token 校验。若要对外暴露，应增加更完整的鉴权、限流、TLS 和审计策略。
 
@@ -99,6 +101,39 @@ Unix socket API 位于 `memguard/api/server.py`，用于本地 Agent 直接调�
 ```
 
 返回结果包含 `decision`、`policy_category`、`reason`、`evidence` 和 `context_receipt`。`evidence` 只记录记忆编号与版本编号，不把完整记忆正文复制到行动审计中；上下文发生更新或遗忘后，旧收据会被拒绝。
+
+### 记忆准入预览
+
+`admission_preview` 在写入前把内容送入同一套质量检查、敏感检测、语义提取和来源治理流程，但不创建记忆记录。返回的 `memguardos-memory-admission-v1` 会给出 `admit_long_term`、`retain_session`、`retain_working`、`quarantine` 或 `deny`，并附带判断因素、作用域、证据门槛和下一步动作。人工明确表达的偏好保留用户意图；工具结果、行为轨迹等自动来源默认先留在会话层，避免一次性观测污染长期记忆。
+
+```json
+{
+  "command": "admission_preview",
+  "text": "工具结果：本次搜索使用 rg 成功，后续可能复用。",
+  "source_kind": "tool_result",
+  "session_id": "session-001",
+  "project_root": "/home/luo/project-alpha"
+}
+```
+
+CLI 等价命令为 `memctl admission-preview --text "以后搜索代码优先使用 rg" --source-kind manual`。该命令明确标注“本次没有写入记忆”，适合用户确认长期保存策略，也适合 Agent 适配器在自动摄取前执行准入检查。`ingest` 请求还可以设置 `enforce_admission: true`；此时自动来源会实际降为会话层，待复核内容不会落盘，人工来源的兼容行为保持不变。
+
+### Agent 记忆驱动动作计划
+
+`agent_action_plan` 将上下文收据、行动预检和反馈契约合并为一个 `memguardos-agent-action-plan-v1`。计划不执行工具，只给适配器一个可强制执行的闸门：`execute`、`replace_then_execute`、`user_confirmation` 或 `stop`。其中 `plan_id` 绑定任务摘要、工具输入摘要、上下文指纹和记忆版本；外部工具完成后应沿计划中的 `record_agent_action_outcome` 回写结构化结果。
+
+```json
+{
+  "command": "agent_action_plan",
+  "task": "搜索项目代码中的 build_agent_context",
+  "tool_name": "terminal",
+  "tool_input": {"command": "grep -n build_agent_context ."},
+  "agent_name": "local-agent",
+  "session_id": "session-001"
+}
+```
+
+CLI 等价命令为 `memctl agent action-plan --task "搜索项目代码中的 build_agent_context" --tool-name terminal --tool-input '{"command":"grep -n build_agent_context ."}'`。当已有偏好要求使用 `rg` 时，计划会把执行闸门标为 `replace_then_execute`，同时给出建议命令和对应记忆版本，避免只展示“检索到了偏好”却无法证明它影响了真实行动。
 
 ### Agent 行动结果反馈
 

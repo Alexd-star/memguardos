@@ -88,6 +88,25 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
         text = _string_param(request, "text", "", max_chars=200000)
         source_kind = _string_param(request, "source_kind", "manual", max_chars=64)
         return {"ok": True, "result": _jsonable(service.explain_extraction(text, source_kind=source_kind))}
+    if command == "admission_preview":
+        text = _string_param(request, "text", "", max_chars=200000)
+        if not text:
+            return {"ok": False, "error": "text_required"}
+        selected_tier = _string_param(request, "tier", "", max_chars=32) or None
+        return {
+            "ok": True,
+            "result": _jsonable(service.preview_memory_admission(
+                text,
+                source_kind=_string_param(request, "source_kind", "manual", max_chars=64),
+                source_uri=_string_param(request, "source_uri", "", max_chars=2048),
+                tier=selected_tier,
+                session_id=_string_param(request, "session_id", "", max_chars=256),
+                project_root=_string_param(request, "project_root", "", max_chars=2048),
+                agent_name=_string_param(request, "agent_name", "", max_chars=128),
+                task_type=_string_param(request, "task_type", "", max_chars=128),
+                verified_tool_evidence=bool(request.get("verified_tool_evidence", False)),
+            )),
+        }
     if command == "namespace_status":
         return {"ok": True, "result": service.namespace_status()}
     if command == "feedback_home":
@@ -471,6 +490,30 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                 )
             ),
         }
+    if command == "agent_action_plan":
+        task = _string_param(request, "task", "", max_chars=4096)
+        tool_name = _string_param(request, "tool_name", "", max_chars=128)
+        if not task or not tool_name:
+            raise ValueError("task and tool_name are required")
+        tool_input = request.get("tool_input") or {}
+        if not isinstance(tool_input, dict):
+            raise ValueError("tool_input must be an object")
+        receipt = request.get("context_receipt")
+        if receipt is not None and not isinstance(receipt, dict):
+            raise ValueError("context_receipt must be an object")
+        return {
+            "ok": True,
+            "result": _jsonable(service.build_agent_action_plan(
+                task,
+                tool_name=tool_name,
+                tool_input=tool_input,
+                agent_name=_string_param(request, "agent_name", "generic-agent", max_chars=128),
+                session_id=_string_param(request, "session_id", "action-plan", max_chars=256),
+                project_root=_string_param(request, "project_root", "", max_chars=2048),
+                task_type=_string_param(request, "task_type", "", max_chars=128),
+                context_receipt=receipt,
+            )),
+        }
     if command == "record_agent_action_outcome":
         preflight = request.get("preflight")
         if not isinstance(preflight, dict):
@@ -540,6 +583,7 @@ def _handle_authorized_request(service: MemGuardService, request: Dict[str, obje
                 source_uri=source_uri,
                 tier=selected_tier,
                 retention_session_id=_string_param(request, "session_id", "", max_chars=256),
+                enforce_admission=bool(request.get("enforce_admission", False)),
                 **_project_scope_param(request),
             )
         )

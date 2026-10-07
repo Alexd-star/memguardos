@@ -48,6 +48,7 @@ from memguard.integrations.adherence import (
     successful_terminal_commands,
 )
 from memguard.integrations.action_contract import evaluate_action
+from memguard.integrations.action_plan import build_action_plan
 from memguard.integrations.action_feedback import classify_action_outcome
 from memguard.integrations.action_impact import (
     attach_observational_baseline,
@@ -82,6 +83,7 @@ from memguard.lifecycle import (
 )
 from memguard.models import AuditInfo, MemoryRecord, MemorySource, VersionInfo, make_memory, new_id, stable_hash, utc_now
 from memguard.memory_budget import estimate_memory_bytes, recommend_budget_action, score_memory_budget
+from memguard.memory_admission import assess_memory_admission
 from memguard.natural_language import explicitly_requests_no_store, infer_retention_tier, looks_like_question
 from memguard.os_guard.events import parse_os_event
 from memguard.os_guard.cgroup import cgroup_status
@@ -510,6 +512,7 @@ class MemGuardService(ProcedureServiceMixin):
         retention_session_id: str = "",
         project_root: str = "",
         verified_tool_evidence: bool = False,
+        enforce_admission: bool = False,
     ) -> Dict[str, object]:
         project_root = str(Path(project_root).expanduser().resolve()) if project_root else ""
         self._recover_pending_memory_writes()
@@ -597,6 +600,39 @@ class MemGuardService(ProcedureServiceMixin):
         memory_type = extraction.memory_type
         subtype = extraction.subtype
         effective_tier = tier or infer_retention_tier(clean_text) or self._default_tier(memory_type, source_kind)
+        admission = assess_memory_admission(
+            source_kind=source_kind,
+            requested_tier=tier or "",
+            inferred_tier=effective_tier,
+            memory_type=memory_type,
+            memory_subtype=subtype,
+            quality_score=quality.score,
+            extraction_confidence=extraction.confidence,
+            sensitivity_level=sensitivity.level,
+            governance_state=governance.governance_state,
+            explicit_request=source_kind in {"manual", "user_cli", "api", "dashboard"},
+            verified_tool_evidence=verified_tool_evidence,
+            scope={"namespace": self.namespace, "session_id": retention_session_id, "project_root": project_root},
+        )
+        if enforce_admission and admission["decision"] == "quarantine":
+            return {
+                "stored": False,
+                "reason": "admission_review_required",
+                "admission": admission,
+                "quality": quality.to_dict(),
+                "extraction": extraction.to_dict(),
+                "governance": governance.to_dict(),
+            }
+        if enforce_admission and admission["decision"] == "deny":
+            return {"stored": False, "reason": "admission_denied", "admission": admission}
+        if enforce_admission and admission["decision"] == "retain_session":
+            effective_tier = "session"
+            admission = {
+                **admission,
+                "enforcement": "applied",
+                "enforced_tier": "session",
+                "next_action": "已按准入策略保留在会话层，达到证据门槛后再提交巩固。",
+            }
         if effective_tier not in {"working", "session", "long_term"}:
             raise ValueError("invalid memory tier")
         session_scope = str(retention_session_id or "").strip() if effective_tier in {"working", "session"} else ""
@@ -648,6 +684,7 @@ class MemGuardService(ProcedureServiceMixin):
                             **updated, "stored": True, "fact_update": True,
                             "quality": quality.to_dict(),
                             "extraction": extraction.to_dict(),
+                            "admission": admission,
                         }
                         result["feedback"] = build_memory_change_summary(
                             result, namespace=self.namespace, source=source_kind,
@@ -694,6 +731,7 @@ class MemGuardService(ProcedureServiceMixin):
                     "quality": quality.to_dict(),
                     "extraction": extraction.to_dict(),
                     "governance": governance.to_dict(),
+                    "admission": admission,
                     "audit_event_id": _audit_event_id(audit),
                 }
                 result["feedback"] = build_memory_change_summary(
@@ -760,6 +798,7 @@ class MemGuardService(ProcedureServiceMixin):
                     if key != "summary"
                 },
                 "governance": governance.to_dict(),
+                "admission": admission,
             },
         )
         result = {
@@ -769,6 +808,7 @@ class MemGuardService(ProcedureServiceMixin):
             "quality": quality.to_dict(),
             "extraction": extraction.to_dict(),
             "governance": governance.to_dict(),
+            "admission": admission,
         }
         result["audit_event_id"] = _audit_event_id(audit)
         result["feedback"] = build_memory_change_summary(
@@ -778,6 +818,84 @@ class MemGuardService(ProcedureServiceMixin):
             session_id=safe_source_uri,
             audit_event_ids=[result["audit_event_id"]],
         ).to_dict()
+        return result
+
+    def preview_memory_admission(
+        self,
+        text: str,
+        *,
+        source_kind: str = "manual",
+        source_uri: str = "",
+        tier: Optional[str] = None,
+        session_id: str = "",
+        project_root: str = "",
+        agent_name: str = "",
+        task_type: str = "",
+        verified_tool_evidence: bool = False,
+    ) -> Dict[str, object]:
+        """Explain retention admission without creating a memory record."""
+
+        project_scope = str(Path(project_root).expanduser().resolve()) if project_root else ""
+        clean_text, quality = assess_text_quality(text, source_kind=source_kind)
+        sensitivity = self.detector.classify(clean_text, source_uri)
+        extraction = self.extractor.extract(clean_text, source_kind)
+        governance = assess_memory_source(clean_text, source_kind, source_uri)
+        inferred_tier = tier or infer_retention_tier(clean_text) or self._default_tier(extraction.memory_type, source_kind)
+        admission = assess_memory_admission(
+            source_kind=source_kind,
+            requested_tier=tier or "",
+            inferred_tier=inferred_tier,
+            memory_type=extraction.memory_type,
+            memory_subtype=extraction.subtype,
+            quality_score=quality.score,
+            extraction_confidence=extraction.confidence,
+            sensitivity_level=sensitivity.level,
+            governance_state=governance.governance_state,
+            explicit_request=source_kind in {"manual", "user_cli", "api", "dashboard"},
+            verified_tool_evidence=verified_tool_evidence,
+            storage_prohibited=explicitly_requests_no_store(text),
+            quality_rejected=not quality.accepted,
+            scope={
+                "namespace": self.namespace,
+                "agent_name": agent_name,
+                "session_id": session_id,
+                "project_root": project_scope,
+                "task_type": task_type,
+            },
+        )
+        result = {
+            "schema": "memguardos-memory-admission-preview-v1",
+            "stored": False,
+            "persisted": False,
+            "source": {"kind": source_kind, "uri_redacted": self._safe_provenance_uri(source_uri)},
+            "quality": quality.to_dict(),
+            "sensitivity": {
+                "level": sensitivity.level,
+                "labels": list(sensitivity.labels),
+                "redacted": bool(sensitivity.redacted),
+            },
+            "extraction": {
+                "memory_type": extraction.memory_type,
+                "subtype": extraction.subtype,
+                "confidence": extraction.confidence,
+                "signals": list(extraction.signals),
+            },
+            "governance": governance.to_dict(),
+            "admission": admission,
+        }
+        self._audit(
+            "memory_admission_preview",
+            None,
+            {
+                "source_kind": source_kind,
+                "decision": admission.get("decision"),
+                "recommended_tier": admission.get("recommended_tier"),
+                "quality_score": quality.score,
+                "extraction_confidence": extraction.confidence,
+                "sensitivity_level": sensitivity.level,
+                "project_root": project_scope,
+            },
+        )
         return result
 
     def _fact_review_required(
@@ -5578,6 +5696,49 @@ class MemGuardService(ProcedureServiceMixin):
             },
         )
         return decision
+
+    def build_agent_action_plan(
+        self,
+        task: str,
+        *,
+        tool_name: str,
+        tool_input: Optional[Dict[str, object]] = None,
+        agent_name: str = "generic-agent",
+        session_id: str = "action-plan",
+        project_root: str = "",
+        task_type: str = "",
+        context_receipt: Optional[Dict[str, object]] = None,
+    ) -> Dict[str, object]:
+        """Build one enforceable plan from context, policy and feedback rules."""
+
+        preflight = self.preflight_agent_action(
+            task,
+            tool_name=tool_name,
+            tool_input=tool_input or {},
+            agent_name=agent_name,
+            session_id=session_id,
+            project_root=project_root,
+            task_type=task_type,
+            context_receipt=context_receipt,
+        )
+        plan = build_action_plan(
+            task=task,
+            tool_name=tool_name,
+            tool_input=tool_input or {},
+            preflight=preflight,
+        )
+        plan["preflight"] = preflight
+        self._audit(
+            "agent_action_plan",
+            None,
+            {
+                "plan_id": plan.get("plan_id"),
+                "decision": plan.get("decision"),
+                "execution_gate": plan.get("execution_gate"),
+                "memory_ids": [item.get("memory_id") for item in plan.get("evidence", [])],
+            },
+        )
+        return plan
 
     def record_agent_action_outcome(
         self,

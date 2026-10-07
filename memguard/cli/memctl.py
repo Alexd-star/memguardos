@@ -50,9 +50,20 @@ def build_parser() -> argparse.ArgumentParser:
     ingest.add_argument("--file", help="File path to ingest")
     ingest.add_argument("--source-kind", default="manual")
     ingest.add_argument("--tier", choices=["working", "session", "long_term"], help="Memory tier")
+    ingest.add_argument("--enforce-admission", action="store_true", help="Enforce the pre-write admission decision for automatic sources")
     explain_extraction = sub.add_parser("explain-extraction", help="Explain preference/knowledge extraction without storing memory")
     explain_extraction.add_argument("--text", required=True)
     explain_extraction.add_argument("--source-kind", default="manual")
+    admission = sub.add_parser("admission-preview", help="Explain retention admission without storing memory")
+    admission.add_argument("--text", required=True)
+    admission.add_argument("--source-kind", default="manual")
+    admission.add_argument("--source-uri", default="")
+    admission.add_argument("--tier", choices=["working", "session", "long_term"])
+    admission.add_argument("--session-id", default="")
+    admission.add_argument("--project-root", default="")
+    admission.add_argument("--agent-name", default="")
+    admission.add_argument("--task-type", default="")
+    admission.add_argument("--verified-tool-evidence", action="store_true")
 
     tool_result = sub.add_parser("ingest-tool-result", help="Ingest a structured tool execution result JSON")
     tool_result.add_argument("--file", required=True, help="JSON file containing command/cwd/exit_code/stdout/stderr/duration_ms")
@@ -410,6 +421,17 @@ def build_parser() -> argparse.ArgumentParser:
     agent_preflight.add_argument("--project-root", default="")
     agent_preflight.add_argument("--task-type", default="")
     agent_preflight.add_argument("--context-receipt-file", default="", help="Optional JSON file containing context_receipt")
+    agent_plan = agent_sub.add_parser(
+        "action-plan",
+        help="Build a reviewable memory-conditioned execution plan without running the tool",
+    )
+    agent_plan.add_argument("--task", required=True)
+    agent_plan.add_argument("--tool-name", required=True)
+    agent_plan.add_argument("--tool-input", default="{}")
+    agent_plan.add_argument("--agent-name", default="generic-agent")
+    agent_plan.add_argument("--session-id", default="action-plan")
+    agent_plan.add_argument("--project-root", default="")
+    agent_plan.add_argument("--task-type", default="")
     agent_outcome = agent_sub.add_parser(
         "record-outcome",
         help="Record the external Agent tool result against the preflight memory evidence",
@@ -617,6 +639,21 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
                 return 0 if result.get("decision") == "allow" else 2
+            if args.agent_command == "action-plan":
+                tool_input = json.loads(args.tool_input)
+                if not isinstance(tool_input, dict):
+                    raise ValueError("--tool-input must be a JSON object")
+                result = service.build_agent_action_plan(
+                    args.task,
+                    tool_name=args.tool_name,
+                    tool_input=tool_input,
+                    agent_name=args.agent_name,
+                    session_id=args.session_id,
+                    project_root=args.project_root,
+                    task_type=args.task_type,
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+                return 0 if result.get("decision") == "allow" else 2
             if args.agent_command == "record-outcome":
                 payload = json.loads(Path(args.preflight_file).read_text(encoding="utf-8"))
                 preflight = payload.get("result", payload) if isinstance(payload, dict) else None
@@ -709,6 +746,7 @@ def main(argv: list[str] | None = None) -> int:
                 text, source_kind=args.source_kind, source_uri=source_uri, tier=args.tier,
                 retention_session_id=args.session_id,
                 project_root=args.project_root or "",
+                enforce_admission=args.enforce_admission,
             )
             if result["stored"]:
                 record = result["record"]
@@ -723,12 +761,13 @@ def main(argv: list[str] | None = None) -> int:
                             "confidence": record.confidence,
                             "quality": result.get("quality"),
                             "extraction": result.get("extraction"),
+                            "admission": result.get("admission"),
                         },
                         ensure_ascii=False,
                     )
                 )
             else:
-                payload = {"stored": False, "reason": result["reason"], "quality": result.get("quality")}
+                payload = {"stored": False, "reason": result["reason"], "quality": result.get("quality"), "admission": result.get("admission")}
                 if result.get("sensitivity"):
                     payload["sensitivity"] = result["sensitivity"].__dict__
                 print(json.dumps(payload, ensure_ascii=False))
@@ -759,6 +798,21 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "explain-extraction":
             print(json.dumps(service.explain_extraction(args.text, source_kind=args.source_kind), ensure_ascii=False, indent=2))
+            return 0
+
+        if args.command == "admission-preview":
+            result = service.preview_memory_admission(
+                args.text,
+                source_kind=args.source_kind,
+                source_uri=args.source_uri,
+                tier=args.tier,
+                session_id=args.session_id,
+                project_root=args.project_root,
+                agent_name=args.agent_name,
+                task_type=args.task_type,
+                verified_tool_evidence=args.verified_tool_evidence,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
             return 0
 
         if args.command == "ingest-tool-result":

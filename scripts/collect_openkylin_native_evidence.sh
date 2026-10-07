@@ -129,6 +129,9 @@ python3 scripts/collect_memory_budget_evidence.py \
 python3 scripts/collect_action_impact_evidence.py \
   --output "${OUT_DIR}/action_impact_evidence.json" \
   >"${OUT_DIR}/action_impact_evidence.stdout.txt" 2>&1
+python3 scripts/collect_memory_admission_evidence.py \
+  --output "${OUT_DIR}/memory_admission_evidence.json" \
+  >"${OUT_DIR}/memory_admission_evidence.stdout.txt" 2>&1
 
 TMP_SAMPLE_DIR="$(mktemp -d)"
 SAMPLE_A="${TMP_SAMPLE_DIR}/peony_preference.md"

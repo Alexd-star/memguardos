@@ -551,6 +551,8 @@ class _DashboardHandler(BaseHTTPRequestHandler):
             "/api/apply-budget": "admin",
             "/api/acceptance-run": "admin",
             "/api/acceptance-report": "admin",
+            "/api/admission-preview": "operator",
+            "/api/agent-action-plan": "operator",
         }.get(parsed.path, "admin")
         if parsed.path.startswith("/api/") and not self._require_role(required_role):
             return
@@ -584,6 +586,35 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                     **({"project_root": payload["project_root"]} if "project_root" in payload else {}),
                 }
             )
+            return
+        if parsed.path == "/api/admission-preview":
+            if not self._require_role("operator"):
+                return
+            self._send_api({
+                "command": "admission_preview",
+                "text": str(payload.get("text", "")),
+                "source_kind": str(payload.get("source_kind", "dashboard")),
+                "source_uri": "web_dashboard",
+                "tier": payload.get("tier") or None,
+                "session_id": str(payload.get("session_id", "")),
+                "project_root": str(payload.get("project_root", "")),
+                "agent_name": str(payload.get("agent_name", "")),
+                "task_type": str(payload.get("task_type", "")),
+            })
+            return
+        if parsed.path == "/api/agent-action-plan":
+            if not self._require_role("operator"):
+                return
+            self._send_api({
+                "command": "agent_action_plan",
+                "task": str(payload.get("task", "")),
+                "tool_name": str(payload.get("tool_name", "terminal")),
+                "tool_input": payload.get("tool_input") if isinstance(payload.get("tool_input"), dict) else {},
+                "agent_name": str(payload.get("agent_name", "generic-agent")),
+                "session_id": str(payload.get("session_id", "action-plan")),
+                "project_root": str(payload.get("project_root", "")),
+                "task_type": str(payload.get("task_type", "")),
+            })
             return
         if parsed.path == "/api/evict-session":
             self._send_api({
@@ -1642,7 +1673,7 @@ def _dashboard_html() -> str:
             <label for="ingestText">要保存的内容</label><textarea id="ingestText">以后回答 openKylin 服务问题时，先给 systemctl 命令，再说明风险。</textarea>
             <label for="sourceKind">内容来源</label><select id="sourceKind"><option value="manual">手动输入</option><option value="dashboard">本地控制台</option><option value="tool_result">工具执行结果</option><option value="user_behavior">用户与 Agent 交互</option><option value="os_event">系统事件</option></select>
             <label for="tier">保存时长</label><select id="tier"><option value="">自动选择</option><option value="working">临时工作记忆</option><option value="session">当前会话记忆</option><option value="long_term">长期记忆</option></select>
-            <div class="actions"><button class="primary" data-min-role="operator" onclick="ingest(event)">保存为记忆</button><button class="secondary" onclick="explainExtraction(event)">查看提取依据</button></div>
+            <div class="actions"><button class="primary" data-min-role="operator" onclick="ingest(event)">保存为记忆</button><button class="secondary" onclick="explainExtraction(event)">查看提取依据</button><button class="secondary" data-min-role="operator" onclick="admissionPreview(event)">评估保存层级</button></div>
           </div>
           <div class="panel hint-card" aria-label="保存流程说明">
             <div class="item-title">保存前会发生什么</div>
@@ -1691,7 +1722,8 @@ def _dashboard_html() -> str:
             <div><label for="agentMode">运行方式</label><select id="agentMode"><option value="replay">本地回放（可复现）</option><option value="dry-run">只读预览</option><option value="openhands" disabled>真实 OpenHands（请从 Agent 接入入口运行）</option></select></div>
             <div><label for="agentName">Agent</label><select id="agentName"><option value="openhands">OpenHands</option></select></div>
           </div>
-          <div class="actions"><button class="primary" data-min-role="operator" onclick="runAgentTask(event)">运行任务</button><button class="secondary" onclick="loadAgentOverview(event)">查看已有记录</button><button class="secondary" onclick="loadAgentActionImpact(event)">动作质量</button><button class="secondary" onclick="exportDiagnostics(event)">导出系统报告</button></div>
+          <div><label for="agentToolCommand">拟执行命令（生成动作计划时使用）</label><input id="agentToolCommand" placeholder="输入本次任务拟执行的终端命令"></div>
+          <div class="actions"><button class="primary" data-min-role="operator" onclick="runAgentTask(event)">运行任务</button><button class="secondary" data-min-role="operator" onclick="buildActionPlan(event)">生成动作计划</button><button class="secondary" onclick="loadAgentOverview(event)">查看已有记录</button><button class="secondary" onclick="loadAgentActionImpact(event)">动作质量</button><button class="secondary" onclick="exportDiagnostics(event)">导出系统报告</button></div>
           <p class="muted">本地回放用于检查完整记忆流程；只读预览不会写入新内容。真实 OpenHands 由已配置的 Agent 接入入口运行，本页不会把回放结果标成真实模型结果。</p>
         </div>
         <div id="agentRunFeedback" class="list" style="margin-top:14px"></div>
@@ -1703,6 +1735,7 @@ def _dashboard_html() -> str:
         <div class="panel" style="margin-top:14px"><div class="item-title">三阶段上下文对比</div><div id="agentContexts" class="stage-columns" style="margin-top:12px"></div></div>
         <div class="panel" style="margin-top:14px"><div class="item-title">偏好生效证明</div><p class="muted">只有观察到实际工具命令或回答内容时才会判定“通过”；没有真实行为时显示“暂无证据”，不会把上下文注入误当成 Agent 已遵循。</p><div id="preferenceProofs" class="list" style="margin-top:12px"></div></div>
         <div class="panel" style="margin-top:14px"><div class="health"><div><div class="item-title">记忆驱动动作质量</div><div class="muted">依据真实 Agent 工具结果评估成功下界、失败与偏离风险；同类基线仅作观察性比较，不替代对照实验。</div></div><button class="secondary" onclick="loadAgentActionImpact(event)">刷新</button></div><div id="agentActionImpact" class="list" style="margin-top:12px"><div class="muted">点击“动作质量”查看记忆是否真正改善了工具行为。</div></div></div>
+        <div class="panel" style="margin-top:14px"><div class="item-title">记忆驱动动作计划</div><div class="muted">把任务、作用范围、记忆证据、风险策略和结果反馈要求合并为一次可执行的前置契约。</div><div id="agentActionPlan" class="list" style="margin-top:12px"><div class="muted">点击“生成动作计划”查看当前任务允许、改写、确认或阻断的原因。</div></div></div>
         <div class="panel" style="margin-top:14px">
           <div class="item-title">按交互主题精准遗忘</div>
           <div class="grid two">
@@ -2999,6 +3032,40 @@ def _dashboard_html() -> str:
         return operationFeedback(payload.ok ? '动作质量报告已更新。' : '动作质量报告暂时没有生成。', payload.ok ? 'ok' : 'warn');
       });
     }
+    function renderActionPlan(payload) {
+      const box = document.getElementById('agentActionPlan');
+      const result = payload.result || {};
+      if (!payload.ok || !result.schema) {
+        box.innerHTML = '<div class="empty-state"><strong>动作计划暂时不可用</strong><span>' + esc(payload.error || '请检查任务内容。') + '</span></div>';
+        return;
+      }
+      const gate = String(result.execution_gate || 'stop');
+      const cls = gate === 'execute' ? 'ok' : gate === 'stop' ? 'bad' : 'warn';
+      const labels = {execute:'允许执行', replace_then_execute:'改写后再执行', user_confirmation:'需要用户确认', stop:'阻断执行'};
+      const policy = result.policy || {};
+      const evidence = result.evidence || [];
+      box.innerHTML = '<div class="section-block"><div class="section-block-header"><strong>' + esc(result.plan_id || '动作计划') + '</strong><span class="badge ' + cls + '">' + esc(labels[gate] || gate) + '</span></div><div class="section-block-body">'
+        + '<div class="list-row"><div><div class="item-title">策略判断</div><div class="muted">' + esc(policy.reason || '') + '</div></div><span class="badge">' + esc(policy.category || '未分类') + '</span></div>'
+        + (policy.suggested_command ? '<div class="list-row"><div><div class="item-title">建议动作</div><div class="muted"><code>' + esc(policy.suggested_command) + '</code></div></div></div>' : '')
+        + '<div class="list-row"><div><div class="item-title">记忆证据</div><div class="muted">关联 ' + esc(evidence.length) + ' 条版本化证据；执行后必须回传结构化结果。</div></div><span class="badge">反馈闭环</span></div>'
+        + '<div class="muted" style="margin-top:10px">' + esc(result.next_step || '') + '</div></div></div>';
+    }
+    async function buildActionPlan(event) {
+      return withBusy(event, async () => {
+        const command = document.getElementById('agentToolCommand').value.trim();
+        if (!command) return operationFeedback('先输入拟执行命令，再生成动作计划。', 'warn');
+        const payload = await postJson('/api/agent-action-plan', {
+          task: document.getElementById('agentTask').value,
+          tool_name: 'terminal',
+          tool_input: {command},
+          agent_name: document.getElementById('agentName').value || 'generic-agent',
+          session_id: document.getElementById('agentSession').value || 'action-plan'
+        });
+        renderActionPlan(payload);
+        setRawOutput('agentOut', payload);
+        return operationFeedback(payload.ok ? '动作计划已生成。' : '动作计划生成失败。', payload.ok ? 'ok' : 'warn');
+      });
+    }
     async function loadPreferenceEvidence(event, memoryId) {
       return withBusy(event, async () => {
         const payload = await getJson('/api/agent-evidence?memory_id=' + encodeURIComponent(memoryId));
@@ -3886,6 +3953,35 @@ def _dashboard_html() -> str:
           + (blocked ? '会被阻断' : '允许保存') + '</span></div>'
           + '</div><p class="muted" style="margin-top:10px">这是保存前的预判，本次没有写入任何记忆。</p></div></div>';
         return operationFeedback('已显示这段文本会被如何提取。', 'ok');
+      });
+    }
+    function admissionDecisionLabel(value) {
+      return {admit_long_term:'建议进入长期层', retain_session:'建议保留在会话层', retain_working:'建议保留在工作层', quarantine:'进入待复核区', deny:'阻断写入'}[String(value || '')] || String(value || '待评估');
+    }
+    function renderAdmissionPreview(payload) {
+      const box = document.getElementById('ingestFeedback');
+      const result = payload.result || {};
+      const admission = result.admission || {};
+      if (!payload.ok || !admission.decision) {
+        box.innerHTML = '<div class="empty-state"><strong>暂时无法完成准入评估</strong><span>' + esc(payload.error || '请补充有效内容。') + '</span></div>';
+        return;
+      }
+      const decision = String(admission.decision);
+      const cls = decision === 'admit_long_term' ? 'ok' : decision === 'deny' ? 'bad' : 'warn';
+      const signals = admission.signals || {};
+      const requirements = admission.evidence_requirements || [];
+      box.innerHTML = '<div class="section-block"><div class="section-block-header"><strong>保存前准入评估</strong><span class="badge ' + cls + '">' + esc(admissionDecisionLabel(decision)) + '</span></div>'
+        + '<div class="section-block-body"><div class="list-row"><div><div class="item-title">为什么这样处理</div><div class="muted">' + esc(admission.reason || '') + '</div></div><span class="badge">' + esc(admission.recommended_tier || 'none') + '</span></div>'
+        + '<div class="list-row"><div><div class="item-title">证据与质量</div><div class="muted">来源：' + esc(admission.source_kind || '') + ' · 质量 ' + esc(signals.quality_score == null ? '-' : signals.quality_score) + ' · 抽取置信度 ' + esc(signals.extraction_confidence == null ? '-' : signals.extraction_confidence) + '</div></div><span class="badge">' + (signals.explicit_request ? '用户明确意图' : '自动观测') + '</span></div>'
+        + (requirements.length ? '<div class="list-row"><div><div class="item-title">进入长期层前还需要</div><div class="muted">' + esc(requirements.join('；')) + '</div></div><span class="badge warn">需积累</span></div>' : '')
+        + '<div class="muted" style="margin-top:10px">' + esc(admission.next_action || '') + '</div></div></div>';
+    }
+    async function admissionPreview(event) {
+      return withBusy(event, async () => {
+        const payload = await postJson('/api/admission-preview', {text: ingestText.value, source_kind: sourceKind.value, tier: tier.value, session_id: memorySessionId});
+        renderAdmissionPreview(payload);
+        setRawOutput('ingestOut', payload);
+        return operationFeedback(payload.ok ? '已完成保存层级评估，本次没有写入记忆。' : '准入评估失败。', payload.ok ? 'ok' : 'warn');
       });
     }
     async function search(event) {

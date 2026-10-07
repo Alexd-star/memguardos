@@ -1,6 +1,8 @@
 {
-  "schema_version": "1.0",
-  "file_count": 36,
+  "generated_at": "2026-10-07T00:24:21.244574+00:00",
+  "root": "docs/evidence/openkylin",
+  "file_count": 37,
+  "total_bytes": 178120,
   "files": [
     {
       "path": "action_feedback_evidence_20261007.json",
@@ -91,6 +93,11 @@
       "path": "manifest_refresh.txt",
       "bytes": 24,
       "sha256": "c602f7605d479c4980cfd94a334ad6fe1f78eaf4a33dd899d582c55a632a175c"
+    },
+    {
+      "path": "memory_admission_evidence_20261007.json",
+      "bytes": 12372,
+      "sha256": "b3f8776464e887d63c1bbdf13ed85ffb83d6f6393ca3634a53ce6e7277fd11ce"
     },
     {
       "path": "memory_budget_evidence_20261007.json",
