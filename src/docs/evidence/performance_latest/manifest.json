@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "file_count": 13,
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 850,
+      "sha256": "b24c6f35404f26691cdfbaa63e745b722c1ea149cd4195b55acac8719bb2ebdc"
+    },
+    {
+      "path": "eval_openkylin_10k_optimized.stdout.txt",
+      "bytes": 3606,
+      "sha256": "df3c88cfdb5654ae177892072fdde8a88d487bb0b45689f5e65616d0edcbd87f"
+    },
+    {
+      "path": "eval_report_openkylin_10k_optimized.md",
+      "bytes": 2855,
+      "sha256": "cb742841948a6fe678391b379f5d0e055e6d9c5bf872ec7fee9d4928fd496f65"
+    },
+    {
+      "path": "eval_result_openkylin_10k_optimized.json",
+      "bytes": 3606,
+      "sha256": "df3c88cfdb5654ae177892072fdde8a88d487bb0b45689f5e65616d0edcbd87f"
+    },
+    {
+      "path": "performance_suite_local.json",
+      "bytes": 4514,
+      "sha256": "8dc7df148797570e512a21d5701460485af84f7e813065e59a095d518a914916"
+    },
+    {
+      "path": "performance_suite_local.md",
+      "bytes": 2338,
+      "sha256": "1b91a2e63e3855076665b50caa06968a0eaa96997b2e5c7ab72d20a8b99ca517"
+    },
+    {
+      "path": "performance_suite_openkylin.json",
+      "bytes": 4763,
+      "sha256": "1f9b79529aaf5476d2e635d3cc6997f2d512506c54012ef5266b1222e4861aff"
+    },
+    {
+      "path": "performance_suite_openkylin.md",
+      "bytes": 2348,
+      "sha256": "f7a946030ce4ecd4b9b4d9c384a749de88fc9ee32d25c3cb838f9b2b65763193"
+    },
+    {
+      "path": "performance_suite_openkylin.stdout.txt",
+      "bytes": 4763,
+      "sha256": "1f9b79529aaf5476d2e635d3cc6997f2d512506c54012ef5266b1222e4861aff"
+    },
+    {
+      "path": "pytest_openkylin.txt",
+      "bytes": 181,
+      "sha256": "8ae81bea98501ad82f8d871f14f605d93dd9575358c312c095cd1f334a660e16"
+    },
+    {
+      "path": "release_preflight_optimized.json",
+      "bytes": 2351,
+      "sha256": "4a8f970fc175cd5c1b92307fa17497402ff99cc34e0816f8b107740ee48704f3"
+    },
+    {
+      "path": "retrieval-v2-local.json",
+      "bytes": 16039,
+      "sha256": "97b9a2141ffc66d383db85d01423954aebadf0f3a8fd2a304b2c8720bffa6e03"
+    },
+    {
+      "path": "retrieval-v2-openkylin.json",
+      "bytes": 47609,
+      "sha256": "dde44535097af79cd76a574939db69a5989adefbaa8f4dd2a2bbac5bc9b5c835"
+    }
+  ]
+}

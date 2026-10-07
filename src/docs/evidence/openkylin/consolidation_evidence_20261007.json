@@ -1,0 +1,80 @@
+{
+  "schema": "memguardos-consolidation-evidence-v1",
+  "revision": "c2b1780",
+  "platform": "Linux-6.6.0-25-generic-x86_64-with-glibc2.38",
+  "python": "3.12.2",
+  "plan": {
+    "plan_id": "0414bf3ad9aeac456467248300636426d6fbafc6e39dbb46295a610c874a9f53",
+    "summary": {
+      "candidate_count": 3,
+      "promote_count": 1,
+      "retain_count": 1,
+      "eviction_review_count": 1
+    },
+    "candidates": [
+      {
+        "memory_id": "mem_537030253a304af0",
+        "recommended_action": "evict_review",
+        "reason": "working memory remains task-local until explicit review",
+        "version_id": "ver_02c45cf89d214359"
+      },
+      {
+        "memory_id": "mem_592416dfd6bd4850",
+        "recommended_action": "retain_session",
+        "reason": "insufficient independent evidence for long-term promotion",
+        "version_id": "ver_d971e21efd9842eb"
+      },
+      {
+        "memory_id": "mem_5a107a7c8d1544a8",
+        "recommended_action": "promote",
+        "reason": "explicit preference evidence",
+        "version_id": "ver_a4495670abdb4b20"
+      }
+    ]
+  },
+  "checks": {
+    "explicit_preference_promote": true,
+    "unreinforced_knowledge_retained": true,
+    "working_memory_reviewed": true,
+    "preview_requires_confirmation": true,
+    "selected_promotion_applied": true,
+    "unselected_knowledge_preserved": true,
+    "working_memory_preserved_until_review": true,
+    "old_plan_rejected_by_cas": true
+  },
+  "results": {
+    "preview": {
+      "applied": false,
+      "reason": "confirmation_required",
+      "session_id": "demo-session",
+      "selected_memory_ids": [
+        "mem_5a107a7c8d1544a8"
+      ],
+      "expected_versions": {
+        "mem_5a107a7c8d1544a8": "ver_a4495670abdb4b20"
+      }
+    },
+    "applied": {
+      "applied": true,
+      "session_id": "demo-session",
+      "plan_id": "0414bf3ad9aeac456467248300636426d6fbafc6e39dbb46295a610c874a9f53",
+      "promoted": [
+        {
+          "memory_id": "mem_5a107a7c8d1544a8",
+          "version_id": "ver_34f164de76fe4ccb"
+        }
+      ],
+      "failures": [],
+      "preserved_session_memory_count": 2
+    },
+    "stale_plan": {
+      "applied": false,
+      "reason": "stale_consolidation_plan",
+      "expected_versions": {
+        "mem_5a107a7c8d1544a8": "ver_a4495670abdb4b20"
+      },
+      "current_versions": {}
+    }
+  },
+  "passed": true
+}

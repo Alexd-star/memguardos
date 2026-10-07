@@ -1,0 +1,4 @@
+$ .venv-agent/bin/python -m pytest tests/test_web_dashboard_product_ui.py tests/test_web_dashboard_smoke_contract.py tests/test_web_dashboard_lifecycle.py tests/test_web_rbac.py -q
+........s............................................................... [ 97%]
+..                                                                       [100%]
+73 passed, 1 skipped in 4.68s

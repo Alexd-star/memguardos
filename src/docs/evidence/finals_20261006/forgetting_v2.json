@@ -1,0 +1,15 @@
+{
+  "schema": "memguardos-forgetting-v2-focused",
+  "manifest_sha256": "abf3b16b4e129e8d30e3d047b7ce2c25bebadac0bb7e1546065c8d7d7af276b0",
+  "metrics": {
+    "forget_cases_evaluated": 60,
+    "forget_candidates_evaluated": 240,
+    "forget_expected_delete_count": 120,
+    "forget_expected_keep_count": 120,
+    "forget_precision": 1.0,
+    "forget_recall": 1.0,
+    "forget_keep_success": 1.0,
+    "forget_residual_leak_rate": 0.0
+  },
+  "failures": []
+}

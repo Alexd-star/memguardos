@@ -1,0 +1,91 @@
+{
+  "arm_source": "real_agent_run",
+  "behavior_assertions": {
+    "output_contains": "load_settings"
+  },
+  "case_id": "A01",
+  "errors": [],
+  "evaluation": {
+    "status": "incomplete"
+  },
+  "events": [],
+  "expected_tool": "",
+  "generated_at": "2026-10-06T05:52:44.170080+00:00",
+  "memory_assertions": {},
+  "memory_mode": "off",
+  "model": "openai/gpt-5.5",
+  "model_config": {
+    "base_url": "https://ai.pite.chat/v1"
+  },
+  "modules": {
+    "memguard.api.server": {
+      "path": "/var/opt/memguardos/memguard/api/server.py",
+      "sha256": "d6e83be13a7f404e044720cf538bcf1a8e611f3268e1fb0ae612481e31ca4395"
+    },
+    "memguard.eval.real_agent_behavior": {
+      "path": "/var/opt/memguardos/memguard/eval/real_agent_behavior.py",
+      "sha256": "d3a8cb81918b5fd5b33740db110beca3508016ab7308171af68ba207b568b533"
+    },
+    "memguard.extraction.semantic": {
+      "path": "/var/opt/memguardos/memguard/extraction/semantic.py",
+      "sha256": "cf13a9ea179d008ba6fd0c0fea2ce9c11bf866a98a358fb1998d4413d25243b9"
+    },
+    "memguard.feedback": {
+      "path": "/var/opt/memguardos/memguard/feedback.py",
+      "sha256": "dd86e93ad3d1f1cb9dbf11af77064b94538d2ed9d4216bc11650615b2e1b09f0"
+    },
+    "memguard.integrations.adherence": {
+      "path": "/var/opt/memguardos/memguard/integrations/adherence.py",
+      "sha256": "758c433b6bb97b770503e33d11dfc6863bf4193e5c3b9642a4c9f69162bee6dc"
+    },
+    "memguard.integrations.openhands_adapter": {
+      "path": "/var/opt/memguardos/memguard/integrations/openhands_adapter.py",
+      "sha256": "e827da45a96f5aff106718fcdc3c54fdbd4c580d4bb9106a29e53bc71405c223"
+    },
+    "memguard.integrations.openhands_memory_hook": {
+      "path": "/var/opt/memguardos/memguard/integrations/openhands_memory_hook.py",
+      "sha256": "074a19f57775b638a7525681018c3041e1bcbed9b604a30f732d65045c40a566"
+    },
+    "memguard.integrations.openhands_runner": {
+      "path": "/var/opt/memguardos/memguard/integrations/openhands_runner.py",
+      "sha256": "7035e384f0d191039a66af3d5d9231ae33394d050183b42210d1fece347b20ba"
+    },
+    "memguard.procedural": {
+      "path": "/var/opt/memguardos/memguard/procedural.py",
+      "sha256": "928a343bc65aa7c434e8f9a5a08ce68cf0d78a8cf0491104f0885cc27136cc3a"
+    },
+    "memguard.procedure_service": {
+      "path": "/var/opt/memguardos/memguard/procedure_service.py",
+      "sha256": "d90a7df77015efb13a961f4620dff1bb71fcda255ea10724b08e19cbf90f1628"
+    },
+    "memguard.service": {
+      "path": "/var/opt/memguardos/memguard/service.py",
+      "sha256": "9abfcd1f5b85327e52afccf56ba5c4c4573f66b5da5f32364a869242480998ca"
+    },
+    "showcase_driver": {
+      "path": "/home/luo/memguardos/scripts/verify_real_agent_showcase.py",
+      "sha256": "3b5a355e2d7a12aa57c9f1fce5db005e31a3f4f2d6ec839c311d3be48a5ed806"
+    }
+  },
+  "product_checks": [],
+  "project_root": "/var/tmp/memguard-real-showcase-fazqc6ue/baseline/project",
+  "result_path": "cases/A01/memory_off/result.json",
+  "run": {
+    "memory_enabled": false
+  },
+  "session_id": "a01-off",
+  "setup_results": [],
+  "started_at": "2026-10-06T05:52:44.165962+00:00",
+  "task": "搜索项目代码中 load_settings 函数的定义，给出文件位置并解释返回值，不修改文件。",
+  "title": "学习偏好后查函数",
+  "workspace_before": {
+    "README.md": {
+      "sha256": "777de460732c1ea0f11778b714101601d15899120006584525ab68ef3dc2d794",
+      "text": "# Settings utility\nA small JSON configuration loader.\n"
+    },
+    "settings.py": {
+      "sha256": "981ac95cdb37b8d21bb9ae6c361b1f3832e5a0f3516aaa8d38432cae256b2ad5",
+      "text": "import json\n\ndef load_settings(path):\n    \"\"\"Read a JSON settings file.\"\"\"\n    with open(path, encoding=\"utf-8\") as stream:\n        return json.load(stream)\n"
+    }
+  }
+}

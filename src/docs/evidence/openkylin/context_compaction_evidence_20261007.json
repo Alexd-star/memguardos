@@ -1,0 +1,78 @@
+{
+  "schema": "memguardos-context-compaction-evidence-v1",
+  "revision": "7efb6a9ee46b474eb605743b8f5bcca5aa75d600",
+  "platform": "Linux-6.6.0-25-generic-x86_64-with-glibc2.38",
+  "python": "3.12.2",
+  "stages": {
+    "planning": {
+      "memory_count": 1,
+      "representations": {
+        "summary": 1
+      },
+      "estimated_saved_tokens": 44,
+      "receipt": {
+        "schema": "memguardos-context-receipt-v1",
+        "fingerprint": "55e75793ab5648122f14a57e2f493b2fd8b45df41163c47aa115d1ba01f56c0b",
+        "task_digest": "427c1459f951db5ada077710c4c43dbd357daca3c67e2857226e4aeed87e5cac",
+        "memory_versions": {
+          "mem_7faad7706efd4d60": "ver_ce7d5040b9fd4060"
+        },
+        "selected_count": 1,
+        "filtered_count": 1,
+        "compaction": "adaptive",
+        "representations": {
+          "mem_7faad7706efd4d60": "summary"
+        },
+        "scope": {
+          "agent_name": "evidence-agent",
+          "session_id": "context-evidence-session",
+          "project_root": "/var/tmp/context-evidence-project",
+          "stage": "planning",
+          "task_type": "code_assistance"
+        }
+      }
+    },
+    "tool_selection": {
+      "memory_count": 1,
+      "representations": {
+        "evidence": 1
+      },
+      "directive_present": true,
+      "receipt": {
+        "schema": "memguardos-context-receipt-v1",
+        "fingerprint": "bfa654a49291d555d3c60f3fe9fb3f6b3673f962c17e4f75ed2fb4ec50b20612",
+        "task_digest": "e30849c8d96b016d4df035ad5c909e2ccf0b3c850982a9445aa0bddfc35ee658",
+        "memory_versions": {
+          "mem_145f1bc0328e418c": "ver_bdd1ef8e5e044857"
+        },
+        "selected_count": 1,
+        "filtered_count": 0,
+        "compaction": "adaptive",
+        "representations": {
+          "mem_145f1bc0328e418c": "evidence"
+        },
+        "scope": {
+          "agent_name": "evidence-agent",
+          "session_id": "context-evidence-session",
+          "project_root": "/var/tmp/context-evidence-project",
+          "stage": "tool_selection",
+          "task_type": "code_search"
+        }
+      }
+    },
+    "full_review": {
+      "memory_count": 1,
+      "representations": {
+        "full": 1
+      }
+    }
+  },
+  "checks": {
+    "planning_uses_compact_knowledge": true,
+    "tool_selection_preserves_preference_directive": true,
+    "receipt_binds_representations": true,
+    "full_review_available": true,
+    "adaptive_saves_or_equal_tokens": true
+  },
+  "passed": true
+}

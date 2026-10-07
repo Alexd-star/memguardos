@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "file_count": 13,
+  "files": [
+    {
+      "path": "base-benchmark-metrics.json",
+      "bytes": 801,
+      "sha256": "70d9e4122ed9f84a4faf7a71dc556f9a5e5227f5b45e8909687dbb6034cdb256"
+    },
+    {
+      "path": "base-benchmark-report.md",
+      "bytes": 1368,
+      "sha256": "884273a2f72829a3c1cdc10cd54b9c3ec40b67d89192eb97c378eb36dee57009"
+    },
+    {
+      "path": "extension-r13-r20.json",
+      "bytes": 618,
+      "sha256": "f57cf7a92cd65b759124f31fd82ff00dfc3b56dee209a275707a49f19ecfce68"
+    },
+    {
+      "path": "extension-r13-r20.md",
+      "bytes": 743,
+      "sha256": "689d3830c0834cc155ef64ccaaf61a5658f6d83667925391bfb81ff5fd0b41cc"
+    },
+    {
+      "path": "holdout.json",
+      "bytes": 618,
+      "sha256": "f57cf7a92cd65b759124f31fd82ff00dfc3b56dee209a275707a49f19ecfce68"
+    },
+    {
+      "path": "holdout.md",
+      "bytes": 743,
+      "sha256": "689d3830c0834cc155ef64ccaaf61a5658f6d83667925391bfb81ff5fd0b41cc"
+    },
+    {
+      "path": "memory-value-deterministic.json",
+      "bytes": 1307,
+      "sha256": "a801f635eb509b9aa940e289e749a4c6c10910043506ea52d97cf04627d9eae1"
+    },
+    {
+      "path": "memory-value-deterministic.md",
+      "bytes": 1495,
+      "sha256": "ccaf172f554f5dcc87e03e3f7c8bc2205c0bc83f685213092b786b2236c16edd"
+    },
+    {
+      "path": "memory-value-real-agent.json",
+      "bytes": 621,
+      "sha256": "c736f50f39b7a51036f08c75daf721e74303191c5ebbee90243a7d259c3ebd5a"
+    },
+    {
+      "path": "memory-value-real-agent.md",
+      "bytes": 745,
+      "sha256": "564d8b422b051780b57284893368c1a0c2be2011fb4bdbdb16b663269531f419"
+    },
+    {
+      "path": "openkylin-tests.txt",
+      "bytes": 214,
+      "sha256": "3f86ea13acb7e843f183d7ab7afbbfcad9a363e1be6a48aed95f2c3dfaa3ae1e"
+    },
+    {
+      "path": "remote-api-openhands.json",
+      "bytes": 621,
+      "sha256": "b9fc05f10022c5cb688d620cfe41bedfcdcfe3f1fea621db9c37f2adc407775f"
+    },
+    {
+      "path": "remote-api-openhands.md",
+      "bytes": 745,
+      "sha256": "86f239d9926de101de89625d3ffd96fb999d3c4ac0e7fbd6f03cfff005c9c5eb"
+    }
+  ]
+}

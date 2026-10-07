@@ -1,0 +1,51 @@
+{
+  "generated_at": "2026-10-06T06:35:13.990440+00:00",
+  "model_change": {
+    "previous_model_backup": "openai/gpt-5.4",
+    "configured_model": "openai/gpt-5.5",
+    "actual_cli_default_model": "openai/gpt-5.5",
+    "verification_reference": "/home/luo/real-agent-showcase-20261006-attempt4/summary.json",
+    "credential_change": false,
+    "key_and_endpoint_preservation": "Atomic updater compared original key/base URL bytes and asserted unchanged before returning success."
+  },
+  "normal_mode": {
+    "returncode": 0,
+    "stdout": "{\n  \"schema\": \"memguardos-normal-mode-persistence-v1\",\n  \"generated_at\": \"2026-10-06T06:35:14.404587+00:00\",\n  \"boot_mode\": \"('normal',)\",\n  \"package_versions\": {\n    \"memguardos\": \"1.0.1-9+finals20261006\",\n    \"memguardos-core\": \"1.0.1-9+finals20261006\",\n    \"memguardos-ukui\": \"1.0.1-9+finals20261006\",\n    \"memguardos-agent-bridge\": \"1.0.1-9+finals20261006\",\n    \"memguardos-doc\": \"1.0.1-9+finals20261006\"\n  },\n  \"service_status\": {\n    \"memguardd\": \"active\",\n    \"memguard-agent@luo\": \"active\"\n  },\n  \"module\": \"/var/opt/memguardos/memguard/service.py\",\n  \"source_match_normalized_newlines\": {\n    \"memguard/service.py\": true,\n    \"memguard/procedural.py\": true,\n    \"memguard/procedure_service.py\": true,\n    \"memguard/store/dependencies.py\": true,\n    \"memguard/store/sqlite_meta.py\": true,\n    \"memguard/retrieval/hybrid.py\": true,\n    \"memguard/forgetting/planner.py\": true,\n    \"memguard/forgetting/natural_intent.py\": true,\n    \"memguard/api/server.py\": true,\n    \"memguard/cli/memguard.py\": true,\n    \"memguard/web/dashboard.py\": true,\n    \"memguard/integrations/openhands_runner.py\": true,\n    \"memguard/integrations/openhands_adapter.py\": true,\n    \"memguard/integrations/adherence.py\": true,\n    \"memguard/extraction/semantic.py\": true,\n    \"memguard/feedback.py\": true,\n    \"memguard/integrations/openhands_memory_hook.py\": true\n  },\n  \"root_capacity\": \"文件系统        大小  已用  可用 已用% 挂载点\\n/dev/sda5        31G   20G  9.3G   68% /\",\n  \"passed\": true\n}\n",
+    "stderr": ""
+  },
+  "memory": {
+    "returncode": 0,
+    "stdout": "               total        used        free      shared  buff/cache   available\n内存：          5860        1853        3532          40         754        4007\n交换：          8191         552        7639\n",
+    "stderr": ""
+  },
+  "root_space": {
+    "returncode": 0,
+    "stdout": "文件系统        大小  已用  可用 已用% 挂载点\n/dev/sda5        31G   20G  9.3G   68% /\n",
+    "stderr": ""
+  },
+  "memguard_services": {
+    "returncode": 0,
+    "stdout": "active\nactive\n",
+    "stderr": ""
+  },
+  "kytensor_runtime_state": {
+    "returncode": 3,
+    "stdout": "inactive\n",
+    "stderr": ""
+  },
+  "resource_policy": {
+    "memory_high": "1200M",
+    "memory_max": "1600M",
+    "memory_swap_max": "256M",
+    "cpu_quota": "100%",
+    "tasks_max": 128,
+    "runtime_max_sec": 1200,
+    "applies_to": "Transient real validation job, not a permanent configuration change"
+  },
+  "operational_notes": [
+    "One user-authorized hard reset recovered the unresponsive VM.",
+    "Previous boot recorded memory pressure and page allocation failure; no single process is proven to be the sole cause.",
+    "Native Kylin kytensor inference service was temporarily stopped after measured memory use about 3.9GB; it was not uninstalled or disabled.",
+    "Screen resolution restored to 1280x800 after actual desktop captures."
+  ]
+}

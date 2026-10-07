@@ -56,5 +56,5 @@ version = {attr = "memguard.__version__"}
 "memguard.resources" = ["*.json"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["../tests"]
 pythonpath = ["."]

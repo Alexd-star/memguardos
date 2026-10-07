@@ -1,0 +1,23 @@
+{
+  "generated_at": "2026-07-26T07:43:55.441300+00:00",
+  "root": "docs/evidence/multi_distro_latest",
+  "file_count": 3,
+  "total_bytes": 4116,
+  "files": [
+    {
+      "path": "debian_container_full_suite.txt",
+      "bytes": 574,
+      "sha256": "78b7684e127fc905d226544f8f640cfc6bd3792b9e0b85a802790ca5432cb981"
+    },
+    {
+      "path": "github_actions_ubuntu_ci.txt",
+      "bytes": 1222,
+      "sha256": "ba68fd31570d914a97bb35414b49c15e616e0b3efd29620ca4352a9286eb2467"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2320,
+      "sha256": "cc4a2b985ab1831d28007a28a998f2bb3dbb80930e62cfb9860f99df19eb3a4d"
+    }
+  ]
+}

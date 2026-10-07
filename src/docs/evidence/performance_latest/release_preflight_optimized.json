@@ -1,0 +1,109 @@
+{
+  "ok": true,
+  "elapsed_s": 47.514,
+  "results": [
+    {
+      "name": "compile",
+      "command": [
+        "C:\\Program Files\\Python39\\python.exe",
+        "-m",
+        "compileall",
+        "-q",
+        "memguard",
+        "scripts"
+      ],
+      "ok": true,
+      "returncode": 0,
+      "elapsed_s": 0.153
+    },
+    {
+      "name": "ruff",
+      "command": [
+        "C:\\Program Files\\Python39\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "ok": true,
+      "returncode": 0,
+      "elapsed_s": 0.168
+    },
+    {
+      "name": "pytest",
+      "command": [
+        "C:\\Program Files\\Python39\\python.exe",
+        "-m",
+        "pytest",
+        "-q"
+      ],
+      "ok": true,
+      "returncode": 0,
+      "elapsed_s": 39.996
+    },
+    {
+      "name": "docs links",
+      "command": [
+        "C:\\Program Files\\Python39\\python.exe",
+        "scripts/check_docs_links.py"
+      ],
+      "ok": true,
+      "returncode": 0,
+      "elapsed_s": 0.122
+    },
+    {
+      "name": "web dashboard smoke",
+      "command": [
+        "C:\\Program Files\\Python39\\python.exe",
+        "scripts/web_dashboard_smoke.py"
+      ],
+      "ok": true,
+      "returncode": 0,
+      "elapsed_s": 1.809
+    },
+    {
+      "name": "competition readiness",
+      "command": [
+        "C:\\Program Files\\Python39\\python.exe",
+        "scripts/check_competition_ready.py",
+        "--output",
+        "docs/competition_ready.json",
+        "--markdown",
+        "docs/竞赛就绪自检报告.md"
+      ],
+      "ok": true,
+      "returncode": 0,
+      "elapsed_s": 0.286
+    },
+    {
+      "name": "submission package",
+      "command": [
+        "C:\\Program Files\\Python39\\python.exe",
+        "scripts/package_submission.py"
+      ],
+      "ok": true,
+      "returncode": 0,
+      "elapsed_s": 1.352
+    },
+    {
+      "name": "submission package audit",
+      "command": [
+        "C:\\Program Files\\Python39\\python.exe",
+        "scripts/inspect_submission_package.py"
+      ],
+      "ok": true,
+      "returncode": 0,
+      "elapsed_s": 0.212
+    },
+    {
+      "name": "submission archive smoke",
+      "command": [
+        "C:\\Program Files\\Python39\\python.exe",
+        "scripts/smoke_submission_archive.py"
+      ],
+      "ok": true,
+      "returncode": 0,
+      "elapsed_s": 3.416
+    }
+  ]
+}

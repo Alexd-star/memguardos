@@ -1,0 +1,29 @@
+{
+  "mode": "installed_api_and_real_pretool_hook_without_llm",
+  "passed": true,
+  "external_llm_used": false,
+  "tool_executed": false,
+  "before": {
+    "returncode": 0,
+    "response": {
+      "decision": "allow",
+      "continue": true
+    }
+  },
+  "after": {
+    "returncode": 2,
+    "response": {
+      "decision": "deny",
+      "reason": "记忆上下文已更新或撤回，请结束当前任务并重新开始，以获取最新记忆。",
+      "policy_category": "stale_memory_context",
+      "continue": false,
+      "validation_reason": "memory_changed",
+      "affected_memory_ids": [
+        "mem_7ca9c4e47a9c4139",
+        "mem_821a545fd0e7431d"
+      ]
+    }
+  },
+  "source_invalidated": "source_invalidated",
+  "new_context_excludes_procedure": true
+}

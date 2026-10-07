@@ -1,0 +1,246 @@
+{
+  "schema": "memguardos-desktop-scan-apply-v1",
+  "ok": true,
+  "manifest_id": "a51ff366-940b-40fa-98b2-fea1b530f95c",
+  "summary": {
+    "selected": 2,
+    "stored": 2,
+    "blocked": 0,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "schema": "memguardos-peony-scan-report-v1",
+      "path": "/var/tmp/tmp.HGpacKXTMz/peony_preference.md",
+      "exists": true,
+      "file_kind": "file",
+      "size_bytes": 57,
+      "eligible_for_text_import": true,
+      "recommended_action": "import_text",
+      "sensitivity": {
+        "level": "none",
+        "labels": [],
+        "redacted": false,
+        "decision_reason": {
+          "matched_pattern": [],
+          "allowlist_hit": [],
+          "source_uri_sensitive": false,
+          "final_action": "allow"
+        }
+      },
+      "preview": "以后回答 openKylin 问题时先给可复制命令。",
+      "warnings": [],
+      "audit_event": {
+        "attempted": true,
+        "stored": true,
+        "reason": ""
+      },
+      "ingest": {
+        "attempted": true,
+        "stored": true,
+        "reason": "",
+        "feedback": {
+          "schema": "memguardos-memory-change-summary-v1",
+          "namespace": "default",
+          "session_id": "/var/tmp/tmp.HGpacKXTMz/peony_preference.md",
+          "source": "peony_file",
+          "new_memories": [
+            {
+              "memory_id": "mem_2e44acdc336f4939",
+              "type": "preference",
+              "subtype": "tool_preference",
+              "tier": "long_term",
+              "scope": "default",
+              "preference_topic": "",
+              "preference_value": "",
+              "summary_for_user": "用户偏好：以后回答 openKylin 问题时先给可复制命令。",
+              "why_extracted": "内容通过质量和敏感性检查，并被抽取为可检索的记忆。",
+              "where_it_will_apply": [
+                "相关检索任务"
+              ],
+              "actions": [
+                "view",
+                "test_effect",
+                "forget"
+              ]
+            }
+          ],
+          "updated_memories": [],
+          "blocked_items": [],
+          "skipped_items": [],
+          "effective_scopes": [
+            "相关检索任务"
+          ],
+          "suggested_next_actions": [
+            "view",
+            "test_effect",
+            "forget"
+          ],
+          "audit_event_ids": [
+            "audit-26"
+          ]
+        },
+        "sensitive_notice": null,
+        "audit_event_id": "audit-26",
+        "memory_id": "mem_2e44acdc336f4939",
+        "type": "preference",
+        "subtype": "tool_preference",
+        "tier": "long_term"
+      },
+      "verification": {
+        "audit_chain_ok": true
+      }
+    },
+    {
+      "schema": "memguardos-peony-scan-report-v1",
+      "path": "/var/tmp/tmp.HGpacKXTMz/peony_knowledge.txt",
+      "exists": true,
+      "file_kind": "file",
+      "size_bytes": 61,
+      "eligible_for_text_import": true,
+      "recommended_action": "import_text",
+      "sensitivity": {
+        "level": "none",
+        "labels": [],
+        "redacted": false,
+        "decision_reason": {
+          "matched_pattern": [],
+          "allowlist_hit": [],
+          "source_uri_sensitive": false,
+          "final_action": "allow"
+        }
+      },
+      "preview": "systemd MemoryMax 可以限制后台记忆服务的内存。",
+      "warnings": [],
+      "audit_event": {
+        "attempted": true,
+        "stored": true,
+        "reason": ""
+      },
+      "ingest": {
+        "attempted": true,
+        "stored": true,
+        "reason": "",
+        "feedback": {
+          "schema": "memguardos-memory-change-summary-v1",
+          "namespace": "default",
+          "session_id": "/var/tmp/tmp.HGpacKXTMz/peony_knowledge.txt",
+          "source": "peony_file",
+          "new_memories": [
+            {
+              "memory_id": "mem_27f966e589a240c0",
+              "type": "knowledge",
+              "subtype": "fact",
+              "tier": "long_term",
+              "scope": "default",
+              "preference_topic": "",
+              "preference_value": "",
+              "summary_for_user": "知识记忆：systemd MemoryMax 可以限制后台记忆服务的内存。",
+              "why_extracted": "内容通过质量和敏感性检查，并被抽取为可检索的记忆。",
+              "where_it_will_apply": [
+                "相关检索任务"
+              ],
+              "actions": [
+                "view",
+                "test_effect",
+                "forget"
+              ]
+            }
+          ],
+          "updated_memories": [],
+          "blocked_items": [],
+          "skipped_items": [],
+          "effective_scopes": [
+            "相关检索任务"
+          ],
+          "suggested_next_actions": [
+            "view",
+            "test_effect",
+            "forget"
+          ],
+          "audit_event_ids": [
+            "audit-29"
+          ]
+        },
+        "sensitive_notice": null,
+        "audit_event_id": "audit-29",
+        "memory_id": "mem_27f966e589a240c0",
+        "type": "knowledge",
+        "subtype": "fact",
+        "tier": "long_term"
+      },
+      "verification": {
+        "audit_chain_ok": true
+      }
+    }
+  ],
+  "memory_change_summary": {
+    "schema": "memguardos-memory-change-summary-v1",
+    "namespace": "default",
+    "session_id": "a51ff366-940b-40fa-98b2-fea1b530f95c",
+    "source": "peony",
+    "new_memories": [
+      {
+        "memory_id": "mem_2e44acdc336f4939",
+        "type": "preference",
+        "subtype": "tool_preference",
+        "tier": "long_term",
+        "scope": "default",
+        "preference_topic": "",
+        "preference_value": "",
+        "summary_for_user": "用户偏好：以后回答 openKylin 问题时先给可复制命令。",
+        "why_extracted": "内容通过质量和敏感性检查，并被抽取为可检索的记忆。",
+        "where_it_will_apply": [
+          "相关检索任务"
+        ],
+        "actions": [
+          "view",
+          "test_effect",
+          "forget"
+        ]
+      },
+      {
+        "memory_id": "mem_27f966e589a240c0",
+        "type": "knowledge",
+        "subtype": "fact",
+        "tier": "long_term",
+        "scope": "default",
+        "preference_topic": "",
+        "preference_value": "",
+        "summary_for_user": "知识记忆：systemd MemoryMax 可以限制后台记忆服务的内存。",
+        "why_extracted": "内容通过质量和敏感性检查，并被抽取为可检索的记忆。",
+        "where_it_will_apply": [
+          "相关检索任务"
+        ],
+        "actions": [
+          "view",
+          "test_effect",
+          "forget"
+        ]
+      }
+    ],
+    "updated_memories": [],
+    "blocked_items": [],
+    "skipped_items": [],
+    "effective_scopes": [
+      "相关检索任务"
+    ],
+    "suggested_next_actions": [
+      "view",
+      "test_effect",
+      "forget"
+    ],
+    "audit_event_ids": [
+      "audit-26",
+      "audit-29",
+      "32"
+    ]
+  },
+  "audit_chain": {
+    "ok": true,
+    "checked": 32,
+    "head_hash": "e7eb4972095138b48134ab026773b2854b6e4b0811d249a29208b182b13dbeaa"
+  },
+  "audit_event_id": "32"
+}

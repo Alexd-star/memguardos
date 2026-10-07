@@ -1,0 +1,123 @@
+{
+  "schema": "memguardos-procedure-validation-v1",
+  "generated_at": "2026-10-06T01:35:57.341710+00:00",
+  "mode": "offline_product_api_with_scripted_file_actions",
+  "external_llm_used": false,
+  "passed": true,
+  "checks": [
+    {
+      "name": "完成检查未通过时拒绝形成可复用流程",
+      "passed": true
+    },
+    {
+      "name": "实际文件检查通过后形成带来源版本的流程",
+      "passed": true
+    },
+    {
+      "name": "新会话绑定不同文件参数：release-b.md",
+      "passed": true
+    },
+    {
+      "name": "尚未完成的工作不计成功：release-b.md",
+      "passed": true
+    },
+    {
+      "name": "后续任务重新检查实际结果：release-b.md",
+      "passed": true
+    },
+    {
+      "name": "新会话绑定不同文件参数：发布复核.md",
+      "passed": true
+    },
+    {
+      "name": "尚未完成的工作不计成功：发布复核.md",
+      "passed": true
+    },
+    {
+      "name": "后续任务重新检查实际结果：发布复核.md",
+      "passed": true
+    },
+    {
+      "name": "新会话绑定不同文件参数：report-final.txt",
+      "passed": true
+    },
+    {
+      "name": "尚未完成的工作不计成功：report-final.txt",
+      "passed": true
+    },
+    {
+      "name": "后续任务重新检查实际结果：report-final.txt",
+      "passed": true
+    },
+    {
+      "name": "重复同次反馈不增加成功计数",
+      "passed": true
+    },
+    {
+      "name": "未提供参数时明确提示而不虚构步骤",
+      "passed": true
+    },
+    {
+      "name": "Agent 上下文同时携带步骤、约束与完成条件",
+      "passed": true
+    },
+    {
+      "name": "窗口不足时整体跳过流程，不裁掉安全约束",
+      "passed": true
+    },
+    {
+      "name": "控制台详情可查看流程来源及实测反馈",
+      "passed": true
+    },
+    {
+      "name": "流程进入接入的 Agent 上下文检查点",
+      "passed": true
+    },
+    {
+      "name": "来源更新后派生流程立即失效",
+      "passed": true
+    },
+    {
+      "name": "已发出的旧上下文在下一检查点拒用",
+      "passed": true
+    },
+    {
+      "name": "新任务不再收到过时流程",
+      "passed": true
+    },
+    {
+      "name": "撤回预览列出确切派生影响",
+      "passed": true
+    },
+    {
+      "name": "源记录、流程、依赖关系和反馈一起清理",
+      "passed": true
+    },
+    {
+      "name": "独立文档偏好保留，审计链完整",
+      "passed": true
+    }
+  ],
+  "environment": {
+    "system": "Linux",
+    "python": "3.12.2"
+  },
+  "modules": {
+    "memguard.procedural": {
+      "path": "/var/opt/memguardos/memguard/procedural.py",
+      "sha256": "928a343bc65aa7c434e8f9a5a08ce68cf0d78a8cf0491104f0885cc27136cc3a"
+    },
+    "memguard.procedure_service": {
+      "path": "/var/opt/memguardos/memguard/procedure_service.py",
+      "sha256": "d90a7df77015efb13a961f4620dff1bb71fcda255ea10724b08e19cbf90f1628"
+    },
+    "memguard.store.dependencies": {
+      "path": "/var/opt/memguardos/memguard/store/dependencies.py",
+      "sha256": "450c8f2c8c7dd5507a807635012fb1b3dd5fa709bd8fffd45b4ea4329198dac3"
+    },
+    "memguard.service": {
+      "path": "/var/opt/memguardos/memguard/service.py",
+      "sha256": "9abfcd1f5b85327e52afccf56ba5c4c4573f66b5da5f32364a869242480998ca"
+    }
+  }
+}

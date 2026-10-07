@@ -1,0 +1,601 @@
+$ python3 -m memguard.cli.memctl openkylin-status --probe-sdk --probe-timeout 90
+[1785313287104] [32minfo [0m Proxy init engine sessionId:116710832.
+{
+  "schema": "memguardos-openkylin-native-status-v1",
+  "system": {
+    "platform": "Linux-6.6.0-19-generic-x86_64-with-glibc2.38",
+    "kernel": "6.6.0-19-generic",
+    "machine": "x86_64",
+    "distribution_id": "openkylin",
+    "distribution_name": "openKylin",
+    "distribution_version": "2.0 SP2 (nile)",
+    "is_openkylin_like": true
+  },
+  "services": {
+    "systemd": {
+      "available": true,
+      "active": true,
+      "note": "systemctl available"
+    },
+    "memguardd.service": {
+      "available": true,
+      "active": true,
+      "state": "active",
+      "enabled": "enabled"
+    },
+    "kylin-ai-vector-engine.service": {
+      "available": false,
+      "active": false,
+      "state": "inactive",
+      "enabled": "not-found"
+    },
+    "kytensor.service": {
+      "available": true,
+      "active": true,
+      "state": "active",
+      "enabled": "enabled"
+    }
+  },
+  "sdk": {
+    "embedding": {
+      "backend": "kylin_coreai_embedding",
+      "library": "libkysdk-coreai-embedding.so.1",
+      "library_file": "/lib/x86_64-linux-gnu/libkysdk-coreai-embedding.so.1",
+      "library_loadable": true,
+      "headers": {
+        "/usr/include/kylin-ai/coreai/embedding/embedding.h": true,
+        "/usr/include/kylin-ai/plugins/ai-engines/ondeviceembeddingengine.h": true
+      },
+      "runtime": {
+        "binary": "/usr/bin/kylin-ai-runtime",
+        "user_service": {
+          "available": true,
+          "active": true,
+          "state": "active"
+        },
+        "base_dir": "/tmp/.kylin-ai-runtime-unix/1000",
+        "base_dir_exists": true,
+        "sockets": {
+          "core-textembedding.sock": "/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock",
+          "config.sock": "/tmp/.kylin-ai-runtime-unix/1000/config.sock"
+        },
+        "socket_exists": {
+          "core-textembedding.sock": true,
+          "config.sock": true
+        },
+        "socket_ready": {
+          "core-textembedding.sock": true,
+          "config.sock": true
+        },
+        "socket_trust": {
+          "core-textembedding.sock": {
+            "path": "/tmp/.kylin-ai-runtime-unix/1000/core-textembedding.sock",
+            "exists": true,
+            "trusted": true,
+            "socket_ready": true,
+            "reason": "Unix socket 可信：类型、所有者、连接与 SO_PEERCRED 校验通过",
+            "socket": {
+              "owner": 1000,
+              "mode": "0o775",
+              "world_writable": false,
+              "sticky": false,
+              "is_symlink": false,
+              "is_socket": true,
+              "device": 2053,
+              "inode": 82
+            },
+            "parent_directory": {
+              "owner": 1000,
+              "mode": "0o700",
+              "world_writable": false,
+              "sticky": false,
+              "is_symlink": false,
+              "is_socket": false,
+              "device": 2053,
+              "inode": 69,
+              "path": "/tmp/.kylin-ai-runtime-unix/1000"
+            },
+            "parent_directory_warning": false,
+            "connection": {
+              "attempted": true,
+              "connected": true,
+              "closed": true,
+              "timeout_seconds": 0.2
+            },
+            "peer_credentials": {
+              "supported": true,
+              "verified": true,
+              "pid": 43018,
+              "uid": 1000,
+              "gid": 1000
+            },
+            "root_policy": {
+              "applies": false,
+              "allowed": true,
+              "environment_variable": "MEMGUARD_ALLOW_ROOT_KYLIN_USER_SOCKET",
+              "explicit_opt_in": false
+            }
+          },
+          "config.sock": {
+            "path": "/tmp/.kylin-ai-runtime-unix/1000/config.sock",
+            "exists": true,
+            "trusted": true,
+            "socket_ready": true,
+            "reason": "Unix socket 可信：类型、所有者、连接与 SO_PEERCRED 校验通过",
+            "socket": {
+              "owner": 1000,
+              "mode": "0o775",
+              "world_writable": false,
+              "sticky": false,
+              "is_symlink": false,
+              "is_socket": true,
+              "device": 2053,
+              "inode": 70
+            },
+            "parent_directory": {
+              "owner": 1000,
+              "mode": "0o700",
+              "world_writable": false,
+              "sticky": false,
+              "is_symlink": false,
+              "is_socket": false,
+              "device": 2053,
+              "inode": 69,
+              "path": "/tmp/.kylin-ai-runtime-unix/1000"
+            },
+            "parent_directory_warning": false,
+            "connection": {
+              "attempted": true,
+              "connected": true,
+              "closed": true,
+              "timeout_seconds": 0.2
+            },
+            "peer_credentials": {
+              "supported": true,
+              "verified": true,
+              "pid": 43018,
+              "uid": 1000,
+              "gid": 1000
+            },
+            "root_policy": {
+              "applies": false,
+              "allowed": true,
+              "environment_variable": "MEMGUARD_ALLOW_ROOT_KYLIN_USER_SOCKET",
+              "explicit_opt_in": false
+            }
+          }
+        },
+        "trusted": true,
+        "reason": "Kylin runtime Unix socket 全部可信",
+        "parent_directory_warning": false,
+        "session_bus": true,
+        "xdg_runtime_dir": "/run/user/1000"
+      },
+      "kytensor": {
+        "service": {
+          "available": true,
+          "active": true,
+          "state": "active",
+          "enabled": "enabled"
+        },
+        "repository_index": {
+          "available": true,
+          "ok": true,
+          "models": [
+            "embd_cn-clip_512-uint8-image",
+            "embd_cn-clip_512-uint8-text",
+            "embd_gte-base_uint8-text",
+            "ensemble-embd_cn-clip_512-uint8-text",
+            "ensemble-embd_gte-base_uint8-text",
+            "matting_portrait",
+            "model_bank",
+            "ocr_ppocr",
+            "tokenizer_cn-clip_512-uint8-text",
+            "tokenizer_gte-base_uint8-text"
+          ],
+          "has_text_embedding_models": true
+        },
+        "repositories": [
+          {
+            "path": "/opt/appdata/kylin-ai/model-repository",
+            "exists": true,
+            "entries": [
+              "embd_cn-clip_512-uint8-image",
+              "embd_cn-clip_512-uint8-text",
+              "embd_gte-base_uint8-text",
+              "ensemble-embd_cn-clip_512-uint8-text",
+              "ensemble-embd_gte-base_uint8-text",
+              "matting_portrait",
+              "model_bank",
+              "ocr_ppocr",
+              "tokenizer_cn-clip_512-uint8-text",
+              "tokenizer_gte-base_uint8-text"
+            ],
+            "has_text_embedding_models": true
+          },
+          {
+            "path": "/usr/share/kylin-ai/model-repository",
+            "exists": true,
+            "entries": [
+              "embd_cn-clip_512-uint8-image",
+              "embd_cn-clip_512-uint8-text",
+              "embd_gte-base_uint8-text",
+              "ensemble-embd_cn-clip_512-uint8-text",
+              "ensemble-embd_gte-base_uint8-text",
+              "matting_portrait",
+              "model_bank",
+              "ocr_ppocr",
+              "tokenizer_cn-clip_512-uint8-text",
+              "tokenizer_gte-base_uint8-text"
+            ],
+            "has_text_embedding_models": true
+          }
+        ],
+        "expected_text_embedding_models": [
+          "ensemble-embd_gte-base_uint8-text",
+          "embd_gte-base_uint8-text",
+          "tokenizer_gte-base_uint8-text"
+        ],
+        "fix_hint": "If /opt/appdata/kylin-ai/model-repository is empty while /usr/share/kylin-ai/model-repository has models, run scripts/fix_kylin_embedding_runtime.sh to link the repositories and restart kytensor/runtime."
+      },
+      "plugins": {
+        "dirs": [
+          {
+            "path": "/usr/lib/kylin-ai/plugins/ai-engines",
+            "exists": false,
+            "shared_objects": [],
+            "has_ondevice_plugin": false
+          },
+          {
+            "path": "/usr/lib/x86_64-linux-gnu/kylin-ai/plugins/ai-engines",
+            "exists": true,
+            "shared_objects": [
+              "libbaidu-engine-plugin.so",
+              "libcustom-engine-plugin.so",
+              "libdeepseek-engine-plugin.so",
+              "libfreetrial-engine-plugin.so",
+              "libkylin-traditional-engine-plugin.so",
+              "libondevice-engine.so",
+              "libqwen-engine-plugin.so",
+              "libxunfei-engine-plugin.so"
+            ],
+            "has_ondevice_plugin": true
+          },
+          {
+            "path": "/usr/lib/aarch64-linux-gnu/kylin-ai/plugins/ai-engines",
+            "exists": false,
+            "shared_objects": [],
+            "has_ondevice_plugin": false
+          },
+          {
+            "path": "/usr/lib/loongarch64-linux-gnu/kylin-ai/plugins/ai-engines",
+            "exists": false,
+            "shared_objects": [],
+            "has_ondevice_plugin": false
+          }
+        ]
+      },
+      "packages": {
+        "available": true,
+        "packages": {
+          "kylin-ai-runtime": {
+            "installed": true,
+            "raw": "install ok installed 1.1.0.1-ok0.12"
+          },
+          "kylin-ai-engine-plugins": {
+            "installed": true,
+            "raw": "install ok installed 1.1.0.1-ok1.3"
+          },
+          "libkylin-coreai-embedding": {
+            "installed": true,
+            "raw": "install ok installed 1.2.0.0-ok0.2"
+          },
+          "libkylin-coreai-embedding-dev": {
+            "installed": true,
+            "raw": "install ok installed 1.2.0.0-ok0.2"
+          },
+          "libkylin-ondevice-embedding-engine": {
+            "installed": true,
+            "raw": "install ok installed 1.2.0.0-ok0.5"
+          },
+          "libkylin-ondevice-embedding-engine-dev": {
+            "installed": true,
+            "raw": "install ok installed 1.2.0.0-ok0.5"
+          },
+          "libkylin-ondevice-ai-engine-plugin": {
+            "installed": true,
+            "raw": "install ok installed 1.2.0.0-ok0.6"
+          },
+          "libkylin-ondevice-traditional-ai-engine-plugin": {
+            "installed": true,
+            "raw": "install ok installed 1.2.0.0-ok0.2"
+          }
+        }
+      },
+      "symbols": {
+        "available": true,
+        "ok": true,
+        "symbols": {
+          "text_embedding_create_session": true,
+          "text_embedding_init_session": true,
+          "text_embedding_get_model_info": true,
+          "text_embedding": true,
+          "embedding_result_get_vector_length": true,
+          "embedding_result_get_vector_data": true
+        }
+      },
+      "session": {
+        "created": true,
+        "init_code": 0,
+        "init_ok": true,
+        "init_code_hint": "success",
+        "model_info_ok": true
+      },
+      "model_info": {
+        "dim": 768,
+        "name": "ensemble-embd_gte-base_uint8-text",
+        "ondevice": true
+      },
+      "embedding_probe": {
+        "ok": true,
+        "dim": 768,
+        "sample": [
+          -0.086721,
+          -0.023629,
+          -0.007548,
+          0.027401,
+          0.011692
+        ],
+        "subprocess_returncode": 0,
+        "stderr_tail": "[1785313287199] \u001b[32minfo \u001b[0m Proxy init engine sessionId:695984718."
+      },
+      "available": true,
+      "inference_ready": true,
+      "ready_for_default_retrieval": true,
+      "fallback": "hash_embedding",
+      "diagnosis": {
+        "success_condition": "library_loadable and model_info and embedding_probe.ok",
+        "availability_meaning": "available means SDK metadata is reachable; inference_ready means a real embedding call succeeded.",
+        "probe_meaning": "embedding_probe is null when sdk-status runs without --probe-embedding; use --probe-embedding to verify real inference readiness.",
+        "timeout_hint": "If model_info is present but embedding_probe returns 'Timeout was reached', inspect kylin-ai-runtime sockets, kytensor.service, Triton repository index, ondevice plugin logs, and model repository links."
+      },
+      "capability_state": "inference_ready",
+      "component_ready": true,
+      "user_message": "推理就绪，可作为端侧检索增强",
+      "next_action": "可继续使用，也可定期导出诊断报告",
+      "product_state": {
+        "installed": true,
+        "last_probe_success": true,
+        "last_success_at": "2026-07-29T16:21:25+08:00",
+        "last_success_dim": 768,
+        "last_success_model": "ensemble-embd_gte-base_uint8-text",
+        "last_failure_at": "",
+        "last_failure_reason": "",
+        "warmup_state": "ready",
+        "fallback": "hash_embedding",
+        "user_message": "已安装，最近一次端侧向量预热成功"
+      }
+    },
+    "vector_store": {
+      "backend": "kysdk_vector_engine_client",
+      "library": "libkysdk-vector-engine-client.so.1",
+      "library_loadable": true,
+      "headers": {
+        "/usr/include/kysdk-vector-engine-client/Database.h": true
+      },
+      "binary": "/usr/bin/kylin-ai-vector-engine",
+      "default_binary": "/usr/bin/kylin-ai-vector-engine-default",
+      "user_service": {
+        "available": true,
+        "active": true,
+        "state": "active"
+      },
+      "socket": "/tmp/kylin-ai-vector-engine-1000.sock",
+      "socket_exists": true,
+      "socket_ready": true,
+      "trusted": true,
+      "reason": "Unix socket 可信：类型、所有者、连接与 SO_PEERCRED 校验通过",
+      "socket_trust": {
+        "path": "/tmp/kylin-ai-vector-engine-1000.sock",
+        "exists": true,
+        "trusted": true,
+        "socket_ready": true,
+        "reason": "Unix socket 可信：类型、所有者、连接与 SO_PEERCRED 校验通过",
+        "socket": {
+          "owner": 1000,
+          "mode": "0o775",
+          "world_writable": false,
+          "sticky": false,
+          "is_symlink": false,
+          "is_socket": true,
+          "device": 2053,
+          "inode": 1866641
+        },
+        "parent_directory": {
+          "owner": 0,
+          "mode": "0o1777",
+          "world_writable": true,
+          "sticky": true,
+          "is_symlink": false,
+          "is_socket": false,
+          "device": 2053,
+          "inode": 1853797,
+          "path": "/tmp"
+        },
+        "parent_directory_warning": false,
+        "connection": {
+          "attempted": true,
+          "connected": true,
+          "closed": true,
+          "timeout_seconds": 0.2
+        },
+        "peer_credentials": {
+          "supported": true,
+          "verified": true,
+          "pid": 43060,
+          "uid": 1000,
+          "gid": 1000
+        },
+        "root_policy": {
+          "applies": false,
+          "allowed": true,
+          "environment_variable": "MEMGUARD_ALLOW_ROOT_KYLIN_USER_SOCKET",
+          "explicit_opt_in": false
+        }
+      },
+      "parent_directory_warning": false,
+      "available": true,
+      "fallback": "sqlite_fts_hash_vector",
+      "capability_state": "socket_ready",
+      "component_ready": true,
+      "user_message": "向量服务接口可连接",
+      "next_action": "可继续使用；如需服务管理状态，可在系统维护中刷新服务"
+    }
+  },
+  "desktop": {
+    "session_desktop": "",
+    "desktop_session": "",
+    "peony": {
+      "available": true,
+      "plugin_path": "/usr/lib/x86_64-linux-gnu/peony-extensions/libpeony-menu-plugin-memguardos.so",
+      "plugin_installed": true
+    },
+    "ukui_control_center": {
+      "available": true,
+      "plugin_path": "/usr/lib/x86_64-linux-gnu/ukui-control-center/libmemguardos-ukcc-plugin.so",
+      "plugin_installed": true
+    },
+    "notify_send": {
+      "available": true
+    }
+  },
+  "security": {
+    "auditd": {
+      "available": true,
+      "rules_tool_available": true,
+      "rules_directory_accessible": false
+    },
+    "bpf_lsm": {
+      "source_available": true,
+      "loader_available": true,
+      "note": "可选强制拦截能力，默认仅用于安全测试路径和可审查 denylist。"
+    },
+    "polkit": {
+      "available": true,
+      "policy_path": "/usr/share/polkit-1/actions/org.memguardos.policy",
+      "policy_installed": true
+    }
+  },
+  "resources": {
+    "cgroup_v2": true,
+    "service_managed": true,
+    "control_group": "/system.slice/memguardd.service",
+    "diagnosis_code": "ready",
+    "advice": "服务级 cgroup 资源状态正常。",
+    "memory": {
+      "cgroup_memory_current": "17170432",
+      "cgroup_memory_max": "536870912"
+    },
+    "cpu": {
+      "cpu_max": "50000 100000",
+      "cpu_quota_per_sec_usec": "500ms",
+      "cpu_stat": {
+        "usage_usec": 414610,
+        "user_usec": 240966,
+        "system_usec": 173643,
+        "nice_usec": 0,
+        "core_sched.force_idle_usec": 0,
+        "nr_periods": 164,
+        "nr_throttled": 3,
+        "throttled_usec": 140886,
+        "nr_bursts": 0,
+        "burst_usec": 0
+      }
+    },
+    "namespace": "default"
+  },
+  "namespace": {
+    "namespace": "default",
+    "is_default": true,
+    "home": "/var/tmp/memguardos-native-home.WEsptE",
+    "home_exists": true,
+    "namespace_home": "/var/tmp/memguardos-native-home.WEsptE",
+    "namespace_home_exists": true,
+    "store_path": "/var/tmp/memguardos-native-home.WEsptE/memory.segment",
+    "db_path": "/var/tmp/memguardos-native-home.WEsptE/memguard.sqlite3",
+    "custom_patterns_path": "/var/tmp/memguardos-native-home.WEsptE/sensitive_patterns.json",
+    "store_exists": false,
+    "db_exists": false,
+    "custom_patterns_exists": false,
+    "store_bytes": 0,
+    "db_bytes": 0,
+    "record_count": 0,
+    "live_record_count": 0,
+    "audit_event_count": 0
+  },
+  "summary": {
+    "overall": "green",
+    "readiness_score": 1.0,
+    "green": 7,
+    "yellow": 0,
+    "red": 0
+  },
+  "components": [
+    {
+      "name": "systemd",
+      "label": "systemd 服务管理",
+      "available": true,
+      "ready": true,
+      "level": "green"
+    },
+    {
+      "name": "auditd",
+      "label": "审计规则工具",
+      "available": true,
+      "ready": true,
+      "level": "green"
+    },
+    {
+      "name": "kylin_embedding",
+      "label": "Kylin embedding SDK",
+      "available": true,
+      "ready": true,
+      "level": "green",
+      "user_message": "推理就绪，可作为端侧检索增强",
+      "next_action": "可继续使用，也可定期导出诊断报告",
+      "capability_state": "inference_ready"
+    },
+    {
+      "name": "kylin_vector",
+      "label": "Kylin vector SDK",
+      "available": true,
+      "ready": true,
+      "level": "green",
+      "user_message": "向量服务接口可连接",
+      "next_action": "可继续使用；如需服务管理状态，可在系统维护中刷新服务",
+      "capability_state": "socket_ready"
+    },
+    {
+      "name": "peony",
+      "label": "Peony 右键插件",
+      "available": true,
+      "ready": true,
+      "level": "green"
+    },
+    {
+      "name": "ukui_control_center",
+      "label": "UKUI 控制中心插件",
+      "available": true,
+      "ready": true,
+      "level": "green"
+    },
+    {
+      "name": "cgroup_v2",
+      "label": "cgroup v2 资源治理",
+      "available": true,
+      "ready": true,
+      "level": "green"
+    }
+  ],
+  "recommendations": []
+}

@@ -1,0 +1,83 @@
+{
+  "schema": "memguardos-decay-evidence-v1",
+  "revision": "c2b1780",
+  "platform": "Linux-6.6.0-25-generic-x86_64-with-glibc2.38",
+  "python": "3.12.2",
+  "plan": {
+    "plan_id": "c82cfcf1e1055f508ee74dcb03c7fc3cb39e76c8d7592060e2a23726689627d1",
+    "summary": {
+      "candidate_count": 3,
+      "demote_count": 1,
+      "retain_count": 2
+    },
+    "candidates": [
+      {
+        "memory_id": "mem_5b4ffef395d244c8",
+        "recommended_action": "demote_to_session",
+        "decay_score": 0.2488,
+        "age_days": 395.0,
+        "reason": "长期未使用且未达到重要性与置信度保留门槛"
+      },
+      {
+        "memory_id": "mem_0ca1bb6383744d71",
+        "recommended_action": "retain_explicit_preference",
+        "decay_score": 0.26,
+        "age_days": 395.0,
+        "reason": "用户明确要求保留的偏好不参与被动衰减"
+      },
+      {
+        "memory_id": "mem_dde0247203ca4665",
+        "recommended_action": "retain_reinforced",
+        "decay_score": 0.6037,
+        "age_days": 0.0,
+        "reason": "存在检索强化证据或综合健康度达到保留门槛"
+      }
+    ]
+  },
+  "checks": {
+    "cold_memory_demoted": true,
+    "explicit_preference_protected": true,
+    "reinforced_memory_protected": true,
+    "preview_requires_confirmation": true,
+    "demotion_is_reversible": true,
+    "protected_records_remain_long_term": true,
+    "old_plan_rejected_by_cas": true
+  },
+  "results": {
+    "preview": {
+      "applied": false,
+      "reason": "confirmation_required",
+      "plan_id": "c82cfcf1e1055f508ee74dcb03c7fc3cb39e76c8d7592060e2a23726689627d1",
+      "selected_memory_ids": [
+        "mem_5b4ffef395d244c8"
+      ],
+      "target_session_id": "maintenance-2026-01",
+      "expected_versions": {
+        "mem_5b4ffef395d244c8": "ver_3d2852d5bf394ffe"
+      }
+    },
+    "applied": {
+      "applied": true,
+      "plan_id": "c82cfcf1e1055f508ee74dcb03c7fc3cb39e76c8d7592060e2a23726689627d1",
+      "target_session_id": "maintenance-2026-01",
+      "demoted": [
+        {
+          "memory_id": "mem_5b4ffef395d244c8",
+          "version_id": "ver_537c87a487374665",
+          "tier": "session",
+          "session_id": "maintenance-2026-01"
+        }
+      ],
+      "failures": []
+    },
+    "stale_plan": {
+      "applied": false,
+      "reason": "stale_decay_plan",
+      "expected_versions": {
+        "mem_5b4ffef395d244c8": "ver_3d2852d5bf394ffe"
+      },
+      "current_versions": {}
+    }
+  },
+  "passed": true
+}

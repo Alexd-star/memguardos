@@ -1,0 +1,12 @@
+{
+  "host": "openKylin VM",
+  "module": "/var/opt/memguardos/memguard/service.py",
+  "isolated_temporary_memories": true,
+  "external_llm_used": false,
+  "viewport_checks": [
+    1600,
+    390
+  ],
+  "page_errors": [],
+  "source_revocation_removed_procedure": true
+}

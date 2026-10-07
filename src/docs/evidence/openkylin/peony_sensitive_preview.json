@@ -1,0 +1,72 @@
+{
+  "schema": "memguardos-desktop-scan-manifest-v1",
+  "ok": true,
+  "manifest_id": "ca2ec719-165b-4dfd-8ed8-dcfe0ca211dc",
+  "nonce": "J0u4qMZYFM_vfpteU9sO_hmuBFcRcFHN",
+  "namespace": "default",
+  "created_at": 1785313291.5377703,
+  "expires_at": 1785313591.5377703,
+  "used": false,
+  "limits": {
+    "max_files": 100,
+    "max_file_bytes": 1048576,
+    "max_total_bytes": 10485760
+  },
+  "total_bytes": 41,
+  "items": [
+    {
+      "schema": "memguardos-peony-scan-report-v1",
+      "path": "/var/tmp/tmp.HGpacKXTMz/peony_secret.env",
+      "exists": true,
+      "file_kind": "file",
+      "size_bytes": 41,
+      "eligible_for_text_import": true,
+      "recommended_action": "block_sensitive",
+      "sensitivity": {
+        "level": "high",
+        "labels": [
+          "api_key",
+          "sensitive_os_source",
+          "token_assignment"
+        ],
+        "redacted": false,
+        "decision_reason": {
+          "matched_pattern": [
+            "api_key",
+            "sensitive_os_source",
+            "token_assignment"
+          ],
+          "allowlist_hit": [],
+          "source_uri_sensitive": true,
+          "final_action": "block"
+        }
+      },
+      "preview": "OPENAI_API_KEY=<API_TOKEN_REDACTED>",
+      "warnings": [
+        "检测到高风险敏感内容，默认不写入长期记忆。"
+      ],
+      "audit_event": {
+        "attempted": false,
+        "stored": false
+      },
+      "ingest": {
+        "attempted": false,
+        "stored": false
+      },
+      "verification": {
+        "audit_chain_ok": null
+      },
+      "selectable": false,
+      "fingerprint": {
+        "exists": true,
+        "device": 2053,
+        "inode": 1866658,
+        "size": 41,
+        "mtime_ns": 1785313288995440196,
+        "mode": 33204
+      }
+    }
+  ],
+  "signature": "0a9415d53808ac9a5d86999249c6ac82aa9ff46be8db6b62e885105584938cc0",
+  "manifest_path": "/var/tmp/memguardos-native-home.WEsptE/desktop-scans/ca2ec719-165b-4dfd-8ed8-dcfe0ca211dc.json"
+}

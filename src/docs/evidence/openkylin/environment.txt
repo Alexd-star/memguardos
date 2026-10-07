@@ -1,0 +1,15 @@
+$ bash -c cat\ /etc/os-release\;\ uname\ -a\;\ python3\ --version\;\ printf\ \"desktop=%s\\nsession=%s\\n\"\ \"\$\{XDG_CURRENT_DESKTOP:-\}\"\ \"\$\{DESKTOP_SESSION:-\}\"
+NAME="openKylin"
+FULL_NAME="openKylin"
+VERSION="2.0 SP2 (nile)"
+VERSION_US="2.0 SP2 (nile)"
+ID=openkylin
+PRETTY_NAME="openKylin 2.0 SP2"
+VERSION_ID="2.0"
+HOME_URL="https://www.openkylin.top/"
+VERSION_CODENAME=nile
+PRODUCT_FEATURES=3
+Linux luo-pc 6.6.0-19-generic #0ok4-KYLINOS SMP PREEMPT_DYNAMIC Fri Dec 19 07:42:23 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+Python 3.12.2
+desktop=
+session=

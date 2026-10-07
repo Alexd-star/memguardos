@@ -1,0 +1,50 @@
+{
+  "schema": "memguardos-action-feedback-evidence-v1",
+  "revision": "5b36d2516f6170c06e5a0c2ce19434a9a0e164c4",
+  "platform": "Linux-6.6.0-25-generic-x86_64-with-glibc2.38",
+  "python": "3.12.2",
+  "preflight": {
+    "decision": "redirect",
+    "policy_category": "preference_enforcement",
+    "evidence_count": 1
+  },
+  "outcomes": {
+    "followed": {
+      "outcome": "success",
+      "stored": 1
+    },
+    "deviated": {
+      "outcome": "deviation",
+      "stored": 1
+    },
+    "duplicate": {
+      "stored": 0,
+      "duplicates": 1
+    },
+    "stats": {
+      "total_count": 2,
+      "success_count": 1,
+      "failure_count": 0,
+      "deviation_count": 1,
+      "blocked_count": 0,
+      "unknown_count": 0,
+      "last_success_at": "2026-10-06T19:19:17.010324+00:00",
+      "last_observed_at": "2026-10-06T19:19:17.052197+00:00",
+      "adherence_rate": 0.5,
+      "memory_id": "mem_6a6eadc988c04f04"
+    },
+    "stale_receipt": {
+      "ok": false,
+      "reason": "stale_memory_context"
+    }
+  },
+  "checks": {
+    "preflight_redirects_conflict": true,
+    "successful_action_recorded": true,
+    "deviation_not_success": true,
+    "retry_is_idempotent": true,
+    "stats_count_both_outcomes": true,
+    "stale_receipt_rejected": true
+  },
+  "passed": true
+}

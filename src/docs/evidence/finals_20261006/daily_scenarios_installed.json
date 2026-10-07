@@ -1,0 +1,105 @@
+{
+  "schema": "memguardos-finals-scenarios-v1",
+  "ok": true,
+  "created_at": "2026-10-06T00:28:10.922535+00:00",
+  "module_path": "/var/opt/memguardos/memguard/service.py",
+  "module_sha256": "92e41d63adedba8e2934a6f342a5dda43fc210aa70360db60c339e6b131a2f84",
+  "evaluation_scope": "offline product API and runtime guard scenarios; no model-generated actions",
+  "data_scope": "temporary synthetic workspace only",
+  "checks": [
+    {
+      "name": "同一句要求形成独立工具偏好与回答偏好",
+      "passed": true
+    },
+    {
+      "name": "偏好有来源片段、情节与提交版本",
+      "passed": true
+    },
+    {
+      "name": "新会话自动复用历史偏好",
+      "passed": true
+    },
+    {
+      "name": "纠正偏好使已经构建的旧上下文失效",
+      "passed": true
+    },
+    {
+      "name": "重新取上下文只采用更新后的工具偏好",
+      "passed": true
+    },
+    {
+      "name": "矛盾事实先进入核对队列，不直接覆盖",
+      "passed": true
+    },
+    {
+      "name": "确认新事实生成版本并关闭核对项",
+      "passed": true
+    },
+    {
+      "name": "相同事实键不跨项目覆盖或串入检索",
+      "passed": true
+    },
+    {
+      "name": "临时事实按会话保存且不进入其他会话",
+      "passed": true
+    },
+    {
+      "name": "中文短密码写入前拒存",
+      "passed": true
+    },
+    {
+      "name": "自然语言遗忘准确定位工具偏好并保留回答偏好",
+      "passed": true
+    },
+    {
+      "name": "单项遗忘清理受管存储且不删除另一项偏好",
+      "passed": true,
+      "forgotten_ids": [
+        "mem_7e416240637b4e0b"
+      ]
+    },
+    {
+      "name": "遗忘后旧 Agent 上下文被拒绝继续使用",
+      "passed": true
+    },
+    {
+      "name": "重新构建上下文保留无关偏好且排除目标",
+      "passed": true
+    },
+    {
+      "name": "压力调度推迟后台工作，空闲状态允许有界批处理",
+      "passed": true,
+      "policy": {
+        "interval_seconds": 30.0,
+        "budget_seconds": 2.0,
+        "batch_limit": 8
+      }
+    },
+    {
+      "name": "完整操作链审计可校验",
+      "passed": true
+    },
+    {
+      "name": "服务重开后已遗忘内容不复活",
+      "passed": true
+    }
+  ],
+  "os_resources": {
+    "platform": "Linux",
+    "is_linux": true,
+    "cgroup_v2_mounted": true,
+    "proc_cgroup": "0::/user.slice/user-1000.slice/session-43.scope",
+    "cgroup_path": "/sys/fs/cgroup/user.slice/user-1000.slice/session-43.scope",
+    "memory_current": "30228480",
+    "memory_max": "max",
+    "memory_high": "max",
+    "cpu_max": "max 100000",
+    "pid": 84960,
+    "memory_budget_ratio": null,
+    "pressure_some_avg10": {
+      "cpu": 3.21,
+      "memory": 0.45,
+      "io": 1.13
+    }
+  }
+}
