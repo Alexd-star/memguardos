@@ -12,7 +12,7 @@ from memguard.eval.memory_value import (
     summarize_group,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = (Path(__file__).resolve().parents[1] / "src")
 
 
 def load_jsonl(path):

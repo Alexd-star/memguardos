@@ -134,7 +134,7 @@ def test_openhands_hook_enforces_action_contract_before_tool_execution(tmp_path)
         task_type="maintenance",
     )
     bundle = runner.prepare_context("安装依赖")
-    hook = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
+    hook = (Path(__file__).parents[1] / "src") / "scripts" / "openhands_memory_hook.py"
     completed = subprocess.run(
         [sys.executable, str(hook), "--context-file", bundle["context_file"], "--guard-tool"],
         input=json.dumps(

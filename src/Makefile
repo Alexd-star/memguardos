@@ -20,7 +20,7 @@ demo:
 
 lint:
 	python -m compileall -q memguard scripts
-	python -m ruff check memguard tests scripts
+	python -m ruff check memguard ../tests scripts
 
 coverage:
 	python -m pytest --cov=memguard --cov=scripts --cov-report=term-missing

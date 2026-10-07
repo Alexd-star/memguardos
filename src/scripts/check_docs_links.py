@@ -6,7 +6,10 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = ROOT.parent if ROOT.name == "src" else ROOT
 DOC_PATHS = [ROOT / "README.md", ROOT / "docs"]
+if ROOT != REPOSITORY_ROOT:
+    DOC_PATHS += [REPOSITORY_ROOT / "README.md", REPOSITORY_ROOT / "demo", REPOSITORY_ROOT / "tests" / "README.md"]
 LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 IGNORE_PREFIXES = ("http://", "https://", "mailto:", "#")
 
@@ -44,12 +47,12 @@ def main() -> int:
                 continue
             resolved = (md.parent / target).resolve()
             try:
-                resolved.relative_to(ROOT.resolve())
+                resolved.relative_to(REPOSITORY_ROOT.resolve())
             except ValueError:
-                broken.append(f"{md.relative_to(ROOT)} -> {target} escapes repository")
+                broken.append(f"{md.relative_to(REPOSITORY_ROOT)} -> {target} escapes repository")
                 continue
             if not resolved.exists():
-                broken.append(f"{md.relative_to(ROOT)} -> {target}")
+                broken.append(f"{md.relative_to(REPOSITORY_ROOT)} -> {target}")
     if broken:
         print("Broken local Markdown links:")
         for item in broken:

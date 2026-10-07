@@ -24,7 +24,7 @@ def _git(*args: str) -> str:
 
 def _git_blob(relative: str) -> bytes:
     completed = subprocess.run(
-        ["git", "show", f"HEAD:{relative}"],
+        ["git", "show", f"HEAD:{_git('rev-parse', '--show-prefix')}{relative}"],
         cwd=ROOT,
         check=True,
         capture_output=True,

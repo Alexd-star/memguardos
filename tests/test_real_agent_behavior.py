@@ -16,7 +16,7 @@ from scripts.run_openhands_behavior_suite import (
     validate_cases,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = (Path(__file__).resolve().parents[1] / "src")
 
 
 def test_openhands_suite_exposes_real_paired_memory_mode():

@@ -4,7 +4,7 @@ from scripts.build_deb_packages import build_package_plan
 
 
 def test_user_service_keeps_sdk_in_user_context_and_bounds_resources():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     unit = (root / "scripts/memguardd-user.service").read_text()
     assert "MEMGUARD_ALLOW_ROOT_KYLIN_USER_SOCKET" not in unit
     assert "User=root" not in unit and "User=memguard" not in unit

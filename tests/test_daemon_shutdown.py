@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = (Path(__file__).resolve().parents[1] / "src")
 
 
 @pytest.mark.skipif(os.name == "nt", reason="POSIX signal handling is verified on openKylin")

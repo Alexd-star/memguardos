@@ -10,7 +10,7 @@ import sys
 import pytest
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "fix_kylin_embedding_runtime.sh"
+SCRIPT = (Path(__file__).resolve().parents[1] / "src") / "scripts" / "fix_kylin_embedding_runtime.sh"
 BASH = (r"C:\Program Files\Git\bin\bash.exe" if os.name == "nt" else shutil.which("bash"))
 pytestmark = pytest.mark.skipif(not BASH or not Path(BASH).exists(), reason="bash unavailable")
 

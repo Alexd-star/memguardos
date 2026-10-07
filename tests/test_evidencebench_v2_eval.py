@@ -14,7 +14,7 @@ from scripts.run_evidencebench_v2 import (
 )
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = (Path(__file__).resolve().parents[1] / "src")
 BENCH = ROOT / "data" / "benchmarks_v2"
 
 

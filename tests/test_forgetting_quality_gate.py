@@ -5,7 +5,7 @@ from memguard.eval.metrics import mean, precision, recall_at_k
 from memguard.service import MemGuardService
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = (Path(__file__).resolve().parents[1] / "src")
 BENCHMARK_DIR = ROOT / "data" / "benchmarks"
 
 

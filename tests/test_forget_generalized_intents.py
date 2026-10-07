@@ -254,7 +254,7 @@ def test_exact_topic_selection_cannot_resurrect_out_of_window_records(tmp_path, 
     ],
 )
 def test_reported_misses_recall_exact_atoms_without_related_preference(tmp_path, relative_path):
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     cases = [json.loads(line) for line in (root / "data/benchmarks_v2" / relative_path).read_text(encoding="utf-8").splitlines()]
     case = next(item for item in cases if item["id"].endswith("_08"))
     service = MemGuardService(tmp_path / "memory.segment", tmp_path / "meta.sqlite3")

@@ -2,6 +2,9 @@
 set -euo pipefail
 
 PROJECT_DIR="${1:-$(pwd)}"
+if [[ -f "${PROJECT_DIR}/src/pyproject.toml" ]]; then
+  PROJECT_DIR="${PROJECT_DIR}/src"
+fi
 INSTALL_DIR="/opt/memguardos"
 
 echo "[memguard] installing from ${PROJECT_DIR} to ${INSTALL_DIR}"

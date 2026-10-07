@@ -76,6 +76,9 @@ def inspect_package(package: Path, manifest: Path | None = None) -> dict[str, ob
         return {"ok": False, "package": str(package), "error": "package_not_found"}
 
     with ZipFile(package) as archive:
+        if "src/pyproject.toml" in archive.namelist():
+            from scripts.final_submission import inspect_final_archive
+            return inspect_final_archive(package, manifest)
         names = sorted(name for name in archive.namelist() if not name.endswith("/"))
         name_set = set(names)
         local_path_hits = scan_formal_docs_for_local_paths(archive, name_set)

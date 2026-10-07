@@ -14,6 +14,8 @@ RUN apt-get update \
 # 保证 native/、packaging/、docs/（含 evidence）等仓库内容测试可在容器内复验。
 COPY . .
 
+WORKDIR /workspace/src
+
 RUN python -m pip install --no-cache-dir -U pip \
     && python -m pip install --no-cache-dir -e ".[dev]"
 

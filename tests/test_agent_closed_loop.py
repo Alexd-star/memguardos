@@ -632,7 +632,7 @@ def test_agent_context_snapshot_blocks_updated_and_forgotten_memories(tmp_path):
         stored = json.loads(Path(first["context_file"]).read_text(encoding="utf-8"))
         assert stored["memory_snapshot"]["use_scope"] == first["memory_snapshot"]["use_scope"]
         assert context_snapshot_status(stored)["ok"]
-        script = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
+        script = (Path(__file__).parents[1] / "src") / "scripts" / "openhands_memory_hook.py"
 
         def guard(context_file, guard_tool=True):
             args = [sys.executable, str(script), "--context-file", str(context_file)]
@@ -2026,7 +2026,7 @@ def test_openhands_hook_injects_context_and_blocks_high_risk_commands(tmp_path):
         ),
         encoding="utf-8",
     )
-    script = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
+    script = (Path(__file__).parents[1] / "src") / "scripts" / "openhands_memory_hook.py"
 
     inject = subprocess.run(
         [sys.executable, str(script), "--context-file", str(context_file)],
@@ -2121,7 +2121,7 @@ def test_openhands_hook_enforces_selected_code_search_preference(prepared_hook_c
     context_file = prepared_hook_context(
         "以后搜索项目代码优先使用 rg。", "code_search_tool", "rg",
     )
-    script = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
+    script = (Path(__file__).parents[1] / "src") / "scripts" / "openhands_memory_hook.py"
 
     denied = subprocess.run(
         [
@@ -2179,7 +2179,7 @@ def test_openhands_hook_blocks_bare_pytest_when_test_runner_preference_is_active
         "以后运行 Python 测试时优先使用 python -m pytest，不要直接用 pytest。",
         "test_runner_command", "python -m pytest",
     )
-    script = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
+    script = (Path(__file__).parents[1] / "src") / "scripts" / "openhands_memory_hook.py"
 
     denied = subprocess.run(
         [
@@ -2235,7 +2235,7 @@ def test_openhands_hook_blocks_false_high_risk_finish_completion(prepared_hook_c
         "涉及 rm、systemctl disable、重启服务这类高风险命令时，必须先说明风险并等待确认。",
         "high_risk_confirmation", "required",
     )
-    script = Path(__file__).parents[1] / "scripts" / "openhands_memory_hook.py"
+    script = (Path(__file__).parents[1] / "src") / "scripts" / "openhands_memory_hook.py"
 
     denied = subprocess.run(
         [

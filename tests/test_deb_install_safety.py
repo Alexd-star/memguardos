@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import pytest
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = (Path(__file__).resolve().parents[1] / "src")
 PACKAGES = ["memguardos-core", "memguardos-ukui", "memguardos-agent-bridge", "memguardos-doc", "memguardos"]
 VERSION = "1.0.1-4"
 

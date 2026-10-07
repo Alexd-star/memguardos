@@ -12,7 +12,7 @@ from pathlib import Path
 
 from memguard.sensitivity.detector import SensitiveDetector
 
-DATASET = Path(__file__).resolve().parents[1] / "data" / "benchmarks" / "sensitivity_blind_holdout.jsonl"
+DATASET = (Path(__file__).resolve().parents[1] / "src") / "data" / "benchmarks" / "sensitivity_blind_holdout.jsonl"
 
 
 def _rows():

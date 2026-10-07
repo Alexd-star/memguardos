@@ -2,7 +2,7 @@
   "name": "MemGuardOS",
   "build": {
     "dockerfile": "../Dockerfile",
-    "context": ".."
+    "context": "../.."
   },
   "customizations": {
     "vscode": {
@@ -12,6 +12,6 @@
       ]
     }
   },
-  "postCreateCommand": "python -m pip install -e '.[dev]'",
+  "postCreateCommand": "cd src && python -m pip install -e '.[dev]'",
   "remoteUser": "root"
 }

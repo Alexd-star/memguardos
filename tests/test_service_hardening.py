@@ -8,7 +8,7 @@ from memguard.service import MemGuardService
 from memguard.sensitivity.custom_patterns import save_pattern
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = (Path(__file__).resolve().parents[1] / "src")
 
 
 @pytest.mark.parametrize("unit", ["memguardd.service", "memguardd@.service"])

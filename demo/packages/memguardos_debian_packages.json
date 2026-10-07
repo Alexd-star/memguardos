@@ -1,0 +1,48 @@
+{
+  "schema": "memguardos-debian-package-set-v1",
+  "version": "1.0.1-9+finals20261006",
+  "architecture": "amd64",
+  "multiarch": "x86_64-linux-gnu",
+  "packages": [
+    {
+      "package": "memguardos-core",
+      "version": "1.0.1-9+finals20261006",
+      "architecture": "amd64",
+      "path": "../demo/packages/memguardos-core_1.0.1-9+finals20261006_amd64.deb",
+      "bytes": 303740,
+      "sha256": "eab9c5538888d4dcee2848633727b5638415913d7d357342e0f3945a205dff08"
+    },
+    {
+      "package": "memguardos-ukui",
+      "version": "1.0.1-9+finals20261006",
+      "architecture": "amd64",
+      "path": "../demo/packages/memguardos-ukui_1.0.1-9+finals20261006_amd64.deb",
+      "bytes": 151308,
+      "sha256": "f5596e844e04d2551544fd446e2ec8ec052f41f659e9d16e40911ccd1361ecaf"
+    },
+    {
+      "package": "memguardos-agent-bridge",
+      "version": "1.0.1-9+finals20261006",
+      "architecture": "amd64",
+      "path": "../demo/packages/memguardos-agent-bridge_1.0.1-9+finals20261006_amd64.deb",
+      "bytes": 10664,
+      "sha256": "0d0cbf19e9c7cad2a1fbf68482302a060119e9ce1777fbe0a116cffc8a399ad7"
+    },
+    {
+      "package": "memguardos-doc",
+      "version": "1.0.1-9+finals20261006",
+      "architecture": "all",
+      "path": "../demo/packages/memguardos-doc_1.0.1-9+finals20261006_all.deb",
+      "bytes": 182748,
+      "sha256": "4ccd7aa3584df90892bf26c1396600519faf77e7d74d199cd532cfc47c094c80"
+    },
+    {
+      "package": "memguardos",
+      "version": "1.0.1-9+finals20261006",
+      "architecture": "all",
+      "path": "../demo/packages/memguardos_1.0.1-9+finals20261006_all.deb",
+      "bytes": 908,
+      "sha256": "c98967aac4b288f248cdb798feae3407603ae53f8e2e8d5c0f709e11b3f90269"
+    }
+  ]
+}

@@ -226,6 +226,10 @@ def main(argv: list[str] | None = None) -> int:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = args.timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
+    from scripts.final_submission import build_final_archive, is_finals_layout
+    if is_finals_layout():
+        build_final_archive(output_dir, timestamp, args.kind)
+        return 0
     all_files = iter_files()
     competition_files = [
         path for path in all_files if is_competition_path(path.relative_to(ROOT).as_posix())

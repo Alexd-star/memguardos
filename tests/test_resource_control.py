@@ -6,7 +6,7 @@ import sys
 from memguard.eval.resource_control import compare_runs, make_workload
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = (Path(__file__).resolve().parents[1] / "src")
 
 
 def test_workload_is_deterministic_and_shared_by_both_modes():

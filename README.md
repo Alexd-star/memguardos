@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/branding/memguardos-logo.png" alt="MemGuardOS 图标" width="168">
+<img src="src/docs/assets/branding/memguardos-logo.png" alt="MemGuardOS 图标" width="168">
 
 # MemGuardOS
 
@@ -26,12 +26,12 @@
 
 ## 🎬 演示视频
 
-<video controls preload="metadata" poster="docs/assets/branding/demo-video-cover.jpg" width="100%">
-  <source src="MemGuardOS-演示视频-头脑特工队.mp4" type="video/mp4">
-  当前浏览器不支持在线播放，请打开 <a href="MemGuardOS-演示视频-头脑特工队.mp4">MemGuardOS 演示视频</a>。
+<video controls preload="metadata" poster="src/docs/assets/branding/demo-video-cover.jpg" width="100%">
+  <source src="presentation/决赛演示视频.mp4" type="video/mp4">
+  当前浏览器不支持在线播放，请打开 <a href="presentation/决赛演示视频.mp4">MemGuardOS 演示视频</a>。
 </video>
 
-<p align="center">4 分 58 秒核心流程演示：openKylin 桌面入口、工具结果与偏好记忆提取、新会话复用、版本更新、精准遗忘、敏感信息保护及 Web 可追溯证据链。</p>
+<p align="center">4 分 56 秒核心流程演示：openKylin 桌面入口、工具结果与偏好记忆提取、新会话复用、版本更新、精准遗忘、敏感信息保护及 Web 可追溯证据链。</p>
 
 MemGuardOS 是部署在本机的 OS Agent 记忆层。它接收用户与 Agent 的交互事件，提取长期偏好、知识和工具经验，在下一次任务中按需提供分阶段上下文，并为每次注入生成包含记忆版本和作用域的可复核收据；当用户要求遗忘时，系统先展示候选和影响范围，再清理受管存储、检索索引、图谱、缓存和段文件中的目标内容。
 
@@ -48,7 +48,7 @@ MemGuardOS 是部署在本机的 OS Agent 记忆层。它接收用户与 Agent �
 
 | 个人工作台 | 系统维护 |
 | --- | --- |
-| ![MemGuardOS 个人工作台](docs/assets/screenshots/personal-workbench.png) | ![MemGuardOS 系统维护](docs/assets/screenshots/system-maintenance.png) |
+| ![MemGuardOS 个人工作台](src/docs/assets/screenshots/personal-workbench.png) | ![MemGuardOS 系统维护](src/docs/assets/screenshots/system-maintenance.png) |
 | 查看最近学习内容、检索记忆、预览上下文和执行遗忘 | 查看服务、检索后端、SDK、审计链和本机资源状态 |
 
 <a id="项目结构"></a>
@@ -56,22 +56,28 @@ MemGuardOS 是部署在本机的 OS Agent 记忆层。它接收用户与 Agent �
 ## 🗂️ 项目结构
 
 ```text
-memguard/                  Python 核心、CLI、服务、Agent 适配与 Web 工作台
-  api/                     本地 API 与 Unix socket 协议
-  extraction/              偏好、知识和程序性经验提取
-  retrieval/               FTS、向量、图谱、融合排序与缓存
-  forgetting/              自然语言解析、ErasurePlan 与遗忘执行
-  governance/              来源、隔离区、冲突和生命周期治理
-  integrations/            OpenHands 等 Agent 适配层
-  memory_admission.py      写入前准入、分层建议与证据门槛
-  os_guard/                cgroup、auditd、BPF LSM 与本机状态探针
-  web/                     本地用户工作台与管理员控制台
-native/                    UKUI、Peony、托盘和 BPF LSM 原生组件
-packaging/                 Debian、desktop、Polkit 与系统集成资产
-scripts/                   安装、构建、评测、证据采集和发布脚本
-data/                      演示数据与可复现评测数据集
-tests/                     单元、集成、安全、桌面与交付测试
-docs/                      正式文档、截图与精选可复核证据
+项目根目录/
+├── README.md                       项目介绍、安装运行与验证入口
+├── src/                            完整项目源代码与构建资产
+│   ├── memguard/                   Python 核心、CLI、服务与 Agent 适配
+│   ├── native/                     UKUI、Peony、托盘与 BPF LSM
+│   ├── packaging/                  Debian 包、桌面入口与权限策略
+│   ├── scripts/                    安装、构建、评测与运行脚本
+│   ├── data/                       评测数据与演示样例
+│   ├── config/                     配套配置
+│   ├── docs/                       安装、接口、使用与架构手册
+│   └── pyproject.toml              Python 安装与依赖配置
+├── docs/
+│   ├── 项目说明书.pdf
+│   ├── 项目创新说明.pdf
+│   ├── 成员分工及主要贡献说明.pdf
+│   └── 人工智能及第三方工具使用说明.pdf
+├── tests/                          测试用例、运行证据与验证材料
+├── demo/                           可复现演示流程
+├── presentation/
+│   ├── 决赛现场演示PPT.pptx
+│   └── 决赛演示视频.mp4
+└── 作品原创承诺书.pdf
 ```
 
 仓库以可安装、可运行、可评测和可复现为整理原则，源代码、原生组件、安装资产、测试、正式文档与验证证据各自归入明确目录；发行版通过版本标签和 SHA-256 清单提供可追溯交付。
@@ -195,7 +201,7 @@ Python 3.10 及以上环境可以直接从源码安装：
 
 ```bash
 git clone https://github.com/Alexd-star/memguardos.git
-cd memguardos
+cd memguardos/src
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
@@ -234,7 +240,7 @@ memguard audit
 
 ```bash
 git clone https://github.com/Alexd-star/memguardos.git
-cd memguardos
+cd memguardos/src
 bash scripts/build_ukui_plugins.sh
 bash scripts/install_deb_package_set.sh
 ```
@@ -262,7 +268,7 @@ sudo bash scripts/install_openkylin.sh "$(pwd)"
 
 轻量脚本适合快速体验核心闭环；用于评审复现或其他 openKylin 机器部署时，推荐采用上面的 `install_deb_package_set.sh` 完成桌面五包安装。
 
-安装桌面包后，可以从开始菜单打开“MemGuardOS 记忆安全”，或在 UKUI 系统设置的安全分类中进入记忆安全中心。完整环境依赖、安装验证、升级和卸载步骤见 [安装部署](docs/installation.md)。
+安装桌面包后，可以从开始菜单打开“MemGuardOS 记忆安全”，或在 UKUI 系统设置的安全分类中进入记忆安全中心。完整环境依赖、安装验证、升级和卸载步骤见 [安装部署](src/docs/installation.md)。
 
 ### ③ 打开本地工作台
 
@@ -329,7 +335,7 @@ Agent / CLI / Desktop
 MemGuardOS 事件接入 -> 提取与治理 -> 检索与上下文 -> 事件回写与审计
 ```
 
-标准事件包含会话、序号、角色、事件类型、工具名称、工具参数、执行结果和来源。接入协议、事件示例、OpenHands 配置和安全注意事项见 [Agent 接入](docs/agent-integration.md) 与 [接口参考](docs/api.md)。
+标准事件包含会话、序号、角色、事件类型、工具名称、工具参数、执行结果和来源。接入协议、事件示例、OpenHands 配置和安全注意事项见 [Agent 接入](src/docs/agent-integration.md) 与 [接口参考](src/docs/api.md)。
 
 <a id="技术实现与关键设计"></a>
 
@@ -417,7 +423,7 @@ flowchart TB
 8. **让短期经验经过证据审核再沉淀。** 会话记忆先生成带版本快照的巩固计划，明确偏好、验证流程和重复命中的知识才进入长期层；证据不足的内容继续保留在会话层，工作记忆进入清理复核队列，避免一次性输出污染长期状态。
 9. **让有限存储服务于真正有用的记忆。** 维护计划同时计算重要性、置信度、最近使用、检索命中、真实行动结果、治理风险和估算字节成本，输出可解释的价值/字节排序；只对普通长期记忆生成可逆的 session 降级建议，执行前再次校验版本，避免以“空间优化”为名误删偏好或敏感记录。
 
-详细模块边界、数据结构与时序见 [系统架构](docs/architecture.md) 和 [开发者指南](docs/developer-guide.md)。
+详细模块边界、数据结构与时序见 [系统架构](src/docs/architecture.md) 和 [开发者指南](src/docs/developer-guide.md)。
 
 ## 🐧 openKylin 原生能力
 
@@ -450,18 +456,18 @@ flowchart TB
 
 | 验证层 | 数据与环境 | 代表性结果 | 证据入口 |
 |---|---|---|---|
-| openKylin 回归测试 | openKylin 2.0 SP2 实机 | `1751 passed, 3 skipped` | [最终实机 pytest 摘要](docs/evidence/finals_20261006/pytest_openkylin.txt) |
-| 通用功能 | 217 条可复现种子与用例 | Recall@5、跨语言 Recall@5、敏感阻断 F1 与遗忘候选召回率为 1.0000；遗忘候选精确率为 0.9425 | [测试与评测](docs/testing.md) |
-| Agent 交互专项 | 200 条，其中 60 条匿名化真实风格、140 条合成边界样例 | 跨会话偏好遵循率 1.0000，敏感泄漏率 0，P95 113.966 ms | [Agent 证据](docs/evidence/agent/) |
-| 真实 OpenHands | 基础 12 次、扩展 8 次、留出 8 次 | 28 次运行均保留上下文、工具事件与结果记录 | [真实 Agent 说明](docs/testing.md#6-记忆价值实验) |
+| openKylin 回归测试 | openKylin 2.0 SP2 实机 | `1751 passed, 3 skipped` | [最终实机 pytest 摘要](tests/evidence/finals_20261006/pytest_openkylin.txt) |
+| 通用功能 | 217 条可复现种子与用例 | Recall@5、跨语言 Recall@5、敏感阻断 F1 与遗忘候选召回率为 1.0000；遗忘候选精确率为 0.9425 | [测试与评测](src/docs/testing.md) |
+| Agent 交互专项 | 200 条，其中 60 条匿名化真实风格、140 条合成边界样例 | 跨会话偏好遵循率 1.0000，敏感泄漏率 0，P95 113.966 ms | [Agent 证据](tests/evidence/agent/) |
+| 真实 OpenHands | 基础 12 次、扩展 8 次、留出 8 次 | 28 次运行均保留上下文、工具事件与结果记录 | [真实 Agent 说明](src/docs/testing.md#6-记忆价值实验) |
 | 行动契约回归 | 8 个 allow、redirect、confirm、deny 及无关工具场景 | 判定准确率 1.0000，四类决策均有覆盖 | `data/benchmarks/action_contract.jsonl` |
-| 行动结果反馈闭环 | 执行成功、偏好偏离、重复回写、旧收据和遗忘联动 | 成功与偏离分别计数，重试幂等，旧版本拒绝回写，遗忘后行动证据同步清理 | [行动反馈证据](docs/evidence/openkylin/action_feedback_evidence_20261007.json) |
-| 记忆驱动动作质量 | 将工具执行结果按记忆、Agent、项目和任务类型聚合 | Wilson 成功下界、小样本置信度、失败/偏离风险与同类观察性差值共同形成保留、观察或复核门控 | [动作质量证据](docs/evidence/openkylin/action_impact_evidence_20261007.json) |
-| 会话巩固、衰减与上下文编排回归 | openKylin 隔离会话中的偏好、知识、长期记忆和 Agent 上下文 | 证据分类、确认晋级、健康度衰减、可逆降级、阶段表示、预算节省和旧计划 CAS 拒绝均通过 | [巩固证据](docs/evidence/openkylin/consolidation_evidence_20261007.json)、[衰减证据](docs/evidence/openkylin/decay_evidence_20261007.json)、[上下文证据](docs/evidence/openkylin/context_compaction_evidence_20261007.json) |
-| 价值感知记忆预算 | openKylin 隔离空间中的价值、风险、字节成本和可逆降级计划 | 保护显式偏好，按单位存储成本排序普通记忆，确认后降级到 session 层并保留版本链 | [预算治理证据](docs/evidence/openkylin/memory_budget_evidence_20261007.json) |
-| openKylin 10k 负载 | 10,000 条记忆、150 次查询 | P95 10.105 ms，P99 75.255 ms，RSS 低于 256 MB 目标 | [性能证据](docs/evidence/performance_latest/) |
-| 检索 v2 三轮 | openKylin、1,000 条、120 次查询、6 worker | 三轮 Recall@5 均为 1.0000；质量路径和并发路径 P99 均低于 500 ms | [三轮门禁摘要](docs/evidence/openkylin/retrieval_v2.txt) |
-| 持续集成与发布门禁 | Python 3.10、3.11、3.12 | 编译、静态检查、完整测试、隔离安装、文档链接、安全扫描、Web 烟测、评测与提交包复验全部通过 | [CI 配置](.github/workflows/ci.yml)与[证据索引](docs/evidence/README.md) |
+| 行动结果反馈闭环 | 执行成功、偏好偏离、重复回写、旧收据和遗忘联动 | 成功与偏离分别计数，重试幂等，旧版本拒绝回写，遗忘后行动证据同步清理 | [行动反馈证据](tests/evidence/openkylin/action_feedback_evidence_20261007.json) |
+| 记忆驱动动作质量 | 将工具执行结果按记忆、Agent、项目和任务类型聚合 | Wilson 成功下界、小样本置信度、失败/偏离风险与同类观察性差值共同形成保留、观察或复核门控 | [动作质量证据](tests/evidence/openkylin/action_impact_evidence_20261007.json) |
+| 会话巩固、衰减与上下文编排回归 | openKylin 隔离会话中的偏好、知识、长期记忆和 Agent 上下文 | 证据分类、确认晋级、健康度衰减、可逆降级、阶段表示、预算节省和旧计划 CAS 拒绝均通过 | [巩固证据](tests/evidence/openkylin/consolidation_evidence_20261007.json)、[衰减证据](tests/evidence/openkylin/decay_evidence_20261007.json)、[上下文证据](tests/evidence/openkylin/context_compaction_evidence_20261007.json) |
+| 价值感知记忆预算 | openKylin 隔离空间中的价值、风险、字节成本和可逆降级计划 | 保护显式偏好，按单位存储成本排序普通记忆，确认后降级到 session 层并保留版本链 | [预算治理证据](tests/evidence/openkylin/memory_budget_evidence_20261007.json) |
+| openKylin 10k 负载 | 10,000 条记忆、150 次查询 | P95 10.105 ms，P99 75.255 ms，RSS 低于 256 MB 目标 | [性能证据](tests/evidence/performance_latest/) |
+| 检索 v2 三轮 | openKylin、1,000 条、120 次查询、6 worker | 三轮 Recall@5 均为 1.0000；质量路径和并发路径 P99 均低于 500 ms | [三轮门禁摘要](tests/evidence/openkylin/retrieval_v2.txt) |
+| 持续集成与发布门禁 | Python 3.10、3.11、3.12 | 编译、静态检查、完整测试、隔离安装、文档链接、安全扫描、Web 烟测、评测与提交包复验全部通过 | [CI 配置](src/.github/workflows/ci.yml)与[证据索引](tests/evidence/README.md) |
 
 评测体系从检索到真实行为形成完整链路：Recall@5、跨语言召回和遗忘候选精度衡量记忆处理质量，工具调用、任务完成、偏好遵循与敏感泄漏率衡量 Agent 实际效果，P95/P99、资源占用和安装验证衡量端侧运行与系统交付质量。原始结果、执行命令、运行环境和对应 Git 修订均可复核。
 
@@ -481,25 +487,37 @@ python scripts/inspect_submission_package.py
 python scripts/smoke_submission_archive.py
 ```
 
-量化评测、openKylin 原生采集、发布包审计和每个指标的含义见 [测试与评测](docs/testing.md)。
+量化评测、openKylin 原生采集、发布包审计和每个指标的含义见 [测试与评测](src/docs/testing.md)。
 
 <a id="完整文档"></a>
 
 ## 📚 完整文档
 
+| 决赛交付文件 | 内容 |
+|---|---|
+| [项目说明书](docs/项目说明书.pdf) | 系统设计、算法、架构、功能与验证 |
+| [项目创新说明](docs/项目创新说明.pdf) | 核心创新、实现位置与实验依据 |
+| [成员分工及主要贡献说明](docs/成员分工及主要贡献说明.pdf) | 成员职责与主要贡献 |
+| [人工智能及第三方工具使用说明](docs/人工智能及第三方工具使用说明.pdf) | 工具、第三方组件及使用情况 |
+| [决赛现场演示PPT](presentation/决赛现场演示PPT.pptx) | 现场汇报材料 |
+| [决赛演示视频](presentation/决赛演示视频.mp4) | 核心功能操作与运行效果 |
+| [作品原创承诺书](作品原创承诺书.pdf) | 原创承诺材料 |
+
+源码构建、安装、评测和测试命令均在 `src/` 中执行。完整测试用例位于根目录 `tests/`，执行 `python -m pytest ../tests -q`；验证材料见 [测试导航](tests/README.md)，复现演示见 [演示导航](demo/README.md)。
+
 | 文档 | 适合读者 | 内容 |
 |---|---|---|
-| [文档导航](docs/README.md) | 所有人 | 按角色和任务选择阅读入口 |
-| [安装部署](docs/installation.md) | 用户、管理员 | 环境依赖、源码安装、Debian 包、服务和卸载 |
-| [用户指南](docs/user-guide.md) | 普通用户 | 写入、检索、上下文、遗忘、Web 与桌面操作 |
-| [Agent 接入](docs/agent-integration.md) | Agent 开发者 | 标准事件、OpenHands、真实任务和通用适配方法 |
-| [系统架构](docs/architecture.md) | 评委、架构师 | 模块、数据流、存储、检索、遗忘和 OS 集成 |
-| [接口参考](docs/api.md) | 开发者 | Python、CLI、JSON 和 Unix socket 契约 |
-| [开发者指南](docs/developer-guide.md) | 贡献者 | 开发环境、代码边界、测试和扩展方式 |
-| [安全治理](docs/security.md) | 安全人员 | 威胁模型、敏感治理、权限、审计与精准遗忘机制 |
-| [测试与评测](docs/testing.md) | 评委、测试人员 | 测试分层、数据集、量化指标、原始结果和复现方法 |
-| [赛题符合性](docs/competition.md) | 竞赛评审 | 赛题逐项要求、实现位置和验证证据 |
-| [证据索引](docs/evidence/README.md) | 审计与验收人员 | 精选证据、来源修订、命令和 SHA-256 |
+| [文档导航](src/docs/README.md) | 所有人 | 按角色和任务选择阅读入口 |
+| [安装部署](src/docs/installation.md) | 用户、管理员 | 环境依赖、源码安装、Debian 包、服务和卸载 |
+| [用户指南](src/docs/user-guide.md) | 普通用户 | 写入、检索、上下文、遗忘、Web 与桌面操作 |
+| [Agent 接入](src/docs/agent-integration.md) | Agent 开发者 | 标准事件、OpenHands、真实任务和通用适配方法 |
+| [系统架构](src/docs/architecture.md) | 评委、架构师 | 模块、数据流、存储、检索、遗忘和 OS 集成 |
+| [接口参考](src/docs/api.md) | 开发者 | Python、CLI、JSON 和 Unix socket 契约 |
+| [开发者指南](src/docs/developer-guide.md) | 贡献者 | 开发环境、代码边界、测试和扩展方式 |
+| [安全治理](src/docs/security.md) | 安全人员 | 威胁模型、敏感治理、权限、审计与精准遗忘机制 |
+| [测试与评测](src/docs/testing.md) | 评委、测试人员 | 测试分层、数据集、量化指标、原始结果和复现方法 |
+| [赛题符合性](src/docs/competition.md) | 竞赛评审 | 赛题逐项要求、实现位置和验证证据 |
+| [证据索引](tests/evidence/README.md) | 审计与验收人员 | 精选证据、来源修订、命令和 SHA-256 |
 
 ## 🔐 安全治理
 
@@ -507,10 +525,10 @@ MemGuardOS 对受管事件、元数据、FTS、图谱、向量缓存、结果缓
 
 系统采用组合式防护：应用层负责凭据与个人信息识别、脱敏和阻断，Polkit 约束高权限动作，BPF LSM 提供敏感路径强制策略，systemd 与 cgroup 管理服务生命周期和资源预算。离线混合检索作为稳定基础路径，Kylin embedding SDK 可在延迟预算内提供端侧语义增强与重排。
 
-完整威胁模型、权限设计、审计机制和精准遗忘流程见[安全治理](docs/security.md)。报告安全问题时请联系项目维护者，并通过私密渠道提供必要的复现信息。
+完整威胁模型、权限设计、审计机制和精准遗忘流程见[安全治理](src/docs/security.md)。报告安全问题时请联系项目维护者，并通过私密渠道提供必要的复现信息。
 
 ## 🤝 贡献与开源
 
-项目采用 [MIT License](LICENSE)。开发环境、代码边界、测试规范和扩展方式统一收录在[开发者指南](docs/developer-guide.md)中；新增功能应同时提供测试、用户可理解的错误反馈和必要文档。
+项目采用 [MIT License](src/LICENSE)。开发环境、代码边界、测试规范和扩展方式统一收录在[开发者指南](src/docs/developer-guide.md)中；新增功能应同时提供测试、用户可理解的错误反馈和必要文档。
 
-MemGuardOS 起源于第三届中国研究生操作系统开源创新大赛“面向 openKylin 的智能体记忆提取与精准遗忘机制”赛题，现按可独立安装、可接入和可审计的开源项目维护。赛题要求与实现映射见 [赛题符合性](docs/competition.md)。
+MemGuardOS 起源于第三届中国研究生操作系统开源创新大赛“面向 openKylin 的智能体记忆提取与精准遗忘机制”赛题，现按可独立安装、可接入和可审计的开源项目维护。赛题要求与实现映射见 [赛题符合性](src/docs/competition.md)。

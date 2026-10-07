@@ -62,7 +62,7 @@ def test_agent_bridge_rejects_path_traversal_and_does_not_echo_secrets(tmp_path)
 
 
 def test_agent_systemd_unit_is_unprivileged_and_resource_limited():
-    root = Path(__file__).parents[1]
+    root = (Path(__file__).parents[1] / "src")
     unit = (root / "scripts" / "memguard-agent@.service").read_text(
         encoding="utf-8"
     )

@@ -484,7 +484,7 @@ def test_desktop_scan_file_ingests_safe_text_and_records_audit(tmp_path, monkeyp
 
 
 def test_peony_batch_apply_records_user_visible_import_notification():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "memguard/desktop/scan_manifest.py").read_text(encoding="utf-8")
     assert '"peony_import_partial"' in source
     assert '"peony_import"' in source
@@ -507,7 +507,7 @@ def test_desktop_scan_file_reports_directory_as_os_event_only(tmp_path, monkeypa
 
 
 def test_openkylin_native_packaging_assets_exist():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     assert (root / "scripts" / "warmup_kylin_sdk.sh").exists()
     assert (root / "scripts" / "memguard-kylin-warmup.service").exists()
     assert (root / "scripts" / "memguardos-native-helper.sh").exists()
@@ -518,7 +518,7 @@ def test_openkylin_native_packaging_assets_exist():
 
 
 def test_kylin_warmup_runs_only_for_graphical_sessions_without_invalid_documentation_url():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     unit = (root / "scripts" / "memguard-kylin-warmup.service").read_text(encoding="utf-8")
     warmup = (root / "scripts" / "warmup_kylin_sdk.sh").read_text(encoding="utf-8")
 
@@ -756,7 +756,7 @@ def test_collect_openkylin_evidence_cli_exports_manifested_package(tmp_path, mon
 
 
 def test_peony_plugin_uses_preview_confirmation_contract():
-    source = (Path(__file__).resolve().parents[1] / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
+    source = ((Path(__file__).resolve().parents[1] / "src") / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
 
     assert "scan-files" in source
     assert "apply-scan" in source
@@ -788,7 +788,7 @@ def test_peony_plugin_uses_preview_confirmation_contract():
 
 
 def test_ukui_control_center_uses_structured_native_product_ui():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
 
     assert "QTabWidget" in source
@@ -932,7 +932,7 @@ def test_ukui_control_center_uses_structured_native_product_ui():
 
 
 def test_ukui_control_center_has_spacious_native_layout_tokens():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
 
     assert "applyPageSpacing" in source
@@ -959,7 +959,7 @@ def test_ukui_control_center_has_spacious_native_layout_tokens():
 
 
 def test_ukui_control_center_uses_system_palette_and_icon_fallbacks():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
 
     assert "QIcon themedIcon" in source
@@ -971,7 +971,7 @@ def test_ukui_control_center_uses_system_palette_and_icon_fallbacks():
 
 
 def test_ukui_control_center_does_not_block_user_actions_on_background_refresh():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
     header = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.h").read_text(encoding="utf-8")
 
@@ -986,7 +986,7 @@ def test_ukui_control_center_does_not_block_user_actions_on_background_refresh()
 
 
 def test_ukui_control_center_formats_service_logs_for_product_ui():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
 
     assert "formatServiceLogResult" in source
@@ -997,7 +997,7 @@ def test_ukui_control_center_formats_service_logs_for_product_ui():
 
 
 def test_native_evidence_collector_sanitizes_before_final_manifest_hashing():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "scripts/collect_openkylin_native_evidence.sh").read_text(encoding="utf-8")
 
     sanitize = 'python3 scripts/sanitize_evidence_paths.py "${OUT_DIR}"'
@@ -1012,7 +1012,7 @@ def test_native_evidence_collector_sanitizes_before_final_manifest_hashing():
 
 
 def test_native_evidence_collector_uses_an_isolated_user_store():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "scripts/collect_openkylin_native_evidence.sh").read_text(encoding="utf-8")
 
     assert 'EVIDENCE_HOME="$(mktemp -d' in source
@@ -1045,7 +1045,7 @@ def test_privileged_actions_are_fixed_and_report_structured_result(monkeypatch):
 
 
 def test_native_evidence_collector_installs_and_records_polkit_assets():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     collector = (root / "scripts/collect_openkylin_native_evidence.sh").read_text(encoding="utf-8")
     readiness = (root / "scripts/check_competition_ready.py").read_text(encoding="utf-8")
 
@@ -1165,7 +1165,7 @@ def test_privileged_action_rejects_unknown_action_without_execution(monkeypatch)
 
 
 def test_native_helper_has_strict_argument_and_environment_guards():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     helper = (root / "scripts/memguardos-native-helper.sh").read_text(encoding="utf-8")
     policy = (root / "packaging/polkit/org.memguardos.policy").read_text(encoding="utf-8")
 
@@ -1178,7 +1178,7 @@ def test_native_helper_has_strict_argument_and_environment_guards():
 
 
 def test_ukui_tray_follows_system_theme_and_deduplicates_notifications():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/tray/memguard_tray.cpp").read_text(encoding="utf-8")
     desktop = (root / "packaging/desktop/memguardos-tray.desktop").read_text(encoding="utf-8")
     build = (root / "scripts/build_ukui_plugins.sh").read_text(encoding="utf-8")
@@ -1219,7 +1219,7 @@ def test_ukui_tray_follows_system_theme_and_deduplicates_notifications():
 
 
 def test_ukui_daily_page_uses_task_first_memory_actions():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
 
     assert "我的记忆" in source
@@ -1236,7 +1236,7 @@ def test_ukui_daily_page_uses_task_first_memory_actions():
 
 
 def test_ukui_tray_stays_alive_while_the_desktop_panel_is_starting():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/tray/memguard_tray.cpp").read_text(encoding="utf-8")
 
     main_body = source[source.index("int main(") :]
@@ -1246,7 +1246,7 @@ def test_ukui_tray_stays_alive_while_the_desktop_panel_is_starting():
 
 
 def test_peony_apply_and_forget_processes_have_complete_user_control_and_failure_handling():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
     apply_body = source[source.index("void MemGuardPeonyPlugin::runApply") : source.index("void MemGuardPeonyPlugin::runForgetImport")]
     forget_body = source[source.index("void MemGuardPeonyPlugin::runForgetImport") :]
@@ -1266,7 +1266,7 @@ def test_peony_apply_and_forget_processes_have_complete_user_control_and_failure
 
 
 def test_peony_preview_uses_theme_fallback_and_a_dedicated_location_column():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
 
     assert "QIcon themedIcon" in source
@@ -1278,7 +1278,7 @@ def test_peony_preview_uses_theme_fallback_and_a_dedicated_location_column():
 
 
 def test_peony_file_scan_captures_each_menu_selection_and_surfaces_windows():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
     header = (root / "native/ukui/peony-memguard/memguard_peony_plugin.h").read_text(encoding="utf-8")
 
@@ -1303,7 +1303,7 @@ def test_peony_file_scan_captures_each_menu_selection_and_surfaces_windows():
 
 
 def test_peony_file_scan_keeps_async_work_alive_and_records_privacy_safe_stages():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
 
     assert source.count("new QProcess(QCoreApplication::instance())") == 3
@@ -1324,7 +1324,7 @@ def test_peony_file_scan_keeps_async_work_alive_and_records_privacy_safe_stages(
 
 
 def test_peony_finished_handlers_do_not_turn_success_into_cancellation():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
     function_starts = [
         source.index("void MemGuardPeonyPlugin::runPreview"),
@@ -1344,7 +1344,7 @@ def test_peony_finished_handlers_do_not_turn_success_into_cancellation():
 
 
 def test_peony_file_scan_has_a_real_plugin_loading_smoke_test():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     smoke_source = (root / "native/ukui/tests/peony_file_scan_smoke.cpp").read_text(encoding="utf-8")
     smoke_script = (root / "scripts/smoke_peony_file_scan.sh").read_text(encoding="utf-8")
     refresh_script = (root / "scripts/refresh_ukui_desktop.sh").read_text(encoding="utf-8")
@@ -1366,7 +1366,7 @@ def test_peony_file_scan_has_a_real_plugin_loading_smoke_test():
 
 
 def test_tray_background_processes_timeout_and_recover_without_stalling_future_refreshes():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/tray/memguard_tray.cpp").read_text(encoding="utf-8")
     refresh_body = source[source.index("void refresh()") : source.index("void refreshNotifications()")]
     notification_body = source[source.index("void refreshNotifications()") : source.index("bool isUserNotification")]
@@ -1385,7 +1385,7 @@ def test_tray_background_processes_timeout_and_recover_without_stalling_future_r
 
 
 def test_openkylin_desktop_entries_wait_for_dashboard_health_before_opening_browser():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     launcher = (root / "native/ukui/dashboard_launcher.h").read_text(encoding="utf-8")
     sources = {
         "ukcc": (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8"),
@@ -1454,7 +1454,7 @@ def test_openkylin_desktop_entries_wait_for_dashboard_health_before_opening_brow
 
 
 def test_ukui_control_center_keeps_user_ui_product_facing():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
 
     assert "我的记忆与安全" in source
@@ -1469,7 +1469,7 @@ def test_ukui_control_center_keeps_user_ui_product_facing():
 
 
 def test_desktop_user_copy_uses_plain_product_language():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     ukcc = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
     peony = (root / "native/ukui/peony-memguard/memguard_peony_plugin.cpp").read_text(encoding="utf-8")
     tray = (root / "native/ukui/tray/memguard_tray.cpp").read_text(encoding="utf-8")
@@ -1503,7 +1503,7 @@ def test_desktop_user_copy_uses_plain_product_language():
 
 
 def test_ukui_control_center_has_actionable_recent_behavior_and_preflight_review():
-    root = Path(__file__).resolve().parents[1]
+    root = (Path(__file__).resolve().parents[1] / "src")
     source = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.cpp").read_text(encoding="utf-8")
     header = (root / "native/ukui/ukcc-memguard/memguard_ukcc_plugin.h").read_text(encoding="utf-8")
 

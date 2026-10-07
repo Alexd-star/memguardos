@@ -29,6 +29,8 @@ def main(argv: list[str] | None = None) -> int:
         root = Path(tmp) / "submission"
         root.mkdir()
         _extract_archive_safe(package, root)
+        if (root / "src/pyproject.toml").is_file():
+            root = root / "src"
         checks = [
             _run(root, [sys.executable, "-m", "compileall", "-q", "memguard", "scripts"]),
             _run(root, [sys.executable, "scripts/demo_smoke.py"]),

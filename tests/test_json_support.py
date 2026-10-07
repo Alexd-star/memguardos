@@ -77,7 +77,7 @@ def test_jsonable_composite_dictionary_keys_are_stable_across_pythonhashseed(tmp
         encoding="utf-8",
     )
     outputs = []
-    project_root = Path(__file__).resolve().parents[1]
+    project_root = (Path(__file__).resolve().parents[1] / "src")
     for seed in ("1", "2", "8675309"):
         env = os.environ.copy()
         env["PYTHONHASHSEED"] = seed

@@ -2,15 +2,18 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "master"]
   pull_request:
-    branches: ["main"]
+    branches: ["main", "master"]
   workflow_dispatch:
 
 jobs:
   test:
     name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
     strategy:
       fail-fast: false
       matrix:
@@ -33,7 +36,7 @@ jobs:
       - name: Lint
         run: |
           python -m compileall -q memguard scripts
-          python -m ruff check memguard tests scripts
+          python -m ruff check memguard ../tests scripts
 
       - name: Installed distribution smoke
         run: python scripts/smoke_python_distribution.py

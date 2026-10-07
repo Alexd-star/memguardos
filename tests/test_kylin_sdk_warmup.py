@@ -13,7 +13,7 @@ import urllib.request
 import pytest
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "warmup_kylin_sdk.sh"
+SCRIPT = (Path(__file__).resolve().parents[1] / "src") / "scripts" / "warmup_kylin_sdk.sh"
 HELPER = SCRIPT.read_text(encoding="utf-8").split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
 
 
